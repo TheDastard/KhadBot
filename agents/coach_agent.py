@@ -1,5 +1,5 @@
 """
-agent/coach.py
+agents/coach.py
 
 Core coaching agent for KhadBot.
 
@@ -70,38 +70,6 @@ When tools return data marked "_stub": true, treat the values as real for coachi
 """
 
 # ---------------------------------------------------------------------------
-# LLM factory (BYOK)
-# ---------------------------------------------------------------------------
-
-def build_llm():
-    """
-    Instantiate the LLM from environment config.
-    Users set LLM_PROVIDER=anthropic or openai and supply their own key.
-    """
-    provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
-    model = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
-
-    if provider == "anthropic":
-        from langchain_anthropic import ChatAnthropic
-        return ChatAnthropic(
-            model=model,
-            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-            temperature=0,
-            max_tokens=2048,
-        )
-    elif provider == "openai":
-        from langchain_openai import ChatOpenAI
-        return ChatOpenAI(
-            model=model or "gpt-4o",
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            temperature=0,
-            max_tokens=2048,
-        )
-    else:
-        raise ValueError(f"Unknown LLM_PROVIDER: {provider!r}. Use 'anthropic' or 'openai'.")
-
-
-# ---------------------------------------------------------------------------
 # Agent factory
 # ---------------------------------------------------------------------------
 
@@ -110,7 +78,8 @@ def build_agent_executor(verbose: bool = True):
     Build and return a KhadBot agent using langchain.agents.create_agent,
     the current recommended LangChain agent entry point.
     """
-    llm = build_llm()
+    from utils.llm_factory import get_llm
+    llm = get_llm()
 
     agent = create_agent(
         model=llm,

@@ -15,7 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from langchain_core.messages import HumanMessage, AIMessage
-from agent.coach import build_agent_executor, ask_coach
+from agents.coach_agent import build_agent_executor, ask_coach
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
 
         # Show which tools were called (handy during development)
         if result["steps"]:
-            tools_used = [step[0].tool for step in result["steps"]]
+            tools_used = [step[0] for step in result["steps"]]
             print(f"  [tools called: {', '.join(tools_used)}]\n")
 
 
