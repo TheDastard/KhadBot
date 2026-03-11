@@ -20,7 +20,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 
-from agent.coach import build_agent_executor, ask_coach
+from agents.coach_agent import build_agent_executor, ask_coach
 
 load_dotenv()
 
