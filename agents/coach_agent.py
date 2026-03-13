@@ -12,11 +12,6 @@ itself (not fixable by changing agent constructors). It's a warning only —
 the agent runs correctly. Track: https://github.com/langchain-ai/langchain/issues
 """
 
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage, AIMessage
