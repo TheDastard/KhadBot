@@ -10,11 +10,8 @@ Requires DISCORD_BOT_TOKEN in .env
 """
 
 import os
-import sys
 import discord
 
-# Ensure project root is on sys.path
-sys.path.insert(0, os.path.dirname(__file__))
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
