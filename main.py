@@ -7,13 +7,6 @@ Run: python main.py
 Supports multi-turn conversation — type 'quit' to exit, 'reset' to clear history.
 """
 
-import sys
-import os
-
-# Ensure the project root is on sys.path so `agent` and `tools` are importable
-# regardless of which directory python is invoked from.
-sys.path.insert(0, os.path.dirname(__file__))
-
 from langchain_core.messages import HumanMessage, AIMessage
 from agents.coach_agent import build_agent_executor, ask_coach
 

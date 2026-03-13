@@ -1,25 +1,29 @@
 """
 tools/wow_tools.py
-
-Stubbed implementations of the four core WoW coaching tools.
-
-Each tool is decorated with @tool so LangChain's ReAct agent can call them.
-Replace the stub bodies with real API/SimC/RAG calls as you build out each layer.
+ 
+Central tool registry for KhadBot.
+ 
+As each tool moves from stub to real implementation it gets its own module
+and is imported here. The agent imports TOOLS from this file only — it never
+needs to know which tools are real vs stubbed.
+ 
+Status:
+  get_character_raiderio  — REAL  (tools/raiderio_tool.py)
+  get_warcraftlogs_report — stub
+  run_simc                — stub
+  search_guide_rag        — stub
 """
 
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
+# Real implementations
+from tools.raiderio_tool import get_character_raiderio  # noqa: F401  (re-exported)
+
 
 # ---------------------------------------------------------------------------
-# Input schemas — gives the agent clear descriptions of each parameter
+# Stub input schemas
 # ---------------------------------------------------------------------------
-
-class CharacterInput(BaseModel):
-    name: str = Field(description="Character name, e.g. 'Thralladin'")
-    realm: str = Field(description="Realm slug, e.g. 'area-52'")
-    region: str = Field(description="Region code: 'us', 'eu', 'kr', 'tw'")
-
 
 class WarcraftLogsInput(BaseModel):
     report_id: str = Field(description="WarcraftLogs report code, e.g. 'aAbBcC123456'")
@@ -48,37 +52,6 @@ class GuideRAGInput(BaseModel):
 # ---------------------------------------------------------------------------
 # Tool implementations (stubbed)
 # ---------------------------------------------------------------------------
-
-@tool("get_character_raiderio", args_schema=CharacterInput)
-def get_character_raiderio(name: str, realm: str, region: str) -> dict:
-    """
-    Fetch a character's Raider.IO profile: Mythic+ score, highest key completed,
-    and current tier raid progression. Use this to understand a player's overall
-    progression level before diving into performance analysis.
-    """
-    # TODO: Replace with real Raider.IO REST call
-    # GET https://raider.io/api/v1/characters/profile
-    #   ?region={region}&realm={realm}&name={name}
-    #   &fields=mythic_plus_scores_by_season:current,raid_progression
-    return {
-        "_stub": True,
-        "name": name,
-        "realm": realm,
-        "region": region,
-        "mythic_plus_score": 2850,
-        "highest_key_completed": {"dungeon": "Ara-Kara, City of Echoes", "level": 12},
-        "raid_progression": {
-            "nerub-ar-palace": {
-                "summary": "8/8 Heroic",
-                "heroic_bosses_killed": 8,
-                "mythic_bosses_killed": 2,
-            }
-        },
-        "class": "Paladin",
-        "spec": "Retribution",
-        "item_level": 639,
-    }
-
 
 @tool("get_warcraftlogs_report", args_schema=WarcraftLogsInput)
 def get_warcraftlogs_report(
