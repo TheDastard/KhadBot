@@ -67,9 +67,6 @@ install-dev:
 
 
 # ── Entry points ────────────────────────────────────────────────────────────
-bot:
-	$(VENV_PYTHON) main.py bot
-
 cli:
 	$(VENV_PYTHON) main.py cli
 
