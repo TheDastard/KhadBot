@@ -1,5 +1,5 @@
 """
-agents/coach.py
+agent/coach.py
 
 Core coaching agent for KhadBot.
 
@@ -14,27 +14,11 @@ the agent runs correctly. Track: https://github.com/langchain-ai/langchain/issue
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 
-from tools.wow_tools import (
-    get_character_raiderio,
-    get_warcraftlogs_report,
-    run_simc,
-    search_guide_rag,
-)
+from tools import TOOLS
 
 load_dotenv()
-
-# ---------------------------------------------------------------------------
-# Tool registry
-# ---------------------------------------------------------------------------
-
-TOOLS = [
-    get_character_raiderio,
-    get_warcraftlogs_report,
-    run_simc,
-    search_guide_rag,
-]
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -68,12 +52,14 @@ When tools return data marked "_stub": true, treat the values as real for coachi
 # Agent factory
 # ---------------------------------------------------------------------------
 
+
 def build_agent_executor(verbose: bool = True):
     """
     Build and return a KhadBot agent using langchain.agents.create_agent,
     the current recommended LangChain agent entry point.
     """
-    from utils.llm_factory import get_llm
+    from llm_factory import get_llm
+
     llm = get_llm()
 
     agent = create_agent(
@@ -88,6 +74,7 @@ def build_agent_executor(verbose: bool = True):
 # ---------------------------------------------------------------------------
 # Single-turn helper (used by CLI and Discord bot)
 # ---------------------------------------------------------------------------
+
 
 def ask_coach(
     agent,
@@ -116,9 +103,7 @@ def ask_coach(
 
     # Collect any tool call steps from the message history
     steps = [
-        (m.name, m.content)
-        for m in output_messages
-        if hasattr(m, "type") and m.type == "tool"
+        (m.name, m.content) for m in output_messages if hasattr(m, "type") and m.type == "tool"
     ]
 
     return {"answer": answer, "steps": steps}

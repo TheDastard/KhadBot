@@ -1,11 +1,14 @@
 """
-utils/llm_factory.py
+llm_factory.py
 
-ToDo
+Singleton responsible for returning a chat model for a given provider.
+
+Provider is resolved from: argument > LLM_PROVIDER env var > 'ollama'
 """
 
-import os
 import logging
+import os
+
 from langchain_core.language_models import BaseChatModel
 
 logger = logging.getLogger(__name__)
@@ -13,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class LLMProviderError(Exception):
     """Raised when an LLM provider cannot be initialized or reached."""
+
     pass
 
 
@@ -20,10 +24,7 @@ def _check_anthropic_key() -> str:
     """Verify ANTHROPIC_API_KEY is set and return it."""
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise LLMProviderError(
-            "ANTHROPIC_API_KEY is not set. "
-            "Add it to your .env file."
-        )
+        raise LLMProviderError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
     return api_key
 
 
@@ -31,10 +32,7 @@ def _check_openai_key() -> str:
     """Verify OPENAI_API_KEY is set and return it."""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise LLMProviderError(
-            "OPENAI_API_KEY is not set. "
-            "Add it to your .env file."
-        )
+        raise LLMProviderError("OPENAI_API_KEY is not set. Add it to your .env file.")
     return api_key
 
 
@@ -43,8 +41,7 @@ def _check_groq_key() -> str:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise LLMProviderError(
-            "GROQ_API_KEY is not set. "
-            "Get a key at console.groq.com and add it to your .env file."
+            "GROQ_API_KEY is not set. Get a key at console.groq.com and add it to your .env file."
         )
     return api_key
 
@@ -53,17 +50,14 @@ def _check_ollama(model: str) -> None:
     """Verify Ollama is running and the requested model is available."""
     try:
         import httpx
+
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         response = httpx.get(f"{base_url}/api/tags", timeout=5.0)
         response.raise_for_status()
     except httpx.ConnectError:
-        raise LLMProviderError(
-            f"Ollama is not running. Start it with: ollama serve"
-        )
+        raise LLMProviderError("Ollama is not running. Start it with: ollama serve")
     except httpx.TimeoutException:
-        raise LLMProviderError(
-            f"Ollama did not respond within 5 seconds. Is it running?"
-        )
+        raise LLMProviderError("Ollama did not respond within 5 seconds. Is it running?")
     except Exception as e:
         raise LLMProviderError(f"Could not reach Ollama: {e}")
 
@@ -103,6 +97,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
         model = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
         try:
             from langchain_anthropic import ChatAnthropic
+
             llm = ChatAnthropic(model=model, temperature=0)
             logger.info(f"Using Anthropic model: {model}")
             return llm
@@ -116,31 +111,30 @@ def get_llm(provider: str = None) -> BaseChatModel:
         model = os.getenv("LLM_MODEL", "gpt-4o")
         try:
             from langchain_openai import ChatOpenAI
+
             llm = ChatOpenAI(model=model, temperature=0)
             logger.info(f"Using OpenAI model: {model}")
             return llm
         except Exception as e:
-            raise LLMProviderError(
-                f"Failed to initialize OpenAI client for model '{model}': {e}"
-            )
+            raise LLMProviderError(f"Failed to initialize OpenAI client for model '{model}': {e}")
 
     elif provider == "groq":
         _check_groq_key()
         model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
         try:
             from langchain_groq import ChatGroq
+
             llm = ChatGroq(model=model, temperature=0)
             logger.info(f"Using Groq model: {model}")
             return llm
         except Exception as e:
-            raise LLMProviderError(
-                f"Failed to initialize Groq client for model '{model}': {e}"
-            )
+            raise LLMProviderError(f"Failed to initialize Groq client for model '{model}': {e}")
 
     elif provider == "ollama":
         model = os.getenv("LLM_MODEL", "qwen3:8b")
         _check_ollama(model)
         from langchain_ollama import ChatOllama
+
         logger.info(f"Using Ollama model: {model}")
         return ChatOllama(
             model=model,

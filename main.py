@@ -8,7 +8,7 @@ Supports multi-turn conversation — type 'quit' to exit, 'reset' to clear histo
 """
 
 from langchain_core.messages import HumanMessage, AIMessage
-from agents.coach_agent import build_agent_executor, ask_coach
+from agent.coach import build_agent_executor, ask_coach
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
 
         result = ask_coach(executor, user_input, chat_history)
 
-        print(f"\nCoach: {result['answer']}\n")
+        print(f"\nKhadBot: {result['answer']}\n")
 
         # Accumulate history for multi-turn context
         chat_history.append(HumanMessage(content=user_input))

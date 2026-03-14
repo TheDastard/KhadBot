@@ -10,9 +10,8 @@ Structure:
 """
 
 import httpx
-from pydantic import BaseModel, Field
 from langchain_core.tools import tool
-
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -22,13 +21,15 @@ BASE_URL = "https://raider.io/api/v1"
 
 # Fields we request from the profile endpoint.
 # Each comma-separated value maps to a top-level key in the response.
-PROFILE_FIELDS = ",".join([
-    "gear",
-    "mythic_plus_scores_by_season:current",
-    "mythic_plus_best_runs:all",
-    "mythic_plus_highest_level_runs",
-    "raid_progression",
-])
+PROFILE_FIELDS = ",".join(
+    [
+        "gear",
+        "mythic_plus_scores_by_season:current",
+        "mythic_plus_best_runs:all",
+        "mythic_plus_highest_level_runs",
+        "raid_progression",
+    ]
+)
 
 # Valid regions accepted by the API
 VALID_REGIONS = {"us", "eu", "kr", "tw"}
@@ -38,18 +39,23 @@ VALID_REGIONS = {"us", "eu", "kr", "tw"}
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class RaiderIOError(Exception):
     """Raised when the Raider.IO API returns an error or unexpected shape."""
+
     pass
+
 
 class CharacterNotFoundError(RaiderIOError):
     """Raised when the character doesn't exist or has no Raider.IO profile."""
+
     pass
 
 
 # ---------------------------------------------------------------------------
 # HTTP client
 # ---------------------------------------------------------------------------
+
 
 class RaiderIOClient:
     """
@@ -111,9 +117,7 @@ class RaiderIOClient:
             )
 
         if not resp.is_success:
-            raise RaiderIOError(
-                f"Raider.IO API error {resp.status_code}: {resp.text[:200]}"
-            )
+            raise RaiderIOError(f"Raider.IO API error {resp.status_code}: {resp.text[:200]}")
 
         return resp.json()
 
@@ -121,6 +125,7 @@ class RaiderIOClient:
 # ---------------------------------------------------------------------------
 # Response normalizer
 # ---------------------------------------------------------------------------
+
 
 def normalize_profile(raw: dict) -> dict:
     """
@@ -192,6 +197,7 @@ def normalize_profile(raw: dict) -> dict:
 # Input schema
 # ---------------------------------------------------------------------------
 
+
 class CharacterInput(BaseModel):
     name: str = Field(description="Character name, e.g. 'Thralladin'")
     realm: str = Field(description="Realm slug, e.g. 'area-52'")
@@ -201,6 +207,7 @@ class CharacterInput(BaseModel):
 # ---------------------------------------------------------------------------
 # LangChain tool
 # ---------------------------------------------------------------------------
+
 
 @tool("get_character_raiderio", args_schema=CharacterInput)
 def get_character_raiderio(name: str, realm: str, region: str) -> dict:
@@ -214,7 +221,9 @@ def get_character_raiderio(name: str, realm: str, region: str) -> dict:
     if region not in VALID_REGIONS:
         return {
             "error": True,
-            "message": f"Invalid region '{region}'. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
+            "message": (
+                f"Invalid region '{region}'. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
+            ),
         }
 
     try:

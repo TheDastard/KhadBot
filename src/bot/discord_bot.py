@@ -1,5 +1,5 @@
 """
-discord_bot.py
+bot/discord_bot.py
 
 Discord bot interface for the WoW Coaching Agent.
 Supports slash commands for structured input and free-text questions in DMs
@@ -10,14 +10,14 @@ Requires DISCORD_BOT_TOKEN in .env
 """
 
 import os
-import discord
 
+import discord
 from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
-from agents.coach_agent import build_agent_executor, ask_coach
+from agent.coach import ask_coach, build_agent_executor
 
 load_dotenv()
 
@@ -51,6 +51,7 @@ async def on_ready():
 # Slash commands
 # ---------------------------------------------------------------------------
 
+
 @bot.tree.command(name="analyze", description="Analyze a WarcraftLogs report for a character")
 @app_commands.describe(
     report="WarcraftLogs report code (e.g. aAbBcC123456)",
@@ -65,7 +66,10 @@ async def analyze(
 ):
     await interaction.response.defer(thinking=True)
     boss_clause = f" focusing on {boss}" if boss else ""
-    query = f"Analyze the WarcraftLogs report {report} for {character}{boss_clause}. What are the top things they should improve?"
+    query = (
+        f"Analyze the WarcraftLogs report {report} for {character}{boss_clause}. "
+        f"What are the top things they should improve?"
+    )
     result = await _run_coach(interaction.user.id, query)
     await interaction.followup.send(result)
 
@@ -100,7 +104,10 @@ async def character(
     region: str = "us",
 ):
     await interaction.response.defer(thinking=True)
-    query = f"Give me an overview of {name}-{realm} ({region}). What's their progression level and M+ score?"
+    query = (
+        f"Give me an overview of {name}-{realm} ({region}). "
+        f"What's their progression level and M+ score?"
+    )
     result = await _run_coach(interaction.user.id, query)
     await interaction.followup.send(result)
 
@@ -117,6 +124,7 @@ async def reset(interaction: discord.Interaction):
 
 COACHING_CHANNEL_NAME = "wow-coach"  # change to match your server channel name
 
+
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
@@ -124,8 +132,7 @@ async def on_message(message: discord.Message):
 
     is_dm = isinstance(message.channel, discord.DMChannel)
     is_coaching_channel = (
-        hasattr(message.channel, "name")
-        and message.channel.name == COACHING_CHANNEL_NAME
+        hasattr(message.channel, "name") and message.channel.name == COACHING_CHANNEL_NAME
     )
 
     if not (is_dm or is_coaching_channel):
@@ -146,16 +153,16 @@ async def on_message(message: discord.Message):
 # Shared async helper
 # ---------------------------------------------------------------------------
 
+
 async def _run_coach(user_id: int, query: str) -> str:
     """Run the coaching agent for a user and update their history."""
     history = user_histories.get(user_id, [])
 
     # AgentExecutor is synchronous; run in a thread executor to avoid blocking
     import asyncio
+
     loop = asyncio.get_event_loop()
-    result = await loop.run_in_executor(
-        None, lambda: ask_coach(executor, query, history)
-    )
+    result = await loop.run_in_executor(None, lambda: ask_coach(executor, query, history))
 
     # Update history
     user_histories[user_id] = history + [
