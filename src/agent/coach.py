@@ -80,6 +80,7 @@ def ask_coach(
     agent,
     user_message: str,
     chat_history: list | None = None,
+    callbacks: list | None = None
 ) -> dict:
     """
     Run one turn of the coaching conversation.
@@ -95,7 +96,10 @@ def ask_coach(
     messages = list(chat_history or [])
     messages.append(HumanMessage(content=user_message))
 
-    result = agent.invoke({"messages": messages})
+    result = agent.invoke(
+        {"messages": messages},
+        config={"callbacks": callbacks or []},
+    )
 
     # create_agent returns a dict with a "messages" list; the last message is the answer
     output_messages = result.get("messages", [])

@@ -21,6 +21,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cli = [
+    # --- CLI ---
+    "rich>=13.7.0",               # ToDo
+    "prompt_toolkit>=3.0.0",      # ToDo    
+]
+
 dev = [
     # --- Core test runner ---
     "pytest>=8.0.0",
@@ -35,10 +41,17 @@ dev = [
     "ruff>=0.4.0",              # fast linter + formatter; replaces flake8 + black
     "mypy>=1.10.0",             # static type checking
 
+    # --- CLI ---
+    "rich>=13.7.0",               # ToDo
+    "prompt_toolkit>=3.0.0",      # ToDo
+
     # --- Local dev convenience ---
     "python-dotenv>=1.0.0",   # load .env for local development
     "ipython>=8.0.0",           # nicer REPL for debugging agent traces
 ]
+
+[project.scripts]
+khadbot = "cli.cli:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
