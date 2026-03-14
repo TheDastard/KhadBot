@@ -34,9 +34,6 @@ dev = [
     # --- HTTP mocking ---
     "respx>=0.21.0",            # async-native HTTP mocking for httpx
 
-    # --- Discord bot testing ---
-    "dpytest>=0.7.0",           # test discord.py bots without a live gateway connection
-
     # --- Linting / formatting ---
     "ruff>=0.4.0",              # fast linter + formatter; replaces flake8 + black
     "mypy>=1.10.0",             # static type checking
