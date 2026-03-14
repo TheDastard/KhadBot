@@ -1,0 +1,89 @@
+[project]
+name = "khadbot"
+version = "0.1.0"
+description = "KhadBot — Agentic WoW Assistant"
+requires-python = ">=3.12"
+dependencies = [
+    # --- LangChain / agent framework ---
+    "langchain>=0.3.0",
+    "langchain-core>=0.3.0",      # base runnables, tools, message types
+    "langchain-anthropic>=0.3.0", # Claude Sonnet provider
+    "langchain-openai>=0.2.0",    # OpenAI provider + embeddings
+    "langchain-groq>=1.1.2",      # Groq provider (fast free-tier inference)
+    "langchain-ollama>=1.0.1",    # Ollama provider (local models)
+    "langgraph>=0.2.0",           # graph orchestration; used in production phase
+
+    # --- Data validation ---
+    "pydantic>=2.0.0",            # tool argument schemas + config models
+
+    # --- HTTP client ---
+    "httpx>=0.27.0",              # async HTTP for Raider.IO, WarcraftLogs, Wipefest
+
+    # --- Discord interface ---
+    "discord.py>=2.3.0",          # bot framework; slash commands + message handling
+]
+
+[project.optional-dependencies]
+dev = [
+    # --- Core test runner ---
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",   # async support for discord.py + LangChain async calls
+    "pytest-mock>=3.14.0",      # cleaner mocker fixture over raw unittest.mock
+    "pytest-cov>=5.0.0",        # coverage reporting; run with --cov=src
+
+    # --- HTTP mocking ---
+    "respx>=0.21.0",            # async-native HTTP mocking for httpx
+
+    # --- Discord bot testing ---
+    "dpytest>=0.7.0",           # test discord.py bots without a live gateway connection
+
+    # --- Linting / formatting ---
+    "ruff>=0.4.0",              # fast linter + formatter; replaces flake8 + black
+    "mypy>=1.10.0",             # static type checking
+
+    # --- Local dev convenience ---
+    "python-dotenv>=1.0.0",   # load .env for local development
+    "ipython>=8.0.0",           # nicer REPL for debugging agent traces
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.pytest.ini_options]
+# Auto-mode means you don't need @pytest.mark.asyncio on every async test.
+# Required from day one — discord.py and many LangChain components are async.
+asyncio_mode = "auto"
+
+# Where pytest looks for tests
+testpaths = ["tests"]
+
+# Coverage: measure src/, report missing lines, also write HTML report
+addopts = """
+    --cov=src
+    --cov-report=term-missing
+    --cov-report=html:htmlcov
+    -v"""
+
+# Treat these warnings as errors so they don't silently mask issues
+filterwarnings = [
+    "error::DeprecationWarning",
+    "error::PendingDeprecationWarning",
+    # Suppress known Pydantic v1 UserWarnings from langchain_core internals
+    "ignore::UserWarning:pydantic",
+    "ignore::UserWarning:langchain_core",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
