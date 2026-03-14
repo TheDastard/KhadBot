@@ -7,49 +7,47 @@ Run: python main.py
 Supports multi-turn conversation — type 'quit' to exit, 'reset' to clear history.
 """
 
+import asyncio
+import sys
+
 from langchain_core.messages import HumanMessage, AIMessage
 from agent.coach import build_agent_executor, ask_coach
 
-
 def main():
-    print("=" * 60)
-    print("  KhadBot — WoW Coaching Agent (Stub Mode)")
-    print("  Type 'quit' to exit, 'reset' to clear chat history")
-    print("=" * 60)
-    print()
+    mode = sys.argv[1] if len(sys.argv) > 1 else "cli"
+
+    if mode == "cli":
+        _run_cli()
+    else:
+        print(f"Unknown mode: {mode}.") # Use 'cli' or 'bot'.
+        sys.exit(1)
+
+def _run_cli():
+    from cli import run_cli
 
     executor = build_agent_executor(verbose=True)
     chat_history: list = []
 
-    while True:
-        try:
-            user_input = input("You: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nGoodbye!")
-            break
+    async def agent_fn(question: str, callbacks: list) -> str:
+        """
+        Bridge between the Rich CLI and ask_coach.
 
-        if not user_input:
-            continue
-        if user_input.lower() == "quit":
-            print("Goodbye!")
-            break
-        if user_input.lower() == "reset":
-            chat_history = []
-            print("[Chat history cleared]\n")
-            continue
+        ask_coach is currently synchronous (agent.invoke is sunc).
+        We run it in a thread executor so it doesn't block the event loop
+        and freeze the live tool panel.
+        """
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: ask_coach(executor, question, chat_history, callbacks=callbacks)
+        )
 
-        result = ask_coach(executor, user_input, chat_history)
-
-        print(f"\nKhadBot: {result['answer']}\n")
-
-        # Accumulate history for multi-turn context
-        chat_history.append(HumanMessage(content=user_input))
+        chat_history.append(HumanMessage(content=question))
         chat_history.append(AIMessage(content=result["answer"]))
 
-        # Show which tools were called (handy during development)
-        if result["steps"]:
-            tools_used = [step[0] for step in result["steps"]]
-            print(f"  [tools called: {', '.join(tools_used)}]\n")
+        return result["answer"]
+    
+    asyncio.run(run_cli(agent_fn))
 
 
 if __name__ == "__main__":
