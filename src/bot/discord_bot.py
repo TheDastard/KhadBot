@@ -9,8 +9,6 @@ Run: python discord_bot.py
 Requires DISCORD_BOT_TOKEN in .env
 """
 
-import os
-
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -18,6 +16,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 from agent.coach import ask_coach, build_agent_executor
+from config import get_config
 
 load_dotenv()
 
@@ -193,7 +192,8 @@ def _chunk_message(text: str, limit: int = 1900) -> list[str]:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    token = os.getenv("DISCORD_BOT_TOKEN")
-    if not token:
+    cfg = get_config()
+    discord_cfg = cfg.discord
+    if not discord_cfg.bot_token:
         raise ValueError("DISCORD_BOT_TOKEN not set in .env")
-    bot.run(token)
+    bot.run(discord_cfg.bot_token)
