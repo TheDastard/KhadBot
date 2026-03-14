@@ -7,9 +7,10 @@ Provider is resolved from: argument > LLM_PROVIDER env var > 'ollama'
 """
 
 import logging
-import os
 
 from langchain_core.language_models import BaseChatModel
+
+from config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -20,38 +21,16 @@ class LLMProviderError(Exception):
     pass
 
 
-def _check_anthropic_key() -> str:
-    """Verify ANTHROPIC_API_KEY is set and return it."""
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise LLMProviderError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
-    return api_key
+def _check_ollama(model: str, base_url: str) -> None:
+    """
+    Verify Ollama is running and the requested model is available.
 
-
-def _check_openai_key() -> str:
-    """Verify OPENAI_API_KEY is set and return it."""
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise LLMProviderError("OPENAI_API_KEY is not set. Add it to your .env file.")
-    return api_key
-
-
-def _check_groq_key() -> str:
-    """Verify GROQ_API_KEY is set and return it."""
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise LLMProviderError(
-            "GROQ_API_KEY is not set. Get a key at console.groq.com and add it to your .env file."
-        )
-    return api_key
-
-
-def _check_ollama(model: str) -> None:
-    """Verify Ollama is running and the requested model is available."""
+    This is a runtime check, not a config check - it belongs here
+    rather than in config.py because it makes a live network call.
+    """
     try:
         import httpx
 
-        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         response = httpx.get(f"{base_url}/api/tags", timeout=5.0)
         response.raise_for_status()
     except httpx.ConnectError:
@@ -62,7 +41,6 @@ def _check_ollama(model: str) -> None:
         raise LLMProviderError(f"Could not reach Ollama: {e}")
 
     available = [m["name"] for m in response.json().get("models", [])]
-    # Normalize: Ollama may store "qwen3:8b" but also "qwen3:8b-instruct" etc.
     if not any(model in m for m in available):
         available_str = ", ".join(available) if available else "none pulled yet"
         raise LLMProviderError(
@@ -89,63 +67,84 @@ def get_llm(provider: str = None) -> BaseChatModel:
             missing, or the requested model is not available.
         ValueError: If an unrecognized provider name is given.
     """
-    provider = provider or os.getenv("LLM_PROVIDER", "ollama")
+    cfg = get_config()
+    llm_cfg = cfg.llm
+
+    provider = provider or llm_cfg.provider.value
     logger.debug(f"Initializing LLM for provider: {provider}")
 
     if provider == "anthropic":
-        _check_anthropic_key()
-        model = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
+        if not llm_cfg.anthropic_api_key:
+            raise LLMProviderError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
         try:
             from langchain_anthropic import ChatAnthropic
 
-            llm = ChatAnthropic(model=model, temperature=0)
-            logger.info(f"Using Anthropic model: {model}")
-            return llm
+            logger.info(f"Using Anthropic model: {llm_cfg.anthropic_model}")
+            return ChatAnthropic(
+                model=llm_cfg.anthropic_model,
+                api_key=llm_cfg.anthropic_api_key,
+                temperature=llm_cfg.temperature,
+            )
         except Exception as e:
             raise LLMProviderError(
-                f"Failed to initialize Anthropic client for model '{model}': {e}"
+                f"Failed to initialize Anthropic client for model '{llm_cfg.anthropic_model}': {e}"
             )
 
     elif provider == "openai":
-        _check_openai_key()
-        model = os.getenv("LLM_MODEL", "gpt-4o")
+        if not llm_cfg.openai_api_key:
+            raise LLMProviderError("OPENAI_API_KEY is not set. Add it to your .env file.")
         try:
             from langchain_openai import ChatOpenAI
 
-            llm = ChatOpenAI(model=model, temperature=0)
-            logger.info(f"Using OpenAI model: {model}")
-            return llm
+            logger.info(f"Using OpenAI model: {llm_cfg.openai_model}")
+            return ChatOpenAI(
+                model=llm_cfg.openai_model,
+                api_key=llm_cfg.openai_api_key,
+                temperature=llm_cfg.temperature,
+            )
         except Exception as e:
-            raise LLMProviderError(f"Failed to initialize OpenAI client for model '{model}': {e}")
+            raise LLMProviderError(
+                f"Failed to initialize OpenAI client for model '{llm_cfg.openai_model}': {e}"
+            )
 
     elif provider == "groq":
-        _check_groq_key()
-        model = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+        if not llm_cfg.groq_api_key:
+            raise LLMProviderError("GROQ_API_KEY is not set. Add it to your .env file.")
         try:
             from langchain_groq import ChatGroq
 
-            llm = ChatGroq(model=model, temperature=0)
-            logger.info(f"Using Groq model: {model}")
+            logger.info(f"Using Groq model: {llm_cfg.groq_model}")
+            llm = ChatGroq(
+                model=llm_cfg.groq_model,
+                api_key=llm_cfg.groq_api_key,
+                temperature=llm_cfg.temperature,
+            )
             return llm
         except Exception as e:
-            raise LLMProviderError(f"Failed to initialize Groq client for model '{model}': {e}")
+            raise LLMProviderError(
+                f"Failed to initialize Groq client for model '{llm_cfg.groq_model}': {e}"
+            )
 
     elif provider == "ollama":
-        model = os.getenv("LLM_MODEL", "qwen3:8b")
-        _check_ollama(model)
-        from langchain_ollama import ChatOllama
+        _check_ollama(llm_cfg.ollama_model, llm_cfg.ollama_base_url)
+        try:
+            from langchain_ollama import ChatOllama
 
-        logger.info(f"Using Ollama model: {model}")
-        return ChatOllama(
-            model=model,
-            temperature=0,
-            model_kwargs={"think": False},  # disable Qwen3 thinking mode
-        )
+            logger.info(f"Using Ollama model: {llm_cfg.ollama_model}")
+            return ChatOllama(
+                model=llm_cfg.ollama_model,
+                base_url=llm_cfg.ollama_base_url,
+                temperature=llm_cfg.temperature,
+                model_kwargs={"think": False},  # disable Qwen3 thinking mode
+            )
+        except Exception as e:
+            raise LLMProviderError(
+                f"Failed to initialize Ollama client for model '{llm_cfg.ollama_model}': {e}"
+            )
 
     else:
-        available = ["anthropic", "openai", "groq", "ollama"]
         raise ValueError(
             f"Unknown provider: '{provider}'. "
-            f"Valid options: {', '.join(available)}. "
+            f"Valid options: anthropic, openai, groq, ollama. "
             f"Set LLM_PROVIDER in your .env file."
         )
