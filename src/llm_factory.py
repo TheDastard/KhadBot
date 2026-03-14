@@ -33,20 +33,18 @@ def _check_ollama(model: str, base_url: str) -> None:
 
         response = httpx.get(f"{base_url}/api/tags", timeout=5.0)
         response.raise_for_status()
-    except httpx.ConnectError:
-        raise LLMProviderError("Ollama is not running. Start it with: ollama serve")
-    except httpx.TimeoutException:
-        raise LLMProviderError("Ollama did not respond within 5 seconds. Is it running?")
+    except httpx.ConnectError as e:
+        raise LLMProviderError("Ollama is not running. Start it with: ollama serve") from e
+    except httpx.TimeoutException as e:
+        raise LLMProviderError("Ollama did not respond within 5 seconds. Is it running?") from e
     except Exception as e:
-        raise LLMProviderError(f"Could not reach Ollama: {e}")
+        raise LLMProviderError(f"Could not reach Ollama: {e}") from e
 
     available = [m["name"] for m in response.json().get("models", [])]
     if not any(model in m for m in available):
         available_str = ", ".join(available) if available else "none pulled yet"
         raise LLMProviderError(
-            f"Model '{model}' not found in Ollama. "
-            f"Pull it with: ollama pull {model}\n"
-            f"Available models: {available_str}"
+            f"Model '{model}' not found in Ollama. Pull it with: ollama pull {model}\nAvailable models: {available_str}"
         )
 
 
@@ -88,7 +86,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
         except Exception as e:
             raise LLMProviderError(
                 f"Failed to initialize Anthropic client for model '{llm_cfg.anthropic_model}': {e}"
-            )
+            ) from e
 
     elif provider == "openai":
         if not llm_cfg.openai_api_key:
@@ -103,9 +101,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
                 temperature=llm_cfg.temperature,
             )
         except Exception as e:
-            raise LLMProviderError(
-                f"Failed to initialize OpenAI client for model '{llm_cfg.openai_model}': {e}"
-            )
+            raise LLMProviderError(f"Failed to initialize OpenAI client for model '{llm_cfg.openai_model}': {e}") from e
 
     elif provider == "groq":
         if not llm_cfg.groq_api_key:
@@ -121,9 +117,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
             )
             return llm
         except Exception as e:
-            raise LLMProviderError(
-                f"Failed to initialize Groq client for model '{llm_cfg.groq_model}': {e}"
-            )
+            raise LLMProviderError(f"Failed to initialize Groq client for model '{llm_cfg.groq_model}': {e}") from e
 
     elif provider == "ollama":
         _check_ollama(llm_cfg.ollama_model, llm_cfg.ollama_base_url)
@@ -138,9 +132,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
                 model_kwargs={"think": False},  # disable Qwen3 thinking mode
             )
         except Exception as e:
-            raise LLMProviderError(
-                f"Failed to initialize Ollama client for model '{llm_cfg.ollama_model}': {e}"
-            )
+            raise LLMProviderError(f"Failed to initialize Ollama client for model '{llm_cfg.ollama_model}': {e}") from e
 
     else:
         raise ValueError(
