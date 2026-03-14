@@ -13,9 +13,7 @@ from pydantic import BaseModel, Field
 
 
 class SimCInput(BaseModel):
-    simc_string: str = Field(
-        description="Full SimulationCraft export string (generated via the /simc addon command)"
-    )
+    simc_string: str = Field(description="Full SimulationCraft export string (generated via the /simc addon command)")
     comparison_item: str | None = Field(
         default=None,
         description="Optional: an item string or gear change to compare against the baseline",

@@ -121,39 +121,29 @@ class TestSystemPrompt:
 
 class TestAskCoachOutputShape:
     def test_returns_dict_with_answer_and_steps(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my character's IO score?")
         assert isinstance(result, dict)
         assert "answer" in result
         assert "steps" in result
 
     def test_answer_is_a_string(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my character's IO score?")
         assert isinstance(result["answer"], str)
 
     def test_answer_is_not_empty(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my character's IO score?")
         assert len(result["answer"].strip()) > 0
 
     def test_steps_is_a_list(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my character's IO score?")
         assert isinstance(result["steps"], list)
 
     def test_steps_entries_are_tuples(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my character's IO score?")
         for step in result["steps"]:
             assert isinstance(step, tuple)
@@ -275,9 +265,7 @@ class TestAgentErrorHandling:
 
 class TestMultiTurnContext:
     def test_chat_history_accepted_without_error(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         history = [
             HumanMessage(content="My character is Pyroblastus on Area 52 US."),
             AIMessage(content="Got it! I'll keep that in mind."),
@@ -287,16 +275,12 @@ class TestMultiTurnContext:
         assert isinstance(result, dict)
 
     def test_none_chat_history_defaults_gracefully(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my IO score?", chat_history=None)
         assert isinstance(result, dict)
 
     def test_empty_chat_history_defaults_gracefully(self):
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         result = ask_coach(agent, "What's my IO score?", chat_history=[])
         assert isinstance(result, dict)
 
@@ -305,9 +289,7 @@ class TestMultiTurnContext:
         Verify that chat_history messages are prepended to the invocation payload,
         not discarded. We check this by inspecting the agent's invoke call.
         """
-        agent, _ = _make_agent(
-            RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT}
-        )
+        agent, _ = _make_agent(RAIDERIO_THEN_ANSWER, {"get_character_raiderio": MOCK_RAIDERIO_RESULT})
         history = [HumanMessage(content="Context message")]
 
         with patch.object(agent, "invoke", wraps=agent.invoke) as mock_invoke:
@@ -326,17 +308,13 @@ class TestMultiTurnContext:
 class TestBuildAgentExecutor:
     def test_returns_invocable_agent(self):
         """build_agent_executor must return something with an .invoke() method."""
-        with patch(
-            "agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)
-        ):
+        with patch("agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)):
             agent = build_agent_executor(verbose=False)
         assert hasattr(agent, "invoke")
 
     def test_agent_is_built_with_tools(self):
         """Ensure the agent actually has tools bound — not just a bare LLM."""
-        with patch(
-            "agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)
-        ):
+        with patch("agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)):
             agent = build_agent_executor(verbose=False)
         # LangGraph agents expose their tool set; verify it's non-empty
         # (exact attribute varies by LangChain version — check common locations)

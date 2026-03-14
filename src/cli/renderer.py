@@ -1,5 +1,5 @@
 """
-renderer.py — Rich rendering helpers for the WoW Coaching Agent CLI.
+cli/renderer.py — Rich rendering helpers for the WoW Coaching Agent CLI.
 
 All visual output lives here. The agent and tool layers stay plain Python;
 they return structured data and this module decides how to display it.
@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from rich.columns import Columns
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
@@ -56,6 +55,7 @@ def render_parse(percentile: int, spec: str = "", boss: str = "") -> Text:
 # Welcome banner
 # ---------------------------------------------------------------------------
 
+
 def render_banner() -> None:
     banner_text = Text(justify="center")
     banner_text.append("⚔  ", style="quality.legendary")
@@ -65,17 +65,20 @@ def render_banner() -> None:
     subtitle = Text("Ask anything about your character, logs, or gear.", justify="center", style="ui.muted")
 
     console.print()
-    console.print(Panel(
-        f"{banner_text}\n{subtitle}",
-        border_style="bright_cyan",
-        padding=(1, 4),
-    ))
+    console.print(
+        Panel(
+            f"{banner_text}\n{subtitle}",
+            border_style="bright_cyan",
+            padding=(1, 4),
+        )
+    )
     console.print()
 
 
 # ---------------------------------------------------------------------------
 # Conversation rendering
 # ---------------------------------------------------------------------------
+
 
 def render_user_message(message: str) -> None:
     """Print the user's message in the conversation transcript."""
@@ -109,6 +112,7 @@ def render_agent_response(response: str) -> None:
 # Character context card
 # ---------------------------------------------------------------------------
 
+
 def render_character_card(
     name: str,
     realm: str,
@@ -130,7 +134,14 @@ def render_character_card(
     if raid_progress:
         table.add_row("Raid", raid_progress)
 
-    console.print(Panel(table, title="[ui.subheader]Character[/ui.subheader]", border_style="bright_blue", padding=(0, 1)))
+    console.print(
+        Panel(
+            table,
+            title="[ui.subheader]Character[/ui.subheader]",
+            border_style="bright_blue",
+            padding=(0, 1),
+        )
+    )
     console.print()
 
 
@@ -149,6 +160,7 @@ def _mplus_score_style(score: float) -> str:
 # ---------------------------------------------------------------------------
 # SimC results table
 # ---------------------------------------------------------------------------
+
 
 def render_simc_results(results: list[dict]) -> None:
     """
@@ -198,6 +210,7 @@ def render_simc_results(results: list[dict]) -> None:
 # Parse breakdown table
 # ---------------------------------------------------------------------------
 
+
 def render_parse_table(parses: list[dict]) -> None:
     """
     Render a WarcraftLogs parse breakdown.
@@ -235,6 +248,7 @@ def render_parse_table(parses: list[dict]) -> None:
 # ---------------------------------------------------------------------------
 # Error / warning helpers
 # ---------------------------------------------------------------------------
+
 
 def render_error(message: str, title: str = "Error") -> None:
     console.print(Panel(message, title=f"[ui.error]{title}[/ui.error]", border_style="red"))

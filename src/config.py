@@ -36,23 +36,15 @@ def _optional(key: str, default: str = "") -> str:
 
 @dataclass(frozen=True)
 class LLMConfig:
-    provider: LLMProvider = field(
-        default_factory=lambda: LLMProvider(_optional("LLM_PROVIDER", LLMProvider.OLLAMA))
-    )
+    provider: LLMProvider = field(default_factory=lambda: LLMProvider(_optional("LLM_PROVIDER", LLMProvider.OLLAMA)))
     anthropic_api_key: str = field(default_factory=lambda: _optional("ANTHROPIC_API_KEY"))
-    anthropic_model: str = field(
-        default_factory=lambda: _optional("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-    )
+    anthropic_model: str = field(default_factory=lambda: _optional("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"))
     openai_api_key: str = field(default_factory=lambda: _optional("OPENAI_API_KEY"))
     openai_model: str = field(default_factory=lambda: _optional("OPENAI_MODEL", "gpt-4o"))
     groq_api_key: str = field(default_factory=lambda: _optional("GROQ_API_KEY"))
-    groq_model: str = field(
-        default_factory=lambda: _optional("GROQ_MODEL", "llama-3.3-70b-versatile")
-    )
+    groq_model: str = field(default_factory=lambda: _optional("GROQ_MODEL", "llama-3.3-70b-versatile"))
     ollama_model: str = field(default_factory=lambda: _optional("OLLAMA_MODEL", "qwen3:8b"))
-    ollama_base_url: str = field(
-        default_factory=lambda: _optional("OLLAMA_BASE_URL", "http://localhost:11434")
-    )
+    ollama_base_url: str = field(default_factory=lambda: _optional("OLLAMA_BASE_URL", "http://localhost:11434"))
     temperature: float = field(default_factory=lambda: float(_optional("LLM_TEMPERATURE", "0")))
 
 
@@ -74,50 +66,36 @@ class WarcraftLogsConfig:
 @dataclass(frozen=True)
 class SimCConfig:
     binary_path: str = field(default_factory=lambda: _optional("SIMC_BINARY_PATH", "simc"))
-    timeout_seconds: int = field(
-        default_factory=lambda: int(_optional("SIMC_TIMEOUT_SECONDS", "120"))
-    )
+    timeout_seconds: int = field(default_factory=lambda: int(_optional("SIMC_TIMEOUT_SECONDS", "120")))
     max_concurrent: int = field(default_factory=lambda: int(_optional("SIMC_MAX_CONCURRENT", "2")))
 
 
 @dataclass(frozen=True)
 class WipefestConfig:
-    base_url: str = field(
-        default_factory=lambda: _optional("WIPEFEST_BASE_URL", "http://localhost:3001")
-    )
+    base_url: str = field(default_factory=lambda: _optional("WIPEFEST_BASE_URL", "http://localhost:3001"))
 
 
 @dataclass(frozen=True)
 class RAGConfig:
     embedding_backend: EmbeddingBackend = field(
-        default_factory=lambda: EmbeddingBackend(
-            _optional("EMBEDDING_BACKEND", EmbeddingBackend.LOCAL)
-        )
+        default_factory=lambda: EmbeddingBackend(_optional("EMBEDDING_BACKEND", EmbeddingBackend.LOCAL))
     )
     openai_api_key: str = field(default_factory=lambda: _optional("OPENAI_API_KEY"))
     embedding_model_openai: str = "text-embedding-3-small"
-    embedding_model_local: str = field(
-        default_factory=lambda: _optional("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-    )
+    embedding_model_local: str = field(default_factory=lambda: _optional("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2"))
     vector_store: VectorStore = field(
         default_factory=lambda: VectorStore(_optional("VECTOR_STORE", VectorStore.CHROMA))
     )
-    chroma_persist_dir: str = field(
-        default_factory=lambda: _optional("CHROMA_PERSIST_DIR", ".chroma")
-    )
+    chroma_persist_dir: str = field(default_factory=lambda: _optional("CHROMA_PERSIST_DIR", ".chroma"))
     pgvector_dsn: str = field(default_factory=lambda: _optional("PGVECTOR_DSN"))
     retrieval_top_k: int = field(default_factory=lambda: int(_optional("RETRIEVAL_TOP_K", "5")))
-    similarity_threshold: float = field(
-        default_factory=lambda: float(_optional("SIMILARITY_THRESHOLD", "0.5"))
-    )
+    similarity_threshold: float = field(default_factory=lambda: float(_optional("SIMILARITY_THRESHOLD", "0.5")))
 
 
 @dataclass(frozen=True)
 class ObservabilityConfig:
     langsmith_api_key: str = field(default_factory=lambda: _optional("LANGSMITH_API_KEY"))
-    langsmith_project: str = field(
-        default_factory=lambda: _optional("LANGSMITH_PROJECT", "wow-coaching-agent")
-    )
+    langsmith_project: str = field(default_factory=lambda: _optional("LANGSMITH_PROJECT", "wow-coaching-agent"))
     langchain_tracing: bool = field(
         default_factory=lambda: _optional("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     )

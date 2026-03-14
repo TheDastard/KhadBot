@@ -76,12 +76,7 @@ def build_agent_executor(verbose: bool = True):
 # ---------------------------------------------------------------------------
 
 
-def ask_coach(
-    agent,
-    user_message: str,
-    chat_history: list | None = None,
-    callbacks: list | None = None
-) -> dict:
+def ask_coach(agent, user_message: str, chat_history: list | None = None, callbacks: list | None = None) -> dict:
     """
     Run one turn of the coaching conversation.
 
@@ -106,8 +101,6 @@ def ask_coach(
     answer = output_messages[-1].content if output_messages else ""
 
     # Collect any tool call steps from the message history
-    steps = [
-        (m.name, m.content) for m in output_messages if hasattr(m, "type") and m.type == "tool"
-    ]
+    steps = [(m.name, m.content) for m in output_messages if hasattr(m, "type") and m.type == "tool"]
 
     return {"answer": answer, "steps": steps}

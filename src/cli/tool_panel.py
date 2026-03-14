@@ -1,5 +1,5 @@
 """
-tool_panel.py — Live-updating tool execution panel for the WoW Coaching Agent CLI.
+cli/tool_panel.py — Live-updating tool execution panel for the WoW Coaching Agent CLI.
 
 Usage
 -----
@@ -32,12 +32,10 @@ calls tools — no manual `.start_tool()` calls needed in that case:
 from __future__ import annotations
 
 import time
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any
 
-from rich.console import Group
 from rich.live import Live
 from rich.padding import Padding
 from rich.panel import Panel
@@ -53,10 +51,10 @@ from .console import console
 # ---------------------------------------------------------------------------
 
 TOOL_DISPLAY: dict[str, tuple[str, str]] = {
-    "get_character_raiderio":    ("🗺", "Raider.IO"),
-    "get_warcraftlogs_report":   ("📊", "WarcraftLogs"),
-    "run_simc":                  ("⚙", "SimulationCraft"),
-    "search_guide_rag":          ("📖", "Icy Veins Guide"),
+    "get_character_raiderio": ("🗺", "Raider.IO"),
+    "get_warcraftlogs_report": ("📊", "WarcraftLogs"),
+    "run_simc": ("⚙", "SimulationCraft"),
+    "search_guide_rag": ("📖", "Icy Veins Guide"),
 }
 
 _DEFAULT_ICON = "🔧"
@@ -71,11 +69,12 @@ def _display(tool_name: str) -> tuple[str, str]:
 # Internal state
 # ---------------------------------------------------------------------------
 
+
 class ToolState(Enum):
-    PENDING  = auto()
-    RUNNING  = auto()
-    DONE     = auto()
-    FAILED   = auto()
+    PENDING = auto()
+    RUNNING = auto()
+    DONE = auto()
+    FAILED = auto()
 
 
 @dataclass
@@ -96,6 +95,7 @@ class ToolEntry:
 # ---------------------------------------------------------------------------
 # Panel renderer
 # ---------------------------------------------------------------------------
+
 
 class ToolPanel:
     """
@@ -166,7 +166,7 @@ class ToolPanel:
             self._render(),
             console=console,
             refresh_per_second=10,
-            transient=False,   # keep panel visible after exit
+            transient=False,  # keep panel visible after exit
         )
         self._live.start()
         return self
@@ -197,9 +197,9 @@ class ToolPanel:
 
     def _render(self, done: bool = False) -> Panel:
         grid = Table.grid(padding=(0, 1))
-        grid.add_column(width=2)   # icon
+        grid.add_column(width=2)  # icon
         grid.add_column(width=16)  # tool label
-        grid.add_column()          # detail / result
+        grid.add_column()  # detail / result
         grid.add_column(width=6, justify="right")  # elapsed
 
         if not self._tools:

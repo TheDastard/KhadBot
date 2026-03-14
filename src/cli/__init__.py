@@ -9,9 +9,9 @@ Public surface:
     from cli import ToolPanelCallbackHandler  # LangChain integration
 """
 
+from . import renderer
 from .cli import run_cli
 from .console import console
-from . import renderer
 from .tool_panel import ToolPanel, ToolPanelCallbackHandler
 
 __all__ = [

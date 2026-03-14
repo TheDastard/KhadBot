@@ -221,9 +221,7 @@ def get_character_raiderio(name: str, realm: str, region: str) -> dict:
     if region not in VALID_REGIONS:
         return {
             "error": True,
-            "message": (
-                f"Invalid region '{region}'. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
-            ),
+            "message": f"Invalid region '{region}'. Must be one of: {', '.join(sorted(VALID_REGIONS))}",
         }
 
     try:
