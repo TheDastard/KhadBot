@@ -44,9 +44,7 @@ from tools.raiderio import (
 class TestRaiderIOClientHappyPath:
     @respx.mock
     def test_returns_parsed_json_on_200(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(200, json=MAGE_PROFILE_RAW))
         with RaiderIOClient() as client:
             result = client.get_character_profile("Pyroblastus", "area-52", "us")
         assert result["name"] == "Pyroblastus"
@@ -114,9 +112,7 @@ class TestRaiderIOClientErrorHandling:
 
     @respx.mock
     def test_500_raises_raiderio_error(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(500, json=SERVER_ERROR_BODY)
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(500, json=SERVER_ERROR_BODY))
         with RaiderIOClient() as client:
             with pytest.raises(RaiderIOError) as exc_info:
                 client.get_character_profile("Pyroblastus", "area-52", "us")
@@ -125,9 +121,7 @@ class TestRaiderIOClientErrorHandling:
     @respx.mock
     def test_500_is_not_character_not_found(self):
         """500 should raise RaiderIOError, not the more specific subclass."""
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(500, json=SERVER_ERROR_BODY)
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(500, json=SERVER_ERROR_BODY))
         with RaiderIOClient() as client:
             with pytest.raises(RaiderIOError) as exc_info:
                 client.get_character_profile("Pyroblastus", "area-52", "us")
@@ -135,9 +129,7 @@ class TestRaiderIOClientErrorHandling:
 
     @respx.mock
     def test_network_error_raises_raiderio_error(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(side_effect=httpx.ConnectError("Connection refused"))
         with RaiderIOClient() as client:
             with pytest.raises(RaiderIOError) as exc_info:
                 client.get_character_profile("Pyroblastus", "area-52", "us")
@@ -146,9 +138,7 @@ class TestRaiderIOClientErrorHandling:
     @respx.mock
     def test_400_with_malformed_json_body_still_raises(self):
         """If the error body isn't valid JSON, should still raise CharacterNotFoundError."""
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(400, content=b"not json at all")
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(400, content=b"not json at all"))
         with RaiderIOClient() as client:
             with pytest.raises(CharacterNotFoundError):
                 client.get_character_profile("BadName", "area-52", "us")
@@ -291,12 +281,8 @@ class TestNormalizeProfileEdgeCases:
 class TestGetCharacterRaiderioTool:
     @respx.mock
     def test_valid_call_returns_normalized_profile(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": "us"}
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(200, json=MAGE_PROFILE_RAW))
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": "us"})
         assert isinstance(result, dict)
         assert result.get("error") is not True
         assert result["name"] == "Pyroblastus"
@@ -305,33 +291,23 @@ class TestGetCharacterRaiderioTool:
     @pytest.mark.parametrize("region", ["xx", "na", "EU ", "USA", "", "  "])
     def test_invalid_region_returns_error_dict(self, region):
         """Invalid regions must return an error dict — never raise."""
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": region}
-        )
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": region})
         assert result.get("error") is True
         assert "region" in result["message"].lower()
 
     @pytest.mark.parametrize("region", list(VALID_REGIONS))
     @respx.mock
     def test_all_valid_regions_accepted(self, region):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": region}
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(200, json=MAGE_PROFILE_RAW))
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": region})
         assert result.get("error") is not True
 
     @pytest.mark.parametrize("region", ["US", "EU", "KR", "TW"])
     @respx.mock
     def test_uppercase_regions_are_accepted(self, region):
         """Region matching must be case-insensitive."""
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": region}
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(200, json=MAGE_PROFILE_RAW))
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": region})
         assert result.get("error") is not True
 
     @respx.mock
@@ -339,32 +315,22 @@ class TestGetCharacterRaiderioTool:
         respx.get(f"{BASE_URL}/characters/profile").mock(
             return_value=httpx.Response(404, json=CHARACTER_NOT_FOUND_BODY)
         )
-        result = get_character_raiderio.invoke(
-            {"name": "NoSuchChar", "realm": "area-52", "region": "us"}
-        )
+        result = get_character_raiderio.invoke({"name": "NoSuchChar", "realm": "area-52", "region": "us"})
         assert result.get("error") is True
         assert result.get("not_found") is True
         assert "NoSuchChar" in result["message"]
 
     @respx.mock
     def test_server_error_returns_error_dict_not_exception(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(500, json=SERVER_ERROR_BODY)
-        )
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": "us"}
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(500, json=SERVER_ERROR_BODY))
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": "us"})
         assert result.get("error") is True
         assert result.get("not_found") is not True  # 500 ≠ not found
 
     @respx.mock
     def test_network_error_returns_error_dict_not_exception(self):
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            side_effect=httpx.ConnectError("Connection refused")
-        )
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "area-52", "region": "us"}
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(side_effect=httpx.ConnectError("Connection refused"))
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": "us"})
         assert result.get("error") is True
 
     @respx.mock
@@ -373,9 +339,7 @@ class TestGetCharacterRaiderioTool:
         respx.get(f"{BASE_URL}/characters/profile").mock(
             return_value=httpx.Response(404, json=CHARACTER_NOT_FOUND_BODY)
         )
-        result = get_character_raiderio.invoke(
-            {"name": "NoSuchChar", "realm": "area-52", "region": "us"}
-        )
+        result = get_character_raiderio.invoke({"name": "NoSuchChar", "realm": "area-52", "region": "us"})
         assert "message" in result
         assert isinstance(result["message"], str)
         assert len(result["message"]) > 0
@@ -383,12 +347,8 @@ class TestGetCharacterRaiderioTool:
     @respx.mock
     def test_realm_with_spaces_handled(self):
         """Realm names like 'Burning Legion' must not break URL encoding."""
-        respx.get(f"{BASE_URL}/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
+        respx.get(f"{BASE_URL}/characters/profile").mock(return_value=httpx.Response(200, json=MAGE_PROFILE_RAW))
         # Should not raise
-        result = get_character_raiderio.invoke(
-            {"name": "Pyroblastus", "realm": "Burning Legion", "region": "eu"}
-        )
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "Burning Legion", "region": "eu"})
         # Either succeeds or returns an error dict — but never raises
         assert isinstance(result, dict)

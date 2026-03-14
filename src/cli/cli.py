@@ -1,5 +1,5 @@
 """
-cli.py — Main REPL loop for the WoW Coaching Agent CLI.
+cli/cli.py — Main REPL loop for the WoW Coaching Agent CLI.
 
 Wires together:
   - prompt_toolkit for input (history, tab completion, multi-line)
@@ -16,7 +16,7 @@ Or import and call `run_cli(agent_fn)` with your own agent coroutine.
 from __future__ import annotations
 
 import asyncio
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
@@ -28,7 +28,6 @@ from .renderer import (
     render_banner,
     render_error,
     render_user_message,
-    render_warning,
 )
 from .tool_panel import ToolPanel, ToolPanelCallbackHandler
 
@@ -37,9 +36,11 @@ from .tool_panel import ToolPanel, ToolPanelCallbackHandler
 # Keeps the input prompt visually consistent with the Rich theme.
 # ---------------------------------------------------------------------------
 
-PT_STYLE = PTStyle.from_dict({
-    "prompt": "bold ansiyellow",
-})
+PT_STYLE = PTStyle.from_dict(
+    {
+        "prompt": "bold ansiyellow",
+    }
+)
 
 PROMPT_TEXT = [("class:prompt", "⚔  ")]
 
@@ -74,6 +75,7 @@ AgentFn = Callable[[str, list], Awaitable[str]]
 # ---------------------------------------------------------------------------
 # REPL
 # ---------------------------------------------------------------------------
+
 
 async def run_cli(agent_fn: AgentFn | None = None) -> None:
     """
@@ -143,6 +145,7 @@ async def run_cli(agent_fn: AgentFn | None = None) -> None:
 # Useful for UI development without needing the full LangChain stack running.
 # ---------------------------------------------------------------------------
 
+
 async def _echo_agent(question: str, callbacks: list) -> str:
     """
     Simulates an agent response with fake tool calls so the panel can be
@@ -190,6 +193,7 @@ async def _echo_agent(question: str, callbacks: list) -> str:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     asyncio.run(run_cli())

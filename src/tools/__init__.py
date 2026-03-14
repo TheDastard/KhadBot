@@ -2,8 +2,8 @@
 
 from langchain_core.tools import BaseTool
 
-from tools.raiderio import get_character_raiderio
 from tools.rag_search import search_guide_rag
+from tools.raiderio import get_character_raiderio
 from tools.simc import run_simc
 from tools.warcraftlogs import get_warcraftlogs_report
 from tools.wipefest import get_wipefest_insights

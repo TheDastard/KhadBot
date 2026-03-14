@@ -85,11 +85,49 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py312"
+exclude = [
+    "__pycache__",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "I",    # isort
+]
+ignore = [
+    "E501", # line-too-long (handled by formatter)
+    "W191", # tab-indentation
+    "E111", # indentation-not-multiple-of-four
+    "E114", # indentation-not-multiple-of-four-comment
+    "E117", # over-indented
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["khadbot"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.12"
