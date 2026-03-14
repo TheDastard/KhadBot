@@ -113,15 +113,6 @@ class RAGConfig:
 
 
 @dataclass(frozen=True)
-class DiscordConfig:
-    bot_token: str = field(default_factory=lambda: _require("DISCORD_BOT_TOKEN"))
-    guild_id: int | None = field(
-        default_factory=lambda: int(v) if (v := _optional("DISCORD_GUILD_ID")) else None
-    )
-    command_prefix: str = field(default_factory=lambda: _optional("DISCORD_COMMAND_PREFIX", "!"))
-
-
-@dataclass(frozen=True)
 class ObservabilityConfig:
     langsmith_api_key: str = field(default_factory=lambda: _optional("LANGSMITH_API_KEY"))
     langsmith_project: str = field(
@@ -140,7 +131,6 @@ class AppConfig:
     simc: SimCConfig = field(default_factory=SimCConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
-    discord: DiscordConfig = field(default_factory=DiscordConfig)
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
 
 
