@@ -268,9 +268,34 @@ try:
         def __init__(self) -> None:
             super().__init__()
             self.panel = ToolPanel()
+            self._run_id: str | None = None
             self._last_tool_name: str | None = None
 
+        @property
+        def run_id(self) -> str | None:
+            """
+            The LangSmith run ID for this invocation.
+            Only populated after on_chain_start fires, which happens before
+            any tool calls. Safe to read after the agent.invoke() returns.
+            """
+            return self._run_id
+
         # LangChain calls these at the start/end of each tool invocation
+
+        def on_chain_start(
+            self,
+            serialized: dict[str, Any],
+            inputs: dict[str, Any],
+            *,
+            run_id: Any = None,
+            parent_run_id: Any = None,
+            **kwargs: Any,
+        ) -> None:
+            # Capture only the top-level run ID (when parent is None).
+            # Subsequent on_chain_start calls are sub-chains (tools, retrievers)
+            # and would overwrite the one we want.
+            if parent_run_id is None:
+                self._run_id = str(run_id)
 
         def on_tool_start(
             self,
@@ -291,7 +316,7 @@ try:
                 if hasattr(output, "content"):
                     raw = output.content
                 else:
-                    raw= str(output)
+                    raw = str(output)
                 # Trim output for display
                 summary = raw[:80] + "…" if len(raw) > 80 else raw
                 self.panel.finish_tool(tool_name, summary)

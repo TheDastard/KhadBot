@@ -135,12 +135,7 @@ def render_character_card(
         table.add_row("Raid", raid_progress)
 
     console.print(
-        Panel(
-            table,
-            title="[ui.subheader]Character[/ui.subheader]",
-            border_style="bright_blue",
-            padding=(0, 1),
-        )
+        Panel(table, title="[ui.subheader]Character[/ui.subheader]", border_style="bright_blue", padding=(0, 1))
     )
     console.print()
 
@@ -242,6 +237,59 @@ def render_parse_table(parses: list[dict]) -> None:
 
     console.print()
     console.print(table)
+    console.print()
+
+
+# ---------------------------------------------------------------------------
+# LangSmith trace footer
+# ---------------------------------------------------------------------------
+
+
+def _build_langsmith_url(run_id: str) -> str | None:
+    """
+    Build a LangSmith trace URL for the given run ID.
+
+    Fetches org and project IDs from the SDK since both are required for
+    the URL structure: /o/{org_id}/projects/p/{project_id}?peek={run_id}
+
+    Returns None if the SDK is unavailable or any API call fails.
+    """
+    try:
+        from langsmith import Client
+
+        client = Client()
+        run = client.read_run(run_id)
+        org_id = client._get_tenant_id()
+        project_id = str(run.session_id)
+        base_url = client.api_url.rstrip("/").replace("//api.", "//", 1)
+        return f"{base_url}/o/{org_id}/projects/p/{project_id}?peek={run_id}"
+    except Exception:
+        return None
+
+
+def render_langsmith_footer(run_id: str | None) -> None:
+    """
+    Print a dim footer line with the LangSmith trace URL for this run.
+
+    Shown after every agent response when LangSmith tracing is active.
+    Silently skipped when run_id is None (tracing disabled or not yet
+    supported by the active provider).
+
+    Args:
+        run_id:  The LangChain run UUID captured from on_chain_start.
+    """
+    if not run_id:
+        return
+
+    url = _build_langsmith_url(run_id)
+    if not url:
+        return
+
+    footer = Text()
+    footer.append("  🔍 Trace  ", style="ui.muted")
+    footer.append(url, style="link " + url + " ui.muted")
+
+    console.print(footer)
     console.print()
 
 
