@@ -23,8 +23,8 @@ dependencies = [
 [project.optional-dependencies]
 cli = [
     # --- CLI ---
-    "rich>=13.7.0",               # ToDo
-    "prompt_toolkit>=3.0.0",      # ToDo    
+    "rich>=13.7.0",               # terminal rendering: panels, tables, live tool panel, markdown output
+    "prompt_toolkit>=3.0.0",      # REPL input: history, async prompt, keyboard handling
 ]
 
 dev = [
@@ -42,11 +42,14 @@ dev = [
     "mypy>=1.10.0",             # static type checking
 
     # --- CLI ---
-    "rich>=13.7.0",               # ToDo
-    "prompt_toolkit>=3.0.0",      # ToDo
+    "rich>=13.7.0",             # terminal rendering: panels, tables, live tool panel, markdown output
+    "prompt_toolkit>=3.0.0",    # REPL input: history, async prompt, keyboard handling
+
+    # --- LangSmith ---
+    "langsmith>=0.1.0",         # trace URL construction, eval dataset management
 
     # --- Local dev convenience ---
-    "python-dotenv>=1.0.0",   # load .env for local development
+    "python-dotenv>=1.0.0",     # load .env for local development
     "ipython>=8.0.0",           # nicer REPL for debugging agent traces
 ]
 
