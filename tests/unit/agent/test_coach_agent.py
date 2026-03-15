@@ -30,7 +30,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 # Imports from source modules.
 # Adjust paths to match your project layout.
 # ---------------------------------------------------------------------------
-from agent.coach import SYSTEM_PROMPT, TOOLS, ask_coach, build_agent_executor
+from agent.coach import BASE_SYSTEM_PROMPT, TOOLS, ask_coach, build_agent_executor
 
 # ===========================================================================
 # Helpers & shared fixtures
@@ -106,12 +106,12 @@ class TestSystemPrompt:
     def test_system_prompt_references_all_tools(self):
         """Each tool name should appear in the system prompt so the LLM knows what's available."""
         for t in TOOLS:
-            assert t.name in SYSTEM_PROMPT, (
+            assert t.name in BASE_SYSTEM_PROMPT, (
                 f"Tool '{t.name}' not mentioned in SYSTEM_PROMPT — the LLM won't know it exists."
             )
 
     def test_system_prompt_not_empty(self):
-        assert len(SYSTEM_PROMPT.strip()) > 100
+        assert len(BASE_SYSTEM_PROMPT.strip()) > 100
 
 
 # ===========================================================================
