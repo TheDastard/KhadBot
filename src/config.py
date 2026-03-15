@@ -93,6 +93,14 @@ class RAGConfig:
 
 
 @dataclass(frozen=True)
+class PersonaConfig:
+    # Persona ID to activate when no per-user preference is set.
+    # Empty string (the default) means no persona — base prompt only.
+    # Set KHADBOT_PERSONA=khadgar (or thrall/xalatath) to enable a persona server-wide.
+    default_persona_id: str = field(default_factory=lambda: _optional("KHADBOT_PERSONA", ""))
+
+
+@dataclass(frozen=True)
 class ObservabilityConfig:
     langsmith_api_key: str = field(default_factory=lambda: _optional("LANGSMITH_API_KEY"))
     langsmith_project: str = field(default_factory=lambda: _optional("LANGSMITH_PROJECT", "KhadBot"))
@@ -109,6 +117,7 @@ class AppConfig:
     simc: SimCConfig = field(default_factory=SimCConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
+    persona: PersonaConfig = field(default_factory=PersonaConfig)
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
 
 
