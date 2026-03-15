@@ -280,16 +280,20 @@ try:
         ) -> None:
             tool_name = serialized.get("name", "unknown_tool")
             self._last_tool_name = tool_name
-            # Show the raw input trimmed — can be long for SimC strings
+            # Show the raw input trimmed
             detail = input_str[:80] + "…" if len(input_str) > 80 else input_str
             self.panel.start_tool(tool_name, detail)
 
-        def on_tool_end(self, output: str, **kwargs: Any) -> None:
+        def on_tool_end(self, output: Any, **kwargs: Any) -> None:
             # Pull the tool name out of kwargs LangChain passes through
             tool_name = kwargs.get("name") or self._last_tool_name
             if tool_name:
+                if hasattr(output, "content"):
+                    raw = output.content
+                else:
+                    raw= str(output)
                 # Trim output for display
-                summary = output[:80] + "…" if len(output) > 80 else output
+                summary = raw[:80] + "…" if len(raw) > 80 else raw
                 self.panel.finish_tool(tool_name, summary)
 
         def on_tool_error(self, error: Exception, **kwargs: Any) -> None:
