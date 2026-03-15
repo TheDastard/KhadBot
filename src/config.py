@@ -95,7 +95,7 @@ class RAGConfig:
 @dataclass(frozen=True)
 class ObservabilityConfig:
     langsmith_api_key: str = field(default_factory=lambda: _optional("LANGSMITH_API_KEY"))
-    langsmith_project: str = field(default_factory=lambda: _optional("LANGSMITH_PROJECT", "wow-coaching-agent"))
+    langsmith_project: str = field(default_factory=lambda: _optional("LANGSMITH_PROJECT", "KhadBot"))
     langchain_tracing: bool = field(
         default_factory=lambda: _optional("LANGCHAIN_TRACING_V2", "false").lower() == "true"
     )

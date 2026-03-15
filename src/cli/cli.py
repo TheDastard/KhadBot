@@ -22,11 +22,14 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style as PTStyle
 
+from config import get_config
+
 from .console import console
 from .renderer import (
     render_agent_response,
     render_banner,
     render_error,
+    render_langsmith_footer,
     render_user_message,
 )
 from .tool_panel import ToolPanel, ToolPanelCallbackHandler
@@ -138,6 +141,9 @@ async def run_cli(agent_fn: AgentFn | None = None) -> None:
             continue
 
         render_agent_response(response)
+
+        if get_config().observability.langchain_tracing:
+            render_langsmith_footer(handler.run_id)
 
 
 # ---------------------------------------------------------------------------
