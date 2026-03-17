@@ -22,7 +22,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style as PTStyle
 
-from config import get_config
+from khadbot.config import get_config
 
 from .console import console
 from .renderer import (

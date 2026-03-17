@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
 
-from agent.personas import CoachPersona, get_persona
-from tools import TOOLS
+from khadbot.agent.personas import CoachPersona, get_persona
+from khadbot.tools import TOOLS
 
 load_dotenv()
 
@@ -40,6 +40,7 @@ specific, actionable advice grounded in real data — not generic tips.
 You have four tools:
 - get_character_raiderio: fetch a player's progression level and M+ score
 - get_warcraftlogs_report: pull parse data, cooldown usage, and top inefficiencies from a log
+- get_wipefest_insights: analyze a WarcraftLog report, and provide insights into group performance
 - run_simc: simulate a player's gear or compare an upgrade
 - search_guide_rag: look up Icy Veins guide content for rotations, talents, and trinkets
 
@@ -109,8 +110,8 @@ def build_agent_executor(persona: CoachPersona | None = None, verbose: bool = Tr
     rebuilding the agent, which is intentional: persona is session-scoped,
     not turn-scoped.
     """
-    from config import get_config
-    from llm_factory import get_llm
+    from khadbot.config import get_config
+    from khadbot.llm_factory import get_llm
 
     if persona is None:
         cfg = get_config()

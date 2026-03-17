@@ -35,7 +35,7 @@ import pytest
 @pytest.fixture
 def minimal_persona():
     """A minimal valid CoachPersona for testing coach.py in isolation."""
-    from agent.personas import CoachPersona
+    from khadbot.agent.personas import CoachPersona
 
     return CoachPersona(
         id="test_persona",
@@ -55,7 +55,7 @@ class TestCoachPersonaFields:
 
     @pytest.fixture(params=["thrall", "khadgar", "xalatath"])
     def persona(self, request):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         return PERSONAS[request.param]
 
@@ -72,7 +72,7 @@ class TestCoachPersonaFields:
         assert isinstance(persona.intro_message, str) and persona.intro_message.strip()
 
     def test_id_matches_registry_key(self, persona):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         assert PERSONAS[persona.id] is persona
 
@@ -100,27 +100,27 @@ class TestCoachPersonaFields:
 
 class TestPersonasRegistry:
     def test_all_expected_personas_present(self):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         assert "thrall" in PERSONAS
         assert "khadgar" in PERSONAS
         assert "xalatath" in PERSONAS
 
     def test_registry_has_no_duplicate_ids(self):
-        from agent.personas import KHADGAR, THRALL, XALATATH
+        from khadbot.agent.personas import KHADGAR, THRALL, XALATATH
 
         all_personas = [THRALL, KHADGAR, XALATATH]
         ids = [p.id for p in all_personas]
         assert len(ids) == len(set(ids)), "Duplicate persona IDs detected."
 
     def test_registry_values_are_coach_persona_instances(self):
-        from agent.personas import PERSONAS, CoachPersona
+        from khadbot.agent.personas import PERSONAS, CoachPersona
 
         for persona_id, persona in PERSONAS.items():
             assert isinstance(persona, CoachPersona), f"PERSONAS['{persona_id}'] is not a CoachPersona instance."
 
     def test_registry_key_matches_persona_id(self):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         for key, persona in PERSONAS.items():
             assert key == persona.id, f"Registry key '{key}' does not match persona.id '{persona.id}'."
@@ -128,7 +128,7 @@ class TestPersonasRegistry:
     def test_no_default_persona_constant(self):
         # There is no DEFAULT_PERSONA — no persona is the default state.
         # A persona is only active when explicitly set via env var or passed directly.
-        import agent.personas as personas_module
+        import khadbot.agent.personas as personas_module
 
         assert not hasattr(personas_module, "DEFAULT_PERSONA")
 
@@ -140,29 +140,29 @@ class TestPersonasRegistry:
 
 class TestGetPersona:
     def test_returns_correct_persona_for_known_id(self):
-        from agent.personas import THRALL, get_persona
+        from khadbot.agent.personas import THRALL, get_persona
 
         assert get_persona("thrall") is THRALL
 
     def test_returns_correct_persona_for_each_defined_id(self):
-        from agent.personas import PERSONAS, get_persona
+        from khadbot.agent.personas import PERSONAS, get_persona
 
         for persona_id, expected in PERSONAS.items():
             assert get_persona(persona_id) is expected
 
     def test_none_returns_none(self):
-        from agent.personas import get_persona
+        from khadbot.agent.personas import get_persona
 
         assert get_persona(None) is None
 
     def test_unknown_id_returns_none(self):
-        from agent.personas import get_persona
+        from khadbot.agent.personas import get_persona
 
         result = get_persona("totally_unknown_character_xyz")
         assert result is None
 
     def test_unknown_id_does_not_raise(self):
-        from agent.personas import get_persona
+        from khadbot.agent.personas import get_persona
 
         # Must never raise — a bad env var or typo should not crash the bot.
         try:
@@ -172,13 +172,13 @@ class TestGetPersona:
 
     def test_empty_string_returns_none(self):
         # Empty string means "no persona" — same as None.
-        from agent.personas import get_persona
+        from khadbot.agent.personas import get_persona
 
         assert get_persona("") is None
 
     def test_case_sensitive_id_lookup(self):
         # IDs are lowercase slugs — "Thrall" is not "thrall".
-        from agent.personas import get_persona
+        from khadbot.agent.personas import get_persona
 
         result = get_persona("Thrall")
         assert result is None  # no match → no persona
@@ -191,26 +191,26 @@ class TestGetPersona:
 
 class TestListPersonas:
     def test_returns_all_personas(self):
-        from agent.personas import PERSONAS, list_personas
+        from khadbot.agent.personas import PERSONAS, list_personas
 
         result = list_personas()
         assert len(result) == len(PERSONAS)
 
     def test_all_items_are_coach_persona_instances(self):
-        from agent.personas import CoachPersona, list_personas
+        from khadbot.agent.personas import CoachPersona, list_personas
 
         for persona in list_personas():
             assert isinstance(persona, CoachPersona)
 
     def test_no_duplicates_in_list(self):
-        from agent.personas import list_personas
+        from khadbot.agent.personas import list_personas
 
         result = list_personas()
         ids = [p.id for p in result]
         assert len(ids) == len(set(ids))
 
     def test_contains_all_expected_personas(self):
-        from agent.personas import list_personas
+        from khadbot.agent.personas import list_personas
 
         ids = {p.id for p in list_personas()}
         assert {"thrall", "khadgar", "xalatath"}.issubset(ids)
@@ -226,7 +226,7 @@ class TestCoachPersonaImmutability:
 
     @pytest.fixture(params=["thrall", "khadgar", "xalatath"])
     def persona(self, request):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         return PERSONAS[request.param]
 
@@ -263,7 +263,7 @@ class TestVoicePromptContent:
 
     @pytest.fixture(params=["thrall", "khadgar", "xalatath"])
     def persona(self, request):
-        from agent.personas import PERSONAS
+        from khadbot.agent.personas import PERSONAS
 
         return PERSONAS[request.param]
 
@@ -303,12 +303,12 @@ class TestBaseSystemPrompt:
     """
 
     def test_base_prompt_is_nonempty(self):
-        from agent.coach import BASE_SYSTEM_PROMPT
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT
 
         assert BASE_SYSTEM_PROMPT.strip()
 
     def test_base_prompt_mentions_all_tools(self):
-        from agent.coach import BASE_SYSTEM_PROMPT
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT
 
         for tool_name in [
             "get_character_raiderio",
@@ -325,7 +325,7 @@ class TestBaseSystemPrompt:
         # The guardrail is only injected when a persona is active. It must not
         # be present in the base prompt or the no-persona path gets a dangling
         # "a persona voice will be provided below" with nothing below it.
-        from agent.coach import BASE_SYSTEM_PROMPT
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT
 
         assert "PERSONA SCOPE" not in BASE_SYSTEM_PROMPT.upper()
         assert "adversarial" not in BASE_SYSTEM_PROMPT.lower()
@@ -345,24 +345,24 @@ class TestPersonaScopeGuardrail:
     """
 
     def test_guardrail_is_nonempty(self):
-        from agent.coach import PERSONA_SCOPE_GUARDRAIL
+        from khadbot.agent.coach import PERSONA_SCOPE_GUARDRAIL
 
         assert PERSONA_SCOPE_GUARDRAIL.strip()
 
     def test_guardrail_contains_persona_scope_header(self):
-        from agent.coach import PERSONA_SCOPE_GUARDRAIL
+        from khadbot.agent.coach import PERSONA_SCOPE_GUARDRAIL
 
         assert "PERSONA SCOPE" in PERSONA_SCOPE_GUARDRAIL.upper()
 
     def test_guardrail_states_tone_only_restriction(self):
-        from agent.coach import PERSONA_SCOPE_GUARDRAIL
+        from khadbot.agent.coach import PERSONA_SCOPE_GUARDRAIL
 
         assert "tone" in PERSONA_SCOPE_GUARDRAIL.lower(), (
             "PERSONA_SCOPE_GUARDRAIL should state that persona affects tone only."
         )
 
     def test_guardrail_warns_about_adversarial_input(self):
-        from agent.coach import PERSONA_SCOPE_GUARDRAIL
+        from khadbot.agent.coach import PERSONA_SCOPE_GUARDRAIL
 
         assert "adversarial" in PERSONA_SCOPE_GUARDRAIL.lower(), (
             "PERSONA_SCOPE_GUARDRAIL should warn that user-supplied inputs may be adversarial."
@@ -372,39 +372,39 @@ class TestPersonaScopeGuardrail:
 class TestBuildSystemPrompt:
     def test_none_returns_base_prompt_exactly(self):
         # No persona active → system prompt is BASE_SYSTEM_PROMPT with nothing appended.
-        from agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
 
         assert build_system_prompt(None) == BASE_SYSTEM_PROMPT
 
     def test_none_does_not_contain_guardrail(self):
         # The guardrail references "a persona voice below" — must not appear
         # in the no-persona prompt where nothing follows.
-        from agent.coach import build_system_prompt
+        from khadbot.agent.coach import build_system_prompt
 
         result = build_system_prompt(None)
         assert "PERSONA SCOPE" not in result.upper()
 
     def test_returns_string(self, minimal_persona):
-        from agent.coach import build_system_prompt
+        from khadbot.agent.coach import build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         assert isinstance(result, str)
 
     def test_base_prompt_is_present(self, minimal_persona):
-        from agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         # Strip both to avoid trailing-whitespace false negatives
         assert BASE_SYSTEM_PROMPT.strip() in result
 
     def test_voice_prompt_is_present(self, minimal_persona):
-        from agent.coach import build_system_prompt
+        from khadbot.agent.coach import build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         assert minimal_persona.voice_prompt.strip() in result
 
     def test_base_prompt_comes_before_voice_prompt(self, minimal_persona):
-        from agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         base_pos = result.index(BASE_SYSTEM_PROMPT.strip())
@@ -415,7 +415,7 @@ class TestBuildSystemPrompt:
         )
 
     def test_guardrail_present_between_base_and_voice(self, minimal_persona):
-        from agent.coach import BASE_SYSTEM_PROMPT, PERSONA_SCOPE_GUARDRAIL, build_system_prompt
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, PERSONA_SCOPE_GUARDRAIL, build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         base_end = result.index(BASE_SYSTEM_PROMPT.strip()) + len(BASE_SYSTEM_PROMPT.strip())
@@ -426,15 +426,15 @@ class TestBuildSystemPrompt:
         )
 
     def test_each_persona_produces_distinct_prompt(self):
-        from agent.coach import build_system_prompt
-        from agent.personas import list_personas
+        from khadbot.agent.coach import build_system_prompt
+        from khadbot.agent.personas import list_personas
 
         prompts = [build_system_prompt(p) for p in list_personas()]
         assert len(prompts) == len(set(prompts)), "Each persona should produce a distinct assembled system prompt."
 
     def test_base_content_identical_across_all_personas(self):
-        from agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
-        from agent.personas import list_personas
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_system_prompt
+        from khadbot.agent.personas import list_personas
 
         for persona in list_personas():
             result = build_system_prompt(persona)
@@ -443,7 +443,7 @@ class TestBuildSystemPrompt:
             )
 
     def test_voice_prompt_not_duplicated(self, minimal_persona):
-        from agent.coach import build_system_prompt
+        from khadbot.agent.coach import build_system_prompt
 
         result = build_system_prompt(minimal_persona)
         voice = minimal_persona.voice_prompt.strip()
@@ -471,8 +471,8 @@ class TestBuildAgentExecutorPersonaWiring:
         self.mock_agent = MagicMock()
         self.mock_create_agent = MagicMock(return_value=self.mock_agent)
 
-        monkeypatch.setattr("agent.coach.create_agent", self.mock_create_agent)
-        monkeypatch.setattr("llm_factory.get_llm", lambda: self.mock_llm)
+        monkeypatch.setattr("khadbot.agent.coach.create_agent", self.mock_create_agent)
+        monkeypatch.setattr("khadbot.llm_factory.get_llm", lambda: self.mock_llm)
 
     def _get_system_prompt_kwarg(self):
         """Extract the system_prompt passed to create_agent."""
@@ -480,27 +480,27 @@ class TestBuildAgentExecutorPersonaWiring:
         return call_kwargs.get("system_prompt", "")
 
     def test_create_agent_called_once(self, minimal_persona):
-        from agent.coach import build_agent_executor
+        from khadbot.agent.coach import build_agent_executor
 
         build_agent_executor(persona=minimal_persona)
         self.mock_create_agent.assert_called_once()
 
     def test_explicit_persona_voice_prompt_in_system_prompt(self, minimal_persona):
-        from agent.coach import build_agent_executor
+        from khadbot.agent.coach import build_agent_executor
 
         build_agent_executor(persona=minimal_persona)
         system_prompt = self._get_system_prompt_kwarg()
         assert minimal_persona.voice_prompt.strip() in system_prompt
 
     def test_base_prompt_in_system_prompt(self, minimal_persona):
-        from agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
 
         build_agent_executor(persona=minimal_persona)
         system_prompt = self._get_system_prompt_kwarg()
         assert BASE_SYSTEM_PROMPT.strip() in system_prompt
 
     def test_base_prompt_before_voice_prompt_in_system_prompt(self, minimal_persona):
-        from agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
 
         build_agent_executor(persona=minimal_persona)
         system_prompt = self._get_system_prompt_kwarg()
@@ -509,32 +509,32 @@ class TestBuildAgentExecutorPersonaWiring:
         assert base_pos < voice_pos
 
     def test_llm_passed_to_create_agent(self, minimal_persona):
-        from agent.coach import build_agent_executor
+        from khadbot.agent.coach import build_agent_executor
 
         build_agent_executor(persona=minimal_persona)
         call_kwargs = self.mock_create_agent.call_args.kwargs
         assert call_kwargs.get("model") is self.mock_llm
 
     def test_tools_passed_to_create_agent(self, minimal_persona, monkeypatch):
-        from agent.coach import build_agent_executor
+        from khadbot.agent.coach import build_agent_executor
 
         # Patch TOOLS to a known sentinel so we can assert identity
         sentinel_tools = [MagicMock(name="tool_sentinel")]
-        monkeypatch.setattr("agent.coach.TOOLS", sentinel_tools)
+        monkeypatch.setattr("khadbot.agent.coach.TOOLS", sentinel_tools)
 
         build_agent_executor(persona=minimal_persona)
         call_kwargs = self.mock_create_agent.call_args.kwargs
         assert call_kwargs.get("tools") is sentinel_tools
 
     def test_returns_agent_from_create_agent(self, minimal_persona):
-        from agent.coach import build_agent_executor
+        from khadbot.agent.coach import build_agent_executor
 
         result = build_agent_executor(persona=minimal_persona)
         assert result is self.mock_agent
 
     def test_different_personas_produce_different_system_prompts(self):
-        from agent.coach import build_agent_executor
-        from agent.personas import KHADGAR, THRALL
+        from khadbot.agent.coach import build_agent_executor
+        from khadbot.agent.personas import KHADGAR, THRALL
 
         build_agent_executor(persona=THRALL)
         thrall_prompt = self._get_system_prompt_kwarg()
@@ -557,11 +557,11 @@ class TestBuildAgentExecutorConfigFallback:
         self.mock_agent = MagicMock()
         self.mock_create_agent = MagicMock(return_value=self.mock_agent)
 
-        monkeypatch.setattr("agent.coach.create_agent", self.mock_create_agent)
-        monkeypatch.setattr("llm_factory.get_llm", lambda: self.mock_llm)
+        monkeypatch.setattr("khadbot.agent.coach.create_agent", self.mock_create_agent)
+        monkeypatch.setattr("khadbot.llm_factory.get_llm", lambda: self.mock_llm)
 
         # Reset config singleton so env var changes take effect
-        import config as config
+        import khadbot.config as config
 
         config.reset_config()
         yield
@@ -572,7 +572,7 @@ class TestBuildAgentExecutorConfigFallback:
 
     def test_no_persona_arg_no_env_var_uses_base_prompt_only(self, monkeypatch):
         # No persona arg + no env var = base prompt only, no voice block appended.
-        from agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
 
         monkeypatch.delenv("KHADBOT_PERSONA", raising=False)
         build_agent_executor()
@@ -580,11 +580,11 @@ class TestBuildAgentExecutorConfigFallback:
         assert system_prompt == BASE_SYSTEM_PROMPT
 
     def test_khadbot_persona_env_var_selects_persona(self, monkeypatch):
-        from agent.coach import build_agent_executor
-        from agent.personas import THRALL
+        from khadbot.agent.coach import build_agent_executor
+        from khadbot.agent.personas import THRALL
 
         monkeypatch.setenv("KHADBOT_PERSONA", "thrall")
-        import config as config
+        import khadbot.config as config
 
         config.reset_config()
 
@@ -594,10 +594,10 @@ class TestBuildAgentExecutorConfigFallback:
 
     def test_unknown_env_var_uses_base_prompt_only(self, monkeypatch):
         # Unknown persona ID in env var → no persona active → base prompt only.
-        from agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
+        from khadbot.agent.coach import BASE_SYSTEM_PROMPT, build_agent_executor
 
         monkeypatch.setenv("KHADBOT_PERSONA", "gandalf_the_grey")
-        import config as config
+        import khadbot.config as config
 
         config.reset_config()
 
@@ -607,11 +607,11 @@ class TestBuildAgentExecutorConfigFallback:
 
     def test_explicit_persona_arg_overrides_env_var(self, monkeypatch):
         # Explicit arg should win even if env var points to a different persona.
-        from agent.coach import build_agent_executor
-        from agent.personas import XALATATH
+        from khadbot.agent.coach import build_agent_executor
+        from khadbot.agent.personas import XALATATH
 
         monkeypatch.setenv("KHADBOT_PERSONA", "thrall")
-        import config as config
+        import khadbot.config as config
 
         config.reset_config()
 
