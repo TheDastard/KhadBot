@@ -30,7 +30,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 # Imports from source modules.
 # Adjust paths to match your project layout.
 # ---------------------------------------------------------------------------
-from agent.coach import BASE_SYSTEM_PROMPT, TOOLS, ask_coach, build_agent_executor
+from khadbot.agent.coach import BASE_SYSTEM_PROMPT, TOOLS, ask_coach, build_agent_executor
 
 # ===========================================================================
 # Helpers & shared fixtures
@@ -62,8 +62,8 @@ def _make_agent(fake_responses: list, mock_tool_results: dict | None = None):
         patched_tools.append(mock_t)
 
     with (
-        patch("src.agent.coach.get_llm", return_value=fake_llm),
-        patch("src.agent.coach.TOOLS", patched_tools),
+        patch("khadbot.agent.coach.get_llm", return_value=fake_llm),
+        patch("khadbot.agent.coach.TOOLS", patched_tools),
     ):
         agent = build_agent_executor(verbose=False)
 
@@ -85,6 +85,7 @@ class TestToolRegistry:
         tool_names = {t.name for t in TOOLS}
         assert "get_character_raiderio" in tool_names
         assert "get_warcraftlogs_report" in tool_names
+        assert "get_wipefest_insights" in tool_names
         assert "run_simc" in tool_names
         assert "search_guide_rag" in tool_names
 
@@ -308,13 +309,13 @@ class TestMultiTurnContext:
 class TestBuildAgentExecutor:
     def test_returns_invocable_agent(self):
         """build_agent_executor must return something with an .invoke() method."""
-        with patch("agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)):
+        with patch("khadbot.llm_factory.get_llm", return_value=GenericFakeChatModel(messages=iter([AIMessage(content="Hello")]))):
             agent = build_agent_executor(verbose=False)
         assert hasattr(agent, "invoke")
 
     def test_agent_is_built_with_tools(self):
         """Ensure the agent actually has tools bound — not just a bare LLM."""
-        with patch("agents.coach.get_llm", return_value=FakeListChatModel(responses=RAIDERIO_THEN_ANSWER)):
+        with patch("khadbot.llm_factory.get_llm", return_value=GenericFakeChatModel(messages=iter([AIMessage(content="Hello")]))):
             agent = build_agent_executor(verbose=False)
         # LangGraph agents expose their tool set; verify it's non-empty
         # (exact attribute varies by LangChain version — check common locations)

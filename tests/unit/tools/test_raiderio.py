@@ -26,7 +26,7 @@ from fixtures.raiderio_payloads import (
 # Import the module under test.
 # Adjust the import path to match your project layout.
 # ---------------------------------------------------------------------------
-from tools.raiderio import (
+from khadbot.tools.raiderio import (
     BASE_URL,
     VALID_REGIONS,
     CharacterNotFoundError,
