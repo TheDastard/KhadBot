@@ -10,7 +10,7 @@ import logging
 
 from langchain_core.language_models import BaseChatModel
 
-from config import get_config
+from khadbot.config import get_config
 
 logger = logging.getLogger(__name__)
 

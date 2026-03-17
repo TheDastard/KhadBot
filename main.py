@@ -10,8 +10,10 @@ Supports multi-turn conversation — type 'quit' to exit, 'reset' to clear histo
 import asyncio
 import sys
 
-from langchain_core.messages import HumanMessage, AIMessage
-from agent.coach import build_agent_executor, ask_coach
+from langchain_core.messages import AIMessage, HumanMessage
+
+from khadbot.agent import ask_coach, build_agent_executor
+
 
 def main():
     mode = sys.argv[1] if len(sys.argv) > 1 else "cli"
@@ -23,7 +25,7 @@ def main():
         sys.exit(1)
 
 def _run_cli():
-    from cli import run_cli
+    from khadbot.cli import run_cli
 
     executor = build_agent_executor(verbose=True)
     chat_history: list = []
@@ -46,7 +48,7 @@ def _run_cli():
         chat_history.append(AIMessage(content=result["answer"]))
 
         return result["answer"]
-    
+
     asyncio.run(run_cli(agent_fn))
 
 
