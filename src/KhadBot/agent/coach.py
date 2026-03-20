@@ -134,7 +134,7 @@ def build_agent_executor(persona: CoachPersona | None = None, verbose: bool = Tr
 # ---------------------------------------------------------------------------
 
 
-def ask_coach(agent, user_message: str, chat_history: list | None = None, callbacks: list | None = None) -> dict:
+async def ask_coach(agent, user_message: str, chat_history: list | None = None, callbacks: list | None = None) -> dict:
     """
     Run one turn of the coaching conversation.
 
@@ -142,6 +142,7 @@ def ask_coach(agent, user_message: str, chat_history: list | None = None, callba
         agent:        Agent built by build_agent_executor()
         user_message: The player's question
         chat_history: List of prior (HumanMessage, AIMessage) pairs
+        callbacks:    Optional LangChain callbacks (e.g. LangSmith tracing)
 
     Returns:
         dict with keys: "answer" (str), "steps" (list of intermediate tool calls)
@@ -149,7 +150,7 @@ def ask_coach(agent, user_message: str, chat_history: list | None = None, callba
     messages = list(chat_history or [])
     messages.append(HumanMessage(content=user_message))
 
-    result = agent.invoke(
+    result = await agent.ainvoke(
         {"messages": messages},
         config={"callbacks": callbacks or []},
     )
