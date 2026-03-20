@@ -31,18 +31,8 @@ def _run_cli():
     chat_history: list = []
 
     async def agent_fn(question: str, callbacks: list) -> str:
-        """
-        Bridge between the Rich CLI and ask_coach.
-
-        ask_coach is currently synchronous (agent.invoke is sunc).
-        We run it in a thread executor so it doesn't block the event loop
-        and freeze the live tool panel.
-        """
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(
-            None,
-            lambda: ask_coach(executor, question, chat_history, callbacks=callbacks)
-        )
+        """Bridge between the Rich CLI and ask_coach."""
+        result = await ask_coach(executor, question, chat_history, callbacks=callbacks)
 
         chat_history.append(HumanMessage(content=question))
         chat_history.append(AIMessage(content=result["answer"]))
