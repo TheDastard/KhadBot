@@ -294,7 +294,7 @@ try:
             # Capture only the top-level run ID (when parent is None).
             # Subsequent on_chain_start calls are sub-chains (tools, retrievers)
             # and would overwrite the one we want.
-            if parent_run_id is None:
+            if parent_run_id is None and run_id is not None:
                 self._run_id = str(run_id)
 
         def on_tool_start(

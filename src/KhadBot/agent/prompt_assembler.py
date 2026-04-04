@@ -27,7 +27,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from khadbot.agent.agent_config import AgentConfig, PersonaConfig
 
-_DEFAULT_TEMPLATE_PATH = Path(__file__).parent.parent.parent / "config" / "templates" / "prompt.jinja2"
+_DEFAULT_TEMPLATE_PATH = Path(__file__).parent.parent.parent.parent / "config" / "templates" / "prompt.jinja2"
 
 
 class PromptAssembler:
