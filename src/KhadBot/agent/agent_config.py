@@ -39,7 +39,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_ROOT = Path(__file__).parent.parent.parent / "config"
+_DEFAULT_CONFIG_ROOT = Path(__file__).parent.parent.parent.parent / "config"
 
 
 # ---------------------------------------------------------------------------

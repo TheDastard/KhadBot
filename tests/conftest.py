@@ -5,17 +5,22 @@ Shared pytest fixtures available to all test modules.
 Fixtures here are automatically discovered by pytest — no imports needed.
 
 Fixture groups:
-  - Raider.IO HTTP mocks   — used by tool-level unit tests (test_raiderio.py etc.)
   - Agent config / assembler — used by unit and integration agent tests
+  - CLI console              — used by unit and integration CLI tests
+  - Raider.IO HTTP mocks     — used by tool-level unit tests (test_raiderio.py etc.)
 """
 
+import io
+import sys
 import textwrap
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
 import respx as _respx
 from fixtures.raiderio_payloads import CHARACTER_NOT_FOUND_BODY, MAGE_PROFILE_RAW
+from rich.console import Console
 
 from khadbot.agent.agent_config import AgentConfig, load_agent_config
 from khadbot.agent.prompt_assembler import PromptAssembler
@@ -153,8 +158,44 @@ def assembler(config_root) -> PromptAssembler:
 
 
 # ---------------------------------------------------------------------------
+# CLI console fixture
+# ---------------------------------------------------------------------------
+# Shared across:
+#   tests/unit/cli/test_renderer.py
+#   tests/unit/cli/test_tool_panel.py
+#   tests/integration/cli/test_tool_panel_live.py
+#   tests/integration/cli/test_repl_loop.py
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_cli_console() -> Console:
+    """
+    Stub cli.console with a StringIO-backed Console so Rich never touches
+    the real terminal during any CLI test.
+
+    Session-scoped because sys.modules entries persist for the entire test
+    run — re-registering per test would have no effect once cli.console is
+    already cached after the first import.
+
+    autouse=True means every test benefits from this automatically; tests
+    that want to inspect console output can request the fixture directly
+    and read from its underlying StringIO buffer.
+    """
+    buf = io.StringIO()
+    test_console = Console(file=buf, force_terminal=False, width=120)
+
+    mock_module = MagicMock()
+    mock_module.console = test_console
+    sys.modules["cli.console"] = mock_module
+
+    yield test_console
+
+
+# ---------------------------------------------------------------------------
 # Raider.IO HTTP fixtures
 # ---------------------------------------------------------------------------
+# Shared across:
+#   tests/unit/tools/test_raiderio.py
 
 
 @pytest.fixture
