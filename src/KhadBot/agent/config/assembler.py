@@ -1,5 +1,5 @@
 """
-agent/prompt_assembler.py
+agent/config/assembler.py
 
 Renders the system prompt from a Jinja2 template, an AgentConfig, and an
 optional active persona.
@@ -25,9 +25,9 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from khadbot.agent.agent_config import AgentConfig, PersonaConfig
+from khadbot.agent.config.loader import AgentConfig, PersonaConfig
 
-_DEFAULT_TEMPLATE_PATH = Path(__file__).parent.parent.parent.parent / "config" / "templates" / "prompt.jinja2"
+_DEFAULT_TEMPLATE_PATH = Path(__file__).parent.parent.parent.parent.parent / "config" / "templates" / "prompt.jinja2"
 
 
 class PromptAssembler:

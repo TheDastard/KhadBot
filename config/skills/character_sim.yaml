@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Skill: character_sim
+#
+# Runs SimulationCraft to compare gear options or talent configurations.
+# Requires the user to provide a /simc export string — cannot acquire this
+# automatically. Has a human-in-the-loop confirmation step before executing
+# the subprocess because SimC runs can take 30-90 seconds.
+# ---------------------------------------------------------------------------
+
+name: character_sim
+display_name: Character Simulation (SimC)
+version: "0.1"
+
+description: >
+  Run SimulationCraft to compare gear upgrades or talent swaps using the
+  player's exported character data.
+
+routing_description: >
+  Use this skill when the user wants to simulate their character — compare
+  a gear upgrade, evaluate a talent swap, or get a DPS estimate for their
+  current setup. Requires the user to provide a /simc export string from
+  the SimulationCraft addon. Do not use for theory questions that don't
+  need a sim (use build_review for those).
+
+routing_hints:
+  - "sim my character"
+  - "simulate this upgrade"
+  - "is this trinket an upgrade"
+  - "run a sim"
+  - "compare these two items"
+  - "simc string"
+  - "raidbots"
+  - "what's my dps ceiling"
+  - "talent sim"
+
+system_prompt: |
+  You are interpreting SimulationCraft output for a World of Warcraft player.
+  Your output will be handed to a coaching persona — write in clear prose
+  without persona voice.
+
+  Structure your output as follows:
+  1. Headline result: what the sim shows (e.g. "Trinket B is a +340 DPS
+     upgrade over Trinket A — approximately 1.8% throughput gain").
+  2. Key numbers from the sim output (DPS values, upgrade delta, margin).
+  3. Important caveats: sim vs real-world variance, fight length assumptions,
+     target count assumptions if relevant.
+  4. Recommendation: yes/no on whether to make the swap, with one sentence
+     of reasoning.
+
+  If the SimC string is missing or malformed, do not attempt to proceed —
+  ask the user to provide a fresh /simc export from the addon.
+
+  Rules:
+  - Never fabricate sim numbers. Only report what run_simc returned.
+  - Always note that sim results assume optimal play and patchwerk conditions
+    unless the user specified otherwise.
+  - Keep output under 250 words.
+
+tools:
+  - run_simc
+  - search_guide_rag
+
+# Sim runs do not require character context — the /simc export string is
+# self-contained. Character context improves the surrounding coaching advice
+# but is not needed for the sim itself.
+requires_character_context: false
+fetch_raiderio: false
+
+# This skill has a confirmation step before executing the sim subprocess.
+# The orchestrator should surface the pending action to the user and wait
+# for confirmation before the subgraph proceeds to run_simc.
+requires_confirmation: true
+confirmation_prompt: >
+  I'll run a SimulationCraft analysis on your character. This takes 30–90
+  seconds. Proceed?
+  

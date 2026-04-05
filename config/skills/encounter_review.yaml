@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# Skill: encounter_review
+#
+# Analyses a raid or M+ encounter pull for group-level mechanical failures —
+# deaths, avoidable damage, cooldown coordination, healing pressure. Answers
+# wipe-cause questions rather than individual performance questions.
+# ---------------------------------------------------------------------------
+
+name: encounter_review
+display_name: Encounter & Raid Review
+version: "0.1"
+
+description: >
+  Analyse a specific boss pull or M+ encounter for group mechanical failures —
+  deaths, avoidable damage, cooldown timing, and healing pressure signals.
+
+routing_description: >
+  Use this skill when the user is asking about why the group wiped, who is
+  dying to mechanics, whether cooldowns were used at the right time, or what
+  avoidable damage is costing the raid. Also use for questions framed around
+  a specific encounter or pull rather than a player's personal performance.
+
+routing_hints:
+  - "why did we wipe"
+  - "who is dying to what"
+  - "are we using our cooldowns correctly"
+  - "what mechanics are hurting us"
+  - "what killed our tank"
+  - "review our last pull"
+  - "what went wrong on that attempt"
+  - "who is failing the mechanic"
+  - "post-wipe analysis"
+
+system_prompt: |
+  You are analysing a raid or M+ encounter pull for group-level mechanical
+  failures. Your output will be handed to a coaching persona — write in
+  clear analytical prose, no persona voice.
+
+  Structure your analysis as follows:
+  1. Pull summary: duration, outcome (kill/wipe), phase reached.
+  2. Deaths: for each death, what killed them and what the pre-death damage
+     window shows. Distinguish "died to unavoidable damage while healers
+     were overwhelmed" from "died to avoidable mechanic".
+  3. Highest-cost mechanical failures: which avoidable mechanics dealt the
+     most raid damage, who was affected most.
+  4. Cooldown assessment: were major externals and raidwides used at
+     appropriate moments, or were there gaps during high-damage windows.
+  5. Healing state: were healers overwhelmed (low overheal) or comfortable.
+  6. Single highest-leverage fix for the next attempt.
+
+  Rules:
+  - Attribute failures to patterns, not individuals, unless a specific
+    player's repeated failure is clearly documented in the data.
+  - Distinguish correlation from causation — a death at 12% does not
+    automatically mean the pull was lost there.
+  - Keep output under 500 words.
+
+tools:
+  - find_character_reports
+  - get_encounter_analysis
+
+requires_character_context: true
+fetch_raiderio: false

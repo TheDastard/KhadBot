@@ -1,5 +1,5 @@
 """
-agent/agent_config.py
+agent/config/loader.py
 
 Loads, validates, and merges split agent + persona YAML configs into a single
 AgentConfig object used by the rest of the codebase.
@@ -14,7 +14,10 @@ File layout under config/:
         khadgar.yaml
         thrall.yaml
         xalatath.yaml
-      prompt_template.jinja2  ← system prompt template; rendered by PromptAssembler
+      templates/
+        prompt.jinja2         ← system prompt template; rendered by PromptAssembler
+      skills/
+        *.yaml                ← per-skill tool subsets; loaded separately by skills.py
 
 Loading sequence (load_agent_config):
     1. Parse and validate the agent YAML         → AgentFileSchema
@@ -26,6 +29,21 @@ Loading sequence (load_agent_config):
 
 AgentConfig is the only type the rest of the codebase touches.
 AgentFileSchema / PersonaFileSchema are internal parse intermediates.
+
+Role in the skill-based graph architecture
+------------------------------------------
+In the LangGraph skill system, AgentConfig has two runtime responsibilities:
+
+  1. base_prompt   — read by PromptAssembler to render the orchestrator's
+                     Layer 1 system prompt (identity + persona framing).
+  2. personas      — accessed by personas.get_persona() to resolve the active
+                     persona for a session, scoped to this agent's declarations.
+
+The tools list in coach.yaml now serves as a **master validation registry**
+rather than a runtime tool selector.  Per-skill tool selection is declared
+in config/skills/*.yaml and resolved by agent/skills.py.  The agent-level
+tools list is cross-referenced at startup to catch name mismatches early,
+but is not used to construct tool lists at runtime.
 """
 
 from __future__ import annotations
@@ -39,7 +57,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_ROOT = Path(__file__).parent.parent.parent.parent / "config"
+_DEFAULT_CONFIG_ROOT = Path(__file__).parent.parent.parent.parent.parent / "config"
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +140,7 @@ class PersonaFileSchema(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Merged AgentConfig (public type used by coach.py, personas.py, assembler)
+# Merged AgentConfig (public type used by orchestrator.py, personas.py, assembler)
 # ---------------------------------------------------------------------------
 
 
@@ -146,7 +164,8 @@ class AgentConfig(BaseModel):
     name: str
     version: str
     base_prompt: str
-    tools: list[str]  # tool names — resolved to objects by coach.py
+    tools: list[str]  # master tool registry for startup validation only;
+    # runtime tool selection is per-skill (config/skills/*.yaml)
     personas: list[PersonaConfig]
 
     model_config = {"frozen": True}

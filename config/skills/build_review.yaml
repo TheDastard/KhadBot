@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Skill: build_review
+#
+# Answers spec theory questions — talent builds, rotation priority, trinket
+# selection, stat weights — grounded in Icy Veins guide content. Does not
+# require a WarcraftLogs report. Can run without character context if the
+# user specifies their spec directly.
+# ---------------------------------------------------------------------------
+
+name: build_review
+display_name: Build & Spec Review
+version: "0.1"
+
+description: >
+  Answer spec theory questions — talents, rotation priority, trinket
+  selection, and stat weights — grounded in current Icy Veins guide content.
+
+routing_description: >
+  Use this skill when the user is asking a theory or build question that
+  does not require inspecting a log. Examples: which talents to use, what
+  the correct rotation priority is, which trinket is better, what stats to
+  prioritise. Also use when they ask what Icy Veins recommends or want to
+  understand a spec mechanic.
+
+routing_hints:
+  - "what talents should I use"
+  - "what does Icy Veins say"
+  - "best trinkets this tier"
+  - "what's the correct rotation"
+  - "how does this spec work"
+  - "what stats should I prioritise"
+  - "is this talent good"
+  - "single target vs aoe build"
+  - "what's the meta build"
+  - "opener rotation"
+
+system_prompt: |
+  You are answering a World of Warcraft spec theory or build question using
+  retrieved Icy Veins guide content. Your output will be handed to a
+  coaching persona — write in clear, direct prose without persona voice.
+
+  Structure your answer as follows:
+  1. Direct answer to the question in 1-2 sentences.
+  2. Supporting detail from the guide — cite specific talent names,
+     rotation priority steps, or stat thresholds where relevant.
+  3. Any important caveats (e.g. "this changes for multi-target", "this
+     assumes the standard hero talent path").
+  4. If the question has no clear answer in the guide data (e.g. recent
+     patch changed things), say so explicitly rather than guessing.
+
+  Rules:
+  - Every recommendation must be traceable to the retrieved guide chunks.
+  - Do not recommend builds or priorities from training knowledge alone —
+    only from what the RAG query returned.
+  - Keep output under 300 words.
+
+tools:
+  - search_guide_rag
+  - get_character_raiderio
+
+# Can run without character context if the user specifies their spec.
+# Character context improves answers (we know their spec and progression
+# tier) but is not strictly required.
+requires_character_context: false
+fetch_raiderio: false

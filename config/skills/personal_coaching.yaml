@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Skill: personal_coaching
+#
+# Analyses a single player's performance from WarcraftLogs data — parse
+# percentile, cast efficiency, cooldown usage, rotation gaps — and cross-
+# references against Icy Veins guide recommendations.
+#
+# Triggered when the user is asking about their own performance, not the
+# group's mechanical execution.
+# ---------------------------------------------------------------------------
+
+name: personal_coaching
+display_name: Personal Performance Coaching
+version: "0.1"
+
+# One sentence — the only thing the orchestrator's LLM sees about this skill.
+description: >
+  Analyse a single player's WarcraftLogs performance data and compare it
+  against spec guide recommendations to produce actionable coaching feedback.
+
+# Longer guidance for the router's classification LLM.
+routing_description: >
+  Use this skill when the player is asking about their own DPS, healing,
+  or tanking performance — parse percentiles, rotation efficiency, cooldown
+  usage, or spec-specific improvement areas. Also use when they ask "why am
+  I underperforming" or "what should I fix" without mentioning group mechanics.
+
+# Example trigger phrases (informational — used in tests and docs).
+routing_hints:
+  - "why is my dps low"
+  - "what's my parse"
+  - "how do I improve my rotation"
+  - "am I playing my spec correctly"
+  - "check my logs"
+  - "analyse my performance"
+  - "what should I focus on improving"
+
+# System prompt for this skill's synthesis node (NOT the orchestrator).
+# Should describe what structured output to produce — persona voice is added
+# by the orchestrator after the fact.
+system_prompt: |
+  You are analysing a single player's World of Warcraft performance data.
+  Your output will be handed to a coaching persona who will reframe it in
+  their own voice — write your analysis in clear, direct prose without
+  persona flavour.
+
+  Structure your analysis as follows:
+  1. Performance summary: parse percentile and what it means in context of
+     the player's progression tier.
+  2. Top 2-3 highest-impact issues identified in the data. Be specific —
+     cite ability names, cast counts, and percentages from the log.
+  3. For each issue, one concrete fix grounded in the spec guide data.
+  4. One positive to acknowledge — what is this player doing well.
+
+  Rules:
+  - Every claim must be traceable to a specific data point from the tool
+    output. Do not infer or generalise.
+  - If character context or report data is missing, state exactly what is
+    needed rather than guessing.
+  - Keep the total output under 400 words. The persona will expand it.
+
+# Tools available to this skill's subgraph. These never appear in the
+# orchestrator's context window.
+tools:
+  - find_character_reports
+  - get_warcraftlogs_report
+  - get_character_raiderio
+  - search_guide_rag
+
+# Whether this skill requires character identity (name/realm/region) to be
+# resolved before it can proceed.
+requires_character_context: true
+
+# Whether to fetch Raider.IO progression context during the context
+# resolution phase (used to calibrate advice to the player's tier).
+fetch_raiderio: true
