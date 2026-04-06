@@ -1,5 +1,5 @@
 # Makefile — Windows (VSCode terminal)
-# Assumes: Python 3.12+ on PATH, GNU make installed via Chocolatey or Scoop
+# Assumes: uv installed (winget install astral-sh.uv), GNU make installed via Chocolatey
 # WARNING: Do NOT use Cygwin make — it runs under /bin/sh and ignores the
 #          cmd.exe SHELL override, causing recipe failures. Use Chocolatey make.
 # Recommended terminal: PowerShell or Git Bash via VSCode integrated terminal
@@ -10,8 +10,8 @@
 #   3. Select the .venv interpreter in VSCode (Ctrl+Shift+P > Python: Select Interpreter)
 
 .DEFAULT_GOAL := help
-.PHONY: help install install-dev bot cli ingest test test-unit test-integ \
-        test-eval lint format typecheck clean
+.PHONY: help install install-cli install-dev cli check test test-unit \
+        test-integ test-eval lint format typecheck clean distclean
 
 # ── Shell ───────────────────────────────────────────────────────────────────
 # Force CMD so Windows-native commands (rd, del, set) work correctly.
@@ -20,17 +20,15 @@ SHELL       := cmd.exe
 .SHELLFLAGS := /C
 
 # ── Project settings ────────────────────────────────────────────────────────
-PYTHON      := python
-SRC         := src
-TESTS       := tests
-VENV        := .venv
+UV    := uv
+SRC   := src
+TESTS := tests
+VENV  := .venv
 
-# Windows venv binaries live in Scripts\ not bin/
-PIP         := $(VENV)\Scripts\pip
-PYTEST      := $(VENV)\Scripts\pytest
-RUFF        := $(VENV)\Scripts\ruff
-MYPY        := $(VENV)\Scripts\mypy
-VENV_PYTHON := $(VENV)\Scripts\python
+PYTEST := $(UV) run pytest
+RUFF   := $(UV) run ruff
+MYPY   := $(UV) run mypy
+PYTHON := $(UV) run python
 
 
 # ── Help ────────────────────────────────────────────────────────────────────
@@ -38,48 +36,51 @@ help:
 	@echo.
 	@echo   KhadBot — Agentic WoW Assistant
 	@echo.
+	@echo   Setup
 	@echo   install        Install runtime dependencies
+	@echo   install-cli    Install runtime + CLI dependencies
 	@echo   install-dev    Install runtime + dev dependencies
-	@echo   bot            Run the Discord bot
-	@echo   cli            Run the interactive CLI
-	@echo   ingest         Re-ingest Icy Veins spec guides into the vector store
+	@echo.
+	@echo   Run
+	@echo   cli            Launch the interactive CLI
+	@echo.
+	@echo   Test
+	@echo   check          Run all read-only gates (lint + typecheck + unit tests)
 	@echo   test           Run all tests
 	@echo   test-unit      Run unit tests only (no LLM inference)
 	@echo   test-integ     Run integration tests (requires Ollama or Groq)
 	@echo   test-eval      Run LangSmith golden dataset eval (Anthropic only)
-	@echo   lint           Lint with ruff
-	@echo   format         Auto-format with ruff
+	@echo.
+	@echo   Code quality
+	@echo   lint           Lint with ruff (read-only)
+	@echo   format         Auto-format and fix with ruff (writes files)
 	@echo   typecheck      Type-check with mypy
+	@echo.
+	@echo   Cleanup
 	@echo   clean          Remove caches and build artifacts
+	@echo   distclean      Remove everything including the venv
 	@echo.
 
 
 # ── Environment ─────────────────────────────────────────────────────────────
-install:
-	$(PYTHON) -m venv $(VENV)
-	$(PIP) install --upgrade pip
-	$(PIP) install -e .
+install: pyproject.toml
+	$(UV) sync --no-dev
 
-install-dev:
-	$(PYTHON) -m venv $(VENV)
-	$(PIP) install --upgrade pip
-	$(PIP) install -e ".[dev]"
+install-cli: pyproject.toml
+	$(UV) sync --no-dev --extra cli
+
+install-dev: pyproject.toml
+	$(UV) sync --extra dev
 
 
-# ── Entry points ────────────────────────────────────────────────────────────
+# ── Run ─────────────────────────────────────────────────────────────────────
 cli:
-	$(VENV_PYTHON) main.py cli
-
-
-# ── RAG ingestion ───────────────────────────────────────────────────────────
-# Pass SPECS= to limit ingestion to specific specs, e.g.:
-#   make ingest SPECS="fire-mage balance-druid"
-SPECS ?=
-ingest:
-	$(VENV_PYTHON) -m $(SRC).rag.ingest $(SPECS)
+	$(PYTHON) main.py cli
 
 
 # ── Testing ─────────────────────────────────────────────────────────────────
+check: lint typecheck test-unit
+
 test:
 	$(PYTEST) $(TESTS)
 
@@ -101,6 +102,7 @@ test-eval:
 lint:
 	$(RUFF) check $(SRC) $(TESTS)
 
+# Note: format writes files — run lint separately for a read-only check.
 format:
 	$(RUFF) format $(SRC) $(TESTS)
 	$(RUFF) check --fix $(SRC) $(TESTS)
@@ -111,6 +113,7 @@ typecheck:
 
 # ── Cleanup ─────────────────────────────────────────────────────────────────
 clean:
+	@if exist $(SRC)\khadbot.egg-info rd /s /q $(SRC)\khadbot.egg-info
 	@if exist $(SRC)\__pycache__ rd /s /q $(SRC)\__pycache__
 	@if exist $(TESTS)\__pycache__ rd /s /q $(TESTS)\__pycache__
 	@if exist .pytest_cache rd /s /q .pytest_cache
@@ -119,3 +122,7 @@ clean:
 	@if exist htmlcov rd /s /q htmlcov
 	@for /r . %%f in (*.pyc *.pyo) do @del /q "%%f" 2>nul
 	@echo Cleaned.
+
+distclean: clean
+	@if exist $(VENV) rd /s /q $(VENV)
+	@echo Removed venv.
