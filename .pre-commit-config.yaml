@@ -1,9 +1,13 @@
 repos:
-  - repo: https://github.com/TheDastard/KhadBot
-    rev: v0.12.8
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      # Run the linter
-      - id: ruff
+      - id: trailing-whitespace # trim unnecessary whitespace
+      - id: end-of-file-fixer   # ensure files end with a newline
+      - id: check-yaml          # validates syntax of yaml files
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff-check  # linter
         args: [--fix]
-      # Run the formatter
-      - id: ruff-format
+      - id: ruff-format # formatter
