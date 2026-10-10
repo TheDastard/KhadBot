@@ -37,7 +37,27 @@ def _run_cli() -> None:
 
         return result["answer"]
 
-    asyncio.run(run_cli(agent_fn))
+    from khadbot.encounter.commands import ingest_command
+
+    asyncio.run(run_cli(agent_fn, commands={"/ingest": ingest_command}))
+
+
+def _run_ingest(code: str, fights: str | None, offline: bool) -> None:
+    from rich.console import Console
+    from rich.markdown import Markdown
+
+    from khadbot.encounter.commands import format_ingest_result, parse_fights
+    from khadbot.encounter.ingest import ingest_report
+
+    console = Console()
+
+    def progress(pull_key: str, stage: str, pct: float) -> None:
+        console.print(f"[dim]{pull_key}  {stage}  {pct:.0%}[/dim]")
+
+    result = asyncio.run(ingest_report(code, parse_fights(fights), offline=offline, progress=progress))
+    console.print(Markdown(format_ingest_result(result)))
+    if result.failed:
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +69,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="khadbot", description="KhadBot — Agentic WoW Assistant")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("cli", help="Launch the interactive CLI (default)")
+    ingest = sub.add_parser("ingest", help="Ingest a WarcraftLogs report into the local event store")
+    ingest.add_argument("code", help="WarcraftLogs report code")
+    ingest.add_argument("--fights", help="Comma-separated fight IDs (default: all encounter fights)")
+    ingest.add_argument("--offline", action="store_true", help="Use only the raw page cache; never call WCL")
     return parser
 
 
@@ -58,6 +82,8 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     if command == "cli":
         _run_cli()
+    elif command == "ingest":
+        _run_ingest(args.code, args.fights, args.offline)
 
 
 if __name__ == "__main__":

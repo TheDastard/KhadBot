@@ -253,3 +253,18 @@ def role_fakes(monkeypatch) -> dict:
     fakes: dict = {}
     monkeypatch.setattr("khadbot.llm_factory.get_llm", lambda provider=None, *, role=None: fakes[role])
     return fakes
+
+
+# ---------------------------------------------------------------------------
+# perf marker
+# ---------------------------------------------------------------------------
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip @pytest.mark.perf tests unless the run selected them with -m."""
+    if "perf" in (config.getoption("-m") or ""):
+        return
+    skip = pytest.mark.skip(reason="perf test; run with -m perf")
+    for item in items:
+        if "perf" in item.keywords:
+            item.add_marker(skip)

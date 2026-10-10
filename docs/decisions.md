@@ -25,6 +25,15 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **`build_filter` inputs (M1.3)**: takes plain ID lists (`registry_spell_ids`, `encounter_ability_ids`) instead of
   `CooldownRegistry` / `EncounterFile`, because those models arrive in M2.1. M2 passes IDs derived from them.
   `ingest_report` takes the same two optional lists.
+- **`EventStore` additions (M1.7)**: `write_pull` takes an optional `truncated` list and the protocol gains
+  `truncated(pull_key)`, so truncation flags live in `pulls.json` next to `events_hash` (plan M1.8).
+- **Fetch keys**: `fetch_pull` returns `{dir_name: truncated}` (not `data_type`) so friendly/enemy `Casts` are distinct.
+  "Truncated" means pagination stopped because `nextPageTimestamp` did not advance.
+- **CLI ingest before M2**: the registry and encounter files do not exist yet, so `/ingest` and `main.py ingest`
+  fetch `Buffs` and enemy `Casts` **unfiltered** until M2 passes the registry/encounter IDs into `ingest_report`.
+  Avoid running them against real reports before then (cost); `scripts/spike_wcl_cost.py` measures it.
+- **mypy**: `make check` already fails on `main` (7 errors: missing `types-PyYAML`, `tool_panel.py`, `simc.py`,
+  `agent_config.py`, `cli.py`, `llm_factory.py` kwargs). M0/M1 add none; they were left alone.
 - **Package casing (M0.1)** was committed on its own, as the plan requires, before the rest of M0.
 
 ## Human task status
