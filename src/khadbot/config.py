@@ -40,6 +40,19 @@ def _optional(key: str, default: str = "") -> str:
     return os.getenv(key, default)
 
 
+LLM_ROLES = ("analyst", "conversation")
+
+
+def _role_env(name: str, *, suffix: bool = False) -> dict[str, str]:
+    """Collect ``<name>_<ROLE>`` (or ``<ROLE>_<name>`` when suffix) env vars that are set."""
+    out: dict[str, str] = {}
+    for role in LLM_ROLES:
+        key = f"{role.upper()}_{name}" if suffix else f"{name}_{role.upper()}"
+        if val := os.getenv(key):
+            out[role] = val
+    return out
+
+
 @dataclass(frozen=True)
 class LLMConfig:
     provider: LLMProvider = field(default_factory=lambda: LLMProvider(_optional("LLM_PROVIDER", LLMProvider.OLLAMA)))
@@ -52,6 +65,9 @@ class LLMConfig:
     ollama_model: str = field(default_factory=lambda: _optional("OLLAMA_MODEL", "qwen3:8b"))
     ollama_base_url: str = field(default_factory=lambda: _optional("OLLAMA_BASE_URL", "http://localhost:11434"))
     temperature: float = field(default_factory=lambda: float(_optional("LLM_TEMPERATURE", "0")))
+    # Per-role overrides for encounter review ("analyst" | "conversation"); absent roles use the global settings.
+    role_providers: dict[str, str] = field(default_factory=lambda: _role_env("LLM_PROVIDER"))
+    role_models: dict[str, str] = field(default_factory=lambda: _role_env("MODEL", suffix=True))
 
 
 @dataclass(frozen=True)
@@ -67,6 +83,16 @@ class WarcraftLogsConfig:
     client_secret: str = field(default_factory=lambda: _require("WARCRAFTLOGS_CLIENT_SECRET"))
     api_url: str = "https://www.warcraftlogs.com/api/v2/client"
     oauth_url: str = "https://www.warcraftlogs.com/oauth/token"
+
+
+@dataclass(frozen=True)
+class EncounterConfig:
+    data_dir: str = field(default_factory=lambda: _optional("KHADBOT_DATA_DIR", ".khadbot_data"))
+    wcl_max_concurrency: int = 2
+    wcl_max_retries: int = 3
+    wcl_page_limit: int = 10000
+    cutoff_fraction: float = 0.5
+    analyst_max_concurrency: int = 3
 
 
 @dataclass(frozen=True)
@@ -121,6 +147,7 @@ class AppConfig:
     raiderio: RaiderIOConfig = field(default_factory=RaiderIOConfig)
     warcraftlogs: WarcraftLogsConfig = field(default_factory=WarcraftLogsConfig)
     simc: SimCConfig = field(default_factory=SimCConfig)
+    encounter: EncounterConfig = field(default_factory=EncounterConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)
