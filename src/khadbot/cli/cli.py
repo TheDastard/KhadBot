@@ -75,13 +75,27 @@ HELP_TEXT = """
 
 AgentFn = Callable[[str, list], Awaitable[str]]
 
+# A slash-command handler: receives the text after the command, returns markdown to render (or None).
+CommandFn = Callable[[str], Awaitable[str | None]]
+
 
 # ---------------------------------------------------------------------------
 # REPL
 # ---------------------------------------------------------------------------
 
 
-async def run_cli(agent_fn: AgentFn | None = None) -> None:
+def _help_text(commands: dict[str, CommandFn]) -> str:
+    """HELP_TEXT plus one line per registered command (first line of the handler docstring)."""
+    if not commands:
+        return HELP_TEXT
+    lines = ["", "[ui.subheader]Registered commands[/ui.subheader]", ""]
+    for name, fn in sorted(commands.items()):
+        doc = (fn.__doc__ or "").strip().splitlines()
+        lines.append(f"  [ui.prompt]{name}[/ui.prompt]  {doc[0] if doc else ''}")
+    return HELP_TEXT + "\n".join(lines) + "\n"
+
+
+async def run_cli(agent_fn: AgentFn | None = None, commands: dict[str, CommandFn] | None = None) -> None:
     """
     Start the interactive CLI loop.
 
@@ -91,9 +105,13 @@ async def run_cli(agent_fn: AgentFn | None = None) -> None:
         Async callable `(question: str, callbacks: list) -> str`.
         If None, a placeholder echo function is used so the UI can be
         developed and tested independently of the agent.
+    commands:
+        Optional ``{"/name": async handler(arg_text) -> markdown | None}``. Built-in
+        commands (/help, /exit, /clear) take precedence and are always available.
     """
     if agent_fn is None:
         agent_fn = _echo_agent
+    commands = {k.lower(): v for k, v in (commands or {}).items()}
 
     render_banner()
 
@@ -121,12 +139,24 @@ async def run_cli(agent_fn: AgentFn | None = None) -> None:
             break
 
         if user_input.lower() == HELP_COMMAND:
-            console.print(HELP_TEXT)
+            console.print(_help_text(commands))
             continue
 
         if user_input.lower() == "/clear":
             console.clear()
             render_banner()
+            continue
+
+        # ── Registered commands ────────────────────────────────────────────
+        name, _, arg = user_input.partition(" ")
+        if name.lower() in commands:
+            try:
+                output = await commands[name.lower()](arg.strip())
+            except Exception as exc:  # noqa: BLE001
+                render_error(str(exc), title=f"{name} failed")
+                continue
+            if output:
+                render_agent_response(output)
             continue
 
         # ── Agent invocation ───────────────────────────────────────────────

@@ -88,6 +88,11 @@ addopts = """
     --cov-report=html:htmlcov
     -v"""
 
+# Markers: `perf` tests are skipped unless selected with `-m perf` (see tests/conftest.py)
+markers = [
+    "perf: timing/memory budget tests; run with -m perf",
+]
+
 # Treat these warnings as errors so they don't silently mask issues
 filterwarnings = [
     "error::DeprecationWarning",

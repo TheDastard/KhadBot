@@ -50,6 +50,8 @@ TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
 GRAPHQL_CLIENT_URL = "https://www.warcraftlogs.com/api/v2/client"
 GRAPHQL_USER_URL = "https://www.warcraftlogs.com/api/v2/user"
 
+RATE_LIMIT_QUERY = "query { rateLimitData { limitPerHour pointsSpentThisHour pointsResetIn } }"
+
 # Shave 60 s off the real expiry to avoid edge-case clock skew.
 TOKEN_EXPIRY_BUFFER_SECONDS = 60
 
@@ -69,6 +71,19 @@ class WarcraftLogsAPIError(Exception):
     def __init__(self, message: str, errors: list[dict] | None = None) -> None:
         super().__init__(message)
         self.errors = errors or []
+
+
+class WarcraftLogsRateLimitError(WarcraftLogsAPIError):
+    """
+    Raised on HTTP 429 or a GraphQL rate-limit error.
+
+    ``retry_after_s`` is the server's ``Retry-After`` hint when it sent one.
+    The client never retries on its own; callers own the backoff policy.
+    """
+
+    def __init__(self, message: str, errors: list[dict] | None = None, retry_after_s: float | None = None) -> None:
+        super().__init__(message, errors)
+        self.retry_after_s = retry_after_s
 
 
 class WarcraftLogsPrivateReportError(WarcraftLogsAPIError):
@@ -221,6 +236,11 @@ class WarcraftLogsClient:
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                raise WarcraftLogsRateLimitError(
+                    "WarcraftLogs rate limit hit (HTTP 429).",
+                    retry_after_s=_parse_retry_after(exc.response.headers.get("Retry-After")),
+                ) from exc
             raise WarcraftLogsAPIError(f"WarcraftLogs GraphQL HTTP error: {exc.response.status_code}") from exc
         except httpx.RequestError as exc:
             raise WarcraftLogsAPIError(f"WarcraftLogs network error: {exc}") from exc
@@ -229,6 +249,11 @@ class WarcraftLogsClient:
 
         if errors := body.get("errors"):
             first_message = errors[0].get("message", "")
+            if "rate limit" in first_message.lower():
+                raise WarcraftLogsRateLimitError(
+                    f"WarcraftLogs GraphQL error: {first_message}",
+                    errors=errors,
+                )
             if "private" in first_message.lower() or "forbidden" in first_message.lower():
                 raise WarcraftLogsPrivateReportError(
                     "This WarcraftLogs report is private. "
@@ -242,3 +267,18 @@ class WarcraftLogsClient:
             )
 
         return body.get("data", {})
+
+    async def rate_limit(self) -> dict[str, Any]:
+        """Return ``{limitPerHour, pointsSpentThisHour, pointsResetIn}`` for the current credentials."""
+        data = await self.query(RATE_LIMIT_QUERY)
+        return data.get("rateLimitData", {})
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    """Parse a ``Retry-After`` header expressed in seconds; HTTP-date forms are ignored."""
+    if not value:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
