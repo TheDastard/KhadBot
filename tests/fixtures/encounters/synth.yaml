@@ -1,0 +1,36 @@
+# Encounter file matching the synthetic SYNTH01 report (all IDs are fake).
+encounter_id: 90001
+name: Synthetic Boss
+file_version: 1
+phases:
+  - id: p1
+    name: Phase 1
+    start: {trigger: pull}
+  - id: p2
+    name: Phase 2
+    start: {trigger: boss_cast, ability_id: 900501}
+mechanics:
+  - id: swirl
+    name: Synth Swirl
+    ability_ids: [900101]
+    kind: avoidable
+    failure: {rule: any_hit}
+    cluster_window_ms: 1000
+    severity: medium
+  - id: shadow_bolt
+    name: Synth Shadow Bolt
+    ability_ids: [900401]
+    kind: interrupt
+    failure: {rule: not_interrupted}
+  - id: curse
+    name: Synth Curse
+    ability_ids: [900601]
+    kind: debuff
+    failure: {rule: debuff_duration_gt, ms: 8000}
+damage_windows:
+  - id: cataclysm
+    name: Synth Cataclysm
+    ability_ids: [900201]
+    cluster_window_ms: 2000
+    expected_cooldowns: 1
+ignore_ability_ids: [900010]

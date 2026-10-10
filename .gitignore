@@ -63,3 +63,9 @@ env/
 
 # Shared workspace settings are fine to commit; personal ones aren't
 # If your team uses different formatter settings, move settings.json here too
+
+
+# -----------------------------------------------------------------------------
+# Encounter review local data (raw WCL pages, parquet events, sqlite stores)
+# -----------------------------------------------------------------------------
+.khadbot_data/

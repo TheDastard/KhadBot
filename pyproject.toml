@@ -21,6 +21,12 @@ dependencies = [
 
     # --- HTTP client ---
     "httpx>=0.27.0",              # async HTTP for Raider.IO, WarcraftLogs, Wipefest
+
+    # --- Encounter review ---
+    "polars>=1.20",               # event store frames (parquet)
+    "orjson>=3.10",               # fast JSON for raw WCL pages and event hashing
+    "pyyaml>=6.0",                # agent / encounter / registry config files
+    "python-dotenv>=1.0.0",       # load .env (imported by agent/coach.py)
 ]
 
 [project.optional-dependencies]
@@ -52,14 +58,13 @@ dev = [
     "langsmith>=0.1.0",         # trace URL construction, eval dataset management
 
     # --- Local dev convenience ---
-    "python-dotenv>=1.0.0",     # load .env for local development
     "ipython>=8.0.0",           # nicer REPL for debugging agent traces
     "pre-commit>=4.5.0",        # pre-commit hooks
     "types-pyyaml>=6.0.0",      # mypy stubs for yaml
 ]
 
 [project.scripts]
-khadbot = "cli.cli:main"
+khadbot = "khadbot.main:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
