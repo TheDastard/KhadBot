@@ -7,9 +7,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 12000,
-   "overheal": 0,
-   "hitPoints": 32000,
+   "amount": 6000,
+   "overheal": 6000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -69,8 +69,20 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 44000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
+  },
+  {
+   "timestamp": 107900,
+   "type": "heal",
+   "sourceID": 2,
+   "targetID": 3,
+   "abilityGameID": 900003,
+   "fight": 0,
+   "amount": 14000,
+   "overheal": 1000,
+   "hitPoints": 100000,
+   "maxHitPoints": 100000
   },
   {
    "timestamp": 108000,
@@ -79,9 +91,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 12000,
-   "overheal": 0,
-   "hitPoints": 56000,
+   "amount": 6000,
+   "overheal": 6000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -89,18 +101,6 @@
    "type": "heal",
    "sourceID": 2,
    "targetID": 2,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 108100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
    "abilityGameID": 900003,
    "fight": 0,
    "amount": 0,
@@ -141,7 +141,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 68000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -151,9 +151,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 12000,
-   "overheal": 0,
-   "hitPoints": 80000,
+   "amount": 6000,
+   "overheal": 6000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -172,23 +172,11 @@
    "timestamp": 114100,
    "type": "heal",
    "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 114100,
-   "type": "heal",
-   "sourceID": 2,
    "targetID": 4,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
+   "amount": 14000,
+   "overheal": 1000,
    "hitPoints": 100000,
    "maxHitPoints": 100000
   },
@@ -213,7 +201,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 92000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -223,9 +211,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 12000,
-   "overheal": 0,
-   "hitPoints": 104000,
+   "amount": 6000,
+   "overheal": 6000,
+   "hitPoints": 200000,
    "maxHitPoints": 200000
   },
   {
@@ -235,21 +223,9 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 120100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 66000,
    "maxHitPoints": 100000
   },
   {
@@ -259,9 +235,9 @@
    "targetID": 4,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 80000,
    "maxHitPoints": 100000
   },
   {
@@ -271,9 +247,9 @@
    "targetID": 5,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 66000,
    "maxHitPoints": 100000
   },
   {
@@ -285,7 +261,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 116000,
+   "hitPoints": 165000,
    "maxHitPoints": 200000
   },
   {
@@ -297,7 +273,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 128000,
+   "hitPoints": 171000,
    "maxHitPoints": 200000
   },
   {
@@ -307,21 +283,9 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 126100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 81000,
    "maxHitPoints": 100000
   },
   {
@@ -331,21 +295,9 @@
    "targetID": 4,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 126100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 81000,
    "maxHitPoints": 100000
   },
   {
@@ -357,7 +309,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 140000,
+   "hitPoints": 171000,
    "maxHitPoints": 200000
   },
   {
@@ -369,7 +321,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 152000,
+   "hitPoints": 177000,
    "maxHitPoints": 200000
   },
   {
@@ -379,21 +331,9 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 132100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 84000,
    "maxHitPoints": 100000
   },
   {
@@ -403,21 +343,9 @@
    "targetID": 4,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 132100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 96000,
    "maxHitPoints": 100000
   },
   {
@@ -429,7 +357,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 164000,
+   "hitPoints": 177000,
    "maxHitPoints": 200000
   },
   {
@@ -441,7 +369,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 176000,
+   "hitPoints": 183000,
    "maxHitPoints": 200000
   },
   {
@@ -451,21 +379,9 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 138100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 99000,
    "maxHitPoints": 100000
   },
   {
@@ -475,20 +391,8 @@
    "targetID": 4,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 138100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
+   "amount": 4000,
+   "overheal": 11000,
    "hitPoints": 100000,
    "maxHitPoints": 100000
   },
@@ -501,7 +405,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 188000,
+   "hitPoints": 121000,
    "maxHitPoints": 200000
   },
   {
@@ -513,7 +417,7 @@
    "fight": 0,
    "amount": 12000,
    "overheal": 0,
-   "hitPoints": 200000,
+   "hitPoints": 127000,
    "maxHitPoints": 200000
   },
   {
@@ -523,45 +427,9 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 144100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 144100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 4,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 144100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 52000,
    "maxHitPoints": 100000
   },
   {
@@ -571,9 +439,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 12000,
-   "hitPoints": 200000,
+   "amount": 12000,
+   "overheal": 0,
+   "hitPoints": 127000,
    "maxHitPoints": 200000
   },
   {
@@ -583,9 +451,9 @@
    "targetID": 1,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 12000,
-   "hitPoints": 200000,
+   "amount": 12000,
+   "overheal": 0,
+   "hitPoints": 133000,
    "maxHitPoints": 200000
   },
   {
@@ -595,70 +463,10 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 53000,
    "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 150100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 150100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 4,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 150100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 153000,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 1,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 12000,
-   "hitPoints": 200000,
-   "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 156000,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 1,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 12000,
-   "hitPoints": 200000,
-   "maxHitPoints": 200000
   },
   {
    "timestamp": 156100,
@@ -667,58 +475,10 @@
    "targetID": 2,
    "abilityGameID": 900003,
    "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
+   "amount": 15000,
+   "overheal": 0,
+   "hitPoints": 68000,
    "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 156100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 3,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 156100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 4,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 156100,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 5,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 15000,
-   "hitPoints": 100000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 159000,
-   "type": "heal",
-   "sourceID": 2,
-   "targetID": 1,
-   "abilityGameID": 900003,
-   "fight": 0,
-   "amount": 0,
-   "overheal": 12000,
-   "hitPoints": 200000,
-   "maxHitPoints": 200000
   }
  ],
  "nextPageTimestamp": null

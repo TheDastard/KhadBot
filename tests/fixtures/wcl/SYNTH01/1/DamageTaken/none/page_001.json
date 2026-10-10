@@ -1,6 +1,70 @@
 {
  "data": [
   {
+   "timestamp": 123000,
+   "type": "damage",
+   "sourceID": 10,
+   "targetID": 5,
+   "abilityGameID": 900102,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 10000,
+   "mitigated": 0,
+   "unmitigatedAmount": 28000,
+   "absorbed": 0,
+   "overkill": 18000,
+   "hitPoints": 0,
+   "maxHitPoints": 100000
+  },
+  {
+   "timestamp": 125000,
+   "type": "damage",
+   "sourceID": 10,
+   "targetID": 1,
+   "abilityGameID": 900010,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 6000,
+   "mitigated": 0,
+   "unmitigatedAmount": 6000,
+   "absorbed": 0,
+   "overkill": 0,
+   "hitPoints": 159000,
+   "maxHitPoints": 200000
+  },
+  {
+   "timestamp": 125000,
+   "type": "damage",
+   "sourceID": 10,
+   "targetID": 4,
+   "abilityGameID": 900101,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 14000,
+   "mitigated": 0,
+   "unmitigatedAmount": 14000,
+   "absorbed": 0,
+   "overkill": 0,
+   "hitPoints": 66000,
+   "maxHitPoints": 100000
+  },
+  {
+   "timestamp": 127000,
+   "type": "damage",
+   "sourceID": 10,
+   "targetID": 1,
+   "abilityGameID": 900010,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 6000,
+   "mitigated": 0,
+   "unmitigatedAmount": 6000,
+   "absorbed": 0,
+   "overkill": 0,
+   "hitPoints": 165000,
+   "maxHitPoints": 200000
+  },
+  {
    "timestamp": 129000,
    "type": "damage",
    "sourceID": 10,
@@ -13,24 +77,8 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 110000,
+   "hitPoints": 159000,
    "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 130000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 5,
-   "abilityGameID": 900101,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 14000,
-   "mitigated": 0,
-   "unmitigatedAmount": 14000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 72000,
-   "maxHitPoints": 100000
   },
   {
    "timestamp": 131000,
@@ -45,8 +93,24 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 104000,
+   "hitPoints": 165000,
    "maxHitPoints": 200000
+  },
+  {
+   "timestamp": 132001,
+   "type": "damage",
+   "sourceID": 11,
+   "targetID": 2,
+   "abilityGameID": 900401,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 12000,
+   "mitigated": 0,
+   "unmitigatedAmount": 12000,
+   "absorbed": 0,
+   "overkill": 0,
+   "hitPoints": 69000,
+   "maxHitPoints": 100000
   },
   {
    "timestamp": 133000,
@@ -61,7 +125,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 98000,
+   "hitPoints": 171000,
    "maxHitPoints": 200000
   },
   {
@@ -77,24 +141,8 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 92000,
+   "hitPoints": 165000,
    "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 135000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 3,
-   "abilityGameID": 900101,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 14000,
-   "mitigated": 0,
-   "unmitigatedAmount": 14000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 72000,
-   "maxHitPoints": 100000
   },
   {
    "timestamp": 137000,
@@ -109,7 +157,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 86000,
+   "hitPoints": 171000,
    "maxHitPoints": 200000
   },
   {
@@ -125,7 +173,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 80000,
+   "hitPoints": 177000,
    "maxHitPoints": 200000
   },
   {
@@ -141,7 +189,7 @@
    "unmitigatedAmount": 62000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 103000,
+   "hitPoints": 115000,
    "maxHitPoints": 200000
   },
   {
@@ -152,12 +200,12 @@
    "abilityGameID": 900201,
    "fight": 0,
    "hitType": 1,
-   "amount": 37000,
+   "amount": 62000,
    "mitigated": 0,
    "unmitigatedAmount": 62000,
    "absorbed": 0,
-   "overkill": 25000,
-   "hitPoints": 0,
+   "overkill": 0,
+   "hitPoints": 37000,
    "maxHitPoints": 100000
   },
   {
@@ -173,7 +221,7 @@
    "unmitigatedAmount": 14000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 58000,
+   "hitPoints": 86000,
    "maxHitPoints": 100000
   },
   {
@@ -184,12 +232,12 @@
    "abilityGameID": 900201,
    "fight": 0,
    "hitType": 1,
-   "amount": 23000,
+   "amount": 62000,
    "mitigated": 0,
    "unmitigatedAmount": 62000,
    "absorbed": 0,
-   "overkill": 39000,
-   "hitPoints": 0,
+   "overkill": 0,
+   "hitPoints": 24000,
    "maxHitPoints": 100000
   },
   {
@@ -205,8 +253,24 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 74000,
+   "hitPoints": 109000,
    "maxHitPoints": 200000
+  },
+  {
+   "timestamp": 141000,
+   "type": "damage",
+   "sourceID": 10,
+   "targetID": 4,
+   "abilityGameID": 900102,
+   "fight": 0,
+   "hitType": 1,
+   "amount": 24000,
+   "mitigated": 0,
+   "unmitigatedAmount": 90000,
+   "absorbed": 0,
+   "overkill": 66000,
+   "hitPoints": 0,
+   "maxHitPoints": 100000
   },
   {
    "timestamp": 143000,
@@ -221,7 +285,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 68000,
+   "hitPoints": 115000,
    "maxHitPoints": 200000
   },
   {
@@ -237,24 +301,8 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 62000,
+   "hitPoints": 121000,
    "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 145000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 5,
-   "abilityGameID": 900101,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 14000,
-   "mitigated": 0,
-   "unmitigatedAmount": 14000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 58000,
-   "maxHitPoints": 100000
   },
   {
    "timestamp": 147000,
@@ -269,7 +317,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 56000,
+   "hitPoints": 115000,
    "maxHitPoints": 200000
   },
   {
@@ -285,7 +333,7 @@
    "unmitigatedAmount": 6000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 50000,
+   "hitPoints": 121000,
    "maxHitPoints": 200000
   },
   {
@@ -296,11 +344,11 @@
    "abilityGameID": 900010,
    "fight": 0,
    "hitType": 1,
-   "amount": 103000,
+   "amount": 133000,
    "mitigated": 0,
    "unmitigatedAmount": 400000,
    "absorbed": 0,
-   "overkill": 297000,
+   "overkill": 267000,
    "hitPoints": 0,
    "maxHitPoints": 200000
   },
@@ -317,104 +365,8 @@
    "unmitigatedAmount": 14000,
    "absorbed": 0,
    "overkill": 0,
-   "hitPoints": 72000,
-   "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 151000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 6000,
-   "mitigated": 0,
-   "unmitigatedAmount": 6000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 44000,
-   "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 153000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 6000,
-   "mitigated": 0,
-   "unmitigatedAmount": 6000,
-   "absorbed": 0,
-   "overkill": 0,
    "hitPoints": 38000,
-   "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 155000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 6000,
-   "mitigated": 0,
-   "unmitigatedAmount": 6000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 32000,
-   "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 155000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 5,
-   "abilityGameID": 900101,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 14000,
-   "mitigated": 0,
-   "unmitigatedAmount": 14000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 44000,
    "maxHitPoints": 100000
-  },
-  {
-   "timestamp": 157000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 6000,
-   "mitigated": 0,
-   "unmitigatedAmount": 6000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 26000,
-   "maxHitPoints": 200000
-  },
-  {
-   "timestamp": 159000,
-   "type": "damage",
-   "sourceID": 10,
-   "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0,
-   "hitType": 1,
-   "amount": 6000,
-   "mitigated": 0,
-   "unmitigatedAmount": 6000,
-   "absorbed": 0,
-   "overkill": 0,
-   "hitPoints": 20000,
-   "maxHitPoints": 200000
   }
  ],
  "nextPageTimestamp": null
