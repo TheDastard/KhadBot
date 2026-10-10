@@ -9,7 +9,7 @@
    "fight": 0
   },
   {
-   "timestamp": 122000,
+   "timestamp": 123000,
    "type": "death",
    "sourceID": 10,
    "targetID": 5,
@@ -17,19 +17,11 @@
    "fight": 0
   },
   {
-   "timestamp": 140000,
-   "type": "death",
-   "sourceID": 10,
-   "targetID": 2,
-   "abilityGameID": 900201,
-   "fight": 0
-  },
-  {
-   "timestamp": 140000,
+   "timestamp": 141000,
    "type": "death",
    "sourceID": 10,
    "targetID": 4,
-   "abilityGameID": 900201,
+   "abilityGameID": 900102,
    "fight": 0
   },
   {

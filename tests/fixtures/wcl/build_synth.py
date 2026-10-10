@@ -89,7 +89,12 @@ def _sort_key(e: dict) -> tuple:
 
 
 class Sim:
-    """Tiny HP simulation so damage events carry plausible hitPoints and overkill."""
+    """
+    Tiny HP simulation so damage events carry plausible hitPoints and overkill.
+
+    ``hit`` / ``heal`` only queue operations; ``run`` applies them in time order (stable for equal
+    timestamps), so HP follows the fight's timeline regardless of the order the script lists them.
+    """
 
     def __init__(self, start: int) -> None:
         self.start = start
@@ -98,8 +103,23 @@ class Sim:
         self.damage: list[dict] = []
         self.deaths: list[dict] = []
         self.healing: list[dict] = []
+        self._ops: list[tuple[int, int, str, tuple]] = []
 
     def hit(self, t: int, src: int, tgt: int, ability: int, amount: int) -> None:
+        self._ops.append((t, len(self._ops), "hit", (src, tgt, ability, amount)))
+
+    def heal(self, t: int, tgt: int, amount: int, ability: int = 900003) -> None:
+        self._ops.append((t, len(self._ops), "heal", (tgt, amount, ability)))
+
+    def run(self) -> None:
+        for t, _, kind, args in sorted(self._ops):
+            if kind == "hit":
+                self._apply_hit(t, *args)
+            else:
+                self._apply_heal(t, *args)
+        self._ops.clear()
+
+    def _apply_hit(self, t: int, src: int, tgt: int, ability: int, amount: int) -> None:
         if tgt in self.dead or tgt not in self.hp:
             return
         before = self.hp[tgt]
@@ -137,7 +157,7 @@ class Sim:
                 }
             )
 
-    def heal(self, t: int, tgt: int, amount: int, ability: int = 900003) -> None:
+    def _apply_heal(self, t: int, tgt: int, amount: int, ability: int) -> None:
         if tgt in self.dead:
             return
         before = self.hp[tgt]
@@ -212,7 +232,8 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         sim.hit(t, BOSS, swirl_targets[i % len(swirl_targets)], SWIRL, 14_000)
 
     if not kill:
-        # One-shot: DPS1 takes a 140k hit at 8 s at (near) full health.
+        # One-shot: DPS1 is topped up at 7.9 s, then takes a 140k hit at 8 s from full health.
+        sim.heal(7_900, DPS1, 15_000)
         sim.hit(8_000, BOSS, DPS1, SWIRL, 140_000)
         # Multi-hit death: DPS3 stands in Fire Pools 21-24 s (unregistered ability).
         for t in (21_000, 22_000, 23_000, 24_000):
@@ -266,6 +287,8 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         debuffs.append(ev(19_000, "removedebuff", BOSS, TANK, CURSE))
         dispels.append(ev(18_900, "dispel", HEALER, TANK, PURGE, extraAbilityGameID=CURSE))
         sim.hit(55_000, BOSS, DPS3, FIREPOOL, 150_000)  # one death in the kill
+
+    sim.run()
 
     # Friendly filler casts so the Casts type has volume.
     for i, t in enumerate(range(1500, dur, 3000)):

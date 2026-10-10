@@ -28,11 +28,13 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
 
 ## What each event exists to test
 
-- **One-shot death** (fight 1, t=8 s): a 140k Swirl hit on a 100k-HP player (`overkill` > 0).
-- **Multi-hit death** (fight 1, t=22 s): Fire Pool (ability 900102, deliberately *not* in the
-  encounter file, so it shows up as unregistered damage) hits a player four times.
-- **Deaths at the wipe cutoff / after it** (fight 1, t=40 s and t=50 s): with 5 players the
-  cutoff is the 3rd death; the tank's death at 50 s is after it.
+- **One-shot death** (fight 1, t=8 s): the player is healed to full at 7.9 s, then a 140k Swirl hit on a
+  100k-HP player (`overkill` > 0, time-to-die ~0.1 s).
+- **Multi-hit death** (fight 1, t=23 s): after Cataclysm, Fire Pool (ability 900102, deliberately *not* in
+  the encounter file, so it shows up as unregistered damage) hits a player at 21, 22 and 23 s.
+- **Deaths at the wipe cutoff / after it** (fight 1, t=41 s and t=50 s): with 5 players the
+  cutoff is the 3rd death (Fire Pool at 41 s); the tank's death at 50 s is after it.
+- **Kill with a death** (fight 2, t=55 s): Swirl then Fire Pool on the same player.
 - **`any_hit` mechanic**: Swirl (900101) hits one player every 5 s.
 - **Interrupt mechanic**: Shadow Bolt (900401) is interrupted at ~12 s in fight 1 and lands
   at 32 s (missed interrupt). Fight 2 interrupts all three casts.
@@ -40,7 +42,8 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
   18 s, buff 18-26 s); the one at 40 s is not.
 - **Cooldown casts**: Link Totem and Guardian (900302) in fight 1; Link Totem x2 in fight 2.
 - **Phase trigger**: Boss cast of Phase Shift (900501) at 35 s (fight 1) and 30 s (fight 2).
-- **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event).
+- **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event). The generator
+  queues damage and heals and applies them in time order, so HP follows the fight's timeline.
 - **Pagination**: fight 1 `DamageTaken` is two pages (`nextPageTimestamp` set on page 0).
 - **Debuff duration / dispel**: Curse (900601) on the tank lasts 16 s in fight 1 (dispelled
   late) and 5 s in fight 2.
