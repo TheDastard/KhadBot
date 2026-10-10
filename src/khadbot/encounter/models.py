@@ -5,6 +5,7 @@ Pydantic models shared across encounter review. Times inside a pull are
 fight-relative milliseconds unless a field says otherwise.
 
 Ingest models: Pull, Actor, FetchSpec, IngestResult.
+Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, CooldownUse, WindowCoverage, PullDigest.
 """
 
 from __future__ import annotations
@@ -69,3 +70,14 @@ class IngestResult(BaseModel):
     skipped: list[str]  # already ingested with the same events_hash
     failed: dict[str, str]  # pull_key -> error message
     points_spent: float | None  # from WCL rateLimitData, if available
+
+
+# ---------------------------------------------------------------------------
+# Annotation models
+# ---------------------------------------------------------------------------
+
+
+class PhaseSpan(BaseModel):
+    phase_id: str
+    start_ms: int  # fight-relative, inclusive
+    end_ms: int  # fight-relative, exclusive (the next phase's start, or the pull's duration)

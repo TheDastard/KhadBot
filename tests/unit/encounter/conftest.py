@@ -36,3 +36,31 @@ def synth_ingest_kwargs(synth_cache, synth_store) -> dict:
         "registry_spell_ids": SYNTH_REGISTRY_IDS,
         "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS,
     }
+
+
+@pytest.fixture
+async def synth_ingested(synth_ingest_kwargs, synth_store) -> ParquetEventStore:
+    """SYNTH01 ingested offline into ``synth_store``."""
+    from khadbot.encounter.ingest import ingest_report
+
+    result = await ingest_report("SYNTH01", **synth_ingest_kwargs)
+    assert not result.failed
+    return synth_store
+
+
+@pytest.fixture
+def synth_enc():
+    from helpers.synth import SYNTH_ENCOUNTER_FILE
+
+    from khadbot.encounter.config_files import load_encounter_file
+
+    return load_encounter_file(SYNTH_ENCOUNTER_FILE)
+
+
+@pytest.fixture
+def synth_registry():
+    from helpers.synth import SYNTH_REGISTRY_FILE
+
+    from khadbot.encounter.config_files import load_registry
+
+    return load_registry(SYNTH_REGISTRY_FILE)
