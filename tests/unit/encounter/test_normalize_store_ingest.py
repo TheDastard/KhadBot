@@ -121,7 +121,7 @@ class TestNormalize:
     def test_hp_pct_from_resources(self, synth_cache, meta):
         df = frame_for(synth_cache, meta, 1)
         deaths = df.filter(pl.col("type") == "death")
-        assert deaths.height == 5
+        assert deaths.height == 4  # 8 s, 23 s, 41 s (cutoff), 50 s
         dmg = df.filter(pl.col("type") == "damage")
         assert dmg["hp_pct"].null_count() == 0
         assert dmg["hp_pct"].min() == 0.0  # lethal hits
