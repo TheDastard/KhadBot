@@ -120,6 +120,15 @@ def parse_report_meta(code: str, meta: dict) -> tuple[list[Pull], list[Actor]]:
     return pulls, actors
 
 
+def parse_abilities(meta: dict) -> dict[int, str]:
+    """``masterData.abilities`` as ``{gameID: name}``."""
+    return {
+        int(a["gameID"]): a.get("name") or f"ability-{a['gameID']}"
+        for a in (meta.get("masterData") or {}).get("abilities") or []
+        if a.get("gameID") is not None
+    }
+
+
 # ---------------------------------------------------------------------------
 # Events
 # ---------------------------------------------------------------------------

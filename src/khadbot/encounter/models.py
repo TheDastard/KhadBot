@@ -81,3 +81,101 @@ class PhaseSpan(BaseModel):
     phase_id: str
     start_ms: int  # fight-relative, inclusive
     end_ms: int  # fight-relative, exclusive (the next phase's start, or the pull's duration)
+
+
+# ---------------------------------------------------------------------------
+# Analysis records
+# ---------------------------------------------------------------------------
+
+Ref = str  # evidence reference, see make_ref and plan section 6.5
+
+
+def make_ref(pull_key: str, *parts: object) -> Ref:
+    """``ev:<report>:<fight>:<part>:...`` (``pull_key`` is already ``<report>:<fight>``)."""
+    return ":".join(["ev", pull_key, *(str(p) for p in parts)])
+
+
+class Hit(BaseModel):
+    t_ms: int
+    ability_id: int | None
+    ability_name: str | None
+    amount: int
+    source_name: str | None
+
+
+class DeathRecord(BaseModel):
+    ref: Ref
+    actor_id: int
+    name: str
+    t_ms: int
+    phase_id: str | None
+    killing_ability_id: int | None
+    killing_ability_name: str | None
+    overkill: int | None
+    time_to_die_ms: int | None  # death t_ms minus last t_ms with hp_pct >= 90; None without hp data
+    window_ms: int = 10_000
+    window_damage: int  # friendly damage taken by the actor in the window
+    window_healing: int | None  # None if Healing was not ingested
+    top_hits: list[Hit]  # max 5, by amount desc
+    mechanic_ids: list[str]  # mechanics that hit the actor in the window
+    active_defensives: list[int]  # registry spell IDs whose aura was active on the actor at death
+    after_cutoff: bool
+
+
+class MechanicStat(BaseModel):
+    ref: Ref
+    mechanic_id: str
+    clusters: int
+    hits: int
+    failures: int
+    failures_by_player: dict[str, int]  # name -> count, top 10
+    damage_taken: int
+    deaths_in_window: int  # deaths whose mechanic_ids include this one
+
+
+class CooldownUse(BaseModel):
+    ref: Ref
+    spell_id: int
+    spell_name: str
+    caster: str
+    t_ms: int
+    phase_id: str | None
+
+
+class WindowCoverage(BaseModel):
+    ref: Ref
+    window_id: str
+    occurrence: int  # 1-based
+    t_ms: int
+    cooldowns_active: list[int]  # raid cooldown spell IDs whose aura was active at t_ms
+    covered: bool  # len(cooldowns_active) >= expected_cooldowns
+
+
+class UnregisteredAbility(BaseModel):
+    ability_id: int
+    name: str | None
+    damage: int
+    share_pct: float  # of all friendly damage taken in the pull
+
+
+# ---------------------------------------------------------------------------
+# Digest
+# ---------------------------------------------------------------------------
+
+
+class PullDigest(BaseModel):
+    pull_key: str
+    encounter_name: str
+    outcome: Literal["kill", "wipe"]
+    duration_ms: int
+    phase_reached: str | None
+    boss_pct: float | None
+    cutoff_ms: int | None
+    deaths: list[DeathRecord]  # cap 10; before-cutoff first
+    mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
+    cooldowns: list[CooldownUse]  # cap 30
+    coverage_windows: list[WindowCoverage]
+    unregistered: list[UnregisteredAbility]  # cap 5
+    coverage: Literal["full", "partial", "none"]
+    anomalies: list[str]
+    produced_from: dict[str, str]  # events_hash, encfile_hash, registry_hash

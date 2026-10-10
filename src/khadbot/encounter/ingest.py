@@ -23,7 +23,7 @@ from khadbot.encounter.fetch import (
     specs_for,
 )
 from khadbot.encounter.models import IngestResult, Pull
-from khadbot.encounter.normalize import events_hash, normalize_pull, parse_report_meta
+from khadbot.encounter.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
 from khadbot.encounter.store import EventStore, ParquetEventStore
 from khadbot.encounter.wcl_queries import GET_REPORT_META
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient
@@ -89,6 +89,7 @@ async def ingest_report(
         meta = await _report_meta(client, cache, code, offline=offline)
         pulls, actors = parse_report_meta(code, meta)
         store.write_actors(code, actors)
+        store.write_abilities(code, parse_abilities(meta))
 
         wanted: list[Pull] = pulls
         failed: dict[str, str] = {}
