@@ -11,6 +11,7 @@ import argparse
 import shlex
 from typing import NoReturn
 
+from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_registry
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.models import IngestResult
 
@@ -70,6 +71,12 @@ def format_ingest_result(result: IngestResult) -> str:
     return "\n".join(lines)
 
 
+def default_filter_kwargs() -> dict:
+    """Fetch-filter inputs from the cooldown registry and every authored encounter file."""
+    spell_ids, enemy_cast_ids = fetch_filter_inputs(load_registry(), load_all_encounters())
+    return {"registry_spell_ids": spell_ids, "enemy_cast_ids": enemy_cast_ids}
+
+
 def _console_progress(pull_key: str, stage: str, pct: float) -> None:
     from khadbot.cli.console import console
 
@@ -83,5 +90,7 @@ async def ingest_command(arg: str) -> str:
         fights = parse_fights(ns.fights)
     except UsageError as exc:
         return f"**{exc}**"
-    result = await ingest_report(ns.code, fights, offline=ns.offline, progress=_console_progress)
+    result = await ingest_report(
+        ns.code, fights, offline=ns.offline, progress=_console_progress, **default_filter_kwargs()
+    )
     return format_ingest_result(result)

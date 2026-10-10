@@ -46,7 +46,7 @@ def _run_ingest(code: str, fights: str | None, offline: bool) -> None:
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.encounter.commands import format_ingest_result, parse_fights
+    from khadbot.encounter.commands import default_filter_kwargs, format_ingest_result, parse_fights
     from khadbot.encounter.ingest import ingest_report
 
     console = Console()
@@ -54,7 +54,9 @@ def _run_ingest(code: str, fights: str | None, offline: bool) -> None:
     def progress(pull_key: str, stage: str, pct: float) -> None:
         console.print(f"[dim]{pull_key}  {stage}  {pct:.0%}[/dim]")
 
-    result = asyncio.run(ingest_report(code, parse_fights(fights), offline=offline, progress=progress))
+    result = asyncio.run(
+        ingest_report(code, parse_fights(fights), offline=offline, progress=progress, **default_filter_kwargs())
+    )
     console.print(Markdown(format_ingest_result(result)))
     if result.failed:
         sys.exit(1)
