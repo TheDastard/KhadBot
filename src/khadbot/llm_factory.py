@@ -7,12 +7,15 @@ Provider is resolved from: argument > LLM_PROVIDER env var > 'ollama'
 """
 
 import logging
+from dataclasses import replace
 
 from langchain_core.language_models import BaseChatModel
 
 from khadbot.config import get_config
 
 logger = logging.getLogger(__name__)
+
+_MODEL_PROVIDERS = {"anthropic", "openai", "groq", "ollama"}
 
 
 class LLMProviderError(Exception):
@@ -48,11 +51,13 @@ def _check_ollama(model: str, base_url: str) -> None:
         )
 
 
-def get_llm(provider: str | None = None) -> BaseChatModel:
+def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChatModel:
     """
     Initialize and return a chat model for the given provider.
 
-    Provider is resolved from: argument > LLM_PROVIDER env var > 'ollama'
+    Provider is resolved from: argument > role override (LLM_PROVIDER_<ROLE>) >
+    LLM_PROVIDER env var > 'ollama'. A role may also pin the model name via
+    <ROLE>_MODEL (e.g. ANALYST_MODEL); it applies to whichever provider is chosen.
 
     Supported providers:
       - "anthropic"  — Claude Sonnet; production quality eval (BYOK)
@@ -68,7 +73,10 @@ def get_llm(provider: str | None = None) -> BaseChatModel:
     cfg = get_config()
     llm_cfg = cfg.llm
 
-    provider = provider or llm_cfg.provider.value
+    provider = provider or llm_cfg.role_providers.get(role or "") or llm_cfg.provider.value
+    model_override = llm_cfg.role_models.get(role or "")
+    if model_override and provider in _MODEL_PROVIDERS:
+        llm_cfg = replace(llm_cfg, **{f"{provider}_model": model_override})
     logger.debug(f"Initializing LLM for provider: {provider}")
 
     if provider == "anthropic":

@@ -1,0 +1,208 @@
+{
+ "title": "Synthetic Test Report",
+ "startTime": 1700000000000,
+ "zone": {
+  "id": 9000,
+  "name": "Synthetic Citadel"
+ },
+ "masterData": {
+  "actors": [
+   {
+    "id": 1,
+    "name": "Tankyboi",
+    "type": "Player",
+    "subType": "Warrior",
+    "petOwner": null,
+    "gameID": null
+   },
+   {
+    "id": 2,
+    "name": "Healz",
+    "type": "Player",
+    "subType": "Priest",
+    "petOwner": null,
+    "gameID": null
+   },
+   {
+    "id": 3,
+    "name": "Alphadps",
+    "type": "Player",
+    "subType": "Hunter",
+    "petOwner": null,
+    "gameID": null
+   },
+   {
+    "id": 4,
+    "name": "Betadps",
+    "type": "Player",
+    "subType": "Rogue",
+    "petOwner": null,
+    "gameID": null
+   },
+   {
+    "id": 5,
+    "name": "Gammadps",
+    "type": "Player",
+    "subType": "Mage",
+    "petOwner": null,
+    "gameID": null
+   },
+   {
+    "id": 6,
+    "name": "Fido",
+    "type": "Pet",
+    "subType": "Pet",
+    "petOwner": 3,
+    "gameID": 900800
+   },
+   {
+    "id": 10,
+    "name": "Synthetic Boss",
+    "type": "NPC",
+    "subType": "Boss",
+    "petOwner": null,
+    "gameID": 900900
+   },
+   {
+    "id": 11,
+    "name": "Synthetic Add",
+    "type": "NPC",
+    "subType": "NPC",
+    "petOwner": null,
+    "gameID": 900901
+   }
+  ],
+  "abilities": [
+   {
+    "gameID": 900101,
+    "name": "Synth Swirl",
+    "type": 1
+   },
+   {
+    "gameID": 900102,
+    "name": "Synth Fire Pool",
+    "type": 1
+   },
+   {
+    "gameID": 900201,
+    "name": "Synth Cataclysm",
+    "type": 1
+   },
+   {
+    "gameID": 900401,
+    "name": "Synth Shadow Bolt",
+    "type": 1
+   },
+   {
+    "gameID": 900501,
+    "name": "Synth Phase Shift",
+    "type": 1
+   },
+   {
+    "gameID": 900601,
+    "name": "Synth Curse",
+    "type": 1
+   },
+   {
+    "gameID": 900301,
+    "name": "Synth Link Totem",
+    "type": 1
+   },
+   {
+    "gameID": 900302,
+    "name": "Synth Guardian",
+    "type": 1
+   },
+   {
+    "gameID": 900701,
+    "name": "Synth Kick",
+    "type": 1
+   },
+   {
+    "gameID": 900702,
+    "name": "Synth Purge",
+    "type": 1
+   },
+   {
+    "gameID": 900010,
+    "name": "Synth Melee",
+    "type": 1
+   },
+   {
+    "gameID": 900001,
+    "name": "Synth Strike A",
+    "type": 1
+   },
+   {
+    "gameID": 900002,
+    "name": "Synth Strike B",
+    "type": 1
+   },
+   {
+    "gameID": 900003,
+    "name": "Synth Strike C",
+    "type": 1
+   }
+  ]
+ },
+ "fights": [
+  {
+   "id": 1,
+   "encounterID": 90001,
+   "name": "Synthetic Boss",
+   "difficulty": 5,
+   "kill": false,
+   "startTime": 100000,
+   "endTime": 160000,
+   "lastPhase": 2,
+   "fightPercentage": 35.0,
+   "size": 5,
+   "friendlyPlayers": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "phaseTransitions": [
+    {
+     "id": 1,
+     "startTime": 100000
+    },
+    {
+     "id": 2,
+     "startTime": 135000
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "encounterID": 90001,
+   "name": "Synthetic Boss",
+   "difficulty": 5,
+   "kill": true,
+   "startTime": 300000,
+   "endTime": 380000,
+   "lastPhase": 2,
+   "fightPercentage": 0.0,
+   "size": 5,
+   "friendlyPlayers": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "phaseTransitions": [
+    {
+     "id": 1,
+     "startTime": 300000
+    },
+    {
+     "id": 2,
+     "startTime": 335000
+    }
+   ]
+  }
+ ]
+}

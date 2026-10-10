@@ -1,0 +1,21 @@
+{
+ "data": [
+  {
+   "timestamp": 114000,
+   "type": "applydebuff",
+   "sourceID": 10,
+   "abilityGameID": 900601,
+   "fight": 0,
+   "targetID": 1
+  },
+  {
+   "timestamp": 130000,
+   "type": "removedebuff",
+   "sourceID": 10,
+   "abilityGameID": 900601,
+   "fight": 0,
+   "targetID": 1
+  }
+ ],
+ "nextPageTimestamp": null
+}

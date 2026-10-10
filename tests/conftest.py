@@ -238,3 +238,18 @@ def mock_raiderio_server_error():
 @pytest.fixture
 def mage_profile_raw():
     return MAGE_PROFILE_RAW.copy()
+
+
+# ---------------------------------------------------------------------------
+# Role-scripted fake LLMs
+# ---------------------------------------------------------------------------
+# Used by encounter-mode tests: each role ("analyst", "conversation") gets its
+# own scripted model, and khadbot.llm_factory.get_llm is patched to hand them out.
+
+
+@pytest.fixture
+def role_fakes(monkeypatch) -> dict:
+    """Mutable ``{role: model}`` dict; get_llm(role=...) looks the model up at call time."""
+    fakes: dict = {}
+    monkeypatch.setattr("khadbot.llm_factory.get_llm", lambda provider=None, *, role=None: fakes[role])
+    return fakes
