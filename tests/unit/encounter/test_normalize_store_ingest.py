@@ -17,7 +17,7 @@ from helpers.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
 
 from khadbot.encounter.fetch import MissingFixtureError, specs_for
 from khadbot.encounter.ingest import ingest_report
-from khadbot.encounter.normalize import EVENT_SCHEMA, events_hash, normalize_pull, parse_report_meta
+from khadbot.encounter.normalize import EVENT_SCHEMA, events_hash, normalize_pull, parse_abilities, parse_report_meta
 
 CODE = "SYNTH01"
 
@@ -195,6 +195,17 @@ class TestStore:
     def test_actors_round_trip(self, loaded, meta):
         store, _, _ = loaded
         assert store.actors(CODE) == meta[1]
+
+    def test_abilities_round_trip(self, loaded, synth_cache):
+        store, _, _ = loaded
+        assert store.abilities(CODE) == {}
+        abilities = parse_abilities(synth_cache.report_meta(CODE))
+        assert abilities[900101] == "Synth Swirl"
+        store.write_abilities(CODE, abilities)
+        assert store.abilities(CODE) == abilities
+
+    async def test_ingest_writes_abilities(self, synth_ingested):
+        assert synth_ingested.abilities(CODE)[900201] == "Synth Cataclysm"
 
     def test_unknown_pull(self, loaded):
         store, _, _ = loaded

@@ -8,6 +8,7 @@ Layout (rooted at ``$KHADBOT_DATA_DIR/events``)::
 
     <report>/pulls.json        # [{"pull": Pull, "events_hash": str, "truncated": [dir_name]}]
     <report>/actors.parquet
+    <report>/abilities.json    # {ability_id: name} from report masterData
     <report>/<fight>.parquet
 """
 
@@ -32,6 +33,8 @@ class EventStore(Protocol):
 
     def write_actors(self, code: str, actors: list[Actor]) -> None: ...
 
+    def write_abilities(self, code: str, abilities: dict[int, str]) -> None: ...
+
     def pulls(self, code: str) -> list[Pull]: ...
 
     def events_hash(self, pull_key: str) -> str | None: ...
@@ -39,6 +42,8 @@ class EventStore(Protocol):
     def truncated(self, pull_key: str) -> list[str]: ...
 
     def actors(self, code: str) -> list[Actor]: ...
+
+    def abilities(self, code: str) -> dict[int, str]: ...
 
     def events(
         self,
@@ -100,6 +105,10 @@ class ParquetEventStore:
         df = pl.DataFrame([a.model_dump() for a in actors], schema=_ACTOR_SCHEMA)
         _atomic(self.root / code / "actors.parquet", lambda tmp: df.write_parquet(tmp))
 
+    def write_abilities(self, code: str, abilities: dict[int, str]) -> None:
+        data = orjson.dumps(abilities, option=orjson.OPT_NON_STR_KEYS | orjson.OPT_SORT_KEYS)
+        _atomic(self.root / code / "abilities.json", lambda tmp: tmp.write_bytes(data))
+
     # --- reads ---------------------------------------------------------------
 
     def pulls(self, code: str) -> list[Pull]:
@@ -122,6 +131,12 @@ class ParquetEventStore:
         if not path.exists():
             return []
         return [Actor(**row) for row in pl.read_parquet(path).to_dicts()]
+
+    def abilities(self, code: str) -> dict[int, str]:
+        path = self.root / code / "abilities.json"
+        if not path.exists():
+            return {}
+        return {int(k): v for k, v in orjson.loads(path.read_bytes()).items()}
 
     def events(
         self,
