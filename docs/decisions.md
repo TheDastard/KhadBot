@@ -29,11 +29,14 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `truncated(pull_key)`, so truncation flags live in `pulls.json` next to `events_hash` (plan M1.8).
 - **Fetch keys**: `fetch_pull` returns `{dir_name: truncated}` (not `data_type`) so friendly/enemy `Casts` are distinct.
   "Truncated" means pagination stopped because `nextPageTimestamp` did not advance.
-- **CLI ingest before M2**: the registry and encounter files do not exist yet, so `/ingest` and `main.py ingest`
-  fetch `Buffs` and enemy `Casts` **unfiltered** until M2 passes the registry/encounter IDs into `ingest_report`.
-  Avoid running them against real reports before then (cost); `scripts/spike_wcl_cost.py` measures it.
-- **mypy**: `make check` already fails on `main` (7 errors: missing `types-PyYAML`, `tool_panel.py`, `simc.py`,
-  `agent_config.py`, `cli.py`, `llm_factory.py` kwargs). M0/M1 add none; they were left alone.
+- **CLI ingest filters (M2.1)**: `/ingest` and `main.py ingest` now pass `registry_spell_ids` from
+  `config/registries/cooldowns.yaml` and `enemy_cast_ids` from every `config/encounters/*.yaml`
+  (`EncounterFile.ability_ids()`: mechanics, damage windows, phase-trigger abilities). A report whose boss has no
+  encounter file still fetches enemy `Casts` unfiltered.
+- **Cooldown registry kinds (M2.1)**: the 17 ported entries carry a first-pass `kind` (raid / external / personal);
+  H4 verifies kinds along with durations. `class` is exposed as `CooldownEntry.class_name`.
+- **Unknown keys in authored files are errors** (`extra="forbid"`), so typos fail fast.
+- **mypy**: clean on `main` since fdaed26, which also added `types-pyyaml` to dev deps; the encounter work adds no errors.
 - **Package casing (M0.1)** was committed on its own, as the plan requires, before the rest of M0.
 
 ## Human task status
