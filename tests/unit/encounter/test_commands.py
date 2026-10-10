@@ -67,6 +67,9 @@ class TestHandler:
         assert m.await_args.args == ("ABC", [3])
         assert m.await_args.kwargs["offline"] is True
         assert "| Ingested | 3 |" in out
+        # Fetch filters come from the cooldown registry (and any authored encounter files).
+        assert 98008 in m.await_args.kwargs["registry_spell_ids"]
+        assert isinstance(m.await_args.kwargs["enemy_cast_ids"], dict)
 
     async def test_bad_args_return_usage_without_ingesting(self):
         with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock()) as m:
