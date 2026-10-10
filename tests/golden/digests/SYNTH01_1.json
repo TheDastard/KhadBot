@@ -1,0 +1,294 @@
+{
+  "anomalies": [
+    "cooldown_unverified:900302"
+  ],
+  "boss_pct": 35.0,
+  "cooldowns": [
+    {
+      "caster": "Healz",
+      "phase_id": "p1",
+      "ref": "ev:SYNTH01:1:cd:900301:1",
+      "spell_id": 900301,
+      "spell_name": "Synth Link Totem",
+      "t_ms": 18000
+    },
+    {
+      "caster": "Gammadps",
+      "phase_id": "p2",
+      "ref": "ev:SYNTH01:1:cd:900302:1",
+      "spell_id": 900302,
+      "spell_name": "Synth Guardian",
+      "t_ms": 38000
+    }
+  ],
+  "coverage": "full",
+  "coverage_windows": [
+    {
+      "cooldowns_active": [
+        900301
+      ],
+      "covered": true,
+      "occurrence": 1,
+      "ref": "ev:SYNTH01:1:win:cataclysm:1",
+      "t_ms": 20000,
+      "window_id": "cataclysm"
+    },
+    {
+      "cooldowns_active": [],
+      "covered": false,
+      "occurrence": 2,
+      "ref": "ev:SYNTH01:1:win:cataclysm:2",
+      "t_ms": 40000,
+      "window_id": "cataclysm"
+    }
+  ],
+  "cutoff_ms": 41000,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 3,
+      "after_cutoff": false,
+      "killing_ability_id": 900101,
+      "killing_ability_name": "Synth Swirl",
+      "mechanic_ids": [
+        "swirl"
+      ],
+      "name": "Alphadps",
+      "overkill": 40000,
+      "phase_id": "p1",
+      "ref": "ev:SYNTH01:1:death:1",
+      "t_ms": 8000,
+      "time_to_die_ms": 100,
+      "top_hits": [
+        {
+          "ability_id": 900101,
+          "ability_name": "Synth Swirl",
+          "amount": 100000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 8000
+        },
+        {
+          "ability_id": 900101,
+          "ability_name": "Synth Swirl",
+          "amount": 14000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 5000
+        }
+      ],
+      "window_damage": 114000,
+      "window_healing": 14000,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [
+        900301
+      ],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 900102,
+      "killing_ability_name": "Synth Fire Pool",
+      "mechanic_ids": [
+        "swirl"
+      ],
+      "name": "Gammadps",
+      "overkill": 18000,
+      "phase_id": "p1",
+      "ref": "ev:SYNTH01:1:death:2",
+      "t_ms": 23000,
+      "time_to_die_ms": 8900,
+      "top_hits": [
+        {
+          "ability_id": 900201,
+          "ability_name": "Synth Cataclysm",
+          "amount": 35000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 20000
+        },
+        {
+          "ability_id": 900102,
+          "ability_name": "Synth Fire Pool",
+          "amount": 28000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 21000
+        },
+        {
+          "ability_id": 900102,
+          "ability_name": "Synth Fire Pool",
+          "amount": 28000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 22000
+        },
+        {
+          "ability_id": 900101,
+          "ability_name": "Synth Swirl",
+          "amount": 14000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 15000
+        },
+        {
+          "ability_id": 900102,
+          "ability_name": "Synth Fire Pool",
+          "amount": 10000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 23000
+        }
+      ],
+      "window_damage": 115000,
+      "window_healing": 15000,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 4,
+      "after_cutoff": false,
+      "killing_ability_id": 900102,
+      "killing_ability_name": "Synth Fire Pool",
+      "mechanic_ids": [
+        "swirl"
+      ],
+      "name": "Betadps",
+      "overkill": 66000,
+      "phase_id": "p2",
+      "ref": "ev:SYNTH01:1:death:3",
+      "t_ms": 41000,
+      "time_to_die_ms": 2900,
+      "top_hits": [
+        {
+          "ability_id": 900201,
+          "ability_name": "Synth Cataclysm",
+          "amount": 62000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 40000
+        },
+        {
+          "ability_id": 900102,
+          "ability_name": "Synth Fire Pool",
+          "amount": 24000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 41000
+        },
+        {
+          "ability_id": 900101,
+          "ability_name": "Synth Swirl",
+          "amount": 14000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 40000
+        }
+      ],
+      "window_damage": 100000,
+      "window_healing": 19000,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 1,
+      "after_cutoff": true,
+      "killing_ability_id": 900010,
+      "killing_ability_name": "Synth Melee",
+      "mechanic_ids": [],
+      "name": "Tankyboi",
+      "overkill": 267000,
+      "phase_id": "p2",
+      "ref": "ev:SYNTH01:1:death:4",
+      "t_ms": 50000,
+      "time_to_die_ms": 12000,
+      "top_hits": [
+        {
+          "ability_id": 900010,
+          "ability_name": "Synth Melee",
+          "amount": 133000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 50000
+        },
+        {
+          "ability_id": 900201,
+          "ability_name": "Synth Cataclysm",
+          "amount": 62000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 40000
+        },
+        {
+          "ability_id": 900010,
+          "ability_name": "Synth Melee",
+          "amount": 6000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 41000
+        },
+        {
+          "ability_id": 900010,
+          "ability_name": "Synth Melee",
+          "amount": 6000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 43000
+        },
+        {
+          "ability_id": 900010,
+          "ability_name": "Synth Melee",
+          "amount": 6000,
+          "source_name": "Synthetic Boss",
+          "t_ms": 45000
+        }
+      ],
+      "window_damage": 225000,
+      "window_healing": 48000,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 60000,
+  "encounter_name": "Synthetic Boss",
+  "mechanics": [
+    {
+      "clusters": 8,
+      "damage_taken": 198000,
+      "deaths_in_window": 3,
+      "failures": 8,
+      "failures_by_player": {
+        "Alphadps": 2,
+        "Betadps": 3,
+        "Gammadps": 1,
+        "Healz": 2
+      },
+      "hits": 8,
+      "mechanic_id": "swirl",
+      "ref": "ev:SYNTH01:1:mech:swirl"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 12000,
+      "deaths_in_window": 0,
+      "failures": 1,
+      "failures_by_player": {},
+      "hits": 1,
+      "mechanic_id": "shadow_bolt",
+      "ref": "ev:SYNTH01:1:mech:shadow_bolt"
+    },
+    {
+      "clusters": 0,
+      "damage_taken": 0,
+      "deaths_in_window": 0,
+      "failures": 1,
+      "failures_by_player": {
+        "Tankyboi": 1
+      },
+      "hits": 0,
+      "mechanic_id": "curse",
+      "ref": "ev:SYNTH01:1:mech:curse"
+    }
+  ],
+  "outcome": "wipe",
+  "phase_reached": "p2",
+  "produced_from": {
+    "encfile_hash": "fa867cf7e5b3",
+    "events_hash": "f5df0c1464e69e627a74ddb8edf8b9d37c2acf0434b67858751512c97f5a7394",
+    "registry_hash": "c0b89b4ecf2c"
+  },
+  "pull_key": "SYNTH01:1",
+  "unregistered": [
+    {
+      "ability_id": 900102,
+      "damage": 90000,
+      "name": "Synth Fire Pool",
+      "share_pct": 9.9
+    }
+  ]
+}
