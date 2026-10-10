@@ -268,3 +268,25 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "perf" in item.keywords:
             item.add_marker(skip)
+
+
+# ---------------------------------------------------------------------------
+# Golden files
+# ---------------------------------------------------------------------------
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-goldens",
+        action="store_true",
+        default=False,
+        help="Rewrite golden files under tests/golden instead of comparing against them",
+    )
+
+
+@pytest.fixture
+def update_goldens(request) -> bool:
+    """True when goldens should be rewritten (--update-goldens, or UPDATE_GOLDEN=1 for older tests)."""
+    import os
+
+    return bool(request.config.getoption("--update-goldens") or os.environ.get("UPDATE_GOLDEN"))

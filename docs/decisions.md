@@ -39,6 +39,44 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **mypy**: clean on `main` since fdaed26, which also added `types-pyyaml` to dev deps; the encounter work adds no errors.
 - **Package casing (M0.1)** was committed on its own, as the plan requires, before the rest of M0.
 
+### M2 (encounter file, annotation, digest)
+
+- **SYNTH01 generator fix**: the sim applied damage and heals in script order, so `hitPoints` and deaths did not
+  follow the timeline. It now applies them chronologically; deaths match the fixture README (fight 1: 8, 23, 41,
+  50 s; fight 2: 55 s). Normalized goldens were regenerated in the same commit.
+- **Ability names**: `EventStore` gains `write_abilities` / `abilities(code)` (`events/<report>/abilities.json`,
+  from `masterData.abilities`) so death records and unregistered damage can name abilities. Reports ingested before
+  M2 have no names until re-ingested.
+- **Signatures vs plan section 10**: `annotate(pull, events, enc, actors, *, cutoff_fraction)` (no registry; nothing
+  in annotation uses it). `Annotated` carries the `pull`, so analysis functions take no separate `pull`.
+  `death_records(a, actors, registry=None, abilities=None)` needs the registry for `active_defensives`.
+  `detect_phases` keeps its signature; `unmatched_phase(spans, enc)` names the trigger that stopped detection.
+  `build_digest` adds keyword-only `cache`, `cutoff_fraction` and `unregistered_cap`.
+- **Window coverage counts `kind: raid` cooldowns only** (plan 6.3 said raid/external). A damage window is raid-wide
+  damage; an external on one player does not cover it. Plan section 6.3 needs the same edit.
+- **Hits and clusters**: a "hit" is a `damage` event on a friendly target. Clusters, `window_occurrence`,
+  `MechanicStat.hits/damage_taken` and the death window all use hits. Damage figures use WCL `amount` (after
+  absorbs and overkill). `not_interrupted` failures are the enemy cast rows, so they have no player in
+  `failures_by_player`; `soak_count_lt` failures mark a cluster's first row.
+- **`time_to_die_ms`** is None when the actor had no reading at >= 90% HP in that life (not only when HP data is
+  missing). A second death's window and time-to-die are clipped to after the previous death (battle res).
+- **Anomalies**: `phase_trigger_unmatched:<id>` is raised only when the pull should have reached that phase (a kill,
+  or WCL `last_phase` greater than the phases detected); an early wipe never reaching P2 is not an anomaly.
+  `missing_data_type:<T>` checks only DamageTaken, Casts and Healing, which every real pull has; zero Deaths,
+  Interrupts or Dispels rows are legitimate. `unregistered_damage:<pct>` is raised only when an encounter file
+  exists and the share is >= 10%.
+- **Triggers needing data not fetched yet**: `boss_hp_below` needs damage on the boss (no DamageDone spec) and
+  `boss_aura_applied` needs auras on the boss (Buffs are fetched for friendlies only). They match nothing on real
+  data until S1 adds those specs; prefer `boss_cast`, `wcl_phase` or `time` in H3 until then.
+- **CLI**: `/digest [<report-code>] <fight> [--json] [--unregistered]` and `/pulls [<report-code>]` default to the
+  last report ingested in the session. `--unregistered` lists up to 20 abilities. Golden files can be rewritten
+  with `pytest --update-goldens` (`UPDATE_GOLDEN=1` still works).
+- **Offline ingest of SYNTH01 through the CLI** misses the cache, because the CLI derives Buffs / enemy-Casts filters
+  from `config/` while the fixture was recorded with synthetic IDs. Tests pass the synthetic IDs explicitly.
+- **M2.6 (legacy comparison) is blocked on H2**: it compares against real fixture pulls, which do not exist yet.
+- **M2 exit criteria waiting on humans**: H3 encounter file (<10% unregistered on real reports), real-fixture digest
+  goldens and the 1.5k-3k token check (H2), perf budgets (`-m perf`, written, skipped until H2), and M2.6.
+
 ## Human task status
 
 | ID | Task | Status |

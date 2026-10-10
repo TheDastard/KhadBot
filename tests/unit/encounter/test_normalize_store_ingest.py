@@ -3,12 +3,10 @@ tests/unit/encounter/test_normalize_store_ingest.py
 
 Normalizer, ParquetEventStore and ingest orchestration, all on the synthetic SYNTH01 fixture
 (offline; no network). Golden snapshots live in tests/golden/normalized; regenerate them with
-``UPDATE_GOLDEN=1 uv run pytest tests/unit/encounter`` after an intentional schema change.
+``uv run pytest tests/unit/encounter --update-goldens`` after an intentional schema change.
 """
 
 from __future__ import annotations
-
-import os
 
 import orjson
 import polars as pl
@@ -160,11 +158,11 @@ class TestNormalize:
         assert events_hash(a) != events_hash(a.with_columns(pl.col("amount") + 1))
 
     @pytest.mark.parametrize("fight", [1, 2])
-    def test_golden_first_rows(self, synth_cache, meta, fight):
+    def test_golden_first_rows(self, synth_cache, meta, fight, update_goldens):
         rows = frame_for(synth_cache, meta, fight).head(20).with_columns(pl.col(pl.Categorical).cast(pl.Utf8))
         actual = rows.to_dicts()
         path = GOLDEN / "normalized" / f"SYNTH01_{fight}.json"
-        if os.environ.get("UPDATE_GOLDEN"):
+        if update_goldens:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(orjson.dumps(actual, option=orjson.OPT_INDENT_2))
         assert actual == orjson.loads(path.read_bytes())
