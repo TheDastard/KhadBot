@@ -189,7 +189,24 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
                 sim.heal(t + 100, p, 15_000)
 
     # Swirl (avoidable): a scripted target every 5 s.
-    swirl_targets = [DPS1, DPS2, DPS3, HEALER, DPS2, DPS3, DPS1, DPS2, DPS3, HEALER, DPS3, DPS2, DPS1, DPS3, DPS2, HEALER]
+    swirl_targets = [
+        DPS1,
+        DPS2,
+        DPS3,
+        HEALER,
+        DPS2,
+        DPS3,
+        DPS1,
+        DPS2,
+        DPS3,
+        HEALER,
+        DPS3,
+        DPS2,
+        DPS1,
+        DPS3,
+        DPS2,
+        HEALER,
+    ]
     for i, t in enumerate(range(5000, dur - 1000, 5000)):
         enemy_casts.append(ev(t - 1500, "begincast", BOSS, None, SWIRL))
         sim.hit(t, BOSS, swirl_targets[i % len(swirl_targets)], SWIRL, 14_000)
