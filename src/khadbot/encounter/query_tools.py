@@ -80,13 +80,15 @@ def envelope(
     head_refs: Iterable[str] = (),
     hint: str = "Narrow the query to see the rest.",
     note: str | None = None,
+    total: int | None = None,
 ) -> ToolResult:
     """
     Cap ``rows`` at ``ROW_CAP`` and the JSON at ``CHAR_CAP`` (dropping rows from the end, keeping at
     least one), and collect refs. ``wrap`` places the kept rows inside a dict (for a header record
-    whose refs are ``head_refs``).
+    whose refs are ``head_refs``). ``total`` is the row count before any capping, for callers that
+    pass only the first rows so a large result is never built in full.
     """
-    total = len(rows)
+    total = len(rows) if total is None else max(total, len(rows))
     keep = min(total, ROW_CAP)
     while True:
         kept = rows[:keep]
@@ -261,8 +263,11 @@ def query_events_result(
         frame = frame.filter(pl.col("type").cast(pl.Utf8).is_in(types))
         if frame.is_empty():
             note = f"No events of those types in the window. Types present: {', '.join(present) or 'none'}."
-    rows = [event_row(r, row) for row in frame.sort("seq").iter_rows(named=True)]
-    return envelope(rows, note=note, hint="Narrow t_from_ms/t_to_ms, or filter by actor, ability_id or types.")
+    # Build rows only for what the envelope can keep: a 30 s window can hold 20k+ events.
+    rows = [event_row(r, row) for row in frame.sort("seq").head(ROW_CAP).iter_rows(named=True)]
+    return envelope(
+        rows, total=frame.height, note=note, hint="Narrow t_from_ms/t_to_ms, or filter by actor, ability_id or types."
+    )
 
 
 def cooldown_timeline_result(scope: AnalystScope, pull: str, phase: str | None = None) -> ToolResult:

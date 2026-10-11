@@ -61,6 +61,13 @@ def test_envelope_keeps_one_oversized_row():
     assert len(result.data) == 1 and result.truncated
 
 
+def test_envelope_total_counts_rows_not_passed():
+    rows = [{"ref": f"ev:R:1:event:{i}"} for i in range(1, 26)]
+    result = envelope(rows, total=8_000, hint="Narrow it.")
+    assert (len(result.data), result.total, result.truncated) == (25, 8_000, True)
+    assert result.note == "Showing 25 of 8000 rows. Narrow it."
+
+
 def test_envelope_untruncated_has_no_note():
     result = envelope([{"ref": "ev:R:1:pull"}])
     assert (result.ok, result.truncated, result.total, result.note) == (True, False, 1, None)
@@ -179,6 +186,14 @@ def test_query_events_truncates_and_rows_resolve(scope, synth_data):
     assert [r["seq"] for r in result.data] == sorted(r["seq"] for r in result.data)
     for row in result.data:
         assert synth_data.resolve(row["ref"]) == row
+
+
+def test_query_events_total_is_full_window_count(scope, synth_data):
+    frame = synth_data.records("SYNTH01:2").annotated.frame
+    in_window = frame.filter(frame["t_ms"].is_between(0, 30_000))
+    result = qt.query_events_result(scope, "SYNTH01:2", 0, 30_000)
+    assert result.total == in_window.height
+    assert [r["seq"] for r in result.data] == in_window.sort("seq")["seq"].head(len(result.data)).to_list()
 
 
 def test_query_events_filters(scope):
