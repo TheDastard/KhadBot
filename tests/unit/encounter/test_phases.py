@@ -16,7 +16,10 @@ from khadbot.encounter.phases import boss_ids_of, detect_phases, unmatched_phase
 def enc_with(*triggers: dict):
     phases = [{"id": "p1", "name": "P1", "start": {"trigger": "pull"}}]
     phases += [{"id": f"p{i + 2}", "name": f"P{i + 2}", "start": t} for i, t in enumerate(triggers)]
-    return parse_encounter({"encounter_id": 1, "name": "X", "file_version": 1, "phases": phases})
+    phases = [{**p, "difficulties": ["heroic"]} for p in phases]
+    return parse_encounter(
+        {"encounter_id": 1, "name": "X", "zone": {"id": 1, "name": "Z"}, "file_version": 1, "phases": phases}
+    )
 
 
 EVENTS = make_events(

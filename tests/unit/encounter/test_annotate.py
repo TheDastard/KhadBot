@@ -23,10 +23,11 @@ def enc_with(mechanics=(), windows=()):
         {
             "encounter_id": 1,
             "name": "X",
+            "zone": {"id": 1, "name": "Z"},
             "file_version": 1,
-            "phases": [{"id": "p1", "name": "P1", "start": {"trigger": "pull"}}],
-            "mechanics": list(mechanics),
-            "damage_windows": list(windows),
+            "phases": [{"id": "p1", "name": "P1", "difficulties": ["heroic"], "start": {"trigger": "pull"}}],
+            "mechanics": [{**m, "difficulties": ["heroic"]} for m in mechanics],
+            "damage_windows": [{**w, "difficulties": ["heroic"]} for w in windows],
         }
     )
 

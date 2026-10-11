@@ -8,13 +8,11 @@ code, rendering and its size estimate. Regenerate goldens with
 
 from __future__ import annotations
 
-import shutil
-
 import orjson
 import polars as pl
 import pytest
 import yaml
-from helpers.synth import GOLDEN, SYNTH_ENCOUNTER_FILE, SYNTH_ENCOUNTER_ID
+from helpers.synth import GOLDEN, SYNTH_ENCOUNTER_FILE, install_synth_encounter
 
 from khadbot.encounter import digest as digest_mod
 from khadbot.encounter.config_files import encfile_hash, load_encounter_file, registry_hash
@@ -25,8 +23,7 @@ from khadbot.encounter.normalize import events_hash
 @pytest.fixture
 def enc_root(tmp_path):
     root = tmp_path / "encounters"
-    root.mkdir()
-    shutil.copy(SYNTH_ENCOUNTER_FILE, root / f"{SYNTH_ENCOUNTER_ID}.yaml")
+    install_synth_encounter(root)
     return root
 
 
@@ -42,8 +39,7 @@ def write_enc(tmp_path, mutate):
     data = yaml.safe_load(SYNTH_ENCOUNTER_FILE.read_text(encoding="utf-8"))
     mutate(data)
     root = tmp_path / "enc_variant"
-    root.mkdir(exist_ok=True)
-    (root / f"{SYNTH_ENCOUNTER_ID}.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    install_synth_encounter(root, yaml.safe_dump(data))
     return root
 
 
@@ -133,7 +129,7 @@ def test_coverage_none_without_encounter_file(digest_of, tmp_path):
 
 
 def test_coverage_partial(digest_of, tmp_path):
-    root = write_enc(tmp_path, lambda d: d.update(ignore_ability_ids=[]))  # boss melee becomes unregistered
+    root = write_enc(tmp_path, lambda d: d.update(ignored_abilities=[]))  # boss melee becomes unregistered
     d = digest_of(1, root=root)
     assert d.coverage == "partial"
     assert d.unregistered[0].ability_id == 900010
@@ -172,7 +168,9 @@ def test_no_hp_data(digest_of, synth_ingested):
 def test_phase_trigger_unmatched_only_when_expected(digest_of, tmp_path):
     root = write_enc(
         tmp_path,
-        lambda d: d["phases"].append({"id": "p3", "name": "P3", "start": {"trigger": "time", "t_ms": 999_999}}),
+        lambda d: d["phases"].append(
+            {"id": "p3", "name": "P3", "difficulties": ["mythic"], "start": {"trigger": "time", "t_ms": 999_999}}
+        ),
     )
     # The kill must have gone through every phase; the wipe (WCL last_phase 2, both reached) may not have.
     assert "phase_trigger_unmatched:p3" in digest_of(2, root=root).anomalies

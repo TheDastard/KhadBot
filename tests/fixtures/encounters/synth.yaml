@@ -1,17 +1,23 @@
-# Encounter file matching the synthetic SYNTH01 report (all IDs are fake).
+# Encounter file matching the synthetic SYNTH01 report (all IDs are fake). SYNTH01's pulls are
+# difficulty 5 (Mythic), so every entry applies to mythic. Tests install it under an encounter root
+# at its canonical path with helpers.synth.install_synth_encounter.
 encounter_id: 90001
 name: Synthetic Boss
+zone: {id: 9000, name: Synthetic Citadel}
 file_version: 1
 phases:
   - id: p1
     name: Phase 1
+    difficulties: [mythic]
     start: {trigger: pull}
   - id: p2
     name: Phase 2
+    difficulties: [mythic]
     start: {trigger: boss_cast, ability_id: 900501}
 mechanics:
   - id: swirl
     name: Synth Swirl
+    difficulties: [mythic]
     ability_ids: [900101]
     kind: avoidable
     failure: {rule: any_hit}
@@ -19,18 +25,22 @@ mechanics:
     severity: medium
   - id: shadow_bolt
     name: Synth Shadow Bolt
+    difficulties: [mythic]
     ability_ids: [900401]
     kind: interrupt
     failure: {rule: not_interrupted}
   - id: curse
     name: Synth Curse
+    difficulties: [mythic]
     ability_ids: [900601]
     kind: debuff
     failure: {rule: debuff_duration_gt, ms: 8000}
 damage_windows:
   - id: cataclysm
     name: Synth Cataclysm
+    difficulties: [mythic]
     ability_ids: [900201]
     cluster_window_ms: 2000
     expected_cooldowns: 1
-ignore_ability_ids: [900010]
+ignored_abilities:
+  - {ability_id: 900010, name: Synth Boss Melee, difficulties: [mythic]}
