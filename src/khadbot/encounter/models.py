@@ -7,13 +7,14 @@ fight-relative milliseconds unless a field says otherwise.
 Ingest models: Pull, Actor, FetchSpec, IngestResult.
 Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
 WindowCoverage, PullDigest.
+Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisReport.
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Ingest models
@@ -194,3 +195,55 @@ class PullDigest(BaseModel):
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
     produced_from: dict[str, str]  # events_hash, encfile_hash, registry_hash
+
+
+# ---------------------------------------------------------------------------
+# Analyst contracts
+# ---------------------------------------------------------------------------
+
+Depth = Literal["quick", "standard", "deep"]
+Confidence = Literal["low", "medium", "high"]
+
+
+class ToolResult(BaseModel):
+    """Envelope every analyst query tool returns (as JSON)."""
+
+    ok: bool
+    data: list[dict] | dict
+    refs: list[Ref]
+    truncated: bool = False
+    total: int | None = None  # rows before capping
+    note: str | None = None  # e.g. "narrow t_from_ms/t_to_ms to see more"
+
+
+class AnalysisRequest(BaseModel):
+    request_id: str  # uuid4 hex
+    question: str
+    pulls: list[str]  # pull_keys
+    depth: Depth = "standard"  # step budget 4 / 8 / 16
+    plan_id: str | None = None
+
+
+class Finding(BaseModel):
+    id: str  # f"{request_id[:8]}-{n}"
+    claim: str
+    refs: list[Ref] = Field(min_length=1)
+    confidence: Confidence
+    scope: Literal["pull", "cross_pull"]
+
+
+class ProducedBy(BaseModel):
+    model_id: str
+    prompt_version: str
+    graph_version: str
+    encfile_hash: str | None
+    events_hashes: dict[str, str]  # pull_key -> events_hash
+
+
+class AnalysisReport(BaseModel):
+    request_id: str
+    findings: list[Finding]
+    unknowns: list[str]  # questions the data could not answer, with reason
+    partial: bool  # step budget exhausted
+    rejected: list[str] = []  # findings dropped by verify, with reason
+    produced_by: ProducedBy

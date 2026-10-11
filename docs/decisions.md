@@ -95,6 +95,16 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **Claim numbers** also accept `2:14` (m:ss), `12.4 seconds`, `250ms`, `1.2k` and `3.4m`; digits inside words
   (`Healbot2`, `p2`, `3rd`) and inside refs are ignored. A number matches if a record value, scaled to the claim's
   unit and rounded to the claim's precision, equals it.
+- **Query tool shapes** (plan 6.6 names tools and args only): rows are the resolved record for their ref, or a
+  subset of its fields (`list_pulls` and `compare_pulls` rows are slim pull summaries). `query_mechanic` returns
+  `{"mechanic": stat, "clusters": [...]}`; cluster rows carry the mechanic's ref. `cooldown_timeline` returns
+  cooldown uses and damage-window rows in one list sorted by time; a window's phase is the phase active at its
+  first hit. `compare_pulls(metric="mechanic_failures")` rows carry the `mech:` ref. A bare fight ID is accepted
+  as `pull` when exactly one pull in scope has it.
+- **`get_digest` is exempt from the 4,000-character cap**: the rendered digest targets 1.5k-3k tokens, so the
+  digest's own caps bound it instead.
+- **`submit_report` arguments** are `findings` (claim, refs (min 1), confidence) and `unknowns`. The finding
+  `id`, `scope`, request ID and `produced_by` are filled in by code, not the model.
 
 ## Human task status
 
