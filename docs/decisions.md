@@ -79,6 +79,8 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 
 ### M3 (analyst loop)
 
+Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and decisions D5/D11.
+
 - **Refs resolve against uncapped records**: `digest.build_pull_records` returns every death, mechanic, cooldown and
   window (`PullRecords`) plus the capped digest; `build_digest` wraps it. A ref beyond a digest cap (for example the
   11th death) still resolves, and query tools can return it.
