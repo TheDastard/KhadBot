@@ -1,13 +1,4 @@
-# Makefile — Windows (VSCode terminal)
-# Assumes: uv installed (winget install astral-sh.uv), GNU make installed via Chocolatey
-# WARNING: Do NOT use Cygwin make — it runs under /bin/sh and ignores the
-#          cmd.exe SHELL override, causing recipe failures. Use Chocolatey make.
-# Recommended terminal: PowerShell or Git Bash via VSCode integrated terminal
-#
-# First time setup:
-#   1. make install-dev
-#   2. Select LLM provider and model in .env and fill in your API keys
-#   3. Select the .venv interpreter in VSCode (Ctrl+Shift+P > Python: Select Interpreter)
+# Makefile — KhadBot task runner (Windows). Setup instructions: see README.md.
 
 .DEFAULT_GOAL := help
 .PHONY: help install install-cli install-dev cli check test test-unit \
@@ -123,6 +114,7 @@ clean:
 	@for /r . %%f in (*.pyc *.pyo) do @del /q "%%f" 2>nul
 	@echo Cleaned.
 
+# Stops processes running from the venv (e.g. ruff.exe held open by the editor),
+# then retries the delete. See scripts\distclean.ps1.
 distclean: clean
-	@if exist $(VENV) rd /s /q $(VENV)
-	@echo Removed venv.
+	@powershell -NoProfile -ExecutionPolicy Bypass -File scripts\distclean.ps1 -Venv $(VENV)
