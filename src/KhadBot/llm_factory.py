@@ -48,7 +48,7 @@ def _check_ollama(model: str, base_url: str) -> None:
         )
 
 
-def get_llm(provider: str = None) -> BaseChatModel:
+def get_llm(provider: str | None = None) -> BaseChatModel:
     """
     Initialize and return a chat model for the given provider.
 
@@ -78,8 +78,9 @@ def get_llm(provider: str = None) -> BaseChatModel:
             from langchain_anthropic import ChatAnthropic
 
             logger.info(f"Using Anthropic model: {llm_cfg.anthropic_model}")
-            return ChatAnthropic(
-                model=llm_cfg.anthropic_model,
+            # timeout/stop are optional at runtime; the langchain-anthropic stubs mark them required.
+            return ChatAnthropic(  # type: ignore[call-arg]
+                model_name=llm_cfg.anthropic_model,
                 api_key=llm_cfg.anthropic_api_key,
                 temperature=llm_cfg.temperature,
             )
@@ -129,7 +130,7 @@ def get_llm(provider: str = None) -> BaseChatModel:
                 model=llm_cfg.ollama_model,
                 base_url=llm_cfg.ollama_base_url,
                 temperature=llm_cfg.temperature,
-                model_kwargs={"think": False},  # disable Qwen3 thinking mode
+                reasoning=False,  # disable Qwen3 thinking mode
             )
         except Exception as e:
             raise LLMProviderError(f"Failed to initialize Ollama client for model '{llm_cfg.ollama_model}': {e}") from e

@@ -206,7 +206,7 @@ def _validate_tool_names(declared: list[str], tools: list) -> None:
     Python tools not declared in the agent YAML → DEBUG log only (they're
     simply not available to this agent, which is intentional).
     """
-    python_names = {getattr(t, "name", None) for t in tools}
+    python_names = {name for t in tools if (name := getattr(t, "name", None)) is not None}
     declared_set = set(declared)
 
     orphaned = declared_set - python_names
