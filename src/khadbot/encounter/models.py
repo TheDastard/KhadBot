@@ -5,7 +5,8 @@ Pydantic models shared across encounter review. Times inside a pull are
 fight-relative milliseconds unless a field says otherwise.
 
 Ingest models: Pull, Actor, FetchSpec, IngestResult.
-Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, CooldownUse, WindowCoverage, PullDigest.
+Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
+WindowCoverage, PullDigest.
 """
 
 from __future__ import annotations
@@ -131,6 +132,20 @@ class MechanicStat(BaseModel):
     failures_by_player: dict[str, int]  # name -> count, top 10
     damage_taken: int
     deaths_in_window: int  # deaths whose mechanic_ids include this one
+
+
+class MechanicCluster(BaseModel):
+    """One cluster of a mechanic's hits; resolved as part of the mechanic's ``mech:<id>`` ref."""
+
+    cluster: int  # 1-based cluster_id
+    t_ms: int  # first hit
+    end_ms: int  # last hit
+    phase_id: str | None
+    hits: int
+    players: int  # distinct players hit
+    damage: int
+    failures: int  # failure rows among the cluster's hits
+    failed_players: list[str]
 
 
 class CooldownUse(BaseModel):
