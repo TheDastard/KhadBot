@@ -3,7 +3,8 @@ tests/unit/encounter/test_perf.py
 
 Performance budgets (plan 16.5), run on real recorded WCL fixtures:
 
-- Ingest: parse + normalize + store a full night in under 30 s, excluding network.
+- Ingest: parse + normalize + store a full night in under 30 s, excluding network. The fixtures hold only
+  the recorded pulls of each night, so this checks those pulls against the night budget.
 - Annotation: annotate + digest one pull in under 2 s; re-annotate a whole night after an encounter
   file edit in under 30 s. These use the authored file in config/encounters.
 - Query tools: p95 under 200 ms per call on one analysed pull (the longest in each report).
@@ -33,23 +34,40 @@ from khadbot.encounter.store import ParquetEventStore
 REAL_REPORTS = sorted(p.name for p in (FIXTURES / "wcl").iterdir() if p.is_dir() and p.name != "SYNTH01")
 
 
+def _fixture_fights(code: str) -> list[int]:
+    """Fights with recorded pages. report.json lists every fight, but only these are in the fixture."""
+    return sorted(int(p.name) for p in (FIXTURES / "wcl" / code).iterdir() if p.is_dir() and p.name.isdigit())
+
+
+async def _ingest(code: str, store: ParquetEventStore):
+    # The fixtures' Buffs pages were recorded with the registry filter; enemy Casts are unfiltered.
+    return await ingest_report(
+        code,
+        _fixture_fights(code),
+        store=store,
+        cache=RawPageCache(FIXTURES / "wcl"),
+        offline=True,
+        registry_spell_ids=load_registry().spell_ids(),
+    )
+
+
 @pytest.mark.perf
 @pytest.mark.skipif(not REAL_REPORTS, reason="no real WCL fixtures recorded yet")
 @pytest.mark.parametrize("code", REAL_REPORTS)
 async def test_ingest_budget(code, tmp_path):
     t0 = time.perf_counter()
-    result = await ingest_report(
-        code, store=ParquetEventStore(tmp_path / "events"), cache=RawPageCache(FIXTURES / "wcl"), offline=True
-    )
+    result = await _ingest(code, ParquetEventStore(tmp_path / "events"))
     elapsed = time.perf_counter() - t0
     assert not result.failed
+    assert result.pulls
     assert elapsed < 30, f"{code} took {elapsed:.1f}s"
 
 
 async def _ingested(code, tmp_path) -> ParquetEventStore:
     store = ParquetEventStore(tmp_path / "events")
-    result = await ingest_report(code, store=store, cache=RawPageCache(FIXTURES / "wcl"), offline=True)
+    result = await _ingest(code, store)
     assert not result.failed
+    assert result.pulls
     return store
 
 
