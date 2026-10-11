@@ -146,6 +146,38 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   the schema in comments), thresholds and the Groq gate decision (H6), and the query-tool p95 perf test (written,
   skipped until H2 fixtures exist). Unanswerable handling and every scripted scenario pass on SYNTH01.
 
+### M4 (findings persistence and fan-out)
+
+- **Started ahead of the M3 gate** (2026-10-11): the M3 exit needs the golden questions, thresholds and the Groq
+  gate decision (H5, H6), which are still open. M4 is built and tested on SYNTH01 with fake models. If the gate
+  changes the analyst's tools or prompts, the cache key changes with them (by design), but the synthesis prompt
+  and the cross-pull golden check should be revisited.
+- **What is cached**: only the per-pull review, under `findings.cache_key` (plan 6.8). The synthesis runs on every
+  review because it answers the user's question; it is cheap next to the per-pull analyses. So "a second identical
+  request makes no model calls" holds for per-pull analysis, not for the synthesis call.
+- **Per-pull review question** is the fixed `STANDARD_REVIEW_QUESTION`. It is hashed into the review's
+  `prompt_version` (`review_prompt_version()`), which is what the cache key carries; editing it invalidates the
+  cache. Synthesis has its own `synthesis_prompt_version()` (role `synthesis`, tools `compare_pulls` and
+  `submit_report`), recorded in the final report's `produced_by`.
+- **Not cached**: a per-pull report that is `partial` or has `no structured report` is used for this review but
+  not stored, so a transient failure is retried next time. The final report is marked `partial` in that case.
+- **Flagging** is per stored row: `FindingsStore.flag(finding_id)` flags the `PullFindings` that contains the
+  finding. `get` returns flagged rows (with `flagged=True`); the review treats a flagged row as a cache miss,
+  re-analyses the pull, and the new row replaces the flagged one under the same key. `for_pull` hides flagged rows
+  unless asked.
+- **Synthesis wiring**: reuses the analyst graph with `AnalystRun.synthesis` set to the rendered per-pull
+  findings, so verify (refs inside the request, numbers match records, one retry) applies unchanged. All
+  synthesis findings are forced to `scope="cross_pull"`. If no pull produced findings the model is not called and
+  the report carries the pulls' unknowns.
+- **Concurrency**: `review` passes `max_concurrency=EncounterConfig.analyst_max_concurrency` in the run config;
+  the per-pull `Send` tasks respect it. Per-pull runs are traced as `encounter_analyst` children of
+  `encounter_review`.
+- **Cost estimate** (`estimate_review_cost`): `sum(len(rendered digest) / 4)` over the pulls plus
+  `OUTPUT_TOKENS_PER_PULL` (1,500, an allowance rather than a cap) per pull, with no model call. It ignores
+  cached pulls, so it is an upper bound. `/review` prints it before running and `--estimate` prints it only.
+  The report code is `--report <code>` (default: the last ingested), because a positional code is ambiguous
+  with the first word of the question.
+
 ## Human task status
 
 | ID | Task | Status |

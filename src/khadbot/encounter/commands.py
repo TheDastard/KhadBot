@@ -12,12 +12,23 @@ from __future__ import annotations
 import argparse
 import shlex
 from typing import NoReturn
+from uuid import uuid4
 
 from khadbot.agent.agent_config import ConfigurationError
+from khadbot.encounter.analyst import ReviewEstimate, estimate_review_cost, review
 from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_registry
 from khadbot.encounter.digest import UNREGISTERED_CAP, build_digest, default_annotation_cache, render_digest
+from khadbot.encounter.evidence import EncounterData
+from khadbot.encounter.findings import FindingsStore, default_findings_store
 from khadbot.encounter.ingest import default_store, ingest_report
-from khadbot.encounter.models import IngestResult, Pull, PullDigest, UnregisteredAbility
+from khadbot.encounter.models import (
+    AnalysisReport,
+    AnalysisRequest,
+    IngestResult,
+    Pull,
+    PullDigest,
+    UnregisteredAbility,
+)
 from khadbot.encounter.store import EventStore
 
 # Report code of the last successful /ingest in this process; /digest and /pulls default to it.
@@ -210,3 +221,70 @@ async def pulls_command(arg: str, *, store: EventStore | None = None) -> str:
     if len(parts) > 1:
         return f"**{PULLS_USAGE}**"
     return format_pulls(code, (store or default_store()).pulls(code))
+
+
+# ---------------------------------------------------------------------------
+# /review
+# ---------------------------------------------------------------------------
+
+REVIEW_USAGE = (
+    "Usage: /review [--report <code>] [--fights 3,4] [--depth quick|standard|deep] [--estimate] [question...]"
+)
+DEFAULT_REVIEW_QUESTION = "What went wrong across these pulls, and what repeated?"
+
+
+def review_parser() -> argparse.ArgumentParser:
+    parser = _Parser(REVIEW_USAGE, prog="/review")
+    parser.add_argument("--report")
+    parser.add_argument("--fights")
+    parser.add_argument("--depth", choices=["quick", "standard", "deep"], default="standard")
+    parser.add_argument("--estimate", action="store_true")
+    parser.add_argument("words", nargs="*")
+    return parser
+
+
+def format_estimate(estimate: ReviewEstimate) -> str:
+    return (
+        f"Estimated cost for {estimate.pulls} pulls: about {estimate.total:,} tokens "
+        f"({estimate.digest_tokens:,} digest in, {estimate.output_tokens:,} out; "
+        "upper bound, pulls already reviewed are free)."
+    )
+
+
+def format_review(report: AnalysisReport) -> str:
+    lines = ["### Review", ""]
+    lines += [f"- **{f.confidence}** {f.claim} (`{'`, `'.join(f.refs)}`)" for f in report.findings] or ["No findings."]
+    if report.unknowns:
+        lines += ["", "**Unknown:**", *(f"- {u}" for u in report.unknowns)]
+    if report.rejected:
+        lines += ["", f"{len(report.rejected)} finding(s) failed verification and were dropped."]
+    if report.partial:
+        lines += ["", "Some analysis hit its step budget; the result may be incomplete."]
+    return "\n".join(lines)
+
+
+async def review_command(arg: str, *, data: EncounterData | None = None, findings: FindingsStore | None = None) -> str:
+    """Review ingested pulls with the analyst and answer a question about them."""
+    try:
+        ns = review_parser().parse_args(shlex.split(arg))
+        fights = parse_fights(ns.fights)
+        words = list(ns.words)
+        code = ns.report or _last_report
+        if code is None:
+            raise UsageError("No report ingested in this session; pass a report code.")
+    except UsageError as exc:
+        return f"**{exc}**"
+    data = data or EncounterData.from_config()
+    pulls = [p.pull_key for p in data.store.pulls(code) if fights is None or p.fight_id in fights]
+    if not pulls:
+        return f"No pulls stored for `{code}`."
+    estimate = format_estimate(estimate_review_cost(pulls, data))
+    if ns.estimate:
+        return estimate
+    from khadbot.cli.console import console
+
+    console.print(f"[ui.muted]{estimate}[/ui.muted]")
+    req = AnalysisRequest(
+        request_id=uuid4().hex, question=" ".join(words) or DEFAULT_REVIEW_QUESTION, pulls=pulls, depth=ns.depth
+    )
+    return format_review(await review(req, store=data, findings=findings or default_findings_store()))
