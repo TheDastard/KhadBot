@@ -130,6 +130,19 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   rejections stand. A forced final turn that calls anything but `submit_report` ends with
   `unknowns=["no structured report"]` and `partial=True`. Other tool calls made alongside `submit_report` are
   answered "ignored" and not run.
+- **Golden eval harness**: question schema, loading and the deterministic checks live in `tests/helpers/golden.py`
+  (unit-tested on SYNTH01); `tests/eval/` runs them on a real analyst model. Eval tests carry an `eval` marker and,
+  like `perf`, are skipped unless selected (`-m eval`; `make test-eval` passes it). Recorded reports the questions
+  name are ingested offline into a session store. The pass rate per model and ref-resolution counts are printed
+  at the end and written to `$KHADBOT_DATA_DIR/eval/golden-<timestamp>.json`. `KHADBOT_EVAL_MIN_PASS_RATE` gates
+  the run once thresholds are set (unset: report only); `KHADBOT_GOLDEN_QUESTIONS` points at another question
+  file. With `LANGSMITH_API_KEY` set, each question's result is attached to its traced run as `golden_pass`
+  feedback (the "upload" the plan mentions). Validation is stricter than the plan's schema: `unanswerable`
+  requires `must_be_unknown: true`, and answerable questions need `expected_refs_any`. An optional `depth` field
+  selects the step budget.
+- **M3 exit criteria waiting on humans**: golden questions (H5; `tests/golden/questions.yaml` is an empty list with
+  the schema in comments), thresholds and the Groq gate decision (H6), and the query-tool p95 perf test (written,
+  skipped until H2 fixtures exist). Unanswerable handling and every scripted scenario pass on SYNTH01.
 
 ## Human task status
 

@@ -256,18 +256,22 @@ def role_fakes(monkeypatch) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# perf marker
+# Opt-in markers: perf (timing budgets) and eval (golden questions on real models)
 # ---------------------------------------------------------------------------
+
+OPT_IN_MARKERS = ("perf", "eval")
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip @pytest.mark.perf tests unless the run selected them with -m."""
-    if "perf" in (config.getoption("-m") or ""):
-        return
-    skip = pytest.mark.skip(reason="perf test; run with -m perf")
-    for item in items:
-        if "perf" in item.keywords:
-            item.add_marker(skip)
+    """Skip @pytest.mark.perf and @pytest.mark.eval tests unless the run selected them with -m."""
+    selected = config.getoption("-m") or ""
+    for marker in OPT_IN_MARKERS:
+        if marker in selected:
+            continue
+        skip = pytest.mark.skip(reason=f"{marker} test; run with -m {marker}")
+        for item in items:
+            if marker in item.keywords:
+                item.add_marker(skip)
 
 
 # ---------------------------------------------------------------------------
