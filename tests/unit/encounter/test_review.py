@@ -129,8 +129,10 @@ async def reviewed_twice(model, findings, synth_data, *, change, req=None):
 
 async def test_editing_the_encounter_file_invalidates(model, findings, synth_data, synth_enc_root):
     def edit():
-        path = next(synth_enc_root.glob("*.yaml"))
-        path.write_text(path.read_text().replace("Synthetic Boss", "Synthetic Boss Reworked"), encoding="utf-8")
+        path = next(synth_enc_root.rglob("*.yaml"))
+        path.write_text(
+            path.read_text().replace("cluster_window_ms: 1000", "cluster_window_ms: 1500"), encoding="utf-8"
+        )
 
     assert (await reviewed_twice(model, findings, synth_data, change=edit)).count("pull") == 2
 

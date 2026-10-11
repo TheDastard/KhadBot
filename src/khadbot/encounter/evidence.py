@@ -32,7 +32,7 @@ import polars as pl
 from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.mechanics import mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
-from khadbot.encounter.config_files import CooldownRegistry, encfile_hash, load_encounter, load_registry
+from khadbot.encounter.config_files import CooldownRegistry, encfile_hash, load_encounter_view, load_registry
 from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, make_ref
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
@@ -237,7 +237,7 @@ class EncounterData:
         key = (
             pull_key,
             self.store.events_hash(pull_key) or "",
-            encfile_hash(load_encounter(pull.encounter_id, self.enc_root)),
+            encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
         )
         if (hit := self._records.get(key)) is not None:
             self._records.move_to_end(key)

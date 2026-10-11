@@ -36,7 +36,7 @@ config/
   agents/            # coach.yaml, encounter.yaml
   personas/          # khadgar, thrall, xalatath
   templates/         # Jinja system-prompt template
-  encounters/        # one hand-authored file per encounter ID
+  encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # cooldowns.yaml
 scripts/             # WCL fixture recorder, distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
