@@ -105,6 +105,11 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   digest's own caps bound it instead.
 - **`submit_report` arguments** are `findings` (claim, refs (min 1), confidence) and `unknowns`. The finding
   `id`, `scope`, request ID and `produced_by` are filled in by code, not the model.
+- **`prompt_version` hashes prompt templates, not rendered prompts.** The rendered analyst prompt embeds the
+  pull's digest, which would make the version differ per pull; the findings cache key already carries
+  `events_hash` and `encfile_hash`. It also hashes the role and each tool's `tool_call_schema` (the schema the
+  model is sent, without the injected run config) rather than `args_schema`. `VERIFY_RULES_VERSION` lives in
+  `versioning.py` next to `GRAPH_VERSION`.
 
 ## Human task status
 
