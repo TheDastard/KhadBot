@@ -48,3 +48,25 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
 - **Debuff duration / dispel**: Curse (900601) on the tank lasts 16 s in fight 1 (dispelled
   late) and 5 s in fight 2.
 - **Pets**: actor 6 is owned by actor 3 and casts once, to test the friendly flag for pets.
+
+# Real WCL fixtures
+
+Seven pulls recorded on 2026-10-11 from three public reports of one guild's Heroic Ula'tek progression
+(encounter 3492, The Venomous Abyss). The full reports live only in `$KHADBOT_DATA_DIR`; these pulls were
+copied from that raw cache. API notes and costs: `docs/wcl-api.md`.
+
+Each report directory has the full `report.json` (every fight), but only the listed fights have pages, so
+offline ingest must pass `fight_ids`. Everything under a real report directory is stored in Git LFS (see
+`.gitattributes` here); run `git lfs pull` if the pages are pointer files. Pre-commit hooks skip these
+directories so the recorded bytes are never rewritten. Filters: `Buffs` uses the 17 cooldown-registry IDs from
+`config/registries/cooldowns.yaml`; enemy `Casts` and everything else are unfiltered (`none`).
+
+| Pull | Outcome | Length | Why it is here |
+|---|---|---|---|
+| `H7z1fqDXjRTFnbtg:20` | Ula'tek kill, all 4 phases | 579 s | The clean kill. 11 deaths on a kill, one player dying twice (battle res). |
+| `H7z1fqDXjRTFnbtg:15` | Ula'tek wipe at the enrage, Stage Three, 5.6% fight progress | 618 s | Failed Stage Three by attrition: 255 s in Stage Three, deaths in waves, ending in *Fury Unleashed* (the enrage). No enemy casts are recorded after 574 s. |
+| `H7z1fqDXjRTFnbtg:10` | Ula'tek wipe, phase 1, boss 95% | 37 s | Early reset; 21-player raid. |
+| `H7z1fqDXjRTFnbtg:23` | Mythic Nymrissa wipe, boss 78% | 123 s | Different encounter and difficulty; no phase transitions; WCL `size=20` with 22 players. |
+| `trMgApZCVYkv3jdq:11` | Ula'tek wipe, phase 2, boss 53% | 244 s | Typical wipe from the wipe-heavy night; one player dying twice. |
+| `trMgApZCVYkv3jdq:18` | Ula'tek wipe, 35 s into Stage Three (phase ID 4) | 398 s | No deaths before Stage Three, then 20 deaths in 3 s around *Unchecked Rage*: a collapse at the start of a stage. |
+| `QkVa6GHRK8yfrTbw:14` | Ula'tek wipe, phase 1, boss 80% | 106 s | Early-learning wipe from the first night. |
