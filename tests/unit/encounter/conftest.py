@@ -64,3 +64,24 @@ def synth_registry():
     from khadbot.encounter.config_files import load_registry
 
     return load_registry(SYNTH_REGISTRY_FILE)
+
+
+@pytest.fixture
+def synth_enc_root(tmp_path):
+    """Encounter-file root holding only the synthetic encounter file, named by its encounter ID."""
+    import shutil
+
+    from helpers.synth import SYNTH_ENCOUNTER_FILE, SYNTH_ENCOUNTER_ID
+
+    root = tmp_path / "synth_encounters"
+    root.mkdir()
+    shutil.copy(SYNTH_ENCOUNTER_FILE, root / f"{SYNTH_ENCOUNTER_ID}.yaml")
+    return root
+
+
+@pytest.fixture
+def synth_data(synth_ingested, synth_enc_root, synth_registry):
+    """EncounterData over ingested SYNTH01 with the synthetic encounter file and registry."""
+    from khadbot.encounter.evidence import EncounterData
+
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry)

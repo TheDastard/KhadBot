@@ -12,6 +12,7 @@ can match them back to the records.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
@@ -28,7 +29,17 @@ from khadbot.encounter.config_files import (
     load_registry,
     registry_hash,
 )
-from khadbot.encounter.models import PullDigest, UnregisteredAbility, make_ref
+from khadbot.encounter.models import (
+    Actor,
+    CooldownUse,
+    DeathRecord,
+    MechanicStat,
+    Pull,
+    PullDigest,
+    UnregisteredAbility,
+    WindowCoverage,
+    make_ref,
+)
 from khadbot.encounter.store import EventStore, split_pull_key
 
 DEATH_CAP = 10
@@ -88,7 +99,23 @@ def unregistered_damage(
 # ---------------------------------------------------------------------------
 
 
-def build_digest(
+@dataclass(frozen=True)
+class PullRecords:
+    """Every analysis record for one pull (uncapped), plus the capped digest built from them."""
+
+    pull: Pull
+    annotated: Annotated
+    enc: EncounterFile | None
+    actors: list[Actor]
+    abilities: dict[int, str]
+    deaths: list[DeathRecord]  # every player death, time order (``death:<n>`` refs)
+    mechanics: list[MechanicStat]  # every mechanic in the encounter file, file order
+    cooldowns: list[CooldownUse]  # every registry cooldown cast, time order
+    windows: list[WindowCoverage]
+    digest: PullDigest
+
+
+def build_pull_records(
     pull_key: str,
     store: EventStore,
     enc_root: Path | None = None,
@@ -97,9 +124,10 @@ def build_digest(
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
     unregistered_cap: int = UNREGISTERED_CAP,
-) -> PullDigest:
+) -> PullRecords:
     """
-    Digest for one ingested pull. The encounter file is looked up by the pull's ``encounter_id``.
+    Analysis records and digest for one ingested pull. The encounter file is looked up by the pull's
+    ``encounter_id``. Evidence refs resolve against these uncapped records.
 
     ``unregistered_cap`` widens the unregistered list for encounter-file authoring (``--unregistered``).
     """
@@ -141,7 +169,7 @@ def build_digest(
     active_mechanics = [m for m in mechanics if m.hits or m.failures]
     active_mechanics.sort(key=lambda m: (-m.failures, -m.damage_taken))
 
-    return PullDigest(
+    digest = PullDigest(
         pull_key=pull_key,
         encounter_name=pull.encounter_name,
         outcome="kill" if pull.kill else "wipe",
@@ -162,6 +190,44 @@ def build_digest(
             "registry_hash": registry_hash(registry),
         },
     )
+    return PullRecords(
+        pull=pull,
+        annotated=a,
+        enc=enc,
+        actors=actors,
+        abilities=abilities,
+        deaths=deaths,
+        mechanics=mechanics,
+        cooldowns=cooldowns,
+        windows=windows,
+        digest=digest,
+    )
+
+
+def build_digest(
+    pull_key: str,
+    store: EventStore,
+    enc_root: Path | None = None,
+    registry: CooldownRegistry | None = None,
+    *,
+    cache: AnnotationCache | None = None,
+    cutoff_fraction: float | None = None,
+    unregistered_cap: int = UNREGISTERED_CAP,
+) -> PullDigest:
+    """
+    Digest for one ingested pull. The encounter file is looked up by the pull's ``encounter_id``.
+
+    ``unregistered_cap`` widens the unregistered list for encounter-file authoring (``--unregistered``).
+    """
+    return build_pull_records(
+        pull_key,
+        store,
+        enc_root,
+        registry,
+        cache=cache,
+        cutoff_fraction=cutoff_fraction,
+        unregistered_cap=unregistered_cap,
+    ).digest
 
 
 # ---------------------------------------------------------------------------
