@@ -12,6 +12,7 @@ Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisRep
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -247,3 +248,20 @@ class AnalysisReport(BaseModel):
     partial: bool  # step budget exhausted
     rejected: list[str] = []  # findings dropped by verify, with reason
     produced_by: ProducedBy
+
+
+# ---------------------------------------------------------------------------
+# Findings cache
+# ---------------------------------------------------------------------------
+
+
+class PullFindings(BaseModel):
+    """The verified findings of one pull's standard review, as cached."""
+
+    pull_key: str
+    findings: list[Finding]
+    unknowns: list[str]
+    produced_by: ProducedBy
+    cache_key: str
+    created_at: datetime
+    flagged: bool = False  # thumbs-down; excluded from synthesis and regenerated on the next review
