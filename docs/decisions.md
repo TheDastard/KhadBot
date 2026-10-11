@@ -116,6 +116,20 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   every field of the cited records, including IDs and digits inside strings, so a small count can match by
   coincidence; definitions that are not recorded values (the 90% time-to-die threshold) are rejected.
 - **Rejection reasons** are recorded as `<finding id> "<claim>": <reason>`.
+- **Analyst graph wiring**: `build_analyst_graph()` takes no store. The data, model, model ID, prompt version
+  and tools travel in `config["configurable"]["analyst"]` (`AnalystRun`), never in graph state, and the tools node
+  adds the `AnalystScope` to the config it passes to tools. `run_analysis(req, *, store, callbacks, run_id)`
+  accepts `EncounterData` or a bare store, calls `llm_factory.get_llm(role="analyst")` once per run, and traces the
+  run as `encounter_analyst` with the request ID, versions, model ID, pulls and depth as metadata. `run_id` lets the
+  eval harness attach feedback to the trace.
+- **Analyst state** adds `forced` (budget hit), `pulls` (requested pulls that are ingested) and `unknowns` (from
+  code) to the plan's fields. Requested pulls that are not ingested become `pull <key> is not ingested` unknowns;
+  if none are ingested the model is never called.
+- **Step accounting**: a `submit_report` round costs a step like a query round. The single retry (for rejected
+  findings or an invalid `submit_report` call) happens only if steps remain after the submission; otherwise the
+  rejections stand. A forced final turn that calls anything but `submit_report` ends with
+  `unknowns=["no structured report"]` and `partial=True`. Other tool calls made alongside `submit_report` are
+  answered "ignored" and not run.
 
 ## Human task status
 
