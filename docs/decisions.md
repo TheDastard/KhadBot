@@ -193,6 +193,29 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   The report code is `--report <code>` (default: the last ingested), because a positional code is ambiguous
   with the first word of the question.
 
+### Event store spike (S2, 2026-10-11)
+
+Outcome: **keep polars + parquet (D7 unchanged).** Measured on the dev machine over all 62 real pulls in
+`KHADBOT_DATA_DIR` (three nights, up to 177k events per pull), with the Ula'tek encounter file present for the
+47 Ula'tek pulls.
+
+- **Annotate + digest one pull** (budget 2 s): `build_pull_records` cold, median 0.28 s, max 0.45 s
+  (`H7z1fqDXjRTFnbtg:18`, 138k events, 26 deaths). Death records are the largest stage (median 135 ms, max
+  280 ms: a per-death filter over the frame), then mechanics (53 ms) and annotate (36 ms).
+- **Re-annotate a night** (budget 30 s): 0.6 to 1.4 s per night; a full digest of every pull is 3.7 to 7.8 s.
+- **Rendered digests** with the encounter file: 1,310 to 2,089 tokens (`len / 4`), inside the 1.5k-3k target
+  except the shortest pulls.
+- **polars vs DuckDB** on the same 47 pulls, same results asserted for each pair (median / max ms): full parquet
+  load 10.5 / 24 vs 34 / 69; filtered read (30 s window, three types) 7.5 / 16 vs 28 / 39; gap clustering
+  4.6 / 6.6 vs 50 / 74; aura-interval pairing 1.9 / 4.1 vs 103 / 166; death windows (range join in DuckDB)
+  137 / 235 vs 144 / 202. DuckDB is not faster on anything that matters, so there is no reason to switch.
+- **Query tool p95** (budget 200 ms) first measured 283 ms to 1.1 s on the longest pull of each night, but not
+  because of the store: in `query_events` the window filter took about 1 ms and the rest was building a model
+  row for every event in the 30 s window (8k to 22k) before the envelope kept 25. `query_events` now builds rows
+  only for the events the envelope can keep and passes the full count as `total`; p95 is now 7 to 77 ms.
+- **The `-m perf` tests** ingested the real fixture reports without fight IDs and failed on the fights with no
+  recorded pages. They now ingest only the recorded fights; all 12 pass.
+
 ## Human task status
 
 | ID | Task | Status |
@@ -243,11 +266,8 @@ Things raised in review that are not tasks in the plan yet.
   `PullDigest.boss_hp_pct` (request `bossPercentage` in `GET_REPORT_META`), take `phase_reached` and the
   `phase_trigger_unmatched` check from the last phase transition instead of `last_phase`, and fix the
   `start_ms` / `end_ms` comments (milliseconds from report start). `raid_size` already matches.
-- **Exit checks that real fixtures now unblock**: the perf tests (`pytest -m perf`), the legacy comparison
-  (M2.6), digest goldens for the real fixture pulls, and the query-tool p95. The digest token range (1.5k to 3k)
-  can only be judged after H3: without an encounter file real digests are 850 to 1,250 tokens.
-- **Skipped tests rose from 4 to 12** once real fixtures were present. Confirm the extra 8 are perf or eval tests
-  that skip by marker, not tests skipping because a fixture is missing or malformed.
+- **Exit checks that real fixtures now unblock**: the legacy comparison (M2.6) and digest goldens for the real
+  fixture pulls. The perf tests and the query-tool p95 now pass (see the event store spike above).
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; H5 can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
 - **Enemy-Casts filter changes after H3.** The real fixtures were recorded with enemy Casts unfiltered (no encounter
@@ -263,4 +283,5 @@ Things raised in review that are not tasks in the plan yet.
 
 Resolved 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them;
 the `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
-uninstalled.
+uninstalled. The 12 skipped unit tests are the 12 perf tests, skipped by marker; none skip for a missing
+fixture.
