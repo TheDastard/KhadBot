@@ -88,9 +88,10 @@ addopts = """
     --cov-report=html:htmlcov
     -v"""
 
-# Markers: `perf` tests are skipped unless selected with `-m perf` (see tests/conftest.py)
+# Markers: `perf` and `eval` tests are skipped unless selected with `-m perf` / `-m eval` (see tests/conftest.py)
 markers = [
     "perf: timing/memory budget tests; run with -m perf",
+    "eval: golden-question evals against a real LLM; run with -m eval",
 ]
 
 # Treat these warnings as errors so they don't silently mask issues

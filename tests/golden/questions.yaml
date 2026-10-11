@@ -1,0 +1,17 @@
+# Golden questions for the analyst eval (tests/eval/test_golden.py).
+#
+# Empty until real reports are recorded and a person writes the questions: 15 to 25 covering
+# single-pull causes, cross-pull patterns, cooldown usage, plan versus actual, and at least
+# 3 unanswerable questions, reviewed by a second person. Do not generate them.
+#
+# Schema (validated by tests/helpers/golden.py; see that module for the pass rules):
+#
+# - id: q01                                   # unique
+#   question: Why did Healbot die at 2:14 on pull 7?
+#   pulls: ["abc123:7"]                       # pull keys; reports must be recorded under tests/fixtures/wcl
+#   kind: single_pull                         # single_pull | cross_pull | cooldown | plan | unknown_unknown | unanswerable
+#   expected_findings: ["Died to Swirling Flames while no defensive was active"]   # for human review
+#   expected_refs_any: ["ev:abc123:7:death:3"]  # pass if any is cited; required unless must_be_unknown
+#   must_be_unknown: false                    # true: pass only with no findings and some unknowns
+#   depth: standard                           # optional: quick | standard | deep
+[]
