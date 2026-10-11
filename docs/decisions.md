@@ -110,6 +110,12 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `events_hash` and `encfile_hash`. It also hashes the role and each tool's `tool_call_schema` (the schema the
   model is sent, without the injected run config) rather than `args_schema`. `VERIFY_RULES_VERSION` lives in
   `versioning.py` next to `GRAPH_VERSION`.
+- **Verify rule additions** (plan 6.7, still `VERIFY_RULES_VERSION = 1` as the first implementation): a ref
+  must resolve to a pull inside the request, not just any ingested pull; and the number of refs cited (overall
+  and per kind) counts as a supported value, so "3 players died" citing three death refs passes. Numbers come from
+  every field of the cited records, including IDs and digits inside strings, so a small count can match by
+  coincidence; definitions that are not recorded values (the 90% time-to-die threshold) are rejected.
+- **Rejection reasons** are recorded as `<finding id> "<claim>": <reason>`.
 
 ## Human task status
 
