@@ -1,0 +1,338 @@
+# Ula'tek, final boss of The Venomous Abyss.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it.
+#
+# Failure rules are only set where a failure can be pinned on the player who was hit. Mechanics that
+# punish the whole raid for one player's mistake (an untanked tail, the boss without a melee target,
+# an unsoaked bite) have no rule, because any_hit would blame every victim.
+encounter_id: 3492
+name: Ula'tek
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 1
+
+# WarcraftLogs reports phase transitions for this encounter (phase IDs 1-4).
+phases:
+  - id: p1
+    name: "Stage One: Fury of the Serpent Mother"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: p2
+    name: "Stage Two: Children of the Doomscale"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 2}
+  - id: intermission
+    name: "Intermission: The Shattering"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 3}
+  - id: p3
+    name: "Stage Three: Ula'tek's Ascension"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 4}
+
+mechanics:
+  # -- Raid-wide pressure ----------------------------------------------------------------------
+  - id: necrotic_vapors
+    name: Necrotic Vapors
+    # Stacking raid-wide damage for the whole fight.
+    difficulties: [heroic]
+    ability_ids: [1286835]
+    kind: unavoidable
+    severity: low
+
+  - id: spectral_coils
+    name: Spectral Coils
+    # Damage, the Spectral Coil and Gore Rattle casts, and the Soul Constrictor debuff (stops a player
+    # reducing the next Coils). Every player takes the damage, reduced by the number of players at the
+    # impact, so soak_count_lt never fires.
+    difficulties: [heroic]
+    ability_ids: [1287265, 1299010, 1308927, 1300685]
+    kind: soak
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: mephitic_thrash
+    name: Mephitic Thrash
+    # Tail sweep. One ID covers the cast, impact, debuff and DoT. Players inside the sweep should get
+    # out, but the logs give them the same impact and DoT as everyone outside, so standing in it can't
+    # be detected.
+    difficulties: [heroic]
+    ability_ids: [1296301]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  - id: blight_vein
+    name: Blight Vein
+    # Raid-wide DoT each time a Grasping Fangs tether is broken; tethers must be broken a few at a time.
+    difficulties: [heroic]
+    ability_ids: [1317955, 1311609]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: malignant_shell
+    name: Malignant Shell
+    # Eggs stick to the players who pick them up and tick while attached: the cost of carrying eggs.
+    difficulties: [heroic]
+    ability_ids: [1297213, 1295360]
+    kind: unavoidable
+    severity: low
+
+  - id: enrage
+    name: Fury Unleashed
+    # Enrage: a large raid hit followed by heavy damage every second.
+    difficulties: [heroic]
+    ability_ids: [1295004, 1286905]
+    kind: unavoidable
+    severity: high
+
+  # -- Tanking ---------------------------------------------------------------------------------
+  - id: mothers_wrath_tank
+    name: Mother's Wrath (tank)
+    # Cast, the hit on the tank, the Stone Venom DoT and debuff, and Hobbled.
+    difficulties: [heroic]
+    ability_ids: [1298367, 1298369, 1298418, 1298417, 1300938]
+    kind: unavoidable
+    severity: low
+
+  - id: mothers_wrath_raid
+    name: Mother's Wrath (no tank in melee)
+    # Hits the whole raid when Ula'tek's target is out of her reach.
+    difficulties: [heroic]
+    ability_ids: [1301122]
+    kind: avoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: unchecked_rage
+    name: Unchecked Rage
+    # Raid-wide physical damage when Ula'tek has no melee target and is not casting.
+    difficulties: [heroic]
+    ability_ids: [1301007]
+    kind: avoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: rattler_slam
+    name: Rattler Slam
+    # Raid-wide tail slam when nobody is in melee range of Gore Rattle.
+    difficulties: [heroic]
+    ability_ids: [1299206]
+    kind: avoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  # -- Avoidable -------------------------------------------------------------------------------
+  # Damage that ticks once a second on the player who stood in it. hits_per_cluster_gt 0 counts
+  # one failure per player per occurrence instead of one per tick.
+  - id: caustic_waves
+    name: Caustic Waves
+    # Venom waves from the boss and the tail; also hatch any egg they touch.
+    difficulties: [heroic]
+    ability_ids: [1292403, 1298570, 1319282, 1311807, 1292211]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: virulent_spit
+    name: Virulent Spit
+    difficulties: [heroic]
+    ability_ids: [1302982]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: deadly_venom
+    name: Deadly Venom
+    # Standing in the venom pools around the encounter area. Volatile Purge increases its damage.
+    difficulties: [heroic]
+    ability_ids: [1297338]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: toxin_cloud
+    name: Toxin Cloud
+    # Hits players who step onto the stage-two side platforms before they have fully dropped.
+    difficulties: [heroic]
+    ability_ids: [1295995]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: falling_debris
+    name: Falling Debris
+    # Impacts at random spots during Rage of the Shackled.
+    difficulties: [heroic]
+    ability_ids: [1286885]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: low
+
+  - id: wardens_protection
+    name: Warden's Protection
+    # Aura around the eggs while the Doomscale Warden lives.
+    difficulties: [heroic]
+    ability_ids: [1306858]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: circling_prey
+    name: Circling Prey
+    # Destroys a platform: a large hit and knockback close in, a smaller hit to everyone else, so a hit
+    # alone is not a failure. Close-in hits are several times larger before mitigation; no rule can test
+    # hit size yet.
+    difficulties: [heroic]
+    ability_ids: [1301510, 1315341]
+    kind: avoidable
+    cluster_window_ms: 2000
+    severity: high
+
+  # -- Adds ------------------------------------------------------------------------------------
+  - id: blightscale_viper
+    name: Blightscale Viper
+    # Empowered add from an egg that hatched (touched venom or finished its cast). Putrid Membrane
+    # damage and debuff, Acidic Burst, and Petrifying Sting damage and debuff.
+    difficulties: [heroic]
+    ability_ids: [1308275, 1301268, 1301800, 1303414, 1305163]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: poisonous_bite
+    name: Poisonous Bite
+    # Blightscale Rawling stacking DoT on its target (debuff 1287036); dispellable.
+    difficulties: [heroic]
+    ability_ids: [1287032, 1287036]
+    kind: dispel
+    severity: low
+
+  - id: blightscale_clutch
+    name: Blightscale Clutch
+    # Clutch of spawn that grows stronger until it is broken.
+    difficulties: [heroic]
+    ability_ids: [1290409]
+    kind: unavoidable
+    severity: low
+
+  - id: malice
+    name: Malice
+    # Doomscale Warden raid-wide channel; must be interrupted.
+    difficulties: [heroic]
+    ability_ids: [1290779, 1290991]
+    kind: interrupt
+    failure: {rule: not_interrupted}
+    severity: high
+
+  - id: anguished_cry
+    name: Anguished Cry
+    # Weakened Doomscale raid hit and stun; interrupt it.
+    difficulties: [heroic]
+    ability_ids: [1305650]
+    kind: interrupt
+    failure: {rule: not_interrupted}
+    severity: medium
+
+  - id: desperate_thrash
+    name: Desperate Thrash
+    # Weakened Doomscale frontal cone aimed at its tank (impact plus a DoT). A hit on anyone but the
+    # add's tank is a failure, which needs a rule that knows who tanked it; none exists yet.
+    difficulties: [heroic]
+    ability_ids: [1305709]
+    kind: avoidable
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: grasping_fangs
+    name: Grasping Fangs
+    # Tether DoT and slow on several players; breaking a tether causes Blight Vein.
+    difficulties: [heroic]
+    ability_ids: [1311612, 1311611, 1301117]
+    kind: debuff
+    severity: medium
+
+  - id: doomscale_shell
+    name: Doomscale Shell
+    # DoT on the player carrying the Doomscale Egg.
+    difficulties: [heroic]
+    ability_ids: [1300314, 1300312]
+    kind: unavoidable
+    severity: low
+
+  - id: acidic_expulsion
+    name: Acidic Expulsion
+    # Blightscale Shrieker raid-wide stacking DoT; kill Shriekers before they stack it past 2.
+    difficulties: [heroic]
+    ability_ids: [1313531]
+    kind: debuff
+    severity: medium
+
+  - id: vicious_echoes
+    name: Vicious Echoes
+    # Blightscale Shrieker raid hit plus a raid stun; a missed interrupt usually wipes.
+    difficulties: [heroic]
+    ability_ids: [1310764]
+    kind: interrupt
+    failure: {rule: not_interrupted}
+    severity: high
+
+  # -- Stage Three bites -----------------------------------------------------------------------
+  - id: serpents_bite
+    name: Serpent's Bite
+    # Initial hit on the bitten players (1295838), the venom DoT (1293146), cast and debuff (1288879),
+    # and Ingested Venom (1313529), a damage-free debuff believed to mark players who soaked a bite.
+    difficulties: [heroic]
+    ability_ids: [1295838, 1293146, 1295905, 1288879, 1313529]
+    kind: soak
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: calcified_corpse
+    name: Calcified Corpse
+    # A bite left unsoaked turns its player to stone: a stun plus heavy damage.
+    difficulties: [heroic]
+    ability_ids: [1318329, 1306119]
+    kind: unavoidable
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: volatile_purge
+    name: Volatile Purge
+    # Eruption on players who soaked a bite; spread out. A player hit more than once in one eruption
+    # stood in someone else's.
+    difficulties: [heroic]
+    ability_ids: [1305878, 1312967]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 1}
+    cluster_window_ms: 1000
+    severity: medium
+
+  - id: volatile_purge_dot
+    name: Volatile Purge (DoT)
+    difficulties: [heroic]
+    ability_ids: [1316357, 1316356]
+    kind: unavoidable
+    cluster_window_ms: 2000
+    severity: low
+
+damage_windows:
+  - id: rage_of_the_shackled
+    name: Rage of the Shackled
+    # Raid-wide pulses about 4 s apart for 20 s; a 5 s window keeps one channel as one occurrence.
+    difficulties: [heroic]
+    ability_ids: [1307367]
+    cluster_window_ms: 5000
+    expected_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks, and adds
+  - {ability_id: 3, name: Falling, difficulties: [heroic]}               # intermission platform knock-up
+  - {ability_id: 32409, name: "Shadow Word: Death", difficulties: [heroic]}  # player self-damage
