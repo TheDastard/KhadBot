@@ -3,20 +3,26 @@ encounter/config_files.py
 
 Authored configuration for encounter review (plan section 6.2):
 
-    config/registries/cooldowns.yaml       → CooldownRegistry
-    config/encounters/<encounter_id>.yaml  → EncounterFile
+    config/registries/cooldowns.yaml                                          → CooldownRegistry
+    config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml → EncounterFile
 
 Both are validated with Pydantic and fail fast with ``ConfigurationError``. Each has a
 content hash (first 12 hex of SHA-256 over the canonical JSON dump) that keys derived data,
 so editing a file invalidates annotations and digests built from it.
+
+Every encounter-file entry (phase, mechanic, damage window, ignored ability) lists the
+difficulties it applies to. Analysis works on one difficulty's view of the file
+(``EncounterFile.for_difficulty``), and that view is what gets hashed, so editing the Mythic
+entries does not invalidate Heroic annotations.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypeVar
 
 import orjson
 import yaml
@@ -80,6 +86,11 @@ class CooldownRegistry(_Strict):
 TriggerName = Literal["pull", "boss_cast", "boss_aura_applied", "boss_hp_below", "time", "wcl_phase"]
 RuleName = Literal["any_hit", "hits_per_cluster_gt", "not_interrupted", "debuff_duration_gt", "soak_count_lt"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
+Difficulty = Literal["lfr", "normal", "heroic", "mythic"]
+
+# WCL fight ``difficulty`` codes. Heroic (4) and Mythic (5) are confirmed on recorded reports (docs/wcl-api.md).
+WCL_DIFFICULTY: dict[int, Difficulty] = {1: "lfr", 3: "normal", 4: "heroic", 5: "mythic"}
+_DIFFICULTY_ORDER: list[Difficulty] = ["lfr", "normal", "heroic", "mythic"]
 
 # Required parameter per trigger / failure rule (None = no parameter).
 _TRIGGER_PARAM: dict[str, str | None] = {
@@ -99,6 +110,21 @@ _RULE_PARAM: dict[str, str | None] = {
 }
 
 
+class _Entry(_Strict):
+    """An encounter-file entry that applies to the listed difficulties only."""
+
+    difficulties: list[Difficulty] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _unique_difficulties(self) -> _Entry:
+        if len(set(self.difficulties)) != len(self.difficulties):
+            raise ValueError(f"duplicate difficulty in {self.difficulties}")
+        return self
+
+
+_E = TypeVar("_E", bound=_Entry)
+
+
 class PhaseTrigger(_Strict):
     trigger: TriggerName
     ability_id: int | None = None
@@ -114,7 +140,7 @@ class PhaseTrigger(_Strict):
         return self
 
 
-class Phase(_Strict):
+class Phase(_Entry):
     id: str
     name: str
     start: PhaseTrigger
@@ -133,7 +159,7 @@ class FailureRule(_Strict):
         return self
 
 
-class Mechanic(_Strict):
+class Mechanic(_Entry):
     id: str
     name: str
     ability_ids: list[int] = Field(min_length=1)
@@ -143,7 +169,7 @@ class Mechanic(_Strict):
     severity: Literal["low", "medium", "high"] = "medium"
 
 
-class DamageWindow(_Strict):
+class DamageWindow(_Entry):
     id: str
     name: str
     ability_ids: list[int] = Field(min_length=1)
@@ -151,32 +177,62 @@ class DamageWindow(_Strict):
     expected_cooldowns: int = 1
 
 
+class IgnoredAbility(_Entry):
+    """Known noise, excluded from unregistered damage."""
+
+    ability_id: int
+    name: str
+
+
+class Zone(_Strict):
+    """The WCL zone (raid instance) the encounter belongs to."""
+
+    id: int
+    name: str
+
+
 class EncounterFile(_Strict):
     encounter_id: int
     name: str
+    zone: Zone
     file_version: int
     phases: list[Phase] = Field(min_length=1)
     mechanics: list[Mechanic] = []
     damage_windows: list[DamageWindow] = []
-    ignore_ability_ids: list[int] = []
+    ignored_abilities: list[IgnoredAbility] = []
 
     @model_validator(mode="after")
     def _consistent(self) -> EncounterFile:
-        _unique("phase", [p.id for p in self.phases])
-        _unique("mechanic", [m.id for m in self.mechanics])
-        _unique("damage window", [w.id for w in self.damage_windows])
-        if self.phases[0].start.trigger != "pull":
-            raise ValueError(f"first phase '{self.phases[0].id}' must use trigger: pull")
-        for phase in self.phases[1:]:
-            if phase.start.trigger == "pull":
-                raise ValueError(f"only the first phase may use trigger: pull (phase '{phase.id}')")
-        owner: dict[int, str] = {}
-        for mech in self.mechanics:
-            for ability_id in mech.ability_ids:
-                if ability_id in owner:
-                    raise ValueError(f"ability {ability_id} is in mechanics '{owner[ability_id]}' and '{mech.id}'")
-                owner[ability_id] = mech.id
+        for difficulty in self.difficulties():
+            _check_view(self, difficulty)
         return self
+
+    def difficulties(self) -> list[Difficulty]:
+        """Every difficulty any entry applies to, easiest first."""
+        entries: list[_Entry] = [*self.phases, *self.mechanics, *self.damage_windows, *self.ignored_abilities]
+        used = {d for e in entries for d in e.difficulties}
+        return [d for d in _DIFFICULTY_ORDER if d in used]
+
+    def for_difficulty(self, difficulty: int | str | None) -> EncounterFile | None:
+        """
+        The entries for one difficulty (a WCL code or a name), each listing only that difficulty.
+        None when no phase covers it, which includes an unknown or missing difficulty.
+        """
+        name = WCL_DIFFICULTY.get(difficulty) if isinstance(difficulty, int) else difficulty
+        if name is None or not any(name in p.difficulties for p in self.phases):
+            return None
+
+        def pick(entries: Sequence[_E]) -> list[_E]:
+            return [e.model_copy(update={"difficulties": [name]}) for e in entries if name in e.difficulties]
+
+        return self.model_copy(
+            update={
+                "phases": pick(self.phases),
+                "mechanics": pick(self.mechanics),
+                "damage_windows": pick(self.damage_windows),
+                "ignored_abilities": pick(self.ignored_abilities),
+            }
+        )
 
     def ability_ids(self) -> list[int]:
         """Every ability ID the file refers to (mechanics, windows, phase triggers), sorted."""
@@ -187,13 +243,40 @@ class EncounterFile(_Strict):
 
     def registered_ability_ids(self) -> set[int]:
         """Abilities that do not count as unregistered damage."""
-        return set(self.ability_ids()) | set(self.ignore_ability_ids)
+        return set(self.ability_ids()) | {a.ability_id for a in self.ignored_abilities}
 
 
-def _unique(label: str, ids: list[str]) -> None:
+def _check_view(enc: EncounterFile, difficulty: Difficulty) -> None:
+    """Rules that hold within one difficulty. IDs may repeat across entries whose difficulties don't overlap."""
+
+    def on(entries: Sequence[_E]) -> list[_E]:
+        return [e for e in entries if difficulty in e.difficulties]
+
+    phases, mechanics = on(enc.phases), on(enc.mechanics)
+    if not phases:
+        raise ValueError(f"{difficulty}: entries apply to it but no phase does")
+    _unique("phase", [p.id for p in phases], difficulty)
+    _unique("mechanic", [m.id for m in mechanics], difficulty)
+    _unique("damage window", [w.id for w in on(enc.damage_windows)], difficulty)
+    if phases[0].start.trigger != "pull":
+        raise ValueError(f"{difficulty}: first phase '{phases[0].id}' must use trigger: pull")
+    for phase in phases[1:]:
+        if phase.start.trigger == "pull":
+            raise ValueError(f"{difficulty}: only the first phase may use trigger: pull (phase '{phase.id}')")
+    owner: dict[int, str] = {}
+    for mech in mechanics:
+        for ability_id in mech.ability_ids:
+            if ability_id in owner:
+                raise ValueError(
+                    f"{difficulty}: ability {ability_id} is in mechanics '{owner[ability_id]}' and '{mech.id}'"
+                )
+            owner[ability_id] = mech.id
+
+
+def _unique(label: str, ids: list[str], difficulty: Difficulty) -> None:
     dupes = sorted({i for i in ids if ids.count(i) > 1})
     if dupes:
-        raise ValueError(f"duplicate {label} id(s): {', '.join(dupes)}")
+        raise ValueError(f"duplicate {label} id(s) on {difficulty}: {', '.join(dupes)}")
 
 
 # ---------------------------------------------------------------------------
@@ -231,22 +314,54 @@ def load_encounter_file(path: Path) -> EncounterFile:
     return parse_encounter(_read_yaml(path), str(path))
 
 
-def load_encounter(encounter_id: int, root: Path | None = None) -> EncounterFile | None:
-    """Load ``<root>/<encounter_id>.yaml``; None when no file is authored for the encounter."""
-    path = Path(root or DEFAULT_ENCOUNTER_ROOT) / f"{encounter_id}.yaml"
-    if not path.exists():
-        return None
+def slugify(name: str) -> str:
+    """Lowercase ASCII words joined by underscores; apostrophes are dropped (``Ula'tek`` -> ``ulatek``)."""
+    return re.sub(r"[^a-z0-9]+", "_", re.sub(r"['’]", "", name.lower())).strip("_")
+
+
+def encounter_relpath(enc: EncounterFile) -> str:
+    """Where ``enc`` lives under the encounter root: ``<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml``."""
+    return f"{enc.zone.id}-{slugify(enc.zone.name)}/{enc.encounter_id}-{slugify(enc.name)}.yaml"
+
+
+def _load_at(path: Path, root: Path) -> EncounterFile:
+    """Load an encounter file and check that its path matches the zone and encounter it declares."""
     enc = load_encounter_file(path)
-    if enc.encounter_id != encounter_id:
-        raise ConfigurationError(f"{path} declares encounter_id {enc.encounter_id}, expected {encounter_id}")
+    expected = encounter_relpath(enc)
+    if path.relative_to(root).as_posix() != expected:
+        raise ConfigurationError(f"{path} declares {enc.name} ({enc.encounter_id}); it must live at {root / expected}")
     return enc
 
 
+def load_encounter(encounter_id: int, root: Path | None = None) -> EncounterFile | None:
+    """The whole authored file for ``encounter_id``, every difficulty; None when none is authored."""
+    root = Path(root or DEFAULT_ENCOUNTER_ROOT)
+    paths = sorted(root.glob(f"*/{encounter_id}-*.yaml"))
+    if not paths:
+        return None
+    if len(paths) > 1:
+        raise ConfigurationError(f"encounter {encounter_id} has several files: {', '.join(map(str, paths))}")
+    return _load_at(paths[0], root)
+
+
+def load_encounter_view(encounter_id: int, difficulty: int | None, root: Path | None = None) -> EncounterFile | None:
+    """One difficulty's view of the encounter file; None when no file covers that encounter and difficulty."""
+    enc = load_encounter(encounter_id, root)
+    return enc.for_difficulty(difficulty) if enc is not None else None
+
+
 def load_all_encounters(root: Path | None = None) -> dict[int, EncounterFile]:
+    """Every encounter file under ``root``, all difficulties. Misplaced files and duplicate IDs raise."""
     root = Path(root or DEFAULT_ENCOUNTER_ROOT)
     if not root.is_dir():
         return {}
-    return {enc.encounter_id: enc for enc in (load_encounter_file(p) for p in sorted(root.glob("*.yaml")))}
+    found: dict[int, EncounterFile] = {}
+    for path in sorted(root.rglob("*.yaml")):
+        enc = _load_at(path, root)
+        if enc.encounter_id in found:
+            raise ConfigurationError(f"encounter {enc.encounter_id} has several files under {root}")
+        found[enc.encounter_id] = enc
+    return found
 
 
 def _content_hash(model: BaseModel) -> str:

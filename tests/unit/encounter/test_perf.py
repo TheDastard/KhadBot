@@ -22,7 +22,7 @@ from helpers.synth import FIXTURES
 
 from khadbot.encounter import query_tools as qt
 from khadbot.encounter.annotate import annotate_pull
-from khadbot.encounter.config_files import load_encounter, load_registry
+from khadbot.encounter.config_files import load_encounter_view, load_registry
 from khadbot.encounter.digest import build_digest
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.fetch import RawPageCache
@@ -73,7 +73,7 @@ async def test_reannotate_night_budget(code, tmp_path):
     store = await _ingested(code, tmp_path)
     t0 = time.perf_counter()
     for pull in store.pulls(code):
-        annotate_pull(pull.pull_key, store, load_encounter(pull.encounter_id))
+        annotate_pull(pull.pull_key, store, load_encounter_view(pull.encounter_id, pull.difficulty))
     elapsed = time.perf_counter() - t0
     assert elapsed < 30, f"re-annotating {code} took {elapsed:.1f}s"
 

@@ -30,7 +30,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **Fetch keys**: `fetch_pull` returns `{dir_name: truncated}` (not `data_type`) so friendly/enemy `Casts` are distinct.
   "Truncated" means pagination stopped because `nextPageTimestamp` did not advance.
 - **CLI ingest filters (M2.1)**: `/ingest` and `main.py ingest` now pass `registry_spell_ids` from
-  `config/registries/cooldowns.yaml` and `enemy_cast_ids` from every `config/encounters/*.yaml`
+  `config/registries/cooldowns.yaml` and `enemy_cast_ids` from every encounter file under `config/encounters/`
   (`EncounterFile.ability_ids()`: mechanics, damage windows, phase-trigger abilities). A report whose boss has no
   encounter file still fetches enemy `Casts` unfiltered.
 - **Cooldown registry kinds (M2.1)**: the 17 ported entries carry a first-pass `kind` (raid / external / personal);
@@ -73,6 +73,21 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   with `pytest --update-goldens` (`UPDATE_GOLDEN=1` still works).
 - **Offline ingest of SYNTH01 through the CLI** misses the cache, because the CLI derives Buffs / enemy-Casts filters
   from `config/` while the fixture was recorded with synthetic IDs. Tests pass the synthetic IDs explicitly.
+- **Encounter file layout and difficulties (2026-10-11)**: files live at
+  `config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml` (Ula'tek:
+  `53-the_venomous_abyss/3492-ulatek.yaml`), so a file says which fight it is without opening it. The zone ID is
+  the WCL zone ID from report metadata, the only instance ID the data carries. Slugs are lowercase with apostrophes
+  dropped and other runs of non-alphanumerics turned into `_`; a hyphen separates ID from slug because a second dot
+  reads as a file extension. The file declares `zone: {id, name}`, and the loader rejects a file whose path doesn't
+  match its declared zone, encounter ID and name, and an encounter ID with two files. Every entry (phase, mechanic,
+  damage window, ignored ability) has a required `difficulties` list (`lfr`, `normal`, `heroic`, `mythic`; WCL
+  codes 1, 3, 4, 5, of which only 4 and 5 are confirmed on recorded reports). `ignore_ability_ids` became
+  `ignored_abilities: [{ability_id, name, difficulties}]`. Validation runs per difficulty, so an ID or ability may
+  repeat on entries whose difficulties don't overlap (for example a different failure rule on Mythic). Analysis
+  uses `load_encounter_view(encounter_id, pull.difficulty)`: only that difficulty's entries, and None (coverage
+  `none`) when no phase covers the pull's difficulty or the difficulty is unknown. `encfile_hash` is taken over that
+  view, so editing one difficulty's entries leaves the other difficulties' annotations and findings cached. The
+  ingest filter still uses every difficulty's ability IDs. Plan section 6.2 needs the same edit.
 - **M2.6 (legacy comparison) is blocked on H2**: it compares against real fixture pulls, which do not exist yet.
 - **M2 exit criteria waiting on humans**: H3 encounter file (<10% unregistered on real reports), real-fixture digest
   goldens and the 1.5k-3k token check (H2), perf budgets (`-m perf`, written, skipped until H2), and M2.6.
@@ -214,7 +229,7 @@ and, where marked, a contract update in plan section 6.
   Encounter-file lookup is per `encounter_id` already; digests and reviews must not assume one boss per report.
 - **Phase names.** `report.phases` maps phase IDs to names and intermission flags; the Ula'tek table is in
   `docs/wcl-api.md`. Players count stages, so "phase 3" on Ula'tek is phase ID 4 (Stage Three), which started 362
-  to 365 s into every pull that reached it. Use these IDs in `config/encounters/3492.yaml`; a `wcl_phase` trigger
+  to 365 s into every pull that reached it. Use these IDs in `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`; a `wcl_phase` trigger
   works for every Ula'tek phase. The enrage is *Fury Unleashed* (confirmed by the raid leader).
 
 ## Open follow-ups
@@ -236,7 +251,7 @@ Things raised in review that are not tasks in the plan yet.
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; H5 can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
 - **Enemy-Casts filter changes after H3.** The real fixtures were recorded with enemy Casts unfiltered (no encounter
-  file). Once `config/encounters/3492.yaml` exists, the CLI derives a filter and an offline ingest of these
+  file). Once `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml` exists, the CLI derives a filter and an offline ingest of these
   fixtures misses that one data type. Tests should pass explicit IDs (as for SYNTH01), or the fixtures should be
   re-recorded after H3.
 - **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` (the enrage fixture) has no enemy casts after

@@ -25,7 +25,7 @@ from khadbot.encounter.annotate import Annotated, AnnotationCache, annotate_pull
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
-    load_encounter,
+    load_encounter_view,
     load_registry,
     registry_hash,
 )
@@ -136,7 +136,7 @@ def build_pull_records(
     if pull is None:
         raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
     registry = registry or load_registry()
-    enc = load_encounter(pull.encounter_id, enc_root)
+    enc = load_encounter_view(pull.encounter_id, pull.difficulty, enc_root)
     fraction = EncounterConfig().cutoff_fraction if cutoff_fraction is None else cutoff_fraction
     a = annotate_pull(pull_key, store, enc, cache=cache, cutoff_fraction=fraction)
     actors = store.actors(code)

@@ -68,14 +68,11 @@ def synth_registry():
 
 @pytest.fixture
 def synth_enc_root(tmp_path):
-    """Encounter-file root holding only the synthetic encounter file, named by its encounter ID."""
-    import shutil
-
-    from helpers.synth import SYNTH_ENCOUNTER_FILE, SYNTH_ENCOUNTER_ID
+    """Encounter-file root holding only the synthetic encounter file, at its canonical path."""
+    from helpers.synth import install_synth_encounter
 
     root = tmp_path / "synth_encounters"
-    root.mkdir()
-    shutil.copy(SYNTH_ENCOUNTER_FILE, root / f"{SYNTH_ENCOUNTER_ID}.yaml")
+    install_synth_encounter(root)
     return root
 
 

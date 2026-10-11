@@ -65,7 +65,7 @@ Example questions:
 ## Encounter review
 
 1. **Ingest** — `/ingest <report>` fetches events from WarcraftLogs (paginated, cached, idempotent) and stores one normalized parquet file per pull under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored).
-2. **Annotate** — events are tagged using the encounter file in `config/encounters/<encounter_id>.yaml` (phases, mechanics, failure rules, damage windows) and the cooldown registry in `config/registries/cooldowns.yaml`.
+2. **Annotate** — events are tagged using the encounter file in `config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml` (phases, mechanics, failure rules, damage windows, each listing the difficulties it applies to) and the cooldown registry in `config/registries/cooldowns.yaml`.
 3. **Digest** — each pull gets a deterministic digest: deaths, mechanic failures, cooldown usage, window coverage, and anomaly flags. Encounter and registry files are authored by hand; unknown values stay `null` rather than guessed.
 4. **Analyze** — an analyst agent queries the stored data with read-only tools and submits findings. Every finding carries evidence refs, and numbers in a claim are checked against the referenced records before it is accepted. Findings are cached per pull.
 5. **Converse** — a conversation agent answers from findings and dispatches deeper analysis when needed.
@@ -98,7 +98,7 @@ KhadBot/
 │   └── llm_factory.py     # provider factory (anthropic | openai | groq | ollama), role-aware
 ├── config/
 │   ├── agents/            # coach.yaml, encounter.yaml: base prompts, tool subsets, personas
-│   ├── encounters/        # one authored file per encounter
+│   ├── encounters/        # one authored file per encounter, grouped by zone
 │   ├── registries/        # cooldown registry
 │   ├── personas/          # khadgar, thrall, xalatath
 │   └── templates/         # Jinja prompt template

@@ -27,11 +27,10 @@ import pytest
 from helpers.golden import GoldenOutcome, GoldenQuestion, load_questions, pass_rate
 from helpers.synth import (
     FIXTURES,
-    SYNTH_ENCOUNTER_FILE,
-    SYNTH_ENCOUNTER_ID,
     SYNTH_ENEMY_CAST_IDS,
     SYNTH_REGISTRY_FILE,
     SYNTH_REGISTRY_IDS,
+    install_synth_encounter,
 )
 
 from khadbot.config import EncounterConfig
@@ -76,8 +75,7 @@ def eval_data(golden_questions, tmp_path_factory) -> dict[str, EncounterData]:
         _ingest(code, store)
         if code == "SYNTH01":  # synthetic report: its own encounter file and registry
             enc_root = root / "synth_encounters"
-            enc_root.mkdir(exist_ok=True)
-            (enc_root / f"{SYNTH_ENCOUNTER_ID}.yaml").write_bytes(SYNTH_ENCOUNTER_FILE.read_bytes())
+            install_synth_encounter(enc_root)
             data[code] = EncounterData(store, enc_root=enc_root, registry=load_registry(SYNTH_REGISTRY_FILE))
         else:
             data[code] = EncounterData(store)
