@@ -84,9 +84,10 @@ test-integ:
 	set "LLM_PROVIDER=$(or $(LLM_PROVIDER),ollama)" && $(PYTEST) $(TESTS)\integration
 
 # Eval tests are expensive — run deliberately, not in CI by default.
-# Requires ANTHROPIC_API_KEY and LANGSMITH_API_KEY to be set in .env
+# Requires ANTHROPIC_API_KEY; LANGSMITH_API_KEY adds per-question feedback to the traces.
+# Gate with KHADBOT_EVAL_MIN_PASS_RATE (0-1); unset reports the pass rate only.
 test-eval:
-	set "LLM_PROVIDER=anthropic" && set "LANGCHAIN_TRACING_V2=true" && $(PYTEST) $(TESTS)\eval -s
+	set "LLM_PROVIDER=anthropic" && set "LANGCHAIN_TRACING_V2=true" && $(PYTEST) $(TESTS)\eval -m eval -s --no-cov
 
 
 # ── Code quality ────────────────────────────────────────────────────────────
