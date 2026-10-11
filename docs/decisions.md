@@ -182,10 +182,70 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
 
 | ID | Task | Status |
 |----|------|--------|
-| H1 | Choose boss + three public reports | open |
-| H2 / S1 | Record real fixtures, run cost spike | open |
+| H1 | Choose boss + three public reports | done 2026-10-11: Heroic Ula'tek (encounter 3492). Wipe-heavy night `trMgApZCVYkv3jdq`; clean kill `H7z1fqDXjRTFnbtg` fight 20, with the rest of that report as the messy night; second messy / early-learning night `QkVa6GHRK8yfrTbw`. See `docs/wcl-api.md`. |
+| H2 / S1 | Record real fixtures, run cost spike | done 2026-10-11: all 62 boss pulls ingested into `KHADBOT_DATA_DIR` (936 points); seven representative pulls copied to `tests/fixtures/wcl/` and stored in Git LFS (see its README); measurements in `docs/wcl-api.md`. |
 | H3 / S3 | Author the encounter file for the H1 boss | open |
 | H4 | Fill cooldown durations in `cooldowns.yaml` | open |
 | H5 / S4 | Write golden questions | open |
 | H6 | Set eval thresholds | open |
 | H7 | Update external engineering-principles doc | open |
+
+## Findings from the real reports (2026-10-11)
+
+From the fight lists of the three reports and the first live ingest. The API facts behind these are in
+`docs/wcl-api.md`; the items below are what they change in the encounter code. Each still needs a code change
+and, where marked, a contract update in plan section 6.
+
+- **Raid size for the wipe cutoff stays `len(pull.friendly_player_ids)`.** In all 62 recorded pulls the
+  friendly players are exactly the players with events, including the Mythic Nymrissa pulls where WCL reports
+  `size=20` but 22 played (Lair fights allow 15 to 25 on Mythic). Never use WCL `size` for anything. Plan 6.3
+  should say `raid_size` is the pull's friendly-player count.
+- **`lastPhase` is an ordinal, not a phase ID.** WCL numbers stages and intermissions separately, so a pull
+  ending in Ula'tek's intermission (phase ID 3) reports `lastPhase=1`. The `phase_trigger_unmatched` anomaly
+  compares detected phases with `Pull.last_phase`; switch it to the last `phase_transitions` ID. Phase detection
+  itself already uses transitions or triggers.
+- **Keep both progress figures.** `Pull.boss_pct` stores `fightPercentage`. Add `bossPercentage` as a separate
+  field (`boss_hp_pct`) and keep `fightPercentage` for "how close was the pull"; they differ by 10+ points in
+  later phases. Contract change (plan 6.1 `Pull`, 6.4 digest).
+- **Rosters come from each pull.** Report-wide player actors include everyone the logger saw (276 in
+  `H7z1fqDXjRTFnbtg`). Anything that lists "the raid" must use the pull's friendly players, never
+  `masterData.actors`.
+- **A report can mix bosses and difficulties.** `H7z1fqDXjRTFnbtg` has three Heroic bosses and Mythic Nymrissa.
+  Encounter-file lookup is per `encounter_id` already; digests and reviews must not assume one boss per report.
+- **Phase names.** `report.phases` maps phase IDs to names and intermission flags; the Ula'tek table is in
+  `docs/wcl-api.md`. Players count stages, so "phase 3" on Ula'tek is phase ID 4 (Stage Three), which started 362
+  to 365 s into every pull that reached it. Use these IDs in `config/encounters/3492.yaml`; a `wcl_phase` trigger
+  works for every Ula'tek phase. The enrage is *Fury Unleashed* (confirmed by the raid leader).
+
+## Open follow-ups
+
+Things raised in review that are not tasks in the plan yet.
+
+- **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
+  `m3-analyst-loop` → `m4-findings-fanout` are unmerged; `main` has none of the encounter work. Merge the stack
+  (in order, or `m4-findings-fanout` once) before starting M5.
+- **Code changes for the real-report contract** (plan v0.3.3, section 6): add `Pull.boss_hp_pct` and
+  `PullDigest.boss_hp_pct` (request `bossPercentage` in `GET_REPORT_META`), take `phase_reached` and the
+  `phase_trigger_unmatched` check from the last phase transition instead of `last_phase`, and fix the
+  `start_ms` / `end_ms` comments (milliseconds from report start). `raid_size` already matches.
+- **Exit checks that real fixtures now unblock**: the perf tests (`pytest -m perf`), the legacy comparison
+  (M2.6), digest goldens for the real fixture pulls, and the query-tool p95. The digest token range (1.5k to 3k)
+  can only be judged after H3: without an encounter file real digests are 850 to 1,250 tokens.
+- **Skipped tests rose from 4 to 12** once real fixtures were present. Confirm the extra 8 are perf or eval tests
+  that skip by marker, not tests skipping because a fixture is missing or malformed.
+- **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
+  pulls; H5 can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
+- **Enemy-Casts filter changes after H3.** The real fixtures were recorded with enemy Casts unfiltered (no encounter
+  file). Once `config/encounters/3492.yaml` exists, the CLI derives a filter and an offline ingest of these
+  fixtures misses that one data type. Tests should pass explicit IDs (as for SYNTH01), or the fixtures should be
+  re-recorded after H3.
+- **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` (the enrage fixture) has no enemy casts after
+  574 s of a 618 s pull, while *Fury Unleashed* damage continues. Find out whether the boss casts nothing during
+  the enrage or the log lost them before relying on enemy casts near the end of a pull.
+- **Git LFS budget.** The real fixtures are about 200 MB. On GitHub's free tier LFS storage and bandwidth are each
+  1 GB (bandwidth per month), so every full clone or CI checkout with LFS spends about 200 MB. Jobs that don't need
+  real fixtures can set `GIT_LFS_SKIP_SMUDGE=1`.
+
+Resolved 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them;
+the `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
+uninstalled.
