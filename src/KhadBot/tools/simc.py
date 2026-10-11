@@ -53,7 +53,7 @@ def run_simc(simc_string: str, comparison_item: str | None = None) -> dict:
         "talent_note": "Current build is within 1.2% of the optimal simmed build.",
     }
 
-    if comparison_item:
+    if comparison_item and comparison_dps is not None:
         delta = comparison_dps - baseline_dps
         result.update(
             {

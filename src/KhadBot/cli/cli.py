@@ -19,6 +19,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.styles import Style as PTStyle
 
@@ -45,7 +46,7 @@ PT_STYLE = PTStyle.from_dict(
     }
 )
 
-PROMPT_TEXT = [("class:prompt", "⚔  ")]
+PROMPT_TEXT: StyleAndTextTuples = [("class:prompt", "⚔  ")]
 
 # Commands that aren't passed to the agent
 EXIT_COMMANDS = {"/exit", "/quit", "/q"}

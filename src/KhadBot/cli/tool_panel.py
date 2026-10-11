@@ -321,7 +321,9 @@ try:
                 summary = raw[:80] + "…" if len(raw) > 80 else raw
                 self.panel.finish_tool(tool_name, summary)
 
-        def on_tool_error(self, error: Exception, **kwargs: Any) -> None:
+        def on_tool_error(
+            self, error: BaseException, *, run_id: Any = None, parent_run_id: Any = None, **kwargs: Any
+        ) -> None:
             tool_name = kwargs.get("name") or self._last_tool_name
             if tool_name:
                 self.panel.fail_tool(tool_name, str(error)[:80])
