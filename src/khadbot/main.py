@@ -37,9 +37,14 @@ def _run_cli() -> None:
 
         return result["answer"]
 
-    from khadbot.encounter.commands import digest_command, ingest_command, pulls_command
+    from khadbot.encounter.commands import digest_command, ingest_command, pulls_command, review_command
 
-    commands = {"/ingest": ingest_command, "/digest": digest_command, "/pulls": pulls_command}
+    commands = {
+        "/ingest": ingest_command,
+        "/digest": digest_command,
+        "/pulls": pulls_command,
+        "/review": review_command,
+    }
     asyncio.run(run_cli(agent_fn, commands=commands))
 
 

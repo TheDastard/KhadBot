@@ -2,7 +2,7 @@
 tests/unit/encounter/test_commands.py
 
 /ingest argument parsing, result formatting, and the command handler wired to a patched ingest_report;
-/digest and /pulls against SYNTH01 ingested into a temp store.
+/digest, /pulls and /review against SYNTH01 ingested into a temp store.
 """
 
 from __future__ import annotations
@@ -22,7 +22,9 @@ from khadbot.encounter.commands import (
     parse_fights,
     pulls_command,
     resolve_pull_key,
+    review_command,
 )
+from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.models import IngestResult
 
 
@@ -172,3 +174,58 @@ class TestPullsCommand:
         assert "Usage: /pulls" in await pulls_command("A B")
         monkeypatch.setattr(commands, "_last_report", None)
         assert "No report ingested" in await pulls_command("")
+
+
+class TestReviewCommand:
+    """/review against SYNTH01 with a reactive fake analyst; the estimate prints before any model call."""
+
+    @pytest.fixture
+    def events(self, monkeypatch) -> list[str]:
+        log: list[str] = []
+        from khadbot.cli.console import console
+
+        monkeypatch.setattr(console, "print", lambda *a, **k: log.append(f"print: {a[0]}"))
+        return log
+
+    @pytest.fixture
+    def fake(self, role_fakes, events):
+        from helpers.fake_llm import ReactiveFakeModel
+        from helpers.review_fakes import respond
+
+        def logging_respond(messages, tools):
+            events.append("model call")
+            return respond(messages, tools)
+
+        role_fakes["analyst"] = ReactiveFakeModel(logging_respond)
+        return role_fakes["analyst"]
+
+    async def test_estimate_flag_returns_estimate_without_a_model_call(self, synth_data, tmp_path, fake):
+        out = await review_command(
+            "--report SYNTH01 --estimate", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+        )
+        assert out.startswith("Estimated cost for 2 pulls: about ")
+        assert fake.calls == []
+
+    async def test_prints_estimate_before_the_first_model_call(self, synth_data, tmp_path, fake, events):
+        out = await review_command(
+            "--report SYNTH01 What repeated?", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+        )
+        assert events[0].startswith("print: [ui.muted]Estimated cost for 2 pulls")
+        assert "model call" in events[1:]
+        assert "### Review" in out
+        assert "The pulls were reviewed" in out
+
+    async def test_fights_option_limits_pulls(self, synth_data, tmp_path, fake, events):
+        out = await review_command(
+            "--report SYNTH01 --fights 1 --estimate", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+        )
+        assert "for 1 pulls" in out
+
+    async def test_unknown_report(self, synth_data, tmp_path):
+        out = await review_command("--report NOPE", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite"))
+        assert "No pulls stored for `NOPE`" in out
+
+    async def test_usage_errors(self, synth_data, tmp_path, monkeypatch):
+        monkeypatch.setattr(commands, "_last_report", None)
+        assert "No report ingested" in await review_command("", data=synth_data)
+        assert "Usage: /review" in await review_command("--depth huge", data=synth_data)
