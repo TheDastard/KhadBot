@@ -32,7 +32,7 @@ src/khadbot/
                      # CLI commands; conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report
     analysis/        # deaths, mechanics, cooldowns, aggro
-    analyst/         # query tools, versioning, analyst graph, review and synthesis
+    analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
   cli/               # Rich + prompt_toolkit REPL
   tools/             # LangChain @tools and the shared WarcraftLogs client
 config/

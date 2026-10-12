@@ -46,6 +46,14 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `encounter/analyst/`. App code imports `run_analysis`, `review` and `estimate_review_cost` from the package;
   tests that patch module attributes import `analyst.graph` itself. Tool names, docstrings and argument schemas
   are unchanged, so the prompt version and the findings cache key are too.
+- **Analyst modules (2026-10-12)**: `graph.py` was split by concern: `prompts.py` (prompt templates and
+  fixed replies, so a prompt edit, which changes the prompt version, is one file in a diff), `verify.py`
+  (`check_finding`, `verify_report`; the conversation agent's answer check will reuse them),
+  `graph.py` (the single-question analyst and `run_analysis`) and `review_graph.py` (per-pull fan-out,
+  findings cache, synthesis, `review` and the cost estimate). The review module is not called
+  `review.py` because the package exports a `review` function, which would shadow it. The graph's
+  `make_run`, `analysis_config` and `invoke` are public because the review graph uses them. Code and
+  prompts moved unchanged: all three prompt versions match the previous layout and `GRAPH_VERSION` stays.
 - **Encounter fixtures (2026-10-12)**: `wcl/`, `wcl_views/`, `encounters/` and `registries/` live under
   `tests/fixtures/encounter/`, next to the coach payload modules in `tests/fixtures/`. `FIXTURES` in
   `tests/helpers/encounter/synth.py` names that encounter root. The Git LFS rules move with `wcl/`, and the
