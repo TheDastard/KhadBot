@@ -137,6 +137,7 @@ def test_cluster_rows_count_only_hit_failures(synth_data):
     # The missed Shadow Bolt is a failure on the enemy cast row, which belongs to no cluster.
     bolt = synth_data.resolve("ev:SYNTH01:1:mech:shadow_bolt")
     assert (bolt["failures"], bolt["hits"]) == (1, 1)
+    assert bolt["failures_by_player"] == {}  # an enemy cast row is charged to no player
     assert [(c["hits"], c["failures"]) for c in bolt["cluster_rows"]] == [(1, 0)]
 
 
@@ -145,6 +146,7 @@ def test_event_rows_mark_failures_and_round_hp(synth_data):
     seq = frame.filter(pl.col("is_failure") & pl.col("hp_pct").is_not_null())["seq"][0]
     row = synth_data.resolve(f"ev:SYNTH01:1:event:{seq}")
     assert row["failure"] is True
+    assert row["blamed"] == row["target"]
     assert row["mechanic_id"] == "swirl"
     assert row["hp_pct"] == round(row["hp_pct"], 1)
     assert "source_id" not in row and "target_id" not in row

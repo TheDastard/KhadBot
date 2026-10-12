@@ -9,6 +9,12 @@ Added columns:
     mechanic_id        Utf8   mechanic owning ability_id (any event type)
     cluster_id         Int32  1-based cluster within the mechanic; set on hits only
     is_failure         Bool   row is a failure under the mechanic's rule (plan 6.2)
+    blamed_id          Int32  on failure rows, the player charged with the failure: the player hit for most
+                              rules, the player a ``blame`` spec points at for ``per_cluster``; null if no one
+
+Who an NPC is attacking comes from the Threat data (``aggro_events``): its melee swings name its target,
+and a taunt debuff landing on it hands it to the taunting player. ``per_cluster`` blame and
+``hits_on_non_tank`` read the NPC's latest such event.
     window_id          Utf8   damage window owning ability_id; set on hits only
     window_occurrence  Int32  1-based occurrence of the window; set on hits only
 
@@ -17,7 +23,8 @@ A "hit" is a ``damage`` event on a friendly target. Clusters are consecutive hit
 player deaths reach ``ceil(cutoff_fraction * raid_size)``; kills have no cutoff.
 
 Annotated frames are cached under ``$KHADBOT_DATA_DIR/annotated/<report>/<fight>__<encfile_hash>.parquet``
-with a JSON sidecar holding the phases, cutoff and the ``events_hash`` they were built from.
+with a JSON sidecar holding the phases, cutoff, the ``events_hash`` they were built from and
+``ANNOTATION_VERSION``, which is bumped whenever the columns or their rules change.
 """
 
 from __future__ import annotations
@@ -30,7 +37,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 
-from khadbot.encounter.config_files import EncounterFile, Mechanic, encfile_hash
+from khadbot.encounter.config_files import Blame, EncounterFile, Mechanic, encfile_hash
 from khadbot.encounter.models import Actor, PhaseSpan, Pull
 from khadbot.encounter.phases import boss_ids_of, detect_phases, unmatched_phase
 from khadbot.encounter.store import EventStore, split_pull_key
@@ -40,12 +47,16 @@ ANNOTATION_COLUMNS: dict[str, pl.DataType] = {
     "mechanic_id": pl.Utf8(),
     "cluster_id": pl.Int32(),
     "is_failure": pl.Boolean(),
+    "blamed_id": pl.Int32(),
     "window_id": pl.Utf8(),
     "window_occurrence": pl.Int32(),
 }
 
 # Interrupt matching tolerance for not_interrupted: an interrupt 0-100 ms before the cast counts.
 INTERRUPT_TOLERANCE_MS = 100
+
+# Bump when annotation columns or failure rules change, so cached frames are rebuilt.
+ANNOTATION_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -69,6 +80,45 @@ def is_hit() -> pl.Expr:
 
 def type_is(*types: str) -> pl.Expr:
     return pl.col("type").cast(pl.Utf8).is_in(list(types))
+
+
+# ---------------------------------------------------------------------------
+# Column builders
+# ---------------------------------------------------------------------------
+
+
+def _phase_expr(phases: list[PhaseSpan]) -> pl.Expr:
+    expr: pl.Expr = pl.lit(None, dtype=pl.Utf8)
+    for span in phases:  # later phases override earlier ones
+        expr = pl.when(pl.col("t_ms") >= span.start_ms).then(pl.lit(span.phase_id)).otherwise(expr)
+    return expr.alias("phase_id")
+
+
+def _ability_map(groups: list[tuple[str, list[int]]], column: str) -> pl.Expr:
+    mapping = {ability_id: gid for gid, ids in groups for ability_id in ids}
+    if not mapping:
+        return pl.lit(None, dtype=pl.Utf8).alias(column)
+    return pl.col("ability_id").replace_strict(mapping, default=None, return_dtype=pl.Utf8).alias(column)
+
+
+def _clusters(frame: pl.DataFrame, group_col: str, windows: dict[str, int], out_col: str) -> pl.DataFrame:
+    """``seq`` -> 1-based gap cluster per group, over hits that have ``group_col`` set."""
+    hits = frame.filter(is_hit() & pl.col(group_col).is_not_null()).select("seq", "t_ms", group_col)
+    if hits.is_empty():
+        return pl.DataFrame(schema={"seq": pl.UInt32(), out_col: pl.Int32()})
+    gap = pl.col(group_col).replace_strict(windows, return_dtype=pl.Int32)
+    new_cluster = (pl.col("t_ms").diff().over(group_col) > gap).fill_null(True)
+    return hits.sort("seq").select(
+        "seq", new_cluster.cast(pl.Int32).cum_sum().over(group_col).cast(pl.Int32).alias(out_col)
+    )
+
+
+def _victims(rows: pl.DataFrame) -> dict[int, int | None]:
+    """Failure rows charged to the friendly player they hit (None for a non-friendly target)."""
+    return {
+        seq: (target if friendly else None)
+        for seq, target, friendly in rows.select("seq", "target_id", "target_friendly").rows()
+    }
 
 
 def aggro_events(frame: pl.DataFrame) -> pl.DataFrame:
@@ -103,70 +153,61 @@ def aggro_events(frame: pl.DataFrame) -> pl.DataFrame:
     return pl.concat([swings, taunts, deaths]).sort("seq")
 
 
-# ---------------------------------------------------------------------------
-# Column builders
-# ---------------------------------------------------------------------------
+def _aggro_holder(events: pl.DataFrame, npc_ids: set[int], t_ms: int, ms: int) -> int | None:
+    """The player behind the latest swing or taunt on any of ``npc_ids`` in the ``ms`` up to ``t_ms``."""
+    recent = events.filter(pl.col("npc_id").is_in(npc_ids) & pl.col("t_ms").is_between(t_ms - ms, t_ms))
+    return recent["player_id"][-1] if recent.height else None  # null after the NPC's death
 
 
-def _phase_expr(phases: list[PhaseSpan]) -> pl.Expr:
-    expr: pl.Expr = pl.lit(None, dtype=pl.Utf8)
-    for span in phases:  # later phases override earlier ones
-        expr = pl.when(pl.col("t_ms") >= span.start_ms).then(pl.lit(span.phase_id)).otherwise(expr)
-    return expr.alias("phase_id")
-
-
-def _ability_map(groups: list[tuple[str, list[int]]], column: str) -> pl.Expr:
-    mapping = {ability_id: gid for gid, ids in groups for ability_id in ids}
-    if not mapping:
-        return pl.lit(None, dtype=pl.Utf8).alias(column)
-    return pl.col("ability_id").replace_strict(mapping, default=None, return_dtype=pl.Utf8).alias(column)
-
-
-def _clusters(frame: pl.DataFrame, group_col: str, windows: dict[str, int], out_col: str) -> pl.DataFrame:
-    """``seq`` -> 1-based gap cluster per group, over hits that have ``group_col`` set."""
-    hits = frame.filter(is_hit() & pl.col(group_col).is_not_null()).select("seq", "t_ms", group_col)
-    if hits.is_empty():
-        return pl.DataFrame(schema={"seq": pl.UInt32(), out_col: pl.Int32()})
-    gap = pl.col(group_col).replace_strict(windows, return_dtype=pl.Int32)
-    new_cluster = (pl.col("t_ms").diff().over(group_col) > gap).fill_null(True)
-    return hits.sort("seq").select(
-        "seq", new_cluster.cast(pl.Int32).cum_sum().over(group_col).cast(pl.Int32).alias(out_col)
+def _blamed_player(frame: pl.DataFrame, events: pl.DataFrame, blame: Blame, t0: int, npc_ids: set[int]) -> int | None:
+    """The player ``blame`` points at for an occurrence whose first hit is at ``t0``; None if nobody."""
+    if blame.by == "aggro_holder":
+        return _aggro_holder(events, npc_ids, t0, blame.ms)
+    cand = frame.filter(
+        pl.col("t_ms").is_between(t0 - blame.ms, t0)
+        & pl.col("target_friendly")
+        & type_is("cast")
+        & ~pl.col("source_friendly")
+        & (pl.col("ability_id") == blame.ability_id)
     )
+    return cand.sort("seq")["target_id"][-1] if cand.height else None
 
 
-def _failure_seqs(frame: pl.DataFrame, mech: Mechanic, duration_ms: int) -> set[int]:
-    """Row ``seq`` values that are failures under ``mech.failure``."""
+def _failures(
+    frame: pl.DataFrame, mech: Mechanic, duration_ms: int, game_ids: dict[int, int | None], aggro: pl.DataFrame
+) -> dict[int, int | None]:
+    """Failure rows under ``mech.failure``: row ``seq`` -> the player charged with it (None if no one)."""
     if mech.failure is None:
-        return set()
+        return {}
     rule = mech.failure
     rows = frame.filter(pl.col("mechanic_id") == mech.id)
     hits = rows.filter(is_hit())
 
     if rule.rule == "any_hit":
-        return set(hits["seq"].to_list())
+        return _victims(hits)
 
     if rule.rule == "hits_per_cluster_gt":
         # One failure per (player, cluster): the hit that takes the player past `value`.
         nth = hits.sort("seq").with_columns(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id").alias("_n"))
-        return set(nth.filter(pl.col("_n") == (rule.value or 0) + 1)["seq"].to_list())
+        return _victims(nth.filter(pl.col("_n") == (rule.value or 0) + 1))
 
     if rule.rule == "soak_count_lt":
         per_cluster = hits.group_by("cluster_id").agg(
             pl.col("target_id").n_unique().alias("_players"), pl.col("seq").min().alias("_first")
         )
-        return set(per_cluster.filter(pl.col("_players") < (rule.value or 0))["_first"].to_list())
+        return dict.fromkeys(per_cluster.filter(pl.col("_players") < (rule.value or 0))["_first"].to_list())
 
     if rule.rule == "not_interrupted":
         # Stateful: small Python loop over this mechanic's enemy casts and matching interrupts only.
         ids = mech.ability_ids
         casts = rows.filter(type_is("cast") & ~pl.col("source_friendly")).select("seq", "t_ms").rows()
         kicks = frame.filter(type_is("interrupt") & pl.col("extra_ability_id").is_in(ids))["t_ms"].to_list()
-        return {seq for seq, t in casts if not any(t - INTERRUPT_TOLERANCE_MS <= k <= t for k in kicks)}
+        return {seq: None for seq, t in casts if not any(t - INTERRUPT_TOLERANCE_MS <= k <= t for k in kicks)}
 
     if rule.rule == "debuff_duration_gt":
         auras = rows.filter(type_is("applydebuff", "removedebuff") & pl.col("target_friendly")).sort("seq")
         open_since: dict[tuple[int, int], tuple[int, int]] = {}
-        failures: set[int] = set()
+        failures: dict[int, int | None] = {}
         limit = rule.ms or 0
         for seq, t, typ, target, ability in auras.select(
             "seq", "t_ms", pl.col("type").cast(pl.Utf8), "target_id", "ability_id"
@@ -177,11 +218,58 @@ def _failure_seqs(frame: pl.DataFrame, mech: Mechanic, duration_ms: int) -> set[
             elif key in open_since:
                 apply_seq, apply_t = open_since.pop(key)
                 if t - apply_t > limit:
-                    failures.add(apply_seq)
-        failures |= {seq for seq, t in open_since.values() if duration_ms - t > limit}
+                    failures[apply_seq] = target
+        failures |= {seq: target for (target, _), (seq, t) in open_since.items() if duration_ms - t > limit}
         return failures
 
-    return set()  # pragma: no cover - RuleName is exhaustive
+    if rule.rule == "hit_amount_gt":
+        size = pl.coalesce("unmitigated", pl.col("amount").fill_null(0) + pl.col("absorbed").fill_null(0))
+        return _victims(hits.filter(size > (rule.value or 0)))
+
+    if rule.rule == "aura_applied":
+        return _victims(rows.filter(type_is("applydebuff", "applybuff") & pl.col("target_friendly")))
+
+    if rule.rule == "hits_on_non_tank":
+        # Each player is judged once per cluster, at their first hit, against the aggro holder of the NPC
+        # instance that hit them: the latest swing or taunt on it within `ms` before. Later ticks don't
+        # count. A player hit while the NPC had no holder is a failure too.
+        holders = (
+            aggro.filter(pl.col("kind") != "death")
+            .select(
+                pl.col("npc_id").alias("source_id"),
+                pl.col("npc_instance").fill_null(-1).alias("_inst"),
+                pl.col("t_ms").alias("_at"),
+                pl.col("player_id").alias("_holder"),
+            )
+            .sort("_at")
+        )
+        first_hits = hits.sort("seq").filter(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id") == 1)
+        judged = (
+            first_hits.with_columns(pl.col("source_instance").fill_null(-1).alias("_inst"))
+            .sort("t_ms")
+            .join_asof(
+                holders,
+                left_on="t_ms",
+                right_on="_at",
+                by=["source_id", "_inst"],
+                strategy="backward",
+                check_sortedness=False,
+            )
+        )
+        is_tank = (pl.col("_holder") == pl.col("target_id")) & (pl.col("t_ms") - pl.col("_at") <= (rule.ms or 0))
+        return _victims(judged.filter(~is_tank.fill_null(False)))
+
+    if rule.rule == "per_cluster":
+        # One failure per occurrence, on its first hit, charged to the player the blame spec points at.
+        blame = rule.blame
+        assert blame is not None  # enforced by FailureRule
+        npc_ids = {a for a, g in game_ids.items() if g == blame.npc_game_id}
+        firsts = hits.group_by("cluster_id").agg(pl.col("seq").min(), pl.col("t_ms").min())
+        return {
+            seq: _blamed_player(frame, aggro, blame, t0, npc_ids) for seq, t0 in firsts.select("seq", "t_ms").rows()
+        }
+
+    return {}  # pragma: no cover - RuleName is exhaustive
 
 
 def wipe_cutoff(pull: Pull, frame: pl.DataFrame, cutoff_fraction: float) -> int | None:
@@ -232,10 +320,20 @@ def annotate(
         )
     )
 
-    failures: set[int] = set()
+    game_ids = {a.actor_id: a.game_id for a in actors}
+    failures: dict[int, int | None] = {}
+    aggro = aggro_events(frame)
     for mech in mechanics:
-        failures |= _failure_seqs(frame, mech, pull.duration_ms)
-    frame = frame.with_columns(pl.col("seq").is_in(sorted(failures)).alias("is_failure"))
+        failures |= _failures(frame, mech, pull.duration_ms, game_ids, aggro)
+    blamed = pl.DataFrame(
+        {"seq": list(failures), "blamed_id": list(failures.values())},
+        schema={"seq": frame.schema["seq"], "blamed_id": pl.Int32()},
+    )
+    frame = (
+        frame.join(blamed, on="seq", how="left")
+        .sort("seq")
+        .with_columns(pl.col("seq").is_in(list(failures)).alias("is_failure"))
+    )
     frame = frame.select(*events.columns, *[pl.col(c).cast(t) for c, t in ANNOTATION_COLUMNS.items()])
 
     return Annotated(
@@ -268,7 +366,11 @@ class AnnotationCache:
         if not (frame_path.exists() and meta_path.exists()):
             return None
         meta = orjson.loads(meta_path.read_bytes())
-        if meta.get("events_hash") != events_hash or meta.get("cutoff_fraction") != cutoff_fraction:
+        if (
+            meta.get("events_hash") != events_hash
+            or meta.get("cutoff_fraction") != cutoff_fraction
+            or meta.get("annotation_version") != ANNOTATION_VERSION
+        ):
             return None
         return Annotated(
             pull=pull,
@@ -285,6 +387,7 @@ class AnnotationCache:
         meta = {
             "events_hash": events_hash,
             "cutoff_fraction": cutoff_fraction,
+            "annotation_version": ANNOTATION_VERSION,
             "cutoff_ms": a.cutoff_ms,
             "phases": [p.model_dump() for p in a.phases],
             "unmatched_phase": a.unmatched_phase,

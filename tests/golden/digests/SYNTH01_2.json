@@ -137,7 +137,7 @@
   "outcome": "kill",
   "phase_reached": "p2",
   "produced_from": {
-    "encfile_hash": "259ca9f00444",
+    "encfile_hash": "f83c5db0ad74",
     "events_hash": "826ce251c49a7cdf44b0b5b036ba62b54d7d8fb3622cf96bf8979e6ec4407c5c",
     "registry_hash": "c0b89b4ecf2c"
   },

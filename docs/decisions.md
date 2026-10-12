@@ -88,6 +88,28 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `none`) when no phase covers the pull's difficulty or the difficulty is unknown. `encfile_hash` is taken over that
   view, so editing one difficulty's entries leaves the other difficulties' annotations and findings cached. The
   ingest filter still uses every difficulty's ability IDs. Plan section 6.2 updated to match (plan 0.3.4).
+- **Failure blame (2026-10-11)**: annotation adds a `blamed_id` column, the player charged with each failure
+  row. The existing rules charge the friendly player hit (or the debuffed player for `debuff_duration_gt`);
+  `not_interrupted` and `soak_count_lt` charge no one. `MechanicStat.failures_by_player` and
+  `MechanicCluster.failed_players` now count `blamed_id`, not the failure row's target, and an `event:` ref on a
+  failure row adds `blamed` (a name). Four rules are added so mechanics that punish the raid for one player's
+  mistake can be charged to that player:
+  - `per_cluster` + `blame`: one failure per cluster, on its first hit. `blame: {by: cast_target, ability_id, ms}`
+    charges the friendly target of the latest enemy cast of `ability_id` in the `ms` before;
+    `{by: aggro_holder, npc_game_id, ms}` charges the NPC's aggro holder (matched by game ID, since a boss can have
+    two actors with one name): the player behind its latest melee swing or taunt in the Threat data in the `ms`
+    before (see the Threat entries below). With no match the failure still counts, charged to no one. `blame` is required by `per_cluster` and rejected on every other rule.
+  - `hit_amount_gt {value}`: each hit larger than `value` before mitigation (`unmitigated`, else `amount +
+    absorbed`), for mechanics that hit everyone but hit hardest those standing in the wrong place.
+  - `aura_applied`: each application of one of the mechanic's auras on a player, charged to that player. Like
+    `not_interrupted` rows, these are not hits and belong to no cluster.
+  - `hits_on_non_tank {ms}`: one failure per player per cluster for players other than the aggro holder of the
+    NPC instance that hit them (latest swing or taunt on it in the `ms` before their first hit). Instances matter
+    because adds of one kind can share an actor ID (both Weakened Doomscales are one actor), and only the first hit
+    is judged because NPCs stop swinging while they cast, so DoT ticks on the tank would otherwise read as failures.
+  Annotated frames carry `ANNOTATION_VERSION` (now 3) in their cache sidecar, so frames from before the change
+  are rebuilt. The optional `blame` field also changes every encounter file's hash once. Plan sections 6.2
+  (rules table) and 6.3 (`failures_by_player`) updated to match (plan 0.3.4).
 - **Threat data and NPC instances (2026-10-11)**: ingest fetches a tenth data type, `Threat` (Friendlies side,
   about 1 point per pull; see `docs/wcl-api.md`). WCL Threat has no threat values: it is target tracking, NPC melee
   swings (misses included), taunts and NPC deaths. Normalize keeps the NPC swings, the taunt debuffs on NPCs and
@@ -98,8 +120,8 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `AGGRO` section under the pull ref, and the `pull` ref resolves with the same `aggro` list so verify can check
   its numbers. Event rows and death top hits name NPCs with their instance (`Blightscale Rawling #51`).
   Recorded fixtures gained Threat pages and the encounter-filtered enemy Casts. Plan sections 6.1 (FetchSpec,
-  event schema), 6.4 (digest) and 6.5 (`pull` ref) updated to match (plan 0.3.4). Blame does not use this
-  data yet.
+  event schema), 6.4 (digest) and 6.5 (`pull` ref) updated to match (plan 0.3.4). Blame reads it through
+  `aggro_events` (see the blame entries).
 - **Aggro bands (2026-10-11)**: `analysis/aggro.py` builds per-NPC-instance bands of who each NPC was attacking:
   a band starts at a swing or taunt on a new player and ends at the next switch, the NPC's death, 20 s with no
   swing or taunt (`AGGRO_QUIET_MS`, ending at the last event), or the pull end. That rule reproduces WCL's own
@@ -108,6 +130,42 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   holding a quiet band longer (see `docs/wcl-api.md`). Two pulls are unit tests against saved WCL tables.
   `aggro_holder(bands, npc_ids, t, instance)` answers who held an NPC at a time. Not used by the digest or
   blame yet.
+- **Aggro for blame, reconciled with the Threat data (2026-10-11)**: compared over the 47
+  Ula'tek pulls, per raid punishment:
+  - The quiet-gap bands are the wrong question for punishments caused by nobody being in melee. The NPC
+    stops swinging, so its band has often closed: 8 of 13 Mother's Wraths and 6 of 10 Rattler Slams fall
+    outside any band. Blame wants the **last aggro holder**: the latest swing or taunt on that NPC within a
+    lookback, with no quiet rule.
+  - Mother's Wrath (raid): keep `cast_target`. The cast names the boss's actual target; in both cases where a
+    taunt came first, it landed during the 5 s cast and the cast still named the original target.
+  - Unchecked Rage: switch `melee_target` (damage hits only) to the last swing or taunt within 30 s. It
+    charges `trMgApZCVYkv3jdq:18` at 393.5 s to Shinrael (Growl 2.8 s before) instead of Mekerakesh, and
+    `trMgApZCVYkv3jdq:23` at 381.3 s, now charged to no one, to Mekerakesh (taunt 8.8 s before); 7 agree, and
+    2 at the start of Stage Three have no holder either way.
+  - Rattler Slam: same switch; identical results on these pulls (7 agree, 3 slams before anyone picked up
+    the tail have no holder either way). Those unowned cases need the raid plan's tank assignments.
+  - Desperate Thrash: judge each cone against the aggro holder of the casting add's instance
+    (`source_instance`) instead of any recent melee target of the shared actor. Agrees on 93 of 102 first
+    hits; it adds 4 hits on the other add's tank that today's rule misses and drops 1 false failure.
+  - Positions would add "was the holder in melee range", which separates a tank out of position from other
+    causes; attribution does not need it.
+  Implemented: `blame: {by: aggro_holder, npc_game_id, ms}` (the latest swing or taunt on that NPC in the `ms`
+  before, from `annotate.aggro_events`; none after the NPC's death) replaces `melee_target`, and
+  `hits_on_non_tank` judges each player's first hit per cluster against the aggro holder of the casting NPC
+  instance (a hit while the NPC has no holder is a failure). `ANNOTATION_VERSION` is 3. Over the 47 pulls the
+  results match the comparison above: Unchecked Rage `trMgApZCVYkv3jdq:18` goes to Shinrael and
+  `trMgApZCVYkv3jdq:23` at 381.3 s to Mekerakesh (2 rages now charged to no one, was 3); Mother's Wrath and
+  Rattler Slam are unchanged; Desperate Thrash has 28 failures (was 24), the 4 new ones cone hits on the other
+  add's tank. That leaves three kinds of failure attribution, each resting on one kind of evidence and testable with a few
+  synthetic rows:
+  1. **The player hit** (`any_hit`, `hits_per_cluster_gt`, `hit_amount_gt`, `aura_applied`,
+     `debuff_duration_gt`): damage or aura rows on the failing player.
+  2. **No one** (`not_interrupted`, `soak_count_lt`): an enemy cast or a whole cluster, with no single player
+     at fault until raid-plan assignments exist.
+  3. **The player responsible for an NPC** (`per_cluster` blame, `hits_on_non_tank`), from the Threat data
+     only: `cast_target` (the NPC's own cast names its target) or `aggro_holder` (the NPC's latest swing or
+     taunt), and for `hits_on_non_tank` the aggro holder of the casting NPC instance. `melee_target`, which
+     read damage hits and missed taunts, is gone.
 - **Positions not kept yet (2026-10-11)**: `x`/`y`/`facing` are already in the raw pages, and keeping them would
   grow parquet by 39% and normalize time by about 2 s per night (measurements in `docs/wcl-api.md`). They would
   answer "was the aggro holder in melee range" directly. Waiting on a decision before adding them.

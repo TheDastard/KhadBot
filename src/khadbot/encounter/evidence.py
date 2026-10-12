@@ -156,6 +156,8 @@ def event_row(r: PullRecords, row: dict[str, Any]) -> dict[str, Any]:
         out[field] = round(value, 1) if field == "hp_pct" else value
     if row.get("is_failure"):
         out["failure"] = True
+        if (blamed := row.get("blamed_id")) is not None:
+            out["blamed"] = names.get(blamed, f"actor-{blamed}")
     return out
 
 

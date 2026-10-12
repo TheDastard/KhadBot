@@ -186,6 +186,33 @@ class TestEncounterFile:
             (lambda d: d.update(phases=[]), "phases"),
             (lambda d: d.update(bosses=[]), "bosses"),
             (lambda d: d.pop("zone"), "zone"),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "per_cluster"}), "'blame' is required"),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "any_hit", "blame": {"by": "cast_target", "ability_id": 1}}
+                ),
+                "'blame' is required",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "per_cluster", "blame": {"by": "cast_target"}}),
+                "requires 'ability_id'",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "per_cluster", "blame": {"by": "aggro_holder"}}),
+                "requires 'npc_game_id'",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 1, "ms": 0}}
+                ),
+                "greater than 0",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "per_cluster", "blame": {"by": "tank"}}),
+                "by",
+            ),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "hit_amount_gt"}), "requires 'value'"),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "hits_on_non_tank"}), "requires 'ms'"),
             (lambda d: d["phases"][0].pop("difficulties"), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=[]), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=["mythic", "mythic"]), "duplicate difficulty"),
