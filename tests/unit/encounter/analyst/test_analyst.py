@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_analyst.py
+tests/unit/encounter/analyst/test_analyst.py
 
 Verify rules on SYNTH01: hallucinated, malformed and out-of-scope refs; numbers absent from the
 cited records; rounding tolerance; seconds versus milliseconds; counts of cited refs. Graph
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from khadbot.encounter.analyst import check_finding, verify_report
+from khadbot.encounter.analyst.graph import check_finding, verify_report
 from khadbot.encounter.models import AnalysisReport, Finding, ProducedBy
 
 PRODUCED_BY = ProducedBy(

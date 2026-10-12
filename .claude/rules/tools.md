@@ -1,7 +1,7 @@
 ---
 paths:
   - "src/khadbot/tools/**"
-  - "src/khadbot/encounter/query_tools.py"
+  - "src/khadbot/encounter/analyst/query_tools.py"
   - "src/khadbot/encounter/conversation.py"
   - "src/khadbot/encounter/ingest/fetch.py"
   - "src/khadbot/encounter/ingest/wcl_queries.py"
@@ -25,7 +25,7 @@ paths:
 |---|---|---|---|
 | Coach tools | `tools/` | Coach agent, via `config/agents/coach.yaml` | Readable text for the model |
 | Front tools | `encounter/conversation.py` | Encounter conversation agent, via `config/agents/encounter.yaml` | Findings, pull lists, ingest status |
-| Analyst query tools | `encounter/query_tools.py` | Analyst subgraph only | `ToolResult` JSON envelope with evidence refs |
+| Analyst query tools | `encounter/analyst/query_tools.py` | Analyst subgraph only | `ToolResult` JSON envelope with evidence refs |
 
 - **Analyst query tools** read only from the event store and annotations, never from an external API. The pull scope and store come from the run config (`config["configurable"]`), not from tool arguments, so the model can't query outside its request. Every returned row carries a ref.
 - **Front tools** never expose raw event data. The conversation agent gets findings and status; deeper questions go through `ask_analyst`.
