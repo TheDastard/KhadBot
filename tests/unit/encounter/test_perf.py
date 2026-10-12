@@ -21,12 +21,12 @@ import time
 import pytest
 from helpers.real_fixtures import REAL_REPORTS, ingest_fixture
 
-from khadbot.encounter import query_tools as qt
+from khadbot.encounter.analyst import query_tools as qt
+from khadbot.encounter.analyst.query_tools import AnalystScope
 from khadbot.encounter.annotate import annotate_pull
 from khadbot.encounter.config_files import load_encounter_view, load_registry
 from khadbot.encounter.digest import build_digest
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.query_tools import AnalystScope
 from khadbot.encounter.store import ParquetEventStore
 
 
