@@ -85,7 +85,10 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 - Data models use Pydantic v2. App config stays as frozen dataclasses in `config.py`.
 - Tool descriptions live in `@tool` docstrings. Treat docstring edits as prompt changes: they change model behaviour and, for encounter tools, the prompt version and findings cache key.
 - Config files fail fast: invalid YAML or a missing reference raises `ConfigurationError` at load, not at first use.
-- Flat modules are the default. `encounter/` and its `analysis/` package are the deliberate exceptions.
+- Module layout: make a sub-package when a group of modules forms one stage or concern: three or more modules that
+  change together, that the rest of the code reaches through one or two entry points, and whose internals nothing
+  outside the group imports. Shared contracts (models, the event store, config loaders) stay at the parent level.
+  Below that bar, keep modules in their parent. Tests and test helpers mirror the source layout.
 - Add dependencies with `uv add` and say why. Never use `pip`.
 
 ## Game data

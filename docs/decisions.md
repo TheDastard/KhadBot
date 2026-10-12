@@ -15,7 +15,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 | D7 | Event store | polars + parquet, one file per pull, behind an `EventStore` protocol (S2 may swap to DuckDB) | Cheap, columnar, no server | 2026-10-10 |
 | D8 | Runtime | Python only, target 3.13, `requires-python >=3.12` | Matches the venv | 2026-10-10 |
 | D9 | Local persistence | Everything under `KHADBOT_DATA_DIR` (default `.khadbot_data/`); SQLite for findings/plans; `AsyncSqliteSaver` for checkpoints (M5) | One gitignored directory | 2026-10-10 |
-| D10 | Package location | One sub-package, `src/khadbot/encounter/` (with `analysis/`) | Justified exception to "flat files preferred" | 2026-10-10 |
+| D10 | Package location | One sub-package, `src/khadbot/encounter/`, grouped inside by the module layout rule in CLAUDE.md: a sub-package for three or more modules that form one stage, reached through one or two entry points, with internals nothing else imports | A folder only earns its place when it hides something; shared contracts stay at the parent level | 2026-10-11 |
 | D11 | Analyst output | Analyst ends by calling a `submit_report` tool whose schema is `AnalysisReport` | Works across Groq, Ollama, Anthropic and fakes | 2026-10-10 |
 
 ## Implementation notes (deviations from the plan text)
