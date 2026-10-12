@@ -12,7 +12,7 @@ import shutil
 import pytest
 from helpers.synth import FIXTURES, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
 
-from khadbot.encounter.fetch import RawPageCache
+from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
 
 

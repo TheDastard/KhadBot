@@ -28,8 +28,10 @@ src/khadbot/
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
-  encounter/         # ingest, store, annotate, analysis/, digest, evidence, query tools,
-                     # analyst, findings, conversation, plan, CLI commands
+  encounter/         # models, config_files, store, phases, annotate, digest, evidence, query tools,
+                     # analyst, findings, CLI commands; conversation and plan to come
+    ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report
+    analysis/        # deaths, mechanics, cooldowns, aggro
   cli/               # Rich + prompt_toolkit REPL
   tools/             # LangChain @tools and the shared WarcraftLogs client
 config/
