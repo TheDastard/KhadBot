@@ -57,7 +57,7 @@ file's header comment points to.
 - **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` has no enemy casts after 574 s of a 618 s pull
   while Fury Unleashed damage continues. Find out whether the boss casts nothing during the enrage or the log
   lost them before relying on enemy casts near the end of a pull.
-- **Synthetic fixture newlines.** `tests/fixtures/wcl/build_synth.py` writes JSON without a final newline and
+- **Synthetic fixture newlines.** `tests/fixtures/encounter/wcl/build_synth.py` writes JSON without a final newline and
   the pre-commit hook adds one, so regenerating the fixture shows a one-character diff per file. Write the
   newline in the generator.
 
@@ -118,7 +118,7 @@ human task table in `docs/decisions.md`).
 - 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
 - 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the
   `start_ms` / `end_ms` comments fixed.
-- 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them; the
+- 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/encounter/wcl/.gitattributes`) and pre-commit skips them; the
   `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
   uninstalled.
 - 2026-10-11: the recorded fixture pulls were missing the enemy Casts filtered to the Ula'tek file's ability

@@ -33,7 +33,7 @@ Encounter mode (`src/khadbot/encounter/`, its config and data):
 | `encounter-analyst` | Analyst query tools, versioning, verify, analyst graph |
 | `encounter-findings` | Findings store and the cached per-pull review |
 | `encounter-tests` | Encounter test infrastructure, goldens and perf tests |
-| `encounter-fixtures` | Recorded and synthetic WCL fixtures (`tests/fixtures/wcl/`, `tests/fixtures/encounters/`) |
+| `encounter-fixtures` | Recorded and synthetic WCL fixtures, fixture encounter files and registries (`tests/fixtures/encounter/`) |
 | `encounter-eval` | Golden-question eval harness for the analyst |
 
 Rest of the app:

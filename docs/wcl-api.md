@@ -121,7 +121,7 @@ whom. `hostilityType` picks the direction.
   to the pull end). No event in the stored data, the unfiltered enemy casts or the Enemies-side Threat events
   explains where WCL ends those bands. So the bands are reliable for *who* held aggro; how long a holder lasts
   once the NPC goes quiet is a convention. The first two pulls are unit tests against saved tables
-  (`tests/fixtures/wcl_views/`); the third pull is not a recorded fixture.
+  (`tests/fixtures/encounter/wcl_views/`); the third pull is not a recorded fixture.
 - WCL's table merges all instances of one NPC type per player (Rawlings 4 and 5 on Mekerakesh are one band);
   the events keep `sourceInstance`, so KhadBot's bands stay per instance.
 - Taunt spell IDs seen so far: Taunt 355 (warrior), Growl 6795 (druid), Dark Command 56222 (death knight) and

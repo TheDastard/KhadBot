@@ -1,14 +1,14 @@
 """
 tests/helpers/encounter/synth.py
 
-Paths and filter inputs for the synthetic SYNTH01 fixture (see tests/fixtures/wcl/README.md).
+Paths and filter inputs for the synthetic SYNTH01 fixture (see tests/fixtures/encounter/wcl/README.md).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "encounter"  # encounter fixtures only
 GOLDEN = Path(__file__).resolve().parents[2] / "golden"
 
 SYNTH_REGISTRY_IDS = [900301, 900302]

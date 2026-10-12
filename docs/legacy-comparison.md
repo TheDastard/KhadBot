@@ -22,7 +22,7 @@ Run on 2026-10-11.
 
 Pulls: `H7z1fqDXjRTFnbtg` fights 10, 15, 20 (Heroic Ula'tek) and 23 (Mythic Nymrissa Wavecaller, no encounter
 file); `QkVa6GHRK8yfrTbw` fight 14; `trMgApZCVYkv3jdq` fights 11 and 18 (all Heroic Ula'tek). What each pull is
-for is in `tests/fixtures/wcl/README.md`.
+for is in `tests/fixtures/encounter/wcl/README.md`.
 
 ## Results per pull
 

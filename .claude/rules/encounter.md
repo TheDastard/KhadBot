@@ -6,7 +6,6 @@ paths:
   - "config/registries/**"
   - "config/agents/encounter.yaml"
   - "tests/**/encounter/**"
-  - "tests/fixtures/wcl/**"
   - "tests/golden/**"
   - "tests/eval/**"
   - "scripts/record_wcl_fixture.py"
