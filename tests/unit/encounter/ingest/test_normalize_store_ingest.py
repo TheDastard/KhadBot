@@ -11,7 +11,7 @@ from __future__ import annotations
 import orjson
 import polars as pl
 import pytest
-from helpers.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
+from helpers.encounter.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
 
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
@@ -324,7 +324,7 @@ class TestIngest:
 
 
 def test_instances_are_kept():
-    from helpers.events import make_pull
+    from helpers.encounter.events import make_pull
 
     from khadbot.encounter.ingest.normalize import normalize_pull
 

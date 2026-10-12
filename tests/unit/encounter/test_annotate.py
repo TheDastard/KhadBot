@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from helpers.events import BOSS, make_actors, make_events, make_pull
+from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
 
 from khadbot.encounter import annotate as annotate_mod
 from khadbot.encounter.annotate import ANNOTATION_COLUMNS, AnnotationCache, annotate, annotate_pull

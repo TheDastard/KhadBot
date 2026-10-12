@@ -1,6 +1,6 @@
 # Encounter file matching the synthetic SYNTH01 report (all IDs are fake). SYNTH01's pulls are
 # difficulty 5 (Mythic), so every entry applies to mythic. Tests install it under an encounter root
-# at its canonical path with helpers.synth.install_synth_encounter.
+# at its canonical path with helpers.encounter.synth.install_synth_encounter.
 encounter_id: 90001
 name: Synthetic Boss
 zone: {id: 9000, name: Synthetic Citadel}

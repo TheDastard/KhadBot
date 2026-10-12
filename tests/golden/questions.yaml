@@ -4,7 +4,7 @@
 # single-pull causes, cross-pull patterns, cooldown usage, plan versus actual, and at least
 # 3 unanswerable questions, reviewed by a second person. Do not generate them.
 #
-# Schema (validated by tests/helpers/golden.py; see that module for the pass rules):
+# Schema (validated by tests/helpers/encounter/golden.py; see that module for the pass rules):
 #
 # - id: q01                                   # unique
 #   question: Why did Healbot die at 2:14 on pull 7?

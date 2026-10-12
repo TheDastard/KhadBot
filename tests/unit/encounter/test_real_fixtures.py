@@ -18,8 +18,8 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from helpers.real_fixtures import REAL_PULLS, REAL_REPORTS, ingest_fixture
-from helpers.synth import GOLDEN
+from helpers.encounter.real_fixtures import REAL_PULLS, REAL_REPORTS, ingest_fixture
+from helpers.encounter.synth import GOLDEN
 
 from khadbot.encounter.config_files import load_registry
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
