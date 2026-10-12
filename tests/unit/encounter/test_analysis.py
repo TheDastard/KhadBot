@@ -13,9 +13,9 @@ from helpers.events import BOSS, make_actors, make_events, make_pull
 from khadbot.encounter.analysis.aggro import aggro_bands, aggro_holder, aggro_summaries
 from khadbot.encounter.analysis.cooldowns import aura_intervals, cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
-from khadbot.encounter.analysis.mechanics import mechanic_stats
+from khadbot.encounter.analysis.mechanics import mechanic_clusters, mechanic_stats
 from khadbot.encounter.annotate import annotate, annotate_pull
-from khadbot.encounter.config_files import parse_registry
+from khadbot.encounter.config_files import parse_encounter, parse_registry
 
 ACTORS = make_actors()
 
@@ -252,6 +252,40 @@ class TestAuraIntervals:
         assert synth_registry.spell_ids(["raid"]) == [900301]
         reg = parse_registry({"cooldowns": []})
         assert reg.spell_ids() == []
+
+
+def test_mechanic_failures_count_the_blamed_player():
+    rule = {"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 555, "ms": 5_000}}
+    enc = parse_encounter(
+        {
+            "encounter_id": 1,
+            "name": "X",
+            "zone": {"id": 1, "name": "Z"},
+            "file_version": 1,
+            "phases": [{"id": "p1", "name": "P1", "difficulties": ["heroic"], "start": {"trigger": "pull"}}],
+            "mechanics": [
+                {
+                    "id": "m",
+                    "name": "m",
+                    "difficulties": ["heroic"],
+                    "ability_ids": [100],
+                    "kind": "avoidable",
+                    "failure": rule,
+                }
+            ],
+        }
+    )
+    rows = [
+        {"t_ms": 0, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 555},
+        _hit(500, 3, 1000),
+        _hit(500, 4, 1000),
+    ]
+    actors = make_actors()
+    a = annotate(make_pull(), make_events(rows), enc, actors)
+    [stat] = mechanic_stats(a, enc, actors, [])
+    assert (stat.failures, stat.failures_by_player) == (1, {"Tank": 1})
+    [cluster] = mechanic_clusters(a, "m", actors)
+    assert (cluster.failures, cluster.failed_players) == (1, ["Tank"])
 
 
 def test_aggro_counts_swings_and_taunts():
