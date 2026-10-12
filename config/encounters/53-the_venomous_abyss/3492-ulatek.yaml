@@ -4,13 +4,15 @@
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
 # entry against logs from it.
 #
-# Failure rules are only set where a failure can be pinned on the player who was hit. Mechanics that
-# punish the whole raid for one player's mistake (an untanked tail, the boss without a melee target,
-# an unsoaked bite) have no rule, because any_hit would blame every victim.
+# Failures are charged to the player responsible. For most rules that is the player who was hit.
+# Mechanics that punish the whole raid for one player's mistake use per_cluster, which counts one
+# failure per occurrence and charges it to the player a blame spec points at: the target named by the
+# boss's own cast, or the NPC's aggro holder (its latest melee swing or taunt). An occurrence with no such
+# player still counts as a failure.
 encounter_id: 3492
 name: Ula'tek
 zone: {id: 53, name: The Venomous Abyss}
-file_version: 1
+file_version: 2
 
 # WarcraftLogs reports phase transitions for this encounter (phase IDs 1-4).
 phases:
@@ -99,28 +101,40 @@ mechanics:
 
   - id: mothers_wrath_raid
     name: Mother's Wrath (no tank in melee)
-    # Hits the whole raid when Ula'tek's target is out of her reach.
+    # Hits the whole raid when Ula'tek's target is out of her reach. Charged to the target of the
+    # Mother's Wrath cast just before it.
     difficulties: [heroic]
     ability_ids: [1301122]
     kind: avoidable
+    failure:
+      rule: per_cluster
+      blame: {by: cast_target, ability_id: 1298367, ms: 5000}
     cluster_window_ms: 3000
     severity: high
 
   - id: unchecked_rage
     name: Unchecked Rage
-    # Raid-wide physical damage when Ula'tek has no melee target and is not casting.
+    # Raid-wide physical damage when Ula'tek has no melee target and is not casting. Charged to Ula'tek's
+    # (NPC 257758) aggro holder: a tank who taunted it but never reached melee is the one at fault.
     difficulties: [heroic]
     ability_ids: [1301007]
     kind: avoidable
+    failure:
+      rule: per_cluster
+      blame: {by: aggro_holder, npc_game_id: 257758, ms: 30000}
     cluster_window_ms: 3000
     severity: high
 
   - id: rattler_slam
     name: Rattler Slam
-    # Raid-wide tail slam when nobody is in melee range of Gore Rattle.
+    # Raid-wide tail slam when nobody is in melee range of Gore Rattle. Charged to Gore Rattle's (NPC
+    # 259555) aggro holder, the tail tank; a slam before anyone picked up the tail is charged to no one.
     difficulties: [heroic]
     ability_ids: [1299206]
     kind: avoidable
+    failure:
+      rule: per_cluster
+      blame: {by: aggro_holder, npc_game_id: 259555, ms: 30000}
     cluster_window_ms: 3000
     severity: high
 
@@ -187,12 +201,13 @@ mechanics:
 
   - id: circling_prey
     name: Circling Prey
-    # Destroys a platform: a large hit and knockback close in, a smaller hit to everyone else, so a hit
-    # alone is not a failure. Close-in hits are several times larger before mitigation; no rule can test
-    # hit size yet.
+    # Destroys a platform: a large hit and knockback close in, a smaller hit to everyone else. Close-in
+    # hits are over 1.3M before mitigation and the rest under 0.5M, so a hit over 1M means the player
+    # was still on the platform.
     difficulties: [heroic]
     ability_ids: [1301510, 1315341]
     kind: avoidable
+    failure: {rule: hit_amount_gt, value: 1000000}
     cluster_window_ms: 2000
     severity: high
 
@@ -243,11 +258,13 @@ mechanics:
 
   - id: desperate_thrash
     name: Desperate Thrash
-    # Weakened Doomscale frontal cone aimed at its tank (impact plus a DoT). A hit on anyone but the
-    # add's tank is a failure, which needs a rule that knows who tanked it; none exists yet.
+    # Weakened Doomscale frontal cone aimed at its tank (impact plus a DoT). Anyone hit other than the
+    # aggro holder of the add that cast it fails, once per cone; the two adds share an actor ID and are
+    # told apart by instance.
     difficulties: [heroic]
     ability_ids: [1305709]
     kind: avoidable
+    failure: {rule: hits_on_non_tank, ms: 8000}
     cluster_window_ms: 2000
     severity: medium
 
@@ -297,10 +314,12 @@ mechanics:
 
   - id: calcified_corpse
     name: Calcified Corpse
-    # A bite left unsoaked turns its player to stone: a stun plus heavy damage.
+    # A bite left unsoaked turns its player to stone: a stun plus heavy damage. Each Calcified Corpse
+    # debuff (1306119) is a failure charged to the bitten player, standing in for their soak group.
     difficulties: [heroic]
     ability_ids: [1318329, 1306119]
-    kind: unavoidable
+    kind: avoidable
+    failure: {rule: aura_applied}
     cluster_window_ms: 2000
     severity: high
 
