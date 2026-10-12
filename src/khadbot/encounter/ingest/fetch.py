@@ -1,5 +1,5 @@
 """
-encounter/fetch.py
+encounter/ingest/fetch.py
 
 Raw WCL page cache and the paginated fetcher.
 
@@ -28,8 +28,8 @@ from typing import Any
 import orjson
 
 from khadbot.config import EncounterConfig
+from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
 from khadbot.encounter.models import FetchSpec, Pull
-from khadbot.encounter.wcl_queries import GET_EVENTS_PAGE
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient, WarcraftLogsRateLimitError
 
 logger = logging.getLogger(__name__)

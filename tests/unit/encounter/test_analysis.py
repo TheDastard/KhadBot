@@ -417,8 +417,8 @@ def test_aggro_bands_match_wcl_threat_table(code, fight, wcl_bands, differing):
     from helpers.synth import FIXTURES
 
     from khadbot.encounter.commands import default_filter_kwargs
-    from khadbot.encounter.fetch import RawPageCache
     from khadbot.encounter.ingest import ingest_report
+    from khadbot.encounter.ingest.fetch import RawPageCache
     from khadbot.encounter.store import ParquetEventStore
 
     with tempfile.TemporaryDirectory() as tmp:

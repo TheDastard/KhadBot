@@ -23,7 +23,7 @@ from khadbot.encounter.evidence import (
     parse_ref,
     resolve,
 )
-from khadbot.encounter.normalize import events_hash
+from khadbot.encounter.ingest.normalize import events_hash
 
 # ===========================================================================
 # Parsing

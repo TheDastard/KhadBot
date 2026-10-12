@@ -1,5 +1,5 @@
 """
-encounter/normalize.py
+encounter/ingest/normalize.py
 
 Raw WCL report metadata and event pages -> typed ``Pull`` / ``Actor`` models and one
 polars events frame per pull (schema in plan section 6.1).
@@ -17,33 +17,11 @@ import orjson
 import polars as pl
 
 from khadbot.encounter.models import Actor, Pull
+from khadbot.encounter.store import EVENT_SCHEMA, empty_events
 
 # ---------------------------------------------------------------------------
-# Schema
+# Ordering and field mapping
 # ---------------------------------------------------------------------------
-
-EVENT_SCHEMA: dict[str, pl.DataType] = {
-    "seq": pl.UInt32(),
-    "t_ms": pl.Int32(),
-    "data_type": pl.Categorical(),
-    "type": pl.Categorical(),
-    "source_id": pl.Int32(),
-    "target_id": pl.Int32(),
-    "ability_id": pl.Int32(),
-    "extra_ability_id": pl.Int32(),
-    "amount": pl.Int64(),
-    "absorbed": pl.Int64(),
-    "overkill": pl.Int64(),
-    "overheal": pl.Int64(),
-    "unmitigated": pl.Int64(),
-    "hit_type": pl.Int8(),
-    "hp_pct": pl.Float32(),
-    "stack": pl.Int16(),
-    "source_friendly": pl.Boolean(),
-    "target_friendly": pl.Boolean(),
-    "source_instance": pl.Int32(),
-    "target_instance": pl.Int32(),
-}
 
 # Sort tie-break between data types at the same millisecond.
 DATA_TYPE_ORDER = ["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing", "Threat"]
@@ -66,10 +44,6 @@ _INT_FIELDS = {
     "sourceInstance": "source_instance",
     "targetInstance": "target_instance",
 }
-
-
-def empty_events() -> pl.DataFrame:
-    return pl.DataFrame(schema=EVENT_SCHEMA)
 
 
 # ---------------------------------------------------------------------------
