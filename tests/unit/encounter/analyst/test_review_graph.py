@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/analyst/test_review.py
+tests/unit/encounter/analyst/test_review_graph.py
 
 The review graph on SYNTH01 with a reactive fake model: per-pull analysis is cached, each cache-key
 input invalidates it, the concurrency cap holds, flagged findings are excluded and regenerated, and
@@ -20,17 +20,16 @@ from helpers.encounter.review_fakes import P1, P2, kind_of, query, respond
 from helpers.fake_llm import ReactiveFakeModel
 from langchain_core.messages import AIMessage, SystemMessage
 
-from khadbot.encounter.analyst import graph as analyst
-from khadbot.encounter.analyst.graph import (
-    NO_PULLS,
-    NO_STRUCTURED_REPORT,
+from khadbot.encounter.analyst import review_graph as review_module
+from khadbot.encounter.analyst.prompts import NO_PULLS, NO_STRUCTURED_REPORT
+from khadbot.encounter.analyst.query_tools import build_analyst_tools
+from khadbot.encounter.analyst.review_graph import (
     OUTPUT_TOKENS_PER_PULL,
     collect_node,
     estimate_review_cost,
     render_findings,
     review,
 )
-from khadbot.encounter.analyst.query_tools import build_analyst_tools
 from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.models import AnalysisRequest
 
@@ -143,28 +142,28 @@ async def test_changing_a_tool_docstring_invalidates(model, findings, synth_data
             t.model_copy(update={"description": t.description + " Reworded."}) if t.name == "query_deaths" else t
             for t in build_analyst_tools()
         ]
-        monkeypatch.setattr(analyst, "build_analyst_tools", lambda: tools)
+        monkeypatch.setattr(review_module, "build_analyst_tools", lambda: tools)
 
     assert (await reviewed_twice(model, findings, synth_data, change=edit)).count("pull") == 2
 
 
 async def test_changing_a_prompt_invalidates(model, findings, synth_data, monkeypatch):
     def edit():
-        monkeypatch.setattr(analyst, "PROMPTS", (*analyst.PROMPTS, "Be terse."))
+        monkeypatch.setattr(review_module, "PROMPTS", (*review_module.PROMPTS, "Be terse."))
 
     assert (await reviewed_twice(model, findings, synth_data, change=edit)).count("pull") == 2
 
 
 async def test_changing_the_review_question_invalidates(model, findings, synth_data, monkeypatch):
     def edit():
-        monkeypatch.setattr(analyst, "STANDARD_REVIEW_QUESTION", "Review this pull again.")
+        monkeypatch.setattr(review_module, "STANDARD_REVIEW_QUESTION", "Review this pull again.")
 
     assert (await reviewed_twice(model, findings, synth_data, change=edit)).count("pull") == 2
 
 
 async def test_changing_the_graph_version_invalidates(model, findings, synth_data, monkeypatch):
     def edit():
-        monkeypatch.setattr(analyst, "GRAPH_VERSION", "99")
+        monkeypatch.setattr(review_module, "GRAPH_VERSION", "99")
 
     assert (await reviewed_twice(model, findings, synth_data, change=edit)).count("pull") == 2
 
@@ -192,7 +191,7 @@ async def test_changing_the_depth_invalidates(model, findings, synth_data):
 
 @pytest.mark.parametrize(("cap", "expected_peak"), [(1, 1), (2, 2)])
 async def test_concurrency_cap_is_respected(role_fakes, findings, synth_data, monkeypatch, cap, expected_peak):
-    monkeypatch.setattr(analyst, "EncounterConfig", lambda: SimpleNamespace(analyst_max_concurrency=cap))
+    monkeypatch.setattr(review_module, "EncounterConfig", lambda: SimpleNamespace(analyst_max_concurrency=cap))
     fake = ReactiveFakeModel(respond, delay=0.05)
     role_fakes["analyst"] = fake
 

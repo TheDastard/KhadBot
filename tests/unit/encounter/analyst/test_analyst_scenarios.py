@@ -22,14 +22,8 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from khadbot.encounter.analyst import graph as analyst
-from khadbot.encounter.analyst.graph import (
-    BUDGET_PROMPT,
-    IGNORED,
-    NO_PULLS,
-    NO_STRUCTURED_REPORT,
-    analyst_prompt_version,
-    run_analysis,
-)
+from khadbot.encounter.analyst.graph import analyst_prompt_version, run_analysis
+from khadbot.encounter.analyst.prompts import ACCEPTED, BUDGET_PROMPT, IGNORED, NO_PULLS, NO_STRUCTURED_REPORT
 from khadbot.encounter.analyst.query_tools import build_analyst_tools
 from khadbot.encounter.analyst.versioning import GRAPH_VERSION
 from khadbot.encounter.models import AnalysisRequest
@@ -335,7 +329,7 @@ async def test_ignored_calls_get_replies(synth_data, role_fakes):
         {"configurable": {"analyst": run}},
     )
     replies = {m.tool_call_id: m.content for m in state["messages"] if isinstance(m, ToolMessage)}
-    assert replies == {ignored["id"]: IGNORED, accepted["id"]: analyst.ACCEPTED}
+    assert replies == {ignored["id"]: IGNORED, accepted["id"]: ACCEPTED}
 
 
 # ===========================================================================
