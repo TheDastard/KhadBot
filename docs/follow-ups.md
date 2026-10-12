@@ -78,8 +78,7 @@ file's header comment points to.
 - **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
   `m3-analyst-loop` → `m4-findings-fanout` → `real-wcl-fixtures` are unmerged; `main` has none of the encounter
   work.
-- **Exit checks that real fixtures now unblock.** The legacy comparison (M2.6) and digest goldens for the real
-  fixture pulls.
+- **Legacy comparison (M2.6)** still to do; the real fixture pulls it needs now exist.
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; the golden questions can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
 - **Git LFS budget.** The real fixtures are about 200 MB. On GitHub's free tier LFS storage and bandwidth are
@@ -115,6 +114,7 @@ human task table in `docs/decisions.md`).
 
 ## Resolved
 
+- 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
 - 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the
   `start_ms` / `end_ms` comments fixed.
 - 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them; the

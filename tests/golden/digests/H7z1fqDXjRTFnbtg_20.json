@@ -1,0 +1,952 @@
+{
+  "aggro": [
+    {
+      "npc": "Ula'tek",
+      "swings": 52,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 82.7,
+          "swings": 43
+        },
+        {
+          "name": "Shinrael",
+          "share_pct": 17.3,
+          "swings": 9
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 3,
+        "Shinrael": 2
+      }
+    },
+    {
+      "npc": "Gore Rattle",
+      "swings": 11,
+      "targets": [
+        {
+          "name": "Shinrael",
+          "share_pct": 90.9,
+          "swings": 10
+        },
+        {
+          "name": "Mekerakesh",
+          "share_pct": 9.1,
+          "swings": 1
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 1
+      }
+    }
+  ],
+  "anomalies": [
+    "cooldown_unverified:29166",
+    "cooldown_unverified:47788",
+    "cooldown_unverified:51052",
+    "cooldown_unverified:97462",
+    "cooldown_unverified:98008",
+    "cooldown_unverified:357170",
+    "cooldown_unverified:374227"
+  ],
+  "boss_hp_pct": 0.01,
+  "boss_pct": 0.0,
+  "cooldowns": [
+    {
+      "caster": "Verrydis",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:98008:1",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 121015
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:357170:1",
+      "spell_id": 357170,
+      "spell_name": "Rewind",
+      "t_ms": 167303
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:97462:1",
+      "spell_id": 97462,
+      "spell_name": "Rally",
+      "t_ms": 193849
+    },
+    {
+      "caster": "Widowmaker",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:51052:1",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 195175
+    },
+    {
+      "caster": "Cocodiablo",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:51052:2",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 198254
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:51052:3",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 208627
+    },
+    {
+      "caster": "Lesnichii",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:29166:1",
+      "spell_id": 29166,
+      "spell_name": "Innervate",
+      "t_ms": 264323
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:98008:2",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 304186
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "intermission",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:374227:1",
+      "spell_id": 374227,
+      "spell_name": "Stasis",
+      "t_ms": 351641
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:97462:2",
+      "spell_id": 97462,
+      "spell_name": "Rally",
+      "t_ms": 477522
+    },
+    {
+      "caster": "Widowmaker",
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:51052:4",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 520616
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:47788:1",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 527322
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:47788:2",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 528168
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:98008:3",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 538132
+    }
+  ],
+  "coverage": "full",
+  "coverage_windows": [
+    {
+      "cooldowns_active": [
+        357170
+      ],
+      "covered": true,
+      "occurrence": 1,
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:1",
+      "t_ms": 135500,
+      "window_id": "rage_of_the_shackled"
+    },
+    {
+      "cooldowns_active": [],
+      "covered": false,
+      "occurrence": 2,
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:2",
+      "t_ms": 284528,
+      "window_id": "rage_of_the_shackled"
+    },
+    {
+      "cooldowns_active": [],
+      "covered": false,
+      "occurrence": 3,
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:3",
+      "t_ms": 573727,
+      "window_id": "rage_of_the_shackled"
+    }
+  ],
+  "cutoff_ms": null,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "caustic_waves",
+        "deadly_venom",
+        "necrotic_vapors",
+        "volatile_purge_dot"
+      ],
+      "name": "Kouw",
+      "overkill": 71398,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:1",
+      "t_ms": 424467,
+      "time_to_die_ms": 16773,
+      "top_hits": [
+        {
+          "ability_id": 1292403,
+          "ability_name": "Caustic Waves",
+          "amount": 393323,
+          "source_name": "Ula'tek",
+          "t_ms": 424445
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 64534,
+          "source_name": "Ula'tek",
+          "t_ms": 414781
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 63230,
+          "source_name": "Ula'tek",
+          "t_ms": 415787
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 63230,
+          "source_name": "Ula'tek",
+          "t_ms": 419786
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 62579,
+          "source_name": "Ula'tek",
+          "t_ms": 420778
+        }
+      ],
+      "window_damage": 1254937,
+      "window_healing": 535811,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 17,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "acidic_expulsion",
+        "caustic_waves",
+        "necrotic_vapors",
+        "poisonous_bite",
+        "serpents_bite"
+      ],
+      "name": "Dean",
+      "overkill": 11738,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:2",
+      "t_ms": 477443,
+      "time_to_die_ms": 12603,
+      "top_hits": [
+        {
+          "ability_id": 1292403,
+          "ability_name": "Caustic Waves",
+          "amount": 384674,
+          "source_name": "Ula'tek",
+          "t_ms": 476610
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 129886,
+          "source_name": "Blightscale Rawling #60",
+          "t_ms": 471368
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 129707,
+          "source_name": "Blightscale Rawling #60",
+          "t_ms": 473385
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 94547,
+          "source_name": "Blightscale Rawling #60",
+          "t_ms": 477375
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 63770,
+          "source_name": "Blightscale Rawling #60",
+          "t_ms": 469377
+        }
+      ],
+      "window_damage": 1645829,
+      "window_healing": 1142577,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 16,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "acidic_expulsion",
+        "necrotic_vapors",
+        "volatile_purge_dot"
+      ],
+      "name": "Cocodiablo",
+      "overkill": 3448,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:3",
+      "t_ms": 524260,
+      "time_to_die_ms": 10599,
+      "top_hits": [
+        {
+          "ability_id": 1313531,
+          "ability_name": "Acidic Expulsion",
+          "amount": 83149,
+          "source_name": "Blightscale Shrieker #2",
+          "t_ms": 517236
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 62095,
+          "source_name": "Ula'tek",
+          "t_ms": 514785
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 58369,
+          "source_name": "Ula'tek",
+          "t_ms": 516781
+        },
+        {
+          "ability_id": 1313531,
+          "ability_name": "Acidic Expulsion",
+          "amount": 57497,
+          "source_name": "Blightscale Shrieker #3",
+          "t_ms": 518461
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 44228,
+          "source_name": "Ula'tek",
+          "t_ms": 515008
+        }
+      ],
+      "window_damage": 990271,
+      "window_healing": 466432,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 11,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "acidic_expulsion",
+        "caustic_waves",
+        "necrotic_vapors",
+        "volatile_purge_dot"
+      ],
+      "name": "Widowmaker",
+      "overkill": 38294,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:4",
+      "t_ms": 529900,
+      "time_to_die_ms": 7846,
+      "top_hits": [
+        {
+          "ability_id": 1292403,
+          "ability_name": "Caustic Waves",
+          "amount": 279020,
+          "source_name": "Ula'tek",
+          "t_ms": 529890
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 61875,
+          "source_name": "Ula'tek",
+          "t_ms": 528765
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 54128,
+          "source_name": "Ula'tek",
+          "t_ms": 522781
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 54128,
+          "source_name": "Ula'tek",
+          "t_ms": 523765
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 53304,
+          "source_name": "Ula'tek",
+          "t_ms": 524769
+        }
+      ],
+      "window_damage": 1069633,
+      "window_healing": 330620,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 4,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "acidic_expulsion",
+        "necrotic_vapors",
+        "unchecked_rage",
+        "volatile_purge_dot"
+      ],
+      "name": "Mortamur",
+      "overkill": 3242,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:5",
+      "t_ms": 534047,
+      "time_to_die_ms": 20353,
+      "top_hits": [
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 460823,
+          "source_name": "Ula'tek",
+          "t_ms": 533360
+        },
+        {
+          "ability_id": 1313531,
+          "ability_name": "Acidic Expulsion",
+          "amount": 39919,
+          "source_name": "Blightscale Shrieker #2",
+          "t_ms": 532247
+        },
+        {
+          "ability_id": 1313531,
+          "ability_name": "Acidic Expulsion",
+          "amount": 39919,
+          "source_name": "Blightscale Shrieker #2",
+          "t_ms": 533240
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 39294,
+          "source_name": "Ula'tek",
+          "t_ms": 528779
+        },
+        {
+          "ability_id": 1316357,
+          "ability_name": "Volatile Purge",
+          "amount": 39151,
+          "source_name": "Ula'tek",
+          "t_ms": 527780
+        }
+      ],
+      "window_damage": 1371642,
+      "window_healing": 1038621,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 19,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "caustic_waves",
+        "necrotic_vapors",
+        "serpents_bite"
+      ],
+      "name": "Hugedonut",
+      "overkill": 58604,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:6",
+      "t_ms": 574257,
+      "time_to_die_ms": 661,
+      "top_hits": [
+        {
+          "ability_id": 1292403,
+          "ability_name": "Caustic Waves",
+          "amount": 379509,
+          "source_name": "Ula'tek",
+          "t_ms": 574185
+        },
+        {
+          "ability_id": 1292403,
+          "ability_name": "Caustic Waves",
+          "amount": 284768,
+          "source_name": "Ula'tek",
+          "t_ms": 574247
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 211833,
+          "source_name": "Ula'tek",
+          "t_ms": 573727
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 47790,
+          "source_name": "Ula'tek",
+          "t_ms": 564802
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 47790,
+          "source_name": "Ula'tek",
+          "t_ms": 565795
+        }
+      ],
+      "window_damage": 1372159,
+      "window_healing": 571002,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 11,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "necrotic_vapors",
+        "volatile_purge"
+      ],
+      "name": "Widowmaker",
+      "overkill": 419736,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:7",
+      "t_ms": 576846,
+      "time_to_die_ms": 262,
+      "top_hits": [
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 615838,
+          "source_name": "Ula'tek",
+          "t_ms": 576818
+        },
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 258519,
+          "source_name": "Ula'tek",
+          "t_ms": 576818
+        },
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 67083,
+          "source_name": "Ula'tek",
+          "t_ms": 576820
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 43547,
+          "source_name": "Ula'tek",
+          "t_ms": 567017
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 38641,
+          "source_name": "Ula'tek",
+          "t_ms": 569027
+        }
+      ],
+      "window_damage": 1121662,
+      "window_healing": 240082,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 2,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "necrotic_vapors",
+        "serpents_bite",
+        "volatile_purge"
+      ],
+      "name": "Verrydis",
+      "overkill": 544565,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:8",
+      "t_ms": 576846,
+      "time_to_die_ms": 262,
+      "top_hits": [
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 708926,
+          "source_name": "Ula'tek",
+          "t_ms": 576818
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 223355,
+          "source_name": "Ula'tek",
+          "t_ms": 573727
+        },
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 164361,
+          "source_name": "Ula'tek",
+          "t_ms": 576819
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 56715,
+          "source_name": "Ula'tek",
+          "t_ms": 571446
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 42536,
+          "source_name": "Ula'tek",
+          "t_ms": 571016
+        }
+      ],
+      "window_damage": 1476962,
+      "window_healing": 571462,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 9,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "necrotic_vapors",
+        "volatile_purge"
+      ],
+      "name": "Teppic",
+      "overkill": 79149,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:9",
+      "t_ms": 577769,
+      "time_to_die_ms": 4444,
+      "top_hits": [
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 375223,
+          "source_name": "Ula'tek",
+          "t_ms": 576818
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 266115,
+          "source_name": "Ula'tek",
+          "t_ms": 573727
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 171000,
+          "source_name": "Ula'tek",
+          "t_ms": 577751
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 47901,
+          "source_name": "Ula'tek",
+          "t_ms": 574017
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 47900,
+          "source_name": "Ula'tek",
+          "t_ms": 568029
+        }
+      ],
+      "window_damage": 1248679,
+      "window_healing": 470724,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 8,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "necrotic_vapors",
+        "volatile_purge"
+      ],
+      "name": "Talyssah",
+      "overkill": 112371,
+      "phase_id": "p3",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:death:10",
+      "t_ms": 577770,
+      "time_to_die_ms": 4367,
+      "top_hits": [
+        {
+          "ability_id": 1305878,
+          "ability_name": "Volatile Purge",
+          "amount": 368287,
+          "source_name": "Ula'tek",
+          "t_ms": 576818
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 230793,
+          "source_name": "Ula'tek",
+          "t_ms": 573727
+        },
+        {
+          "ability_id": 1307367,
+          "ability_name": "Rage of the Shackled",
+          "amount": 133153,
+          "source_name": "Ula'tek",
+          "t_ms": 577750
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 44194,
+          "source_name": "Ula'tek",
+          "t_ms": 568029
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 44194,
+          "source_name": "Ula'tek",
+          "t_ms": 572027
+        }
+      ],
+      "window_damage": 1142982,
+      "window_healing": 317518,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 579174,
+  "encounter_name": "Ula'tek",
+  "mechanics": [
+    {
+      "clusters": 5,
+      "damage_taken": 13737230,
+      "deaths_in_window": 5,
+      "failures": 19,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Dastard": 2,
+        "Dean": 2,
+        "Dripington": 2,
+        "Hugedonut": 2,
+        "Kouw": 1,
+        "Lesnichii": 1,
+        "Mekerakesh": 1,
+        "Shinrael": 4,
+        "Teppic": 1
+      },
+      "hits": 135,
+      "mechanic_id": "caustic_waves",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:caustic_waves"
+    },
+    {
+      "clusters": 13,
+      "damage_taken": 1701941,
+      "deaths_in_window": 1,
+      "failures": 17,
+      "failures_by_player": {
+        "Dastard": 1,
+        "Hugedonut": 1,
+        "Kindrella": 1,
+        "Kouw": 2,
+        "Lesnichii": 1,
+        "Mainmoon": 1,
+        "Mortamur": 1,
+        "Shinrael": 3,
+        "Snanth": 2,
+        "Widowmaker": 4
+      },
+      "hits": 38,
+      "mechanic_id": "deadly_venom",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:deadly_venom"
+    },
+    {
+      "clusters": 5,
+      "damage_taken": 3032553,
+      "deaths_in_window": 0,
+      "failures": 7,
+      "failures_by_player": {
+        "Cocodiablo": 2,
+        "Kindrella": 1,
+        "Kouw": 1,
+        "Teppic": 1,
+        "Verrydis": 1,
+        "Widowmaker": 1
+      },
+      "hits": 8,
+      "mechanic_id": "virulent_spit",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:virulent_spit"
+    },
+    {
+      "clusters": 4,
+      "damage_taken": 22015080,
+      "deaths_in_window": 5,
+      "failures": 6,
+      "failures_by_player": {
+        "Aluriel": 1,
+        "Dastard": 1,
+        "Kindrella": 1,
+        "Mortamur": 1,
+        "Verrydis": 1,
+        "Widowmaker": 1
+      },
+      "hits": 81,
+      "mechanic_id": "volatile_purge",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:volatile_purge"
+    },
+    {
+      "clusters": 5,
+      "damage_taken": 1666944,
+      "deaths_in_window": 0,
+      "failures": 5,
+      "failures_by_player": {
+        "Discô": 1,
+        "Dripington": 2,
+        "Shinrael": 2
+      },
+      "hits": 5,
+      "mechanic_id": "falling_debris",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:falling_debris"
+    },
+    {
+      "clusters": 3,
+      "damage_taken": 98986,
+      "deaths_in_window": 0,
+      "failures": 3,
+      "failures_by_player": {
+        "Mekerakesh": 1,
+        "Verrydis": 1,
+        "Wilmer": 1
+      },
+      "hits": 3,
+      "mechanic_id": "wardens_protection",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:wardens_protection"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 5734490,
+      "deaths_in_window": 1,
+      "failures": 1,
+      "failures_by_player": {
+        "Mekerakesh": 1
+      },
+      "hits": 19,
+      "mechanic_id": "unchecked_rage",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:unchecked_rage"
+    },
+    {
+      "clusters": 233,
+      "damage_taken": 344253532,
+      "deaths_in_window": 11,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 12460,
+      "mechanic_id": "necrotic_vapors",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:necrotic_vapors"
+    }
+  ],
+  "outcome": "kill",
+  "phase_reached": "p3",
+  "produced_from": {
+    "encfile_hash": "84163c7ea074",
+    "events_hash": "3922f287fe0d6c1a279b3a5ed556f355d01e6a9bfcb50ca6d818e4f6d2550eb2",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "H7z1fqDXjRTFnbtg:20",
+  "unregistered": [
+    {
+      "ability_id": 98021,
+      "damage": 9078519,
+      "name": "Spirit Link",
+      "share_pct": 1.1
+    },
+    {
+      "ability_id": 111400,
+      "damage": 6847707,
+      "name": "Burning Rush",
+      "share_pct": 0.9
+    },
+    {
+      "ability_id": 1309786,
+      "damage": 6235447,
+      "name": "Refraction",
+      "share_pct": 0.8
+    },
+    {
+      "ability_id": 361029,
+      "damage": 1259151,
+      "name": "Time Dilation",
+      "share_pct": 0.2
+    },
+    {
+      "ability_id": 1292299,
+      "damage": 791477,
+      "name": "Seriously Sharp Seashell",
+      "share_pct": 0.1
+    }
+  ]
+}

@@ -1,0 +1,776 @@
+{
+  "aggro": [
+    {
+      "npc": "Ula'tek",
+      "swings": 19,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 89.5,
+          "swings": 17
+        },
+        {
+          "name": "Fatherchill",
+          "share_pct": 10.5,
+          "swings": 2
+        }
+      ],
+      "taunts": {
+        "Fatherchill": 1
+      }
+    },
+    {
+      "npc": "Gore Rattle",
+      "swings": 9,
+      "targets": [
+        {
+          "name": "Fatherchill",
+          "share_pct": 100.0,
+          "swings": 9
+        }
+      ],
+      "taunts": {}
+    }
+  ],
+  "anomalies": [
+    "cooldown_unverified:47788"
+  ],
+  "boss_hp_pct": 79.93,
+  "boss_pct": 85.7,
+  "cooldowns": [
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:47788:1",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 82612
+    }
+  ],
+  "coverage": "full",
+  "coverage_windows": [],
+  "cutoff_ms": 98116,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Hugedonut",
+      "overkill": 38335,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:1",
+      "t_ms": 94038,
+      "time_to_die_ms": 6939,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 478458,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 87138
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 402349,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94028
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 41393,
+          "source_name": "Ula'tek",
+          "t_ms": 87392
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 41392,
+          "source_name": "Ula'tek",
+          "t_ms": 85403
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 41392,
+          "source_name": "Ula'tek",
+          "t_ms": 86410
+        }
+      ],
+      "window_damage": 1428828,
+      "window_healing": 585867,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 12,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Moombly",
+      "overkill": 192597,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:2",
+      "t_ms": 94039,
+      "time_to_die_ms": 7021,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 526055,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 87138
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 333458,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94033
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 44666,
+          "source_name": "Ula'tek",
+          "t_ms": 92065
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 44333,
+          "source_name": "Ula'tek",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 43497,
+          "source_name": "Ula'tek",
+          "t_ms": 88038
+        }
+      ],
+      "window_damage": 1356013,
+      "window_healing": 479158,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 9,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Kouw",
+      "overkill": 94941,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:3",
+      "t_ms": 97347,
+      "time_to_die_ms": 10329,
+      "top_hits": [
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 639269,
+          "source_name": "Blightscale Viper #1",
+          "t_ms": 97342
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 116025,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94034
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 29813,
+          "source_name": "Ula'tek",
+          "t_ms": 95078
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 29812,
+          "source_name": "Ula'tek",
+          "t_ms": 96046
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 29812,
+          "source_name": "Ula'tek",
+          "t_ms": 97071
+        }
+      ],
+      "window_damage": 948366,
+      "window_healing": 561348,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 11,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Shinrael",
+      "overkill": 50514,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:4",
+      "t_ms": 97959,
+      "time_to_die_ms": 4020,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 560523,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94022
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 329073,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97863
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 49235,
+          "source_name": "Ula'tek",
+          "t_ms": 93086
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48943,
+          "source_name": "Ula'tek",
+          "t_ms": 88071
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48943,
+          "source_name": "Ula'tek",
+          "t_ms": 89075
+        }
+      ],
+      "window_damage": 1490043,
+      "window_healing": 1000841,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 14,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Wilmer",
+      "overkill": 442498,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:5",
+      "t_ms": 97960,
+      "time_to_die_ms": 8082,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 551517,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94031
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 109019,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97853
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 53691,
+          "source_name": "Ula'tek",
+          "t_ms": 89250
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 53690,
+          "source_name": "Ula'tek",
+          "t_ms": 88244
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 53143,
+          "source_name": "Ula'tek",
+          "t_ms": 90241
+        }
+      ],
+      "window_damage": 1533658,
+      "window_healing": 1335776,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 20,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Lesnichii",
+      "overkill": 269476,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:6",
+      "t_ms": 97963,
+      "time_to_die_ms": 4024,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 519276,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94029
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 249801,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97877
+        },
+        {
+          "ability_id": 469704,
+          "ability_name": "Tempered in Battle",
+          "amount": 93116,
+          "source_name": "Fatherchill",
+          "t_ms": 88154
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 49870,
+          "source_name": "Ula'tek",
+          "t_ms": 88468
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 49870,
+          "source_name": "Ula'tek",
+          "t_ms": 89478
+        }
+      ],
+      "window_damage": 1659433,
+      "window_healing": 1169271,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 10,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Dastard",
+      "overkill": 151941,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:7",
+      "t_ms": 97967,
+      "time_to_die_ms": 4264,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 508578,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94020
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 363298,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97907
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 38271,
+          "source_name": "Ula'tek",
+          "t_ms": 97069
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 38141,
+          "source_name": "Ula'tek",
+          "t_ms": 96045
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 38012,
+          "source_name": "Ula'tek",
+          "t_ms": 95077
+        }
+      ],
+      "window_damage": 1165648,
+      "window_healing": 672968,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 1,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Aluriel",
+      "overkill": 1417,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:8",
+      "t_ms": 98012,
+      "time_to_die_ms": 5751,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 537776,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97857
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 531543,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94023
+        },
+        {
+          "ability_id": 469704,
+          "ability_name": "Tempered in Battle",
+          "amount": 118892,
+          "source_name": "Fatherchill",
+          "t_ms": 88154
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 47368,
+          "source_name": "Ula'tek",
+          "t_ms": 92430
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 47367,
+          "source_name": "Ula'tek",
+          "t_ms": 93425
+        }
+      ],
+      "window_damage": 1943710,
+      "window_healing": 1228775,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 161,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Snanth",
+      "overkill": 193276,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:9",
+      "t_ms": 98013,
+      "time_to_die_ms": 4307,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 451383,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94020
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 263202,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97849
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 42265,
+          "source_name": "Ula'tek",
+          "t_ms": 88663
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 41899,
+          "source_name": "Ula'tek",
+          "t_ms": 97654
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 41743,
+          "source_name": "Ula'tek",
+          "t_ms": 96653
+        }
+      ],
+      "window_damage": 1496911,
+      "window_healing": 798132,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 3,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Talyssah",
+      "overkill": 423255,
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:death:10",
+      "t_ms": 98014,
+      "time_to_die_ms": 4311,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 558260,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 94034
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 135005,
+          "source_name": "Gore Rattle #2",
+          "t_ms": 97869
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48296,
+          "source_name": "Ula'tek",
+          "t_ms": 88525
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48296,
+          "source_name": "Ula'tek",
+          "t_ms": 90557
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48296,
+          "source_name": "Ula'tek",
+          "t_ms": 91525
+        }
+      ],
+      "window_damage": 1415594,
+      "window_healing": 1209286,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 106399,
+  "encounter_name": "Ula'tek",
+  "mechanics": [
+    {
+      "clusters": 2,
+      "damage_taken": 8124050,
+      "deaths_in_window": 2,
+      "failures": 8,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Dean": 1,
+        "Discô": 1,
+        "Fatherchill": 1,
+        "Kindrella": 1,
+        "Lesnichii": 1,
+        "Moombly": 1,
+        "Widowmaker": 1
+      },
+      "hits": 74,
+      "mechanic_id": "caustic_waves",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:caustic_waves"
+    },
+    {
+      "clusters": 5,
+      "damage_taken": 27082721,
+      "deaths_in_window": 19,
+      "failures": 5,
+      "failures_by_player": {
+        "Fatherchill": 5
+      },
+      "hits": 69,
+      "mechanic_id": "rattler_slam",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:rattler_slam"
+    },
+    {
+      "clusters": 44,
+      "damage_taken": 31598001,
+      "deaths_in_window": 19,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 2172,
+      "mechanic_id": "necrotic_vapors",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:necrotic_vapors"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 11975188,
+      "deaths_in_window": 0,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 44,
+      "mechanic_id": "spectral_coils",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:spectral_coils"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 11759895,
+      "deaths_in_window": 0,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 127,
+      "mechanic_id": "mephitic_thrash",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:mephitic_thrash"
+    },
+    {
+      "clusters": 4,
+      "damage_taken": 9829338,
+      "deaths_in_window": 11,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 232,
+      "mechanic_id": "malignant_shell",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:malignant_shell"
+    },
+    {
+      "clusters": 38,
+      "damage_taken": 5395878,
+      "deaths_in_window": 1,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 104,
+      "mechanic_id": "mothers_wrath_tank",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:mothers_wrath_tank"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 4176438,
+      "deaths_in_window": 17,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 117,
+      "mechanic_id": "blightscale_viper",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:blightscale_viper"
+    }
+  ],
+  "outcome": "wipe",
+  "phase_reached": "p1",
+  "produced_from": {
+    "encfile_hash": "84163c7ea074",
+    "events_hash": "4e3c984e4d24d1adbeaa2aa9af4651947243b190342d428fa63834438d2cac62",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "QkVa6GHRK8yfrTbw:14",
+  "unregistered": [
+    {
+      "ability_id": 469704,
+      "damage": 958015,
+      "name": "Tempered in Battle",
+      "share_pct": 0.8
+    },
+    {
+      "ability_id": 1309786,
+      "damage": 809437,
+      "name": "Refraction",
+      "share_pct": 0.7
+    },
+    {
+      "ability_id": 1292299,
+      "damage": 144985,
+      "name": "Seriously Sharp Seashell",
+      "share_pct": 0.1
+    },
+    {
+      "ability_id": 387846,
+      "damage": 114449,
+      "name": "Fel Armor",
+      "share_pct": 0.1
+    },
+    {
+      "ability_id": 453286,
+      "damage": 78582,
+      "name": "Set Fire to the Pain",
+      "share_pct": 0.1
+    }
+  ]
+}

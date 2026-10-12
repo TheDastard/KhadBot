@@ -1,0 +1,869 @@
+{
+  "aggro": [
+    {
+      "npc": "Ula'tek",
+      "swings": 24,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 79.2,
+          "swings": 19
+        },
+        {
+          "name": "Shinrael",
+          "share_pct": 20.8,
+          "swings": 5
+        }
+      ],
+      "taunts": {
+        "Shinrael": 1
+      }
+    },
+    {
+      "npc": "Gore Rattle",
+      "swings": 12,
+      "targets": [
+        {
+          "name": "Shinrael",
+          "share_pct": 91.7,
+          "swings": 11
+        },
+        {
+          "name": "Mekerakesh",
+          "share_pct": 8.3,
+          "swings": 1
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 1
+      }
+    }
+  ],
+  "anomalies": [
+    "cooldown_unverified:47788",
+    "cooldown_unverified:51052",
+    "cooldown_unverified:97462",
+    "cooldown_unverified:98008",
+    "cooldown_unverified:357170"
+  ],
+  "boss_hp_pct": 53.11,
+  "boss_pct": 57.21,
+  "cooldowns": [
+    {
+      "caster": "Talyssah",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:357170:1",
+      "spell_id": 357170,
+      "spell_name": "Rewind",
+      "t_ms": 52567
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:47788:1",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 87150
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:98008:1",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 122675
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:47788:2",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 127849
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:357170:2",
+      "spell_id": 357170,
+      "spell_name": "Rewind",
+      "t_ms": 171131
+    },
+    {
+      "caster": "Widowmaker",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:51052:1",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 194479
+    },
+    {
+      "caster": "Cocodiablo",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:51052:2",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 194694
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:97462:1",
+      "spell_id": 97462,
+      "spell_name": "Rally",
+      "t_ms": 196610
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:cd:51052:3",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 213182
+    }
+  ],
+  "coverage": "full",
+  "coverage_windows": [
+    {
+      "cooldowns_active": [
+        357170
+      ],
+      "covered": true,
+      "occurrence": 1,
+      "ref": "ev:trMgApZCVYkv3jdq:11:win:rage_of_the_shackled:1",
+      "t_ms": 135547,
+      "window_id": "rage_of_the_shackled"
+    }
+  ],
+  "cutoff_ms": 232071,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 33,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "spectral_coils"
+      ],
+      "name": "Mortamur",
+      "overkill": 50171,
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:1",
+      "t_ms": 128632,
+      "time_to_die_ms": 10296,
+      "top_hits": [
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 257776,
+          "source_name": "Blightscale Rawling #10",
+          "t_ms": 128627
+        },
+        {
+          "ability_id": 1287265,
+          "ability_name": "Spectral Coils",
+          "amount": 244919,
+          "source_name": "Spectral Coil #4",
+          "t_ms": 125310
+        },
+        {
+          "ability_id": 1287265,
+          "ability_name": "Spectral Coils",
+          "amount": 140553,
+          "source_name": "Spectral Coil #3",
+          "t_ms": 122486
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 128718,
+          "source_name": "Blightscale Rawling #13",
+          "t_ms": 128627
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 128061,
+          "source_name": "Blightscale Rawling #9",
+          "t_ms": 128626
+        }
+      ],
+      "window_damage": 1575881,
+      "window_healing": 883441,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 17,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blight_vein",
+        "necrotic_vapors"
+      ],
+      "name": "Moombly",
+      "overkill": 20838,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:2",
+      "t_ms": 204052,
+      "time_to_die_ms": 8588,
+      "top_hits": [
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 293336,
+          "source_name": "Environment",
+          "t_ms": 201892
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 275609,
+          "source_name": "Environment",
+          "t_ms": 203886
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 257055,
+          "source_name": "Environment",
+          "t_ms": 199878
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 99436,
+          "source_name": "Environment",
+          "t_ms": 195886
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 43395,
+          "source_name": "Ula'tek",
+          "t_ms": 196040
+        }
+      ],
+      "window_damage": 1220918,
+      "window_healing": 481727,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 9,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blight_vein",
+        "necrotic_vapors",
+        "virulent_spit"
+      ],
+      "name": "Wilmer",
+      "overkill": 8887,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:3",
+      "t_ms": 204054,
+      "time_to_die_ms": 8499,
+      "top_hits": [
+        {
+          "ability_id": 1302982,
+          "ability_name": "Virulent Spit",
+          "amount": 392178,
+          "source_name": "Ula'tek #1",
+          "t_ms": 197945
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 338387,
+          "source_name": "Environment",
+          "t_ms": 203861
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 287629,
+          "source_name": "Environment",
+          "t_ms": 199877
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 287628,
+          "source_name": "Environment",
+          "t_ms": 201870
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 191752,
+          "source_name": "Environment",
+          "t_ms": 197879
+        }
+      ],
+      "window_damage": 1989641,
+      "window_healing": 1135191,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 23,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blight_vein",
+        "malignant_shell",
+        "necrotic_vapors"
+      ],
+      "name": "Discô",
+      "overkill": 10230,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:4",
+      "t_ms": 219054,
+      "time_to_die_ms": 7422,
+      "top_hits": [
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 329660,
+          "source_name": "Environment",
+          "t_ms": 212174
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 329660,
+          "source_name": "Environment",
+          "t_ms": 214183
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 329660,
+          "source_name": "Environment",
+          "t_ms": 216180
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 109888,
+          "source_name": "Environment",
+          "t_ms": 210197
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 54945,
+          "source_name": "Ula'tek",
+          "t_ms": 212611
+        }
+      ],
+      "window_damage": 1934286,
+      "window_healing": 1113558,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 41,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blight_vein",
+        "malignant_shell",
+        "necrotic_vapors"
+      ],
+      "name": "Hugedonut",
+      "overkill": 11896,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:5",
+      "t_ms": 220034,
+      "time_to_die_ms": 18214,
+      "top_hits": [
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 269000,
+          "source_name": "Environment",
+          "t_ms": 212172
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 255573,
+          "source_name": "Environment",
+          "t_ms": 216179
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 242100,
+          "source_name": "Environment",
+          "t_ms": 214181
+        },
+        {
+          "ability_id": 1317955,
+          "ability_name": "Blight Vein",
+          "amount": 89667,
+          "source_name": "Environment",
+          "t_ms": 210196
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 44834,
+          "source_name": "Ula'tek",
+          "t_ms": 212611
+        }
+      ],
+      "window_damage": 1595336,
+      "window_healing": 901157,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors"
+      ],
+      "name": "Teppic",
+      "overkill": 3427,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:6",
+      "t_ms": 227038,
+      "time_to_die_ms": 332,
+      "top_hits": [
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 57733,
+          "source_name": "Ula'tek",
+          "t_ms": 217965
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 57733,
+          "source_name": "Ula'tek",
+          "t_ms": 221949
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 57733,
+          "source_name": "Ula'tek",
+          "t_ms": 223963
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 57732,
+          "source_name": "Ula'tek",
+          "t_ms": 219963
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 57732,
+          "source_name": "Ula'tek",
+          "t_ms": 220957
+        }
+      ],
+      "window_damage": 923002,
+      "window_healing": 132944,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 3,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors"
+      ],
+      "name": "Aluriel",
+      "overkill": 6605,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:7",
+      "t_ms": 228070,
+      "time_to_die_ms": 15939,
+      "top_hits": [
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 48762,
+          "source_name": "Ula'tek",
+          "t_ms": 227777
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 45472,
+          "source_name": "Ula'tek",
+          "t_ms": 228031
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 42561,
+          "source_name": "Ula'tek",
+          "t_ms": 221020
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 41832,
+          "source_name": "Ula'tek",
+          "t_ms": 219030
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 41612,
+          "source_name": "Ula'tek",
+          "t_ms": 220029
+        }
+      ],
+      "window_damage": 672541,
+      "window_healing": 371562,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 56,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors",
+        "poisonous_bite"
+      ],
+      "name": "Mekerakesh",
+      "overkill": 32777,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:8",
+      "t_ms": 229959,
+      "time_to_die_ms": 42,
+      "top_hits": [
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 240448,
+          "source_name": "Blightscale Viper #3",
+          "t_ms": 229940
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 135794,
+          "source_name": "Blightscale Viper #2",
+          "t_ms": 228702
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 54304,
+          "source_name": "Blightscale Rawling #22",
+          "t_ms": 229898
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 50100,
+          "source_name": "Blightscale Rawling #19",
+          "t_ms": 229168
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 39100,
+          "source_name": "Ula'tek",
+          "t_ms": 221334
+        }
+      ],
+      "window_damage": 1073340,
+      "window_healing": 531273,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 22,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "necrotic_vapors",
+        "virulent_spit"
+      ],
+      "name": "Dastard",
+      "overkill": 4290,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:9",
+      "t_ms": 230078,
+      "time_to_die_ms": 8179,
+      "top_hits": [
+        {
+          "ability_id": 1302982,
+          "ability_name": "Virulent Spit",
+          "amount": 384342,
+          "source_name": "Ula'tek #2",
+          "t_ms": 222190
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 49266,
+          "source_name": "Ula'tek",
+          "t_ms": 229065
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 36581,
+          "source_name": "Ula'tek",
+          "t_ms": 222062
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 36215,
+          "source_name": "Ula'tek",
+          "t_ms": 223012
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 34549,
+          "source_name": "Ula'tek",
+          "t_ms": 223046
+        }
+      ],
+      "window_damage": 1010133,
+      "window_healing": 124796,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 42,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "blightscale_viper",
+        "malignant_shell",
+        "necrotic_vapors"
+      ],
+      "name": "Lesnichii",
+      "overkill": 35244,
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:11:death:10",
+      "t_ms": 231858,
+      "time_to_die_ms": 19726,
+      "top_hits": [
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 61907,
+          "source_name": "Ula'tek",
+          "t_ms": 229065
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 61907,
+          "source_name": "Ula'tek",
+          "t_ms": 230075
+        },
+        {
+          "ability_id": 1308275,
+          "ability_name": "Putrid Membrane",
+          "amount": 61907,
+          "source_name": "Ula'tek",
+          "t_ms": 231055
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 53280,
+          "source_name": "Ula'tek",
+          "t_ms": 224815
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 51588,
+          "source_name": "Ula'tek",
+          "t_ms": 225829
+        }
+      ],
+      "window_damage": 1295038,
+      "window_healing": 717071,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 244025,
+  "encounter_name": "Ula'tek",
+  "mechanics": [
+    {
+      "clusters": 4,
+      "damage_taken": 2516390,
+      "deaths_in_window": 3,
+      "failures": 7,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Dastard": 1,
+        "Dean": 1,
+        "Kouw": 1,
+        "Shinrael": 1,
+        "Widowmaker": 1,
+        "Wilmer": 1
+      },
+      "hits": 7,
+      "mechanic_id": "virulent_spit",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:virulent_spit"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 5816190,
+      "deaths_in_window": 0,
+      "failures": 5,
+      "failures_by_player": {
+        "Dastard": 1,
+        "Lesnichii": 1,
+        "Mainmoon": 1,
+        "Shinrael": 2
+      },
+      "hits": 61,
+      "mechanic_id": "caustic_waves",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:caustic_waves"
+    },
+    {
+      "clusters": 4,
+      "damage_taken": 499426,
+      "deaths_in_window": 2,
+      "failures": 5,
+      "failures_by_player": {
+        "Kindrella": 2,
+        "Lesnichii": 1,
+        "Mainmoon": 2
+      },
+      "hits": 12,
+      "mechanic_id": "deadly_venom",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:deadly_venom"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 677017,
+      "deaths_in_window": 0,
+      "failures": 3,
+      "failures_by_player": {
+        "Dripington": 1,
+        "Hugedonut": 1,
+        "Mortamur": 1
+      },
+      "hits": 5,
+      "mechanic_id": "wardens_protection",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:wardens_protection"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 435972,
+      "deaths_in_window": 1,
+      "failures": 1,
+      "failures_by_player": {
+        "Shinrael": 1
+      },
+      "hits": 1,
+      "mechanic_id": "falling_debris",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:falling_debris"
+    },
+    {
+      "clusters": 101,
+      "damage_taken": 102874999,
+      "deaths_in_window": 22,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 5025,
+      "mechanic_id": "necrotic_vapors",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:necrotic_vapors"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 33877067,
+      "deaths_in_window": 4,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 190,
+      "mechanic_id": "blight_vein",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:blight_vein"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 25585366,
+      "deaths_in_window": 0,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 267,
+      "mechanic_id": "mephitic_thrash",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:mephitic_thrash"
+    }
+  ],
+  "outcome": "wipe",
+  "phase_reached": "p2",
+  "produced_from": {
+    "encfile_hash": "84163c7ea074",
+    "events_hash": "e52badd43b8c97fe84138ed2958d2548d2486973fd106540ae21cecc4c01bf9a",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "trMgApZCVYkv3jdq:11",
+  "unregistered": [
+    {
+      "ability_id": 1309786,
+      "damage": 2103426,
+      "name": "Refraction",
+      "share_pct": 0.7
+    },
+    {
+      "ability_id": 98021,
+      "damage": 1470690,
+      "name": "Spirit Link",
+      "share_pct": 0.5
+    },
+    {
+      "ability_id": 361029,
+      "damage": 1399215,
+      "name": "Time Dilation",
+      "share_pct": 0.4
+    },
+    {
+      "ability_id": 111400,
+      "damage": 570083,
+      "name": "Burning Rush",
+      "share_pct": 0.2
+    },
+    {
+      "ability_id": 1292299,
+      "damage": 225644,
+      "name": "Seriously Sharp Seashell",
+      "share_pct": 0.1
+    }
+  ]
+}
