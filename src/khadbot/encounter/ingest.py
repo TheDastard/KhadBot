@@ -4,7 +4,7 @@ encounter/ingest.py
 Ingest orchestration: report metadata -> raw pages -> normalized events -> event store.
 
 Resumable through the raw page cache and idempotent through ``events_hash``: a pull whose
-recomputed hash matches the stored one is skipped without rewriting anything.
+recomputed hash and metadata match the stored ones is skipped without rewriting anything.
 """
 
 from __future__ import annotations
@@ -102,6 +102,7 @@ async def ingest_report(
 
         ingested: list[str] = []
         skipped: list[str] = []
+        stored = {p.fight_id: p for p in store.pulls(code)}
         for pull in wanted:
             key = pull.pull_key
             try:
@@ -112,7 +113,8 @@ async def ingest_report(
                 pages = {s.dir_name: cache.pages(code, pull.fight_id, s) for s in specs}
                 df = normalize_pull(pull, actors, pages)
                 new_hash = events_hash(df)
-                if store.events_hash(key) == new_hash:
+                # Pull metadata can change without the events (a field added to the report query), so both must match.
+                if store.events_hash(key) == new_hash and stored.get(pull.fight_id) == pull:
                     skipped.append(key)
                     continue
                 store.write_pull(pull, df, new_hash, sorted(name for name, t in truncated.items() if t))

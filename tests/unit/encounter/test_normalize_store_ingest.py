@@ -283,6 +283,17 @@ class TestIngest:
         assert again.pulls == [] and again.skipped == ["SYNTH01:1", "SYNTH01:2"]
         assert (store.root / CODE / "1.parquet").stat().st_mtime_ns == before
 
+    async def test_changed_pull_metadata_is_rewritten(self, synth_ingest_kwargs):
+        # A field added to the report query (boss health) must reach pulls already stored with the same events.
+        await ingest_report(CODE, **synth_ingest_kwargs)
+        store = synth_ingest_kwargs["store"]
+        pull = next(p for p in store.pulls(CODE) if p.fight_id == 1)
+        stale = pull.model_copy(update={"boss_hp_pct": None})
+        store.write_pull(stale, store.events(pull.pull_key), store.events_hash(pull.pull_key))
+        again = await ingest_report(CODE, **synth_ingest_kwargs)
+        assert again.pulls == ["SYNTH01:1"] and again.skipped == ["SYNTH01:2"]
+        assert next(p for p in store.pulls(CODE) if p.fight_id == 1).boss_hp_pct == 41.0
+
     async def test_fight_selection_and_unknown_fight(self, synth_ingest_kwargs):
         result = await ingest_report(CODE, [2, 9], **synth_ingest_kwargs)
         assert result.pulls == ["SYNTH01:2"]
