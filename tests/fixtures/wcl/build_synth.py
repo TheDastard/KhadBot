@@ -42,6 +42,7 @@ LINK_TOTEM, EXTERNAL = 900301, 900302
 KICK, PURGE = 900701, 900702
 FILLERS = [900001, 900002, 900003]
 BOSS_MELEE = 900010
+TAUNT = 900703
 
 ENEMY_CAST_FILTER_IDS = [SWIRL, CATACLYSM, SHADOWBOLT, PHASE_SHIFT, CURSE]
 BUFF_FILTER_IDS = [LINK_TOTEM, EXTERNAL]
@@ -60,6 +61,7 @@ ABILITIES = [
         (KICK, "Synth Kick"),
         (PURGE, "Synth Purge"),
         (BOSS_MELEE, "Synth Melee"),
+        (TAUNT, "Synth Taunt"),
         (900001, "Synth Strike A"),
         (900002, "Synth Strike B"),
         (900003, "Synth Strike C"),
@@ -191,6 +193,7 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
     debuffs: list[dict] = []
     interrupts: list[dict] = []
     dispels: list[dict] = []
+    threat: list[dict] = []
 
     def ev(t: int, typ: str, src: int, tgt: int | None, ability: int, **kw: int) -> dict:
         out = {"timestamp": s + t, "type": typ, "sourceID": src, "abilityGameID": ability, "fight": 0}
@@ -202,6 +205,16 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
     # Boss melee on the tank every 2 s; healer tops people up on a fixed cadence.
     for t in range(1000, dur, 2000):
         sim.hit(t, BOSS, TANK, BOSS_MELEE, 6_000)
+        threat.append(ev(t, "cast", BOSS, TANK, BOSS_MELEE, melee=True))
+    # Threat data: a swing that missed (no damage row), and DPS1 taunting the boss for one swing. The
+    # taunt cast is also in Casts and Threat repeats a death, as WCL does; normalize drops both copies.
+    threat.append(ev(2_000, "cast", BOSS, TANK, BOSS_MELEE, melee=True))
+    casts.append(ev(9_400, "cast", DPS1, BOSS, TAUNT))
+    threat.append(ev(9_400, "cast", DPS1, BOSS, TAUNT))
+    threat.append(ev(9_400, "applydebuff", DPS1, BOSS, TAUNT))
+    threat.append(ev(10_000, "cast", BOSS, DPS1, BOSS_MELEE, melee=True))
+    threat.append(ev(dur - 1, "death", 0, DPS2, 0))
+    threat.append(ev(30_000, "death", 0, ADD, 0, targetInstance=1))  # NPC deaths exist only in Threat
     for t in range(2000, dur, 3000):
         sim.heal(t, TANK, 12_000)
         if t % 6000 == 2000:
@@ -306,6 +319,7 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         "Interrupts": sorted(interrupts, key=_sort_key),
         "Dispels": sorted(dispels, key=_sort_key),
         "Healing": sorted(sim.healing, key=_sort_key),
+        "Threat": sorted(threat, key=_sort_key),
     }
 
 

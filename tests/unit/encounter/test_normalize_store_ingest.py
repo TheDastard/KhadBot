@@ -92,7 +92,19 @@ class TestNormalize:
             "Interrupts",
             "Dispels",
             "Healing",
+            "Threat",
         }
+
+    def test_threat_keeps_only_npc_swings_and_taunt_debuffs(self, synth_cache, meta):
+        df = frame_for(synth_cache, meta, 1)
+        threat = df.filter(pl.col("data_type").cast(pl.Utf8) == "Threat")
+        kinds = set(threat.select(pl.col("type").cast(pl.Utf8), "source_friendly").rows())
+        # NPC swings, taunt debuffs and the add's death; no player cast or player death.
+        assert kinds == {("cast", False), ("applydebuff", True), ("death", False)}
+        assert threat.filter(pl.col("type").cast(pl.Utf8) == "death")["target_id"].to_list() == [11]
+        assert df.filter((pl.col("type").cast(pl.Utf8) == "death") & pl.col("target_friendly")).height == 4
+        taunt_casts = df.filter((pl.col("ability_id") == 900703) & (pl.col("type").cast(pl.Utf8) == "cast"))
+        assert taunt_casts["data_type"].cast(pl.Utf8).to_list() == ["Casts"]
 
     def test_two_page_data_type_is_fully_loaded(self, synth_cache, meta):
         pages = synth_cache.pages(CODE, 1, specs_for()[1])
@@ -118,8 +130,8 @@ class TestNormalize:
 
     def test_hp_pct_from_resources(self, synth_cache, meta):
         df = frame_for(synth_cache, meta, 1)
-        deaths = df.filter(pl.col("type") == "death")
-        assert deaths.height == 4  # 8 s, 23 s, 41 s (cutoff), 50 s
+        deaths = df.filter((pl.col("type") == "death") & pl.col("target_friendly"))
+        assert deaths.height == 4  # 8 s, 23 s, 41 s (cutoff), 50 s; the add's death is not a player's
         dmg = df.filter(pl.col("type") == "damage")
         assert dmg["hp_pct"].null_count() == 0
         assert dmg["hp_pct"].min() == 0.0  # lethal hits
@@ -296,3 +308,34 @@ class TestIngest:
         await ingest_report(CODE, [1], progress=lambda k, s, p: seen.append((k, s)), **synth_ingest_kwargs)
         assert ("SYNTH01:1", "normalizing") in seen
         assert all(k == "SYNTH01:1" for k, _ in seen)
+
+
+def test_instances_are_kept():
+    from helpers.events import make_pull
+
+    from khadbot.encounter.normalize import normalize_pull
+
+    pull = make_pull()
+    page = {
+        "data": [
+            {
+                "timestamp": pull.start_ms + 10,
+                "type": "damage",
+                "sourceID": 11,
+                "sourceInstance": 3,
+                "targetID": 1,
+                "abilityGameID": 1,
+                "amount": 5,
+            },
+            {
+                "timestamp": pull.start_ms + 20,
+                "type": "cast",
+                "sourceID": 1,
+                "targetID": 11,
+                "targetInstance": 4,
+                "abilityGameID": 7,
+            },
+        ]
+    }
+    df = normalize_pull(pull, [], {"DamageTaken": [page]})
+    assert df.select("source_instance", "target_instance").rows() == [(3, None), (None, 4)]

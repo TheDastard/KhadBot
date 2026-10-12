@@ -10,6 +10,7 @@ from __future__ import annotations
 import pytest
 from helpers.events import BOSS, make_actors, make_events, make_pull
 
+from khadbot.encounter.analysis.aggro import aggro_bands, aggro_holder, aggro_summaries
 from khadbot.encounter.analysis.cooldowns import aura_intervals, cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
 from khadbot.encounter.analysis.mechanics import mechanic_stats
@@ -251,3 +252,180 @@ class TestAuraIntervals:
         assert synth_registry.spell_ids(["raid"]) == [900301]
         reg = parse_registry({"cooldowns": []})
         assert reg.spell_ids() == []
+
+
+def test_aggro_counts_swings_and_taunts():
+    rows = [
+        {"t_ms": 0, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 1, "data_type": "Threat"},
+        {"t_ms": 1, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 1, "data_type": "Threat"},
+        {"t_ms": 2, "type": "applydebuff", "source_id": 2, "target_id": BOSS, "ability_id": 9, "data_type": "Threat"},
+        {"t_ms": 3, "type": "cast", "source_id": BOSS, "target_id": 2, "ability_id": 1, "data_type": "Threat"},
+        {"t_ms": 4, "type": "cast", "source_id": 11, "target_id": 3, "ability_id": 1, "data_type": "Threat"},  # an add
+        {"t_ms": 5, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 1},  # not Threat data
+    ]
+    a = annotate(make_pull(), make_events(rows), None, make_actors())
+    [boss] = aggro_summaries(a, make_actors())
+    assert (boss.npc, boss.swings, boss.taunts) == ("Boss", 3, {"Healer": 1})
+    assert [(t.name, t.swings, t.share_pct) for t in boss.targets] == [("Tank", 2, 66.7), ("Healer", 1, 33.3)]
+
+
+def test_aggro_empty_without_threat_data():
+    a = annotate(make_pull(), make_events([_hit(0, 1, 100)]), None, make_actors())
+    assert aggro_summaries(a, make_actors()) == []
+
+
+def _swing(t, target, npc=BOSS, inst=None):
+    return {
+        "t_ms": t,
+        "type": "cast",
+        "source_id": npc,
+        "source_instance": inst,
+        "target_id": target,
+        "ability_id": 1,
+        "data_type": "Threat",
+    }
+
+
+def _taunt(t, player, npc=BOSS, inst=None):
+    return {
+        "t_ms": t,
+        "type": "applydebuff",
+        "source_id": player,
+        "target_id": npc,
+        "target_instance": inst,
+        "ability_id": 9,
+        "data_type": "Threat",
+    }
+
+
+def _npc_death(t, npc=11, inst=None):
+    return {"t_ms": t, "type": "death", "target_id": npc, "target_instance": inst, "data_type": "Threat"}
+
+
+def _bands(rows, duration_ms=60_000):
+    a = annotate(make_pull(duration_ms=duration_ms), make_events(rows), None, make_actors())
+    return [(b.npc_id, b.npc_instance, b.player_id, b.start_ms, b.end_ms, b.start) for b in aggro_bands(a)]
+
+
+class TestAggroBands:
+    def test_switch_and_taunt(self):
+        rows = [_swing(0, 1), _swing(2_000, 1), _taunt(3_000, 2), _swing(4_000, 2), _swing(5_000, 1)]
+        assert _bands(rows, duration_ms=10_000) == [
+            (BOSS, None, 1, 0, 3_000, "melee"),
+            (BOSS, None, 2, 3_000, 5_000, "taunt"),
+            (BOSS, None, 1, 5_000, 10_000, "melee"),  # runs to the pull end
+        ]
+
+    def test_npc_death_ends_the_band(self):
+        rows = [_swing(0, 3, npc=11, inst=1), _npc_death(4_000, inst=1), _swing(5_000, 3, npc=11, inst=2)]
+        assert _bands(rows, duration_ms=10_000) == [
+            (11, 1, 3, 0, 4_000, "melee"),
+            (11, 2, 3, 5_000, 10_000, "melee"),
+        ]
+
+    def test_quiet_gap_ends_at_the_last_event(self):
+        rows = [_swing(0, 1), _swing(1_000, 1), _swing(30_000, 1)]  # 29 s without a swing
+        assert _bands(rows, duration_ms=100_000) == [
+            (BOSS, None, 1, 0, 1_000, "melee"),
+            (BOSS, None, 1, 30_000, 30_000, "melee"),  # quiet until the pull end too
+        ]
+
+    def test_instances_are_separate(self):
+        rows = [_swing(0, 1, npc=11, inst=1), _swing(100, 2, npc=11, inst=2), _swing(200, 1, npc=11, inst=1)]
+        bands = _bands(rows, duration_ms=1_000)
+        assert bands == [(11, 1, 1, 0, 1_000, "melee"), (11, 2, 2, 100, 1_000, "melee")]
+
+    def test_holder(self):
+        a = annotate(
+            make_pull(duration_ms=10_000),
+            make_events([_swing(0, 1), _taunt(3_000, 2), _swing(0, 3, npc=11, inst=4)]),
+            None,
+            make_actors(),
+        )
+        bands = aggro_bands(a)
+        assert aggro_holder(bands, {BOSS}, 2_999) == 1
+        assert aggro_holder(bands, {BOSS}, 3_000) == 2
+        assert aggro_holder(bands, {11}, 5_000, instance=4) == 3
+        assert aggro_holder(bands, {11}, 5_000, instance=5) is None
+        assert aggro_holder(bands, {99}, 5_000) is None
+
+
+def _merged(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
+    for s, e in sorted(spans):
+        if out and s <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], e))
+        else:
+            out.append((s, e))
+    return out
+
+
+def _overlap(a: list[tuple[int, int]], b: list[tuple[int, int]]) -> int:
+    return sum(max(0, min(e1, e2) - max(s1, s2)) for s1, e1 in a for s2, e2 in b)
+
+
+@pytest.mark.parametrize(
+    ("code", "fight", "wcl_bands", "differing"),
+    [
+        # Each differing band is WCL keeping a holder longer after the NPC stops swinging: Gore Rattle in
+        # Stage One on both pulls, and Ula'tek in the kill's last 24 s.
+        ("trMgApZCVYkv3jdq", 18, 36, 1),
+        ("H7z1fqDXjRTFnbtg", 20, 67, 2),
+    ],
+)
+def test_aggro_bands_match_wcl_threat_table(code, fight, wcl_bands, differing):
+    """Merged per NPC actor and player, the bands reproduce WCL's threat table and never name another player."""
+    import asyncio
+    import json
+    import tempfile
+    from pathlib import Path
+
+    from helpers.synth import FIXTURES
+
+    from khadbot.encounter.commands import default_filter_kwargs
+    from khadbot.encounter.fetch import RawPageCache
+    from khadbot.encounter.ingest import ingest_report
+    from khadbot.encounter.store import ParquetEventStore
+
+    with tempfile.TemporaryDirectory() as tmp:
+        store = ParquetEventStore(Path(tmp))
+        result = asyncio.run(
+            ingest_report(
+                code,
+                [fight],
+                store=store,
+                cache=RawPageCache(FIXTURES / "wcl"),
+                offline=True,
+                **default_filter_kwargs(),
+            )
+        )
+        assert not result.failed
+        a = annotate_pull(f"{code}:{fight}", store, None)
+        bosses = {x.actor_id for x in store.actors(code) if x.kind == "boss"}
+    ours: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    for b in aggro_bands(a):  # merge instances of one NPC actor, as WCL's table does
+        ours.setdefault((b.npc_id, b.player_id), []).append((b.start_ms, b.end_ms))
+    ours = {k: _merged(v) for k, v in ours.items()}
+    table = json.loads((FIXTURES / "wcl_views" / f"{code}_{fight}_threat_table.json").read_text())
+    start = a.pull.start_ms
+    wcl = {
+        (t["id"], p["id"]): _merged([(b["startTime"] - start, b["endTime"] - start) for b in t["bands"]])
+        for p in table["data"]["threat"]
+        for t in p["targets"]
+    }
+    keys = set(wcl) | set(ours)
+    assert sum(len(v) for v in wcl.values()) == wcl_bands
+    assert sum(len(v) for v in ours.values()) == wcl_bands
+    assert sum(1 for k in keys for b in wcl.get(k, []) if b not in ours.get(k, [])) == differing
+    # Everything we call aggro, WCL does too (ours only ever ends a band earlier).
+    assert sum(_overlap(ours.get(k, []), wcl.get(k, [])) for k in keys) == sum(
+        e - s for v in ours.values() for s, e in v
+    )
+    # On single-instance bosses, the two never name different players at the same moment.
+    wrong = sum(
+        _overlap(o, w)
+        for (n1, p1), o in ours.items()
+        for (n2, p2), w in wcl.items()
+        if n1 == n2 and n1 in bosses and p1 != p2
+    )
+    assert wrong == 0

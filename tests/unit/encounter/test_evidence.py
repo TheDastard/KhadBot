@@ -100,10 +100,10 @@ def test_resolve_every_kind(synth_data):
     win = synth_data.resolve("ev:SYNTH01:1:win:cataclysm:2")
     assert (win["t_ms"], win["covered"], win["cooldowns_active"]) == (40000, False, [])
 
-    event = synth_data.resolve("ev:SYNTH01:1:event:5")
+    event = synth_data.resolve("ev:SYNTH01:1:event:6")
     assert event == {
-        "ref": "ev:SYNTH01:1:event:5",
-        "seq": 5,
+        "ref": "ev:SYNTH01:1:event:6",
+        "seq": 6,
         "t_ms": 1800,
         "type": "cast",
         "source": "Betadps",
@@ -115,6 +115,17 @@ def test_resolve_every_kind(synth_data):
     pull = synth_data.resolve("ev:SYNTH01:1:pull")
     assert pull["outcome"] == "wipe"
     assert (pull["deaths"], pull["deaths_before_cutoff"], pull["cutoff_ms"]) == (4, 3, 41000)
+    assert pull["aggro"] == [
+        {
+            "npc": "Synthetic Boss",
+            "swings": 32,
+            "targets": [
+                {"name": "Tankyboi", "swings": 31, "share_pct": 96.9},
+                {"name": "Alphadps", "swings": 1, "share_pct": 3.1},
+            ],
+            "taunts": {"Alphadps": 1},
+        }
+    ]
 
 
 def test_mechanic_with_no_hits_resolves(synth_data):

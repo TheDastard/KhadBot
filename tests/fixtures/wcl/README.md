@@ -45,6 +45,10 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
 - **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event). The generator
   queues damage and heals and applies them in time order, so HP follows the fight's timeline.
 - **Pagination**: fight 1 `DamageTaken` is two pages (`nextPageTimestamp` set on page 0).
+- **Threat**: the boss swings at the tank every 2 s, one extra swing misses (no damage row), and Alphadps
+  taunts the boss at 9.4 s and takes its next swing. As in real reports, the taunt cast is also in `Casts`
+  and Threat repeats a player's death; normalize drops both copies. Threat also has the add's death at
+  30 s, which no other data type has, and normalize keeps it.
 - **Debuff duration / dispel**: Curse (900601) on the tank lasts 16 s in fight 1 (dispelled
   late) and 5 s in fight 2.
 - **Pets**: actor 6 is owned by actor 3 and casts once, to test the friendly flag for pets.
@@ -59,7 +63,9 @@ Each report directory has the full `report.json` (every fight), but only the lis
 offline ingest must pass `fight_ids`. Everything under a real report directory is stored in Git LFS (see
 `.gitattributes` here); run `git lfs pull` if the pages are pointer files. Pre-commit hooks skip these
 directories so the recorded bytes are never rewritten. Filters: `Buffs` uses the 17 cooldown-registry IDs from
-`config/registries/cooldowns.yaml`; enemy `Casts` and everything else are unfiltered (`none`).
+`config/registries/cooldowns.yaml`. Enemy `Casts` is recorded twice for Ula'tek pulls: unfiltered (`none`) and
+filtered to the encounter file's ability IDs, which is what an ingest with the current config fetches.
+`Threat` (Friendlies side) and everything else are unfiltered (`none`).
 
 | Pull | Outcome | Length | Why it is here |
 |---|---|---|---|

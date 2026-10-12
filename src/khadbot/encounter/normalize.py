@@ -41,10 +41,12 @@ EVENT_SCHEMA: dict[str, pl.DataType] = {
     "stack": pl.Int16(),
     "source_friendly": pl.Boolean(),
     "target_friendly": pl.Boolean(),
+    "source_instance": pl.Int32(),
+    "target_instance": pl.Int32(),
 }
 
 # Sort tie-break between data types at the same millisecond.
-DATA_TYPE_ORDER = ["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing"]
+DATA_TYPE_ORDER = ["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing", "Threat"]
 
 _ENEMIES_SUFFIX = "-Enemies"
 
@@ -61,6 +63,8 @@ _INT_FIELDS = {
     "unmitigatedAmount": "unmitigated",
     "hitType": "hit_type",
     "stack": "stack",
+    "sourceInstance": "source_instance",
+    "targetInstance": "target_instance",
 }
 
 
@@ -140,9 +144,25 @@ def _friendly_ids(pull: Pull, actors: list[Actor]) -> set[int]:
     return players | pets
 
 
+def _keep(e: dict, data_type: str, friendly: set[int]) -> bool:
+    """
+    Threat pages hold NPC melee swings, taunts and NPC deaths. Players' casts (taunts included) repeat the
+    Casts data and are dropped; so would a player's death, which the Deaths data already holds. NPC
+    deaths are kept: no other data type has them, and they end that NPC's aggro.
+    """
+    if data_type != "Threat":
+        return True
+    typ = e.get("type")
+    if typ == "death":
+        return e.get("targetID") not in friendly
+    return not (typ == "cast" and e.get("sourceID") in friendly)
+
+
 def _page_frame(events: list[dict], data_type: str, start_ms: int, friendly: set[int]) -> pl.DataFrame:
     cols: dict[str, list] = {name: [] for name in EVENT_SCHEMA if name != "seq"}
     for e in events:
+        if not _keep(e, data_type, friendly):
+            continue
         cols["t_ms"].append(int(e["timestamp"]) - start_ms)
         cols["data_type"].append(data_type)
         cols["type"].append(e.get("type", ""))
@@ -176,10 +196,10 @@ def normalize_pull(pull: Pull, actors: list[Actor], pages_by_type: dict[str, Ite
         base = name.removesuffix(_ENEMIES_SUFFIX)
         rank = sort_key(name)[0]
         for page in pages_by_type[name]:
-            data = page.get("data") or []
-            if data:
-                frames.append(_page_frame(data, base, pull.start_ms, friendly))
-                order.extend([rank] * len(data))
+            frame = _page_frame(page.get("data") or [], base, pull.start_ms, friendly)
+            if frame.height:
+                frames.append(frame)
+                order.extend([rank] * frame.height)
 
     if not frames:
         return empty_events()
