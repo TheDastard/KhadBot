@@ -1,0 +1,753 @@
+{
+  "aggro": [
+    {
+      "npc": "Ula'tek",
+      "swings": 4,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 100.0,
+          "swings": 4
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 1
+      }
+    },
+    {
+      "npc": "Gore Rattle",
+      "swings": 2,
+      "targets": [
+        {
+          "name": "Shinrael",
+          "share_pct": 100.0,
+          "swings": 2
+        }
+      ],
+      "taunts": {}
+    }
+  ],
+  "anomalies": [],
+  "boss_hp_pct": 95.24,
+  "boss_pct": 96.6,
+  "cooldowns": [],
+  "coverage": "full",
+  "coverage_windows": [],
+  "cutoff_ms": 16140,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 10,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "malignant_shell",
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Wilmer",
+      "overkill": 30701,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:1",
+      "t_ms": 15422,
+      "time_to_die_ms": 2786,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 455489,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 404697,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 51250,
+          "source_name": "Ula'tek",
+          "t_ms": 13614
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 50536,
+          "source_name": "Ula'tek",
+          "t_ms": 14617
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 25625,
+          "source_name": "Ula'tek",
+          "t_ms": 10617
+        }
+      ],
+      "window_damage": 1226960,
+      "window_healing": 334152,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 15,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "malignant_shell",
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Moombly",
+      "overkill": 98905,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:2",
+      "t_ms": 15806,
+      "time_to_die_ms": 3170,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 400300,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 295586,
+          "source_name": "Ula'tek",
+          "t_ms": 15802
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 207411,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 38697,
+          "source_name": "Ula'tek",
+          "t_ms": 13525
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 36587,
+          "source_name": "Ula'tek",
+          "t_ms": 15541
+        }
+      ],
+      "window_damage": 1262040,
+      "window_healing": 426148,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 3,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Discô",
+      "overkill": 59718,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:3",
+      "t_ms": 15806,
+      "time_to_die_ms": 3327,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 564536,
+          "source_name": "Gore Rattle",
+          "t_ms": 12670
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 437701,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 346112,
+          "source_name": "Ula'tek",
+          "t_ms": 15802
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 22057,
+          "source_name": "Ula'tek",
+          "t_ms": 9027
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 20733,
+          "source_name": "Ula'tek",
+          "t_ms": 6033
+        }
+      ],
+      "window_damage": 1513563,
+      "window_healing": 605483,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 8,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Talyssah",
+      "overkill": 282193,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:4",
+      "t_ms": 15808,
+      "time_to_die_ms": 3430,
+      "top_hits": [
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 473983,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 407557,
+          "source_name": "Gore Rattle",
+          "t_ms": 12670
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 180542,
+          "source_name": "Ula'tek",
+          "t_ms": 15802
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 22451,
+          "source_name": "Ula'tek",
+          "t_ms": 13024
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 22451,
+          "source_name": "Ula'tek",
+          "t_ms": 15021
+        }
+      ],
+      "window_damage": 1179264,
+      "window_healing": 316764,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 4,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Mortamur",
+      "overkill": 189395,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:5",
+      "t_ms": 15809,
+      "time_to_die_ms": 3388,
+      "top_hits": [
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 392592,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 371532,
+          "source_name": "Gore Rattle",
+          "t_ms": 12669
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 202010,
+          "source_name": "Ula'tek",
+          "t_ms": 15804
+        },
+        {
+          "ability_id": 1309786,
+          "ability_name": "Refraction",
+          "amount": 24578,
+          "source_name": "Mortamur",
+          "t_ms": 13024
+        },
+        {
+          "ability_id": 1309786,
+          "ability_name": "Refraction",
+          "amount": 23124,
+          "source_name": "Mortamur",
+          "t_ms": 14028
+        }
+      ],
+      "window_damage": 1219195,
+      "window_healing": 377255,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 13,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Aluriel",
+      "overkill": 87267,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:6",
+      "t_ms": 15810,
+      "time_to_die_ms": 3589,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 513770,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 449334,
+          "source_name": "Ula'tek",
+          "t_ms": 15394
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 340156,
+          "source_name": "Ula'tek",
+          "t_ms": 15803
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 25251,
+          "source_name": "Ula'tek",
+          "t_ms": 11029
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 20247,
+          "source_name": "Ula'tek",
+          "t_ms": 13024
+        }
+      ],
+      "window_damage": 1402854,
+      "window_healing": 429735,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 6,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Lesnichii",
+      "overkill": 38136,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:7",
+      "t_ms": 15811,
+      "time_to_die_ms": 3206,
+      "top_hits": [
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 435532,
+          "source_name": "Ula'tek",
+          "t_ms": 15394
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 397395,
+          "source_name": "Ula'tek",
+          "t_ms": 15786
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 298106,
+          "source_name": "Gore Rattle",
+          "t_ms": 12669
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 20630,
+          "source_name": "Ula'tek",
+          "t_ms": 13024
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 20630,
+          "source_name": "Ula'tek",
+          "t_ms": 14027
+        }
+      ],
+      "window_damage": 1272979,
+      "window_healing": 445899,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Kouw",
+      "overkill": 28063,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:8",
+      "t_ms": 15812,
+      "time_to_die_ms": 773,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 549352,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 451494,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 423430,
+          "source_name": "Ula'tek",
+          "t_ms": 15786
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 21386,
+          "source_name": "Ula'tek",
+          "t_ms": 6033
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 21386,
+          "source_name": "Ula'tek",
+          "t_ms": 7039
+        }
+      ],
+      "window_damage": 1581287,
+      "window_healing": 684827,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 17,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Dean",
+      "overkill": 219930,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:9",
+      "t_ms": 15813,
+      "time_to_die_ms": 3191,
+      "top_hits": [
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 417889,
+          "source_name": "Ula'tek",
+          "t_ms": 15395
+        },
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 315718,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 197959,
+          "source_name": "Ula'tek",
+          "t_ms": 15803
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 19674,
+          "source_name": "Ula'tek",
+          "t_ms": 14027
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 19673,
+          "source_name": "Ula'tek",
+          "t_ms": 15021
+        }
+      ],
+      "window_damage": 1041779,
+      "window_healing": 175356,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 22,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "malignant_shell",
+        "mothers_wrath_raid",
+        "necrotic_vapors",
+        "rattler_slam"
+      ],
+      "name": "Dastard",
+      "overkill": 100020,
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:death:10",
+      "t_ms": 16139,
+      "time_to_die_ms": 3761,
+      "top_hits": [
+        {
+          "ability_id": 1299206,
+          "ability_name": "Rattler Slam",
+          "amount": 489789,
+          "source_name": "Gore Rattle",
+          "t_ms": 12671
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 402541,
+          "source_name": "Ula'tek",
+          "t_ms": 15394
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 402541,
+          "source_name": "Ula'tek",
+          "t_ms": 15786
+        },
+        {
+          "ability_id": 1301122,
+          "ability_name": "Mother's Wrath",
+          "amount": 302520,
+          "source_name": "Ula'tek",
+          "t_ms": 16116
+        },
+        {
+          "ability_id": 1297213,
+          "ability_name": "Malignant Shell",
+          "amount": 45474,
+          "source_name": "Ula'tek",
+          "t_ms": 12086
+        }
+      ],
+      "window_damage": 2014659,
+      "window_healing": 1122587,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 37030,
+  "encounter_name": "Ula'tek",
+  "mechanics": [
+    {
+      "clusters": 2,
+      "damage_taken": 9294740,
+      "deaths_in_window": 18,
+      "failures": 2,
+      "failures_by_player": {},
+      "hits": 24,
+      "mechanic_id": "rattler_slam",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:rattler_slam"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 150867,
+      "deaths_in_window": 2,
+      "failures": 2,
+      "failures_by_player": {
+        "Hugedonut": 1,
+        "Shinrael": 1
+      },
+      "hits": 8,
+      "mechanic_id": "deadly_venom",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:deadly_venom"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 18433866,
+      "deaths_in_window": 18,
+      "failures": 1,
+      "failures_by_player": {
+        "Shinrael": 1
+      },
+      "hits": 60,
+      "mechanic_id": "mothers_wrath_raid",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:mothers_wrath_raid"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 336904,
+      "deaths_in_window": 1,
+      "failures": 1,
+      "failures_by_player": {
+        "Mekerakesh": 1
+      },
+      "hits": 8,
+      "mechanic_id": "unchecked_rage",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:unchecked_rage"
+    },
+    {
+      "clusters": 16,
+      "damage_taken": 3865989,
+      "deaths_in_window": 19,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 340,
+      "mechanic_id": "necrotic_vapors",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:necrotic_vapors"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 971311,
+      "deaths_in_window": 3,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 39,
+      "mechanic_id": "malignant_shell",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:malignant_shell"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 813619,
+      "deaths_in_window": 1,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 38,
+      "mechanic_id": "blightscale_viper",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:blightscale_viper"
+    },
+    {
+      "clusters": 6,
+      "damage_taken": 565456,
+      "deaths_in_window": 4,
+      "failures": 0,
+      "failures_by_player": {},
+      "hits": 24,
+      "mechanic_id": "mothers_wrath_tank",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:mothers_wrath_tank"
+    }
+  ],
+  "outcome": "wipe",
+  "phase_reached": "p1",
+  "produced_from": {
+    "encfile_hash": "84163c7ea074",
+    "events_hash": "202587a780a8b781cff3d6e1522bd66be9b0b6e713e1383a9cf71183d9230442",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "H7z1fqDXjRTFnbtg:10",
+  "unregistered": [
+    {
+      "ability_id": 1309786,
+      "damage": 108549,
+      "name": "Refraction",
+      "share_pct": 0.3
+    },
+    {
+      "ability_id": 1292299,
+      "damage": 26081,
+      "name": "Seriously Sharp Seashell",
+      "share_pct": 0.1
+    },
+    {
+      "ability_id": 453286,
+      "damage": 9994,
+      "name": "Set Fire to the Pain",
+      "share_pct": 0.0
+    },
+    {
+      "ability_id": 387846,
+      "damage": 6369,
+      "name": "Fel Armor",
+      "share_pct": 0.0
+    },
+    {
+      "ability_id": 1287955,
+      "damage": 4314,
+      "name": "Rune of Void-Tainted Shell",
+      "share_pct": 0.0
+    }
+  ]
+}

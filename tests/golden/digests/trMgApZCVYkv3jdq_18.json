@@ -1,0 +1,920 @@
+{
+  "aggro": [
+    {
+      "npc": "Ula'tek",
+      "swings": 30,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 80.0,
+          "swings": 24
+        },
+        {
+          "name": "Shinrael",
+          "share_pct": 16.7,
+          "swings": 5
+        },
+        {
+          "name": "Risen Ghoul",
+          "share_pct": 3.3,
+          "swings": 1
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 1,
+        "Shinrael": 2
+      }
+    },
+    {
+      "npc": "Gore Rattle",
+      "swings": 11,
+      "targets": [
+        {
+          "name": "Shinrael",
+          "share_pct": 81.8,
+          "swings": 9
+        },
+        {
+          "name": "Mekerakesh",
+          "share_pct": 18.2,
+          "swings": 2
+        }
+      ],
+      "taunts": {
+        "Shinrael": 1
+      }
+    }
+  ],
+  "anomalies": [
+    "cooldown_unverified:47788",
+    "cooldown_unverified:51052",
+    "cooldown_unverified:97462",
+    "cooldown_unverified:98008",
+    "cooldown_unverified:357170",
+    "cooldown_unverified:374227"
+  ],
+  "boss_hp_pct": 28.03,
+  "boss_pct": 19.97,
+  "cooldowns": [
+    {
+      "caster": "Talyssah",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:357170:1",
+      "spell_id": 357170,
+      "spell_name": "Rewind",
+      "t_ms": 81629
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:47788:1",
+      "spell_id": 47788,
+      "spell_name": "Guardian Spirit",
+      "t_ms": 82791
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "p1",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:98008:1",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 119974
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:357170:2",
+      "spell_id": 357170,
+      "spell_name": "Rewind",
+      "t_ms": 169970
+    },
+    {
+      "caster": "Widowmaker",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:51052:1",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 193956
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:97462:1",
+      "spell_id": 97462,
+      "spell_name": "Rally",
+      "t_ms": 196367
+    },
+    {
+      "caster": "Cocodiablo",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:51052:2",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 206481
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:51052:3",
+      "spell_id": 51052,
+      "spell_name": "Anti-Magic Zone",
+      "t_ms": 208186
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p2",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:374227:1",
+      "spell_id": 374227,
+      "spell_name": "Stasis",
+      "t_ms": 218384
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "intermission",
+      "ref": "ev:trMgApZCVYkv3jdq:18:cd:98008:2",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 328745
+    }
+  ],
+  "coverage": "full",
+  "coverage_windows": [
+    {
+      "cooldowns_active": [
+        357170
+      ],
+      "covered": true,
+      "occurrence": 1,
+      "ref": "ev:trMgApZCVYkv3jdq:18:win:rage_of_the_shackled:1",
+      "t_ms": 135531,
+      "window_id": "rage_of_the_shackled"
+    },
+    {
+      "cooldowns_active": [],
+      "covered": false,
+      "occurrence": 2,
+      "ref": "ev:trMgApZCVYkv3jdq:18:win:rage_of_the_shackled:2",
+      "t_ms": 284540,
+      "window_id": "rage_of_the_shackled"
+    }
+  ],
+  "cutoff_ms": 395080,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Teppic",
+      "overkill": 1486,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:1",
+      "t_ms": 393763,
+      "time_to_die_ms": 1761,
+      "top_hits": [
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 462670,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1295838,
+          "ability_name": "Serpent's Bite",
+          "amount": 196092,
+          "source_name": "Ula'tek",
+          "t_ms": 392715
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 56673,
+          "source_name": "Ula'tek",
+          "t_ms": 393738
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 47530,
+          "source_name": "Ula'tek",
+          "t_ms": 391012
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 44678,
+          "source_name": "Ula'tek",
+          "t_ms": 388004
+        }
+      ],
+      "window_damage": 1080730,
+      "window_healing": 383898,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 22,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Dastard",
+      "overkill": 151200,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:2",
+      "t_ms": 395043,
+      "time_to_die_ms": 1575,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 535671,
+          "source_name": "Environment",
+          "t_ms": 395031
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 372838,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 58973,
+          "source_name": "Ula'tek",
+          "t_ms": 393825
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 41212,
+          "source_name": "Ula'tek",
+          "t_ms": 393003
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 41212,
+          "source_name": "Ula'tek",
+          "t_ms": 394001
+        }
+      ],
+      "window_damage": 1255465,
+      "window_healing": 336373,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 17,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Moombly",
+      "overkill": 9953,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:3",
+      "t_ms": 395072,
+      "time_to_die_ms": 1738,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 678580,
+          "source_name": "Environment",
+          "t_ms": 395019
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 119052,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 50667,
+          "source_name": "Ula'tek",
+          "t_ms": 394268
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 41312,
+          "source_name": "Ula'tek",
+          "t_ms": 394001
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 40659,
+          "source_name": "Ula'tek",
+          "t_ms": 386016
+        }
+      ],
+      "window_damage": 1155928,
+      "window_healing": 448263,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 47,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "poisonous_bite",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Dean",
+      "overkill": 530516,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:4",
+      "t_ms": 395074,
+      "time_to_die_ms": 1609,
+      "top_hits": [
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 522354,
+          "source_name": "Ula'tek",
+          "t_ms": 393506
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 254705,
+          "source_name": "Blightscale Rawling #53",
+          "t_ms": 389147
+        },
+        {
+          "ability_id": 1295838,
+          "ability_name": "Serpent's Bite",
+          "amount": 227309,
+          "source_name": "Ula'tek",
+          "t_ms": 392714
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 135198,
+          "source_name": "Blightscale Rawling #53",
+          "t_ms": 391144
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 135119,
+          "source_name": "Blightscale Rawling #53",
+          "t_ms": 393165
+        }
+      ],
+      "window_damage": 1781780,
+      "window_healing": 956449,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 3,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Aluriel",
+      "overkill": 222266,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:5",
+      "t_ms": 395075,
+      "time_to_die_ms": 1571,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 484333,
+          "source_name": "Environment",
+          "t_ms": 395015
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 429079,
+          "source_name": "Ula'tek",
+          "t_ms": 393506
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 46969,
+          "source_name": "Ula'tek",
+          "t_ms": 393826
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 42375,
+          "source_name": "Ula'tek",
+          "t_ms": 394002
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 40165,
+          "source_name": "Ula'tek",
+          "t_ms": 388005
+        }
+      ],
+      "window_damage": 1278473,
+      "window_healing": 324255,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 14,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Talyssah",
+      "overkill": 274183,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:6",
+      "t_ms": 395076,
+      "time_to_die_ms": 1573,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 418197,
+          "source_name": "Environment",
+          "t_ms": 394975
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 403945,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 55390,
+          "source_name": "Ula'tek",
+          "t_ms": 393825
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 45561,
+          "source_name": "Ula'tek",
+          "t_ms": 386016
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 45561,
+          "source_name": "Ula'tek",
+          "t_ms": 388003
+        }
+      ],
+      "window_damage": 1272627,
+      "window_healing": 433083,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 23,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Discô",
+      "overkill": 427809,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:7",
+      "t_ms": 395077,
+      "time_to_die_ms": 1743,
+      "top_hits": [
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 554954,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 289137,
+          "source_name": "Environment",
+          "t_ms": 394977
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 61519,
+          "source_name": "Ula'tek",
+          "t_ms": 394359
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 44347,
+          "source_name": "Ula'tek",
+          "t_ms": 387004
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 43017,
+          "source_name": "Ula'tek",
+          "t_ms": 388005
+        }
+      ],
+      "window_damage": 1243221,
+      "window_healing": 383414,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 33,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Mortamur",
+      "overkill": 252102,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:8",
+      "t_ms": 395078,
+      "time_to_die_ms": 1909,
+      "top_hits": [
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 386944,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 356105,
+          "source_name": "Environment",
+          "t_ms": 394973
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 52808,
+          "source_name": "Ula'tek",
+          "t_ms": 393826
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 36493,
+          "source_name": "Ula'tek",
+          "t_ms": 394001
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 18247,
+          "source_name": "Ula'tek",
+          "t_ms": 388004
+        }
+      ],
+      "window_damage": 993562,
+      "window_healing": 168470,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 24,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "unchecked_rage"
+      ],
+      "name": "Widowmaker",
+      "overkill": 63079,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:9",
+      "t_ms": 395078,
+      "time_to_die_ms": 1576,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 475901,
+          "source_name": "Environment",
+          "t_ms": 395022
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 383706,
+          "source_name": "Ula'tek",
+          "t_ms": 393507
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 45094,
+          "source_name": "Ula'tek",
+          "t_ms": 386014
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 45094,
+          "source_name": "Ula'tek",
+          "t_ms": 388004
+        },
+        {
+          "ability_id": 1286835,
+          "ability_name": "Necrotic Vapors",
+          "amount": 43471,
+          "source_name": "Ula'tek",
+          "t_ms": 390007
+        }
+      ],
+      "window_damage": 1226905,
+      "window_healing": 401595,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 42,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [
+        "calcified_corpse",
+        "necrotic_vapors",
+        "poisonous_bite",
+        "serpents_bite",
+        "unchecked_rage"
+      ],
+      "name": "Lesnichii",
+      "overkill": 325398,
+      "phase_id": "p3",
+      "ref": "ev:trMgApZCVYkv3jdq:18:death:10",
+      "t_ms": 395080,
+      "time_to_die_ms": 1871,
+      "top_hits": [
+        {
+          "ability_id": 1318329,
+          "ability_name": "Calcified Corpse",
+          "amount": 324665,
+          "source_name": "Environment",
+          "t_ms": 394978
+        },
+        {
+          "ability_id": 1301007,
+          "ability_name": "Unchecked Rage",
+          "amount": 305784,
+          "source_name": "Ula'tek",
+          "t_ms": 393506
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 187285,
+          "source_name": "Blightscale Rawling #52",
+          "t_ms": 393468
+        },
+        {
+          "ability_id": 1,
+          "ability_name": "Melee",
+          "amount": 92265,
+          "source_name": "Blightscale Rawling #52",
+          "t_ms": 391470
+        },
+        {
+          "ability_id": 1293146,
+          "ability_name": "Serpent's Bite",
+          "amount": 57155,
+          "source_name": "Ula'tek",
+          "t_ms": 393826
+        }
+      ],
+      "window_damage": 1342831,
+      "window_healing": 560752,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 398030,
+  "encounter_name": "Ula'tek",
+  "mechanics": [
+    {
+      "clusters": 7,
+      "damage_taken": 1314161,
+      "deaths_in_window": 0,
+      "failures": 13,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Dastard": 1,
+        "Discô": 1,
+        "Hugedonut": 1,
+        "Kindrella": 1,
+        "Lesnichii": 1,
+        "Mainmoon": 2,
+        "Mortamur": 1,
+        "Teppic": 1,
+        "Verrydis": 1
+      },
+      "hits": 35,
+      "mechanic_id": "deadly_venom",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:deadly_venom"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 2621122,
+      "deaths_in_window": 0,
+      "failures": 7,
+      "failures_by_player": {
+        "Cocodiablo": 2,
+        "Dastard": 2,
+        "Kouw": 1,
+        "Mekerakesh": 1,
+        "Widowmaker": 1
+      },
+      "hits": 8,
+      "mechanic_id": "virulent_spit",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:virulent_spit"
+    },
+    {
+      "clusters": 4,
+      "damage_taken": 860123,
+      "deaths_in_window": 0,
+      "failures": 7,
+      "failures_by_player": {
+        "Aluriel": 1,
+        "Cocodiablo": 1,
+        "Lesnichii": 1,
+        "Shinrael": 1,
+        "Snanth": 1,
+        "Talyssah": 1,
+        "Teppic": 1
+      },
+      "hits": 9,
+      "mechanic_id": "wardens_protection",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:wardens_protection"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 5261436,
+      "deaths_in_window": 0,
+      "failures": 5,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Dean": 1,
+        "Hugedonut": 1,
+        "Shinrael": 2
+      },
+      "hits": 57,
+      "mechanic_id": "caustic_waves",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:caustic_waves"
+    },
+    {
+      "clusters": 3,
+      "damage_taken": 1129637,
+      "deaths_in_window": 0,
+      "failures": 4,
+      "failures_by_player": {
+        "Cocodiablo": 1,
+        "Lesnichii": 1,
+        "Mekerakesh": 1,
+        "Shinrael": 1
+      },
+      "hits": 4,
+      "mechanic_id": "falling_debris",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:falling_debris"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 14396104,
+      "deaths_in_window": 19,
+      "failures": 2,
+      "failures_by_player": {
+        "Dean": 1,
+        "Teppic": 1
+      },
+      "hits": 38,
+      "mechanic_id": "calcified_corpse",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:calcified_corpse"
+    },
+    {
+      "clusters": 1,
+      "damage_taken": 8514784,
+      "deaths_in_window": 20,
+      "failures": 1,
+      "failures_by_player": {
+        "Shinrael": 1
+      },
+      "hits": 27,
+      "mechanic_id": "unchecked_rage",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:unchecked_rage"
+    },
+    {
+      "clusters": 2,
+      "damage_taken": 1360784,
+      "deaths_in_window": 0,
+      "failures": 1,
+      "failures_by_player": {
+        "Shinrael": 1
+      },
+      "hits": 35,
+      "mechanic_id": "desperate_thrash",
+      "ref": "ev:trMgApZCVYkv3jdq:18:mech:desperate_thrash"
+    }
+  ],
+  "outcome": "wipe",
+  "phase_reached": "p3",
+  "produced_from": {
+    "encfile_hash": "84163c7ea074",
+    "events_hash": "d824fa6e42ed0ca4b8d43507d03fce18f47ed84bbef28638055e66ed7c363a90",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "trMgApZCVYkv3jdq:18",
+  "unregistered": [
+    {
+      "ability_id": 98021,
+      "damage": 3969099,
+      "name": "Spirit Link",
+      "share_pct": 0.8
+    },
+    {
+      "ability_id": 1309786,
+      "damage": 3901476,
+      "name": "Refraction",
+      "share_pct": 0.8
+    },
+    {
+      "ability_id": 361029,
+      "damage": 1705751,
+      "name": "Time Dilation",
+      "share_pct": 0.3
+    },
+    {
+      "ability_id": 111400,
+      "damage": 682199,
+      "name": "Burning Rush",
+      "share_pct": 0.1
+    },
+    {
+      "ability_id": 1292299,
+      "damage": 350672,
+      "name": "Seriously Sharp Seashell",
+      "share_pct": 0.1
+    }
+  ]
+}

@@ -169,9 +169,16 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **Positions not kept yet (2026-10-11)**: `x`/`y`/`facing` are already in the raw pages, and keeping them would
   grow parquet by 39% and normalize time by about 2 s per night (measurements in `docs/wcl-api.md`). They would
   answer "was the aggro holder in melee range" directly. Waiting on a decision before adding them.
-- **M2.6 (legacy comparison) is blocked on H2**: it compares against real fixture pulls, which do not exist yet.
-- **M2 exit criteria waiting on humans**: H3 encounter file (<10% unregistered on real reports), real-fixture digest
-  goldens and the 1.5k-3k token check (H2), perf budgets (`-m perf`, written, skipped until H2), and M2.6.
+- **M2.6 (legacy comparison) is still open**: the real fixture pulls it needs now exist.
+- **Real-fixture goldens (2026-10-11)**: `tests/unit/encounter/test_real_fixtures.py` snapshots the first 20
+  normalized events and the full digest of every recorded fixture pull (`tests/golden/{normalized,digests}/
+  <code>_<fight>.json`), using the encounter files and registry under `config/`, and checks every rendered digest
+  stays under 3,000 tokens. It runs in the unit suite (about 10 s) and skips when the Git LFS pages are not pulled.
+  An edit to an encounter file or the registry changes these goldens; regenerate with `--update-goldens` and review
+  the digest diff. Fixture ingest (`tests/helpers/real_fixtures.py`, shared with the perf tests) reads enemy Casts
+  unfiltered, so editing an encounter file's ability IDs never leaves the fixtures without that data type.
+- **M2 exit criteria waiting on humans**: review of the H3 encounter file, plus the legacy comparison above.
+  Digest goldens, the token check and the perf budgets are done.
 
 ### M3 (analyst loop)
 

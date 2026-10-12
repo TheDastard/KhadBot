@@ -1,0 +1,621 @@
+{
+  "aggro": [
+    {
+      "npc": "Nymrissa Wavecaller",
+      "swings": 18,
+      "targets": [
+        {
+          "name": "Mekerakesh",
+          "share_pct": 77.8,
+          "swings": 14
+        },
+        {
+          "name": "Shinrael",
+          "share_pct": 16.7,
+          "swings": 3
+        },
+        {
+          "name": "Kindrella",
+          "share_pct": 5.6,
+          "swings": 1
+        }
+      ],
+      "taunts": {
+        "Mekerakesh": 3,
+        "Shinrael": 2
+      }
+    }
+  ],
+  "anomalies": [],
+  "boss_hp_pct": 78.33,
+  "boss_pct": 78.33,
+  "cooldowns": [],
+  "coverage": "none",
+  "coverage_windows": [],
+  "cutoff_ms": 91056,
+  "deaths": [
+    {
+      "active_defensives": [],
+      "actor_id": 15,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Moombly",
+      "overkill": 19006,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:1",
+      "t_ms": 47312,
+      "time_to_die_ms": 2943,
+      "top_hits": [
+        {
+          "ability_id": 1313448,
+          "ability_name": "Frost Orb",
+          "amount": 190316,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 47310
+        },
+        {
+          "ability_id": 1313393,
+          "ability_name": "Chilling Frost",
+          "amount": 151206,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 39524
+        },
+        {
+          "ability_id": 1313393,
+          "ability_name": "Chilling Frost",
+          "amount": 146921,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 42522
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 139465,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 47036
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 138304,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 45028
+        }
+      ],
+      "window_damage": 1559635,
+      "window_healing": 795766,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 22,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Dastard",
+      "overkill": 39566,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:2",
+      "t_ms": 88762,
+      "time_to_die_ms": 2247,
+      "top_hits": [
+        {
+          "ability_id": 1313448,
+          "ability_name": "Frost Orb",
+          "amount": 270057,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88630
+        },
+        {
+          "ability_id": 1313448,
+          "ability_name": "Frost Orb",
+          "amount": 240091,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88741
+        },
+        {
+          "ability_id": 1313448,
+          "ability_name": "Frost Orb",
+          "amount": 205793,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        },
+        {
+          "ability_id": 1313448,
+          "ability_name": "Frost Orb",
+          "amount": 169779,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 86636
+        },
+        {
+          "ability_id": 1313393,
+          "ability_name": "Chilling Frost",
+          "amount": 168129,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 83558
+        }
+      ],
+      "window_damage": 1906310,
+      "window_healing": 957324,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 10,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Wilmer",
+      "overkill": 128339,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:3",
+      "t_ms": 90111,
+      "time_to_die_ms": 2135,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 167528,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 166990,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88036
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 156568,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88742
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 156568,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89714
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 156065,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        }
+      ],
+      "window_damage": 968025,
+      "window_healing": 74229,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 226,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Snanth",
+      "overkill": 75474,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:4",
+      "t_ms": 90112,
+      "time_to_die_ms": 4098,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 137609,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 137107,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88035
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 130379,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89714
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 128606,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88743
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 128136,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88087
+        }
+      ],
+      "window_damage": 890748,
+      "window_healing": 58208,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 6,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Lesnichii",
+      "overkill": 49830,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:5",
+      "t_ms": 90113,
+      "time_to_die_ms": 2379,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 159144,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88036
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 149596,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 148733,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 86636
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 148733,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 148733,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88742
+        }
+      ],
+      "window_damage": 994513,
+      "window_healing": 167433,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 2,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Verrydis",
+      "overkill": 60643,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:6",
+      "t_ms": 90114,
+      "time_to_die_ms": 3677,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 165131,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88035
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 165131,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 154329,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89714
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 154328,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 154328,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88742
+        }
+      ],
+      "window_damage": 1047159,
+      "window_healing": 122319,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 5,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Kouw",
+      "overkill": 34892,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:7",
+      "t_ms": 90182,
+      "time_to_die_ms": 2198,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 160028,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88036
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 153626,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 150426,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 90090
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 149559,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 143577,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88742
+        }
+      ],
+      "window_damage": 1062177,
+      "window_healing": 165717,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 12,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Mainmoon",
+      "overkill": 46015,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:8",
+      "t_ms": 90183,
+      "time_to_die_ms": 2859,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 150553,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88036
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 150552,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 90090
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 143025,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 140704,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88086
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 140703,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89714
+        }
+      ],
+      "window_damage": 970608,
+      "window_healing": 120108,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 8,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Talyssah",
+      "overkill": 12255,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:9",
+      "t_ms": 90184,
+      "time_to_die_ms": 2148,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 164175,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88036
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 163149,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 163148,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 90089
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 152475,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88087
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 152475,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88742
+        }
+      ],
+      "window_damage": 1069856,
+      "window_healing": 206716,
+      "window_ms": 10000
+    },
+    {
+      "active_defensives": [],
+      "actor_id": 4,
+      "after_cutoff": false,
+      "killing_ability_id": 0,
+      "killing_ability_name": "Unknown Ability",
+      "mechanic_ids": [],
+      "name": "Mortamur",
+      "overkill": 6217,
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:death:10",
+      "t_ms": 90185,
+      "time_to_die_ms": 4105,
+      "top_hits": [
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 141591,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 90090
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 141590,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89039
+        },
+        {
+          "ability_id": 1260843,
+          "ability_name": "Abyssal Rain",
+          "amount": 133095,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 88035
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 132328,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 89715
+        },
+        {
+          "ability_id": 1313450,
+          "ability_name": "Frost Burst",
+          "amount": 124388,
+          "source_name": "Nymrissa Wavecaller",
+          "t_ms": 86636
+        }
+      ],
+      "window_damage": 988476,
+      "window_healing": 144056,
+      "window_ms": 10000
+    }
+  ],
+  "duration_ms": 123903,
+  "encounter_name": "Nymrissa Wavecaller",
+  "mechanics": [],
+  "outcome": "wipe",
+  "phase_reached": null,
+  "produced_from": {
+    "encfile_hash": "none",
+    "events_hash": "db1f51d12e97569b80678e1f99b59a442d4a607b180d2735b927684f2fdf43ad",
+    "registry_hash": "7e9178662e3f"
+  },
+  "pull_key": "H7z1fqDXjRTFnbtg:23",
+  "unregistered": [
+    {
+      "ability_id": 1260843,
+      "damage": 65660294,
+      "name": "Abyssal Rain",
+      "share_pct": 49.7
+    },
+    {
+      "ability_id": 1313450,
+      "damage": 36934631,
+      "name": "Frost Burst",
+      "share_pct": 27.9
+    },
+    {
+      "ability_id": 1271458,
+      "damage": 8785726,
+      "name": "Water Jet",
+      "share_pct": 6.6
+    },
+    {
+      "ability_id": 1313448,
+      "damage": 8588857,
+      "name": "Frost Orb",
+      "share_pct": 6.5
+    },
+    {
+      "ability_id": 1,
+      "damage": 3891558,
+      "name": "Melee",
+      "share_pct": 2.9
+    }
+  ]
+}
