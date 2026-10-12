@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_query_tools.py
+tests/unit/encounter/analyst/test_query_tools.py
 
 Analyst query tools on SYNTH01: the capped envelope (rows and characters, truncated/total/note),
 scope enforcement, each tool's filters and failure paths, the 30 s event window limit, and refs on
@@ -12,9 +12,9 @@ import json
 
 import pytest
 
-from khadbot.encounter import query_tools as qt
+from khadbot.encounter.analyst import query_tools as qt
+from khadbot.encounter.analyst.query_tools import AnalystScope, envelope
 from khadbot.encounter.models import ToolResult
-from khadbot.encounter.query_tools import AnalystScope, envelope
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 """
-encounter/query_tools.py
+encounter/analyst/query_tools.py
 
 Analyst query tools (plan section 6.6). They read only from the event store and annotations,
 through ``EncounterData``; none of them can reach WCL.

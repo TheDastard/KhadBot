@@ -42,6 +42,10 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `pipeline.py`) live in `encounter/ingest/`, under the module layout rule in CLAUDE.md. App code imports
   `ingest_report` and `default_store` from the package. `EVENT_SCHEMA` and `empty_events` moved from `normalize`
   to `store`, which owns the schema it persists, so the shared store never imports ingest internals.
+- **Analyst package (2026-10-11)**: `analyst.py` (now `graph.py`), `query_tools` and `versioning` live in
+  `encounter/analyst/`. App code imports `run_analysis`, `review` and `estimate_review_cost` from the package;
+  tests that patch module attributes import `analyst.graph` itself. Tool names, docstrings and argument schemas
+  are unchanged, so the prompt version and the findings cache key are too.
 
 ### M2 (encounter file, annotation, digest)
 

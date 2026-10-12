@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_versioning.py
+tests/unit/encounter/analyst/test_versioning.py
 
 prompt_version: stable, 12 hex, and sensitive to prompts, tool docstrings, tool argument schemas,
 the role and VERIFY_RULES_VERSION, but not to tool order.
@@ -11,9 +11,9 @@ import re
 
 from langchain_core.tools import tool
 
-from khadbot.encounter import versioning
-from khadbot.encounter.query_tools import build_analyst_tools
-from khadbot.encounter.versioning import prompt_version
+from khadbot.encounter.analyst import versioning
+from khadbot.encounter.analyst.query_tools import build_analyst_tools
+from khadbot.encounter.analyst.versioning import prompt_version
 
 
 @tool

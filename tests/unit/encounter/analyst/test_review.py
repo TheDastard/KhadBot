@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_review.py
+tests/unit/encounter/analyst/test_review.py
 
 The review graph on SYNTH01 with a reactive fake model: per-pull analysis is cached, each cache-key
 input invalidates it, the concurrency cap holds, flagged findings are excluded and regenerated, and
@@ -20,8 +20,8 @@ from helpers.findings import make
 from helpers.review_fakes import P1, P2, kind_of, query, respond
 from langchain_core.messages import AIMessage, SystemMessage
 
-from khadbot.encounter import analyst
-from khadbot.encounter.analyst import (
+from khadbot.encounter.analyst import graph as analyst
+from khadbot.encounter.analyst.graph import (
     NO_PULLS,
     NO_STRUCTURED_REPORT,
     OUTPUT_TOKENS_PER_PULL,
@@ -30,9 +30,9 @@ from khadbot.encounter.analyst import (
     render_findings,
     review,
 )
+from khadbot.encounter.analyst.query_tools import build_analyst_tools
 from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.models import AnalysisRequest
-from khadbot.encounter.query_tools import build_analyst_tools
 
 
 def kinds(model: ReactiveFakeModel) -> list[str]:

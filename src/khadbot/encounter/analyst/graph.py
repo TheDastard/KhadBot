@@ -1,5 +1,5 @@
 """
-encounter/analyst.py
+encounter/analyst/graph.py
 
 The encounter analyst: a LangGraph subgraph that investigates one question about one or more
 pulls through the read-only query tools and ends by calling ``submit_report``.
@@ -50,6 +50,8 @@ from pydantic import ValidationError
 
 from khadbot import llm_factory
 from khadbot.config import EncounterConfig
+from khadbot.encounter.analyst.query_tools import AnalystScope, SubmitReportArgs, build_analyst_tools, list_pulls_result
+from khadbot.encounter.analyst.versioning import GRAPH_VERSION, prompt_version
 from khadbot.encounter.digest import render_digest
 from khadbot.encounter.evidence import (
     EncounterData,
@@ -68,9 +70,7 @@ from khadbot.encounter.models import (
     PullFindings,
     ToolResult,
 )
-from khadbot.encounter.query_tools import AnalystScope, SubmitReportArgs, build_analyst_tools, list_pulls_result
 from khadbot.encounter.store import EventStore
-from khadbot.encounter.versioning import GRAPH_VERSION, prompt_version
 
 STEP_BUDGETS: dict[str, int] = {"quick": 4, "standard": 8, "deep": 16}
 SUBMIT_TOOL = "submit_report"

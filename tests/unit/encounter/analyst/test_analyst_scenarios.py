@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_analyst_scenarios.py
+tests/unit/encounter/analyst/test_analyst_scenarios.py
 
 The analyst graph driven by a scripted model (FakeToolModel) on SYNTH01: a normal investigation,
 budget exhaustion, a hallucinated ref rejected and retried once, a truncated result followed by a
@@ -21,8 +21,8 @@ from helpers.fake_llm import FakeToolModel, make_fake
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
-from khadbot.encounter import analyst
-from khadbot.encounter.analyst import (
+from khadbot.encounter.analyst import graph as analyst
+from khadbot.encounter.analyst.graph import (
     BUDGET_PROMPT,
     IGNORED,
     NO_PULLS,
@@ -30,9 +30,9 @@ from khadbot.encounter.analyst import (
     analyst_prompt_version,
     run_analysis,
 )
+from khadbot.encounter.analyst.query_tools import build_analyst_tools
+from khadbot.encounter.analyst.versioning import GRAPH_VERSION
 from khadbot.encounter.models import AnalysisRequest
-from khadbot.encounter.query_tools import build_analyst_tools
-from khadbot.encounter.versioning import GRAPH_VERSION
 
 ALL_TOOLS = [t.name for t in build_analyst_tools()]
 P1, P2 = "SYNTH01:1", "SYNTH01:2"
@@ -317,7 +317,7 @@ async def test_ignored_calls_get_replies(synth_data, role_fakes):
     ignored = call("query_deaths", pull=P1)
     accepted = call("submit_report", findings=[], unknowns=["n/a"])
     role_fakes["analyst"] = make_fake([turn(ignored, accepted)])
-    from khadbot.encounter.analyst import AnalystRun, build_analyst_graph, model_id_of
+    from khadbot.encounter.analyst.graph import AnalystRun, build_analyst_graph, model_id_of
 
     model = role_fakes["analyst"]
     run = AnalystRun(synth_data, model, model_id_of(model), analyst_prompt_version(), tuple(build_analyst_tools()))
