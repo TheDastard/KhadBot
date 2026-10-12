@@ -94,4 +94,4 @@ Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Ta
 
 ## Git
 
-Commit rules are in `.claude/rules/git-commits.md`. In short: `[KB] <Imperative summary>`, a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
+Commit rules are in `.claude/rules/git-commits.md`. In short: `[KB][<tag>] <Imperative summary>` with a lowercase system or module tag from that file, a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
