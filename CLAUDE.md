@@ -41,6 +41,7 @@ config/
 scripts/             # WCL fixture recorder, distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
+docs/follow-ups.md   # open work: encounter system and per-encounter gaps
 ```
 
 Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events, annotations, and the findings and checkpoint SQLite databases.
@@ -49,6 +50,7 @@ Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignore
 
 - The design and its data contracts come from the "KhadBot Encounter Review Refactor" plan: https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE (read it with the Artifact tool). Section 6 defines the models, file formats, evidence refs and verify rules.
 - `docs/decisions.md` records each design decision and why it was made. When you change a decision, update that file in the same change.
+- `docs/follow-ups.md` tracks open work that is not a plan task yet. Add a gap you are not fixing; remove it in the commit that fixes it.
 - Path-scoped rules in `.claude/rules/` add detail for the area you are working in.
 
 ## Commands
