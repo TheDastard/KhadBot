@@ -187,7 +187,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   <code>_<fight>.json`), using the encounter files and registry under `config/`, and checks every rendered digest
   stays under 3,000 tokens. It runs in the unit suite (about 10 s) and skips when the Git LFS pages are not pulled.
   An edit to an encounter file or the registry changes these goldens; regenerate with `--update-goldens` and review
-  the digest diff. Fixture ingest (`tests/helpers/real_fixtures.py`, shared with the perf tests) reads enemy Casts
+  the digest diff. Fixture ingest (`tests/helpers/encounter/real_fixtures.py`, shared with the perf tests) reads enemy Casts
   unfiltered, so editing an encounter file's ability IDs never leaves the fixtures without that data type.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
@@ -247,7 +247,7 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   rejections stand. A forced final turn that calls anything but `submit_report` ends with
   `unknowns=["no structured report"]` and `partial=True`. Other tool calls made alongside `submit_report` are
   answered "ignored" and not run.
-- **Golden eval harness**: question schema, loading and the deterministic checks live in `tests/helpers/golden.py`
+- **Golden eval harness**: question schema, loading and the deterministic checks live in `tests/helpers/encounter/golden.py`
   (unit-tested on SYNTH01); `tests/eval/` runs them on a real analyst model. Eval tests carry an `eval` marker and,
   like `perf`, are skipped unless selected (`-m eval`; `make test-eval` passes it). Recorded reports the questions
   name are ingested offline into a session store. The pass rate per model and ref-resolution counts are printed

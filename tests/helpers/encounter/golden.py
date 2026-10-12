@@ -1,5 +1,5 @@
 """
-tests/helpers/golden.py
+tests/helpers/encounter/golden.py
 
 Golden questions for the analyst eval: the question file schema, loading, and the deterministic
 checks applied to each analyst report. Used by tests/eval (real models) and unit-tested on SYNTH01.
@@ -33,7 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from khadbot.encounter.evidence import EncounterData, UnresolvableRef, parse_ref
 from khadbot.encounter.models import AnalysisReport, Depth
 
-QUESTIONS_FILE = Path(__file__).resolve().parents[1] / "golden" / "questions.yaml"
+QUESTIONS_FILE = Path(__file__).resolve().parents[2] / "golden" / "questions.yaml"
 
 QuestionKind = Literal["single_pull", "cross_pull", "cooldown", "plan", "unknown_unknown", "unanswerable"]
 

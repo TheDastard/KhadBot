@@ -1,5 +1,5 @@
 """
-tests/helpers/review_fakes.py
+tests/helpers/encounter/review_fakes.py
 
 Replies for a ReactiveFakeModel that plays the analyst in review tests on SYNTH01: one cited
 ``pull`` ref per pull analysis, and one finding citing every pull for the synthesis.

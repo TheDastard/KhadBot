@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 
 import pytest
-from helpers.findings import make
+from helpers.encounter.findings import make
 
 from khadbot.encounter.findings import FindingsStore, cache_key
 

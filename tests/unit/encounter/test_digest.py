@@ -12,7 +12,7 @@ import orjson
 import polars as pl
 import pytest
 import yaml
-from helpers.synth import GOLDEN, SYNTH_ENCOUNTER_FILE, install_synth_encounter
+from helpers.encounter.synth import GOLDEN, SYNTH_ENCOUNTER_FILE, install_synth_encounter
 
 from khadbot.encounter import digest as digest_mod
 from khadbot.encounter.config_files import encfile_hash, load_encounter_file, registry_hash

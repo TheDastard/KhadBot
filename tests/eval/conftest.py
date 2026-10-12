@@ -24,8 +24,8 @@ from pathlib import Path
 
 import orjson
 import pytest
-from helpers.golden import GoldenOutcome, GoldenQuestion, load_questions, pass_rate
-from helpers.synth import (
+from helpers.encounter.golden import GoldenOutcome, GoldenQuestion, load_questions, pass_rate
+from helpers.encounter.synth import (
     FIXTURES,
     SYNTH_ENEMY_CAST_IDS,
     SYNTH_REGISTRY_FILE,

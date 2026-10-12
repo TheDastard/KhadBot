@@ -3,7 +3,7 @@ tests/eval/test_golden.py
 
 Golden-question eval for the analyst. Each question runs the analyst graph with the real
 analyst-role model on recorded reports, then applies the deterministic checks from
-tests/helpers/golden.py. Cited refs must always resolve; the pass rate per model is printed at
+tests/helpers/encounter/golden.py. Cited refs must always resolve; the pass rate per model is printed at
 the end and gated by KHADBOT_EVAL_MIN_PASS_RATE when it is set.
 
 Run deliberately: ``uv run pytest tests/eval -m eval`` (``make test-eval``).
@@ -14,7 +14,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from helpers.golden import check_report, load_questions, min_pass_rate, pass_rate
+from helpers.encounter.golden import check_report, load_questions, min_pass_rate, pass_rate
 
 from khadbot.encounter.analyst import run_analysis
 from khadbot.encounter.models import AnalysisRequest

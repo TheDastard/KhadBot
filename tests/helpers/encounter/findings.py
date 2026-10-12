@@ -1,5 +1,5 @@
 """
-tests/helpers/findings.py
+tests/helpers/encounter/findings.py
 
 Builder for PullFindings rows used by the findings store and review tests.
 """

@@ -10,7 +10,7 @@ from __future__ import annotations
 import shutil
 
 import pytest
-from helpers.synth import FIXTURES, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
+from helpers.encounter.synth import FIXTURES, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
 
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
@@ -50,7 +50,7 @@ async def synth_ingested(synth_ingest_kwargs, synth_store) -> ParquetEventStore:
 
 @pytest.fixture
 def synth_enc():
-    from helpers.synth import SYNTH_ENCOUNTER_FILE
+    from helpers.encounter.synth import SYNTH_ENCOUNTER_FILE
 
     from khadbot.encounter.config_files import load_encounter_file
 
@@ -59,7 +59,7 @@ def synth_enc():
 
 @pytest.fixture
 def synth_registry():
-    from helpers.synth import SYNTH_REGISTRY_FILE
+    from helpers.encounter.synth import SYNTH_REGISTRY_FILE
 
     from khadbot.encounter.config_files import load_registry
 
@@ -69,7 +69,7 @@ def synth_registry():
 @pytest.fixture
 def synth_enc_root(tmp_path):
     """Encounter-file root holding only the synthetic encounter file, at its canonical path."""
-    from helpers.synth import install_synth_encounter
+    from helpers.encounter.synth import install_synth_encounter
 
     root = tmp_path / "synth_encounters"
     install_synth_encounter(root)

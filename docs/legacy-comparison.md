@@ -14,7 +14,7 @@ Run on 2026-10-11.
   unmodified, with every GraphQL response captured so the inputs to each pass could be inspected. 7 pulls cost
   173 points (about 25 per pull, against about 14 per pull for a full ingest; see `docs/wcl-api.md`). The
   reports are finished logs, so the live data is the data the fixtures were recorded from.
-- **Digest side**: the fixture pulls ingested offline (`tests/helpers/real_fixtures.py`), then
+- **Digest side**: the fixture pulls ingested offline (`tests/helpers/encounter/real_fixtures.py`), then
   `build_pull_records` with the authored encounter files and cooldown registry under `config/`. The registry's
   spell IDs are exactly the legacy `MAJOR_COOLDOWN_IDS`, so both sides track the same 17 cooldowns.
 - Deaths are matched by player name and time (within 50 ms). The comparison scripts were one-off and are not

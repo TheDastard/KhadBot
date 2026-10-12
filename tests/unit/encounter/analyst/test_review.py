@@ -15,9 +15,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from helpers.encounter.findings import make
+from helpers.encounter.review_fakes import P1, P2, kind_of, query, respond
 from helpers.fake_llm import ReactiveFakeModel
-from helpers.findings import make
-from helpers.review_fakes import P1, P2, kind_of, query, respond
 from langchain_core.messages import AIMessage, SystemMessage
 
 from khadbot.encounter.analyst import graph as analyst

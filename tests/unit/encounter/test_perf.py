@@ -19,7 +19,7 @@ import statistics
 import time
 
 import pytest
-from helpers.real_fixtures import REAL_REPORTS, ingest_fixture
+from helpers.encounter.real_fixtures import REAL_REPORTS, ingest_fixture
 
 from khadbot.encounter.analyst import query_tools as qt
 from khadbot.encounter.analyst.query_tools import AnalystScope

@@ -8,7 +8,7 @@ on SYNTH01 and on small hand-written frames for edge cases (battle res, no HP da
 from __future__ import annotations
 
 import pytest
-from helpers.events import BOSS, make_actors, make_events, make_pull
+from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
 
 from khadbot.encounter.analysis.aggro import aggro_bands, aggro_holder, aggro_summaries
 from khadbot.encounter.analysis.cooldowns import aura_intervals, cooldown_uses, window_coverage
@@ -414,7 +414,7 @@ def test_aggro_bands_match_wcl_threat_table(code, fight, wcl_bands, differing):
     import tempfile
     from pathlib import Path
 
-    from helpers.synth import FIXTURES
+    from helpers.encounter.synth import FIXTURES
 
     from khadbot.encounter.commands import default_filter_kwargs
     from khadbot.encounter.ingest import ingest_report

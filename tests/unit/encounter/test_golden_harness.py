@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import pytest
 import yaml
-from helpers.fake_llm import make_fake
-from helpers.golden import (
+from helpers.encounter.golden import (
     QUESTIONS_FILE,
     GoldenOutcome,
     GoldenQuestion,
@@ -20,6 +19,7 @@ from helpers.golden import (
     min_pass_rate,
     pass_rate,
 )
+from helpers.fake_llm import make_fake
 from langchain_core.messages import AIMessage
 
 from khadbot.encounter.analyst import run_analysis

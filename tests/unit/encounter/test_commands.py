@@ -189,8 +189,8 @@ class TestReviewCommand:
 
     @pytest.fixture
     def fake(self, role_fakes, events):
+        from helpers.encounter.review_fakes import respond
         from helpers.fake_llm import ReactiveFakeModel
-        from helpers.review_fakes import respond
 
         def logging_respond(messages, tools):
             events.append("model call")
