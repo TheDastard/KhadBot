@@ -34,7 +34,7 @@ from khadbot.encounter.analysis.mechanics import mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.config_files import CooldownRegistry, encfile_hash, load_encounter_view, load_registry
 from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
-from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, make_ref
+from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
 
 __all__ = [
@@ -144,9 +144,9 @@ def event_row(r: PullRecords, row: dict[str, Any]) -> dict[str, Any]:
         "type": row["type"],
     }
     if row["source_id"] is not None:
-        out["source"] = names.get(row["source_id"], f"actor-{row['source_id']}")
+        out["source"] = actor_label(names, row["source_id"], row.get("source_instance"))
     if row["target_id"] is not None:
-        out["target"] = names.get(row["target_id"], f"actor-{row['target_id']}")
+        out["target"] = actor_label(names, row["target_id"], row.get("target_instance"))
     if row["ability_id"] is not None and row["ability_id"] in r.abilities:
         out["ability"] = r.abilities[row["ability_id"]]
     for field in _EVENT_FIELDS:
@@ -160,7 +160,7 @@ def event_row(r: PullRecords, row: dict[str, Any]) -> dict[str, Any]:
 
 
 def pull_summary(r: PullRecords) -> dict[str, Any]:
-    """What a ``pull`` ref resolves to: outcome, length, progress and death counts."""
+    """What a ``pull`` ref resolves to: outcome, length, progress, death counts and aggro."""
     d = r.digest
     return {
         "ref": make_ref(d.pull_key, "pull"),
@@ -175,6 +175,7 @@ def pull_summary(r: PullRecords) -> dict[str, Any]:
         "deaths_before_cutoff": sum(1 for x in r.deaths if not x.after_cutoff),
         "coverage": d.coverage,
         "anomalies": list(d.anomalies),
+        "aggro": [g.model_dump(mode="json") for g in d.aggro],
     }
 
 

@@ -198,7 +198,12 @@ def test_query_events_total_is_full_window_count(scope, synth_data):
 
 def test_query_events_filters(scope):
     deaths = qt.query_events_result(scope, "SYNTH01:1", 0, 30_000, types=["death"])
-    assert [(r["t_ms"], r["target"]) for r in deaths.data] == [(8000, "Alphadps"), (23000, "Gammadps")]
+    # The add's death comes from the Threat data and is named with its instance.
+    assert [(r["t_ms"], r["target"]) for r in deaths.data] == [
+        (8000, "Alphadps"),
+        (23000, "Gammadps"),
+        (30000, "Synthetic Add #1"),
+    ]
     swirl = qt.query_events_result(scope, "SYNTH01:1", 0, 12_000, actor="Alphadps", ability_id=900101)
     assert [(r["t_ms"], r["type"]) for r in swirl.data] == [(5000, "damage"), (8000, "death"), (8000, "damage")]
     swirls = qt.query_events_result(

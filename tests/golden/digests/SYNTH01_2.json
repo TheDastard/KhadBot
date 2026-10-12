@@ -1,4 +1,25 @@
 {
+  "aggro": [
+    {
+      "npc": "Synthetic Boss",
+      "swings": 42,
+      "targets": [
+        {
+          "name": "Tankyboi",
+          "share_pct": 97.6,
+          "swings": 41
+        },
+        {
+          "name": "Alphadps",
+          "share_pct": 2.4,
+          "swings": 1
+        }
+      ],
+      "taunts": {
+        "Alphadps": 1
+      }
+    }
+  ],
   "anomalies": [],
   "boss_pct": 0.0,
   "cooldowns": [
@@ -117,7 +138,7 @@
   "phase_reached": "p2",
   "produced_from": {
     "encfile_hash": "259ca9f00444",
-    "events_hash": "49a38ac3b9b546d2a3a780769b4887ece58e71c8c51730d4cd61da4afd8ebf22",
+    "events_hash": "826ce251c49a7cdf44b0b5b036ba62b54d7d8fb3622cf96bf8979e6ec4407c5c",
     "registry_hash": "c0b89b4ecf2c"
   },
   "pull_key": "SYNTH01:2",

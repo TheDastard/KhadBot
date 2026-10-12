@@ -17,7 +17,7 @@ import polars as pl
 from khadbot.encounter.analysis.cooldowns import aura_intervals
 from khadbot.encounter.annotate import Annotated, type_is
 from khadbot.encounter.config_files import CooldownRegistry
-from khadbot.encounter.models import Actor, DeathRecord, Hit, make_ref
+from khadbot.encounter.models import Actor, DeathRecord, Hit, actor_label, make_ref
 
 DEATH_WINDOW_MS = 10_000
 TOP_HITS = 5
@@ -71,7 +71,9 @@ def death_records(
                 ability_id=r["ability_id"],
                 ability_name=abilities.get(r["ability_id"]),
                 amount=r["amount"],
-                source_name=names.get(r["source_id"]),
+                source_name=actor_label(names, r["source_id"], r.get("source_instance"))
+                if r["source_id"] is not None
+                else None,
             )
             for r in top.head(TOP_HITS).iter_rows(named=True)
         ]

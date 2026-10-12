@@ -59,6 +59,9 @@ DEFAULT_SPECS: list[FetchSpec] = [
     FetchSpec(data_type="Interrupts"),
     FetchSpec(data_type="Dispels"),
     FetchSpec(data_type="Healing"),
+    # Friendlies Threat: NPC melee swings at players (misses included) and taunts. The Enemies side is
+    # player threat generation, about 40 times larger, and is not fetched.
+    FetchSpec(data_type="Threat"),
 ]
 
 
