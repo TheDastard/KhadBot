@@ -7,7 +7,7 @@ Phase detection: each trigger type, ordering, an unmatched trigger, and SYNTH01.
 from __future__ import annotations
 
 import pytest
-from helpers.events import BOSS, make_events, make_pull
+from helpers.encounter.events import BOSS, make_events, make_pull
 
 from khadbot.encounter.config_files import parse_encounter
 from khadbot.encounter.phases import boss_ids_of, detect_phases, unmatched_phase

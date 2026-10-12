@@ -1,5 +1,5 @@
 """
-tests/helpers/events.py
+tests/helpers/encounter/events.py
 
 Builders for small, hand-written event frames and pulls, for unit tests that need exact
 control over a handful of events rather than the whole SYNTH01 fixture.

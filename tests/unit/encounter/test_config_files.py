@@ -11,7 +11,7 @@ import copy
 
 import pytest
 import yaml
-from helpers.synth import (
+from helpers.encounter.synth import (
     SYNTH_ENCOUNTER_FILE,
     SYNTH_ENCOUNTER_ID,
     SYNTH_ENCOUNTER_RELPATH,

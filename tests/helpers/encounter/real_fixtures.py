@@ -1,5 +1,5 @@
 """
-tests/helpers/real_fixtures.py
+tests/helpers/encounter/real_fixtures.py
 
 The recorded WCL fixtures under tests/fixtures/wcl/<code>/ (every report directory except SYNTH01): which reports
 are usable, which fights have pages, and an offline ingest of those fights.
@@ -10,7 +10,7 @@ instead, so such a report counts as absent and the tests that need it skip.
 
 from __future__ import annotations
 
-from helpers.synth import FIXTURES
+from helpers.encounter.synth import FIXTURES
 from khadbot.encounter.config_files import load_registry
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import RawPageCache
