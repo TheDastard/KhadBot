@@ -12,6 +12,7 @@ Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisRep
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Literal
 
@@ -21,7 +22,7 @@ from pydantic import BaseModel, Field
 # Ingest models
 # ---------------------------------------------------------------------------
 
-DataType = Literal["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing"]
+DataType = Literal["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing", "Threat"]
 
 
 class Pull(BaseModel):
@@ -91,6 +92,12 @@ class PhaseSpan(BaseModel):
 # ---------------------------------------------------------------------------
 
 Ref = str  # evidence reference, see make_ref and plan section 6.5
+
+
+def actor_label(names: Mapping[int, str], actor_id: int, instance: int | None = None) -> str:
+    """An actor's name, with its WCL instance number when several NPCs share one actor (``Rawling #3``)."""
+    name = names.get(actor_id, f"actor-{actor_id}")
+    return f"{name} #{instance}" if instance is not None else name
 
 
 def make_ref(pull_key: str, *parts: object) -> Ref:
@@ -180,6 +187,32 @@ class UnregisteredAbility(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class AggroTarget(BaseModel):
+    name: str
+    swings: int
+    share_pct: float  # of the NPC's melee swings, 1 decimal
+
+
+class AggroBand(BaseModel):
+    """A span during which one NPC instance was attacking one player (or pet), from the Threat data."""
+
+    npc_id: int
+    npc_instance: int | None
+    player_id: int
+    start_ms: int
+    end_ms: int
+    start: Literal["melee", "taunt"]  # what gave the player aggro
+
+
+class AggroSummary(BaseModel):
+    """Who one boss NPC attacked and who taunted it, from the Threat data."""
+
+    npc: str
+    swings: int  # melee swing attempts, including misses
+    targets: list[AggroTarget]  # cap 3, by swings desc
+    taunts: dict[str, int]  # player name -> taunts that landed on the NPC
+
+
 class PullDigest(BaseModel):
     pull_key: str
     encounter_name: str
@@ -193,6 +226,7 @@ class PullDigest(BaseModel):
     cooldowns: list[CooldownUse]  # cap 30
     coverage_windows: list[WindowCoverage]
     unregistered: list[UnregisteredAbility]  # cap 5
+    aggro: list[AggroSummary] = []  # one per boss NPC that swung at a player
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
     produced_from: dict[str, str]  # events_hash, encfile_hash, registry_hash

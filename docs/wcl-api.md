@@ -82,3 +82,61 @@ no encounter file existed yet) and `scripts/spike_wcl_cost.py` (no filters).
   pages are concatenated per pull.
 - Parsing one long pull's pages: stdlib `json` 1.58 s, `orjson` 0.56 s. Normalizing it: 2.3 s.
 - Digest per pull (no encounter file yet): 0.1 to 0.7 s and about 850 to 1,250 tokens.
+
+## Threat data (2026-10-11)
+
+`dataType: Threat` is in the live `EventDataType` enum. Probed on `trMgApZCVYkv3jdq:18` through `events`,
+`table` and `graph`. **Nothing in it is a threat amount.** WCL's "threat" is target tracking: who is attacking
+whom. `hostilityType` picks the direction.
+
+| | Friendlies: NPCs attacking players | Enemies: players and pets attacking NPCs |
+|---|---|---|
+| `events` | 348 events, 0.1 MB. NPC melee swings as `cast` with `melee: true`, `abilityGameID: 1` (misses included: 30 Ula'tek swings against 29 melee damage rows); players' taunt casts; the taunt debuff landing on the NPC (`applydebuff`, player to NPC); **NPC** deaths. | 12.7k events, 4.9 MB, 2 pages. `cast` events from players and pets aimed at an NPC, including auto-attacks (4.8k) and pet spells (Fel Firebolt 1.8k); NPC-caused deaths. |
+| `table` | Per player, per NPC type: bands of time that NPC was attacking the player (aggro), each with start and end event. 23 kB. | Per NPC, per player or pet: bands of time they were attacking it. 551 kB. |
+| `graph` | Per player: how many NPCs were on them, as a count rising by 1 (max 8). | Per NPC: how many players and pets were on it (max 64 on Ula'tek). |
+
+- No event carries an amount: only identity fields, `melee`, instance numbers and the resource snapshot. The
+  Enemies side also leaves out healing (no Chain Heal, Prayer of Mending) and tank abilities with no single
+  target (Revenge, Thrash, Ironfur), so it is not a feed for computing threat by hand.
+- KhadBot fetches the Friendlies `events`, about 1 point per pull. Normalize drops the players' taunt casts
+  (they repeat the Casts data) and keeps NPC swings, taunt debuffs and NPC deaths (no other data type has NPC
+  deaths; the Deaths fetch is players only). The probe of all four views cost 14.8 points; both `events` sides
+  cost 5.
+- **WCL's aggro bands start on an NPC melee swing or a taunt debuff landing**, nothing else. On the probe pull
+  Shinrael holds Ula'tek from the Growl at 390.74 s to 397.14 s although Ula'tek never swung at Shinrael; the
+  Unchecked Rage at 393.5 s falls inside it. A band ends at a switch to another player, the NPC's death, or,
+  after a quiet spell, somewhere after its last event. `encounter/analysis/aggro.py` rebuilds the bands from the
+  Friendlies events, ending a quiet band at its last event after 20 s without a swing or taunt. Merged per NPC
+  type and player and compared with WCL's table on three pulls from three nights:
+
+  | Pull | WCL bands | Exact match | Share of WCL aggro time | Time ours calls aggro that WCL doesn't | Boss time on a different player |
+  |---|---|---|---|---|---|
+  | `trMgApZCVYkv3jdq:18` | 36 | 35 | 99.1% | 0 | 0 s |
+  | `H7z1fqDXjRTFnbtg:20` (kill) | 67 | 65 | 95.1% | 0 | 0 s |
+  | `QkVa6GHRK8yfrTbw:20` | 41 | 40 | 99.4% | 0 | 0 s |
+
+  Every difference is WCL keeping a holder longer after the NPC stops swinging: Gore Rattle on Mekerakesh at
+  the same point of Stage One in all three pulls (WCL holds about 20 s past the band's start: 132.58 s against
+  ours 127.71 s; 131.87 against 114.03; 131.78 against 128.18), and Ula'tek in the kill's last 24 s (WCL holds
+  to the pull end). No event in the stored data, the unfiltered enemy casts or the Enemies-side Threat events
+  explains where WCL ends those bands. So the bands are reliable for *who* held aggro; how long a holder lasts
+  once the NPC goes quiet is a convention. The first two pulls are unit tests against saved tables
+  (`tests/fixtures/wcl_views/`); the third pull is not a recorded fixture.
+- WCL's table merges all instances of one NPC type per player (Rawlings 4 and 5 on Mekerakesh are one band);
+  the events keep `sourceInstance`, so KhadBot's bands stay per instance.
+- Taunt spell IDs seen so far: Taunt 355 (warrior), Growl 6795 (druid), Dark Command 56222 (death knight) and
+  Challenging Shout 1161 (area taunt, no single target).
+
+## Instances and positions
+
+- **`sourceInstance` / `targetInstance`** number NPCs that share one actor ID (both Weakened Doomscales are one
+  actor; Blightscale Rawlings 51 to 54 are one actor). They appear on every data type and are null for unique
+  actors and players. KhadBot keeps them as `source_instance` / `target_instance`.
+- **Positions**: events with `includeResources` carry `x`, `y`, `facing` and `mapID` for one unit,
+  `resourceActor` saying which (1 source, 2 target). 73% of rows in the 62 recorded pulls have one. They cost
+  nothing extra to fetch (already in the raw pages). Measured over the 62 pulls (2026-10-11, scratch spike, not
+  in the codebase): parquet 54.0 MB -> 75.0 MB (+39%); normalize 20.1 s -> 26.1 s in total (about 2 s per
+  night); reading a pull 20 -> 22 ms median; an as-of query for the boss-to-target distance at every swing about
+  8 ms per pull. Distances between Ula'tek and the target of its melee swings are 1,336 to 2,026 units (5th to
+  95th percentile, n=1,095), so "in melee" can be tested empirically without knowing the unit scale. At the
+  Unchecked Rage above, Shinrael (holding aggro) was 3,021 units away and Mekerakesh 1,296.

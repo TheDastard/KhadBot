@@ -71,6 +71,38 @@ def type_is(*types: str) -> pl.Expr:
     return pl.col("type").cast(pl.Utf8).is_in(list(types))
 
 
+def aggro_events(frame: pl.DataFrame) -> pl.DataFrame:
+    """
+    Threat rows that give an NPC a target or end it, in ``seq`` order: ``seq``, ``t_ms``, ``npc_id``,
+    ``npc_instance``, ``player_id`` and ``kind``. ``melee`` is an NPC swing at a player, ``taunt`` a taunt
+    debuff landing on the NPC, ``death`` the NPC dying (``player_id`` null).
+    """
+    threat = frame.filter(pl.col("data_type").cast(pl.Utf8) == "Threat")
+    cols = ("seq", "t_ms")
+    swings = threat.filter(type_is("cast") & ~pl.col("source_friendly") & pl.col("target_friendly")).select(
+        *cols,
+        pl.col("source_id").alias("npc_id"),
+        pl.col("source_instance").alias("npc_instance"),
+        pl.col("target_id").alias("player_id"),
+        pl.lit("melee").alias("kind"),
+    )
+    taunts = threat.filter(type_is("applydebuff") & pl.col("source_friendly") & ~pl.col("target_friendly")).select(
+        *cols,
+        pl.col("target_id").alias("npc_id"),
+        pl.col("target_instance").alias("npc_instance"),
+        pl.col("source_id").alias("player_id"),
+        pl.lit("taunt").alias("kind"),
+    )
+    deaths = threat.filter(type_is("death") & ~pl.col("target_friendly")).select(
+        *cols,
+        pl.col("target_id").alias("npc_id"),
+        pl.col("target_instance").alias("npc_instance"),
+        pl.lit(None, dtype=pl.Int32).alias("player_id"),
+        pl.lit("death").alias("kind"),
+    )
+    return pl.concat([swings, taunts, deaths]).sort("seq")
+
+
 # ---------------------------------------------------------------------------
 # Column builders
 # ---------------------------------------------------------------------------

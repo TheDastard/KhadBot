@@ -18,6 +18,7 @@ from pathlib import Path
 import polars as pl
 
 from khadbot.config import EncounterConfig
+from khadbot.encounter.analysis.aggro import aggro_summaries
 from khadbot.encounter.analysis.cooldowns import cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
 from khadbot.encounter.analysis.mechanics import mechanic_stats
@@ -182,6 +183,7 @@ def build_pull_records(
         cooldowns=cooldowns[:COOLDOWN_CAP],
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
+        aggro=aggro_summaries(a, actors),
         coverage=coverage,
         anomalies=anomalies,
         produced_from={
@@ -299,6 +301,13 @@ def render_digest(d: PullDigest) -> str:
         active = ",".join(str(s) for s in w.cooldowns_active) or "none"
         status = "covered" if w.covered else "NOT covered"
         lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active})")
+
+    if d.aggro:
+        lines.append(f"AGGRO (melee swings by target, taunts landed) [{make_ref(d.pull_key, 'pull')}]")
+    for g in d.aggro:
+        targets = ", ".join(f"{t.name} {t.swings} ({t.share_pct:.1f}%)" for t in g.targets)
+        taunts = ", ".join(f"{name} {n}" for name, n in g.taunts.items()) or "none"
+        lines.append(f"- {g.npc}: {g.swings} swings; {targets}; taunts: {taunts}")
 
     if d.unregistered:
         lines.append("UNREGISTERED DAMAGE")

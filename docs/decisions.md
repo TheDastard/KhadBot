@@ -53,7 +53,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `detect_phases` keeps its signature; `unmatched_phase(spans, enc)` names the trigger that stopped detection.
   `build_digest` adds keyword-only `cache`, `cutoff_fraction` and `unregistered_cap`.
 - **Window coverage counts `kind: raid` cooldowns only** (plan 6.3 said raid/external). A damage window is raid-wide
-  damage; an external on one player does not cover it. Plan section 6.3 needs the same edit.
+  damage; an external on one player does not cover it. Plan section 6.3 updated to match.
 - **Hits and clusters**: a "hit" is a `damage` event on a friendly target. Clusters, `window_occurrence`,
   `MechanicStat.hits/damage_taken` and the death window all use hits. Damage figures use WCL `amount` (after
   absorbs and overkill). `not_interrupted` failures are the enemy cast rows, so they have no player in
@@ -87,7 +87,30 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   uses `load_encounter_view(encounter_id, pull.difficulty)`: only that difficulty's entries, and None (coverage
   `none`) when no phase covers the pull's difficulty or the difficulty is unknown. `encfile_hash` is taken over that
   view, so editing one difficulty's entries leaves the other difficulties' annotations and findings cached. The
-  ingest filter still uses every difficulty's ability IDs. Plan section 6.2 needs the same edit.
+  ingest filter still uses every difficulty's ability IDs. Plan section 6.2 updated to match (plan 0.3.4).
+- **Threat data and NPC instances (2026-10-11)**: ingest fetches a tenth data type, `Threat` (Friendlies side,
+  about 1 point per pull; see `docs/wcl-api.md`). WCL Threat has no threat values: it is target tracking, NPC melee
+  swings (misses included), taunts and NPC deaths. Normalize keeps the NPC swings, the taunt debuffs on NPCs and
+  the NPC deaths, and drops the players' taunt casts, which repeat the Casts data. The event schema gains `source_instance` and
+  `target_instance` (WCL `sourceInstance` / `targetInstance`), which number NPCs sharing one actor ID; every
+  `events_hash` changes, so all pulls re-ingest from the raw cache. The digest gains `aggro`: per boss NPC, its
+  melee swings, the top 3 targets with counts and shares, and the taunts that landed by player. It renders as an
+  `AGGRO` section under the pull ref, and the `pull` ref resolves with the same `aggro` list so verify can check
+  its numbers. Event rows and death top hits name NPCs with their instance (`Blightscale Rawling #51`).
+  Recorded fixtures gained Threat pages and the encounter-filtered enemy Casts. Plan sections 6.1 (FetchSpec,
+  event schema), 6.4 (digest) and 6.5 (`pull` ref) updated to match (plan 0.3.4). Blame does not use this
+  data yet.
+- **Aggro bands (2026-10-11)**: `analysis/aggro.py` builds per-NPC-instance bands of who each NPC was attacking:
+  a band starts at a swing or taunt on a new player and ends at the next switch, the NPC's death, 20 s with no
+  swing or taunt (`AGGRO_QUIET_MS`, ending at the last event), or the pull end. That rule reproduces WCL's own
+  threat table: on three pulls from three nights, 140 of 144 bands match to the millisecond, nothing ours calls
+  aggro is missing from WCL's, and boss aggro never names a different player. The four differences are WCL
+  holding a quiet band longer (see `docs/wcl-api.md`). Two pulls are unit tests against saved WCL tables.
+  `aggro_holder(bands, npc_ids, t, instance)` answers who held an NPC at a time. Not used by the digest or
+  blame yet.
+- **Positions not kept yet (2026-10-11)**: `x`/`y`/`facing` are already in the raw pages, and keeping them would
+  grow parquet by 39% and normalize time by about 2 s per night (measurements in `docs/wcl-api.md`). They would
+  answer "was the aggro holder in melee range" directly. Waiting on a decision before adding them.
 - **M2.6 (legacy comparison) is blocked on H2**: it compares against real fixture pulls, which do not exist yet.
 - **M2 exit criteria waiting on humans**: H3 encounter file (<10% unregistered on real reports), real-fixture digest
   goldens and the 1.5k-3k token check (H2), perf budgets (`-m perf`, written, skipped until H2), and M2.6.
@@ -258,6 +281,15 @@ and, where marked, a contract update in plan section 6.
 ## Open follow-ups
 
 Things raised in review that are not tasks in the plan yet.
+
+- **Track who players attack (wrong-target damage).** The Enemies side of WCL's Threat data records every
+  player and pet action aimed at an NPC, per NPC instance, and its `table` view gives bands of who was on
+  which NPC. That would show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
+  Heart during the three Rage of the Shackled windows when the Heart takes double damage, or ignoring a
+  priority add. Cost: about 12.7k events and 4.9 MB of raw pages per long pull (2 pages, a few points), or
+  551 kB for the table view. A next pass would need a "kill target" notion per phase or window in the
+  encounter file and a digest or query view of damage by target. DamageDone events would give the amounts;
+  the Threat Enemies events only say who was attacking.
 
 - **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
   `m3-analyst-loop` → `m4-findings-fanout` are unmerged; `main` has none of the encounter work. Merge the stack
