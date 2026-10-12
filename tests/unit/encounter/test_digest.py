@@ -72,7 +72,14 @@ def test_golden(digest_of, update_goldens, fight):
 
 def test_wipe_summary(digest_of, synth_ingested, synth_registry):
     d = digest_of(1)
-    assert (d.outcome, d.duration_ms, d.phase_reached, d.boss_pct, d.cutoff_ms) == ("wipe", 60_000, "p2", 35.0, 41_000)
+    assert (d.outcome, d.duration_ms, d.phase_reached, d.boss_pct, d.boss_hp_pct, d.cutoff_ms) == (
+        "wipe",
+        60_000,
+        "p2",
+        35.0,
+        41.0,
+        41_000,
+    )
     assert [x.name for x in d.deaths] == ["Alphadps", "Gammadps", "Betadps", "Tankyboi"]
     assert [m.mechanic_id for m in d.mechanics] == ["swirl", "shadow_bolt", "curse"]
     assert [(u.ability_id, u.share_pct) for u in d.unregistered] == [(900102, 9.9)]
@@ -187,7 +194,8 @@ def test_render(digest_of):
     lines = text.splitlines()
     assert (
         lines[0]
-        == "PULL SYNTH01:1 Synthetic Boss | wipe | 60.0s | reached p2 | boss 35.0% | cutoff 41.0s | coverage full"
+        == "PULL SYNTH01:1 Synthetic Boss | wipe | 60.0s | reached p2 | fight 35.0% | boss HP 41.0% | cutoff 41.0s"
+        " | coverage full"
     )
     assert lines[1] == "ref ev:SYNTH01:1:pull"
     assert (

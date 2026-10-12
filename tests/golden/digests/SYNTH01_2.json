@@ -21,6 +21,7 @@
     }
   ],
   "anomalies": [],
+  "boss_hp_pct": 0.0,
   "boss_pct": 0.0,
   "cooldowns": [
     {

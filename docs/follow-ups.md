@@ -11,10 +11,12 @@ file's header comment points to.
 
 ### Data and ingest
 
-- **Real-report contract fields** (plan section 6.1). Add `Pull.boss_hp_pct` and `PullDigest.boss_hp_pct`
-  (request `bossPercentage` in `GET_REPORT_META`), take `phase_reached` and the `phase_trigger_unmatched` check
-  from the last phase transition instead of `last_phase`, and fix the `start_ms` / `end_ms` comments
-  (milliseconds from report start).
+- **Phase reached from phase transitions** (plan section 6.1). Take `phase_reached` and the
+  `phase_trigger_unmatched` check from the last phase transition instead of `last_phase`, which is an ordinal
+  within stages or intermissions, not a phase ID. `/pulls` also shows `last_phase` as "Last phase".
+- **Cached report metadata never refreshes.** Ingest reads `report.json` from the raw cache whenever it exists,
+  so a field added to `GET_REPORT_META` never reaches reports already cached (`bossPercentage` was merged in by
+  hand). Add a way to refetch only the metadata, such as an `ingest --refresh-meta` flag.
 - **Death records name the killing ability "Unknown Ability (0)".** Every death in the Heroic Ula'tek digests
   reads that way although the top hits show the real killing blow. WCL death events carry
   `killingAbilityGameID` and their `abilityGameID` may be 0; normalize it, or fall back to the overkill hit at
@@ -113,6 +115,8 @@ human task table in `docs/decisions.md`).
 
 ## Resolved
 
+- 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the
+  `start_ms` / `end_ms` comments fixed.
 - 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them; the
   `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
   uninstalled.

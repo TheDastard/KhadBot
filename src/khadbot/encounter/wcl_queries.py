@@ -42,6 +42,7 @@ query GetReportMeta($code: String!) {
         endTime
         lastPhase
         fightPercentage
+        bossPercentage
         size
         friendlyPlayers
         phaseTransitions {

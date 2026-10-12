@@ -161,6 +161,7 @@
    "endTime": 160000,
    "lastPhase": 2,
    "fightPercentage": 35.0,
+   "bossPercentage": 41.0,
    "size": 5,
    "friendlyPlayers": [
     1,
@@ -190,6 +191,7 @@
    "endTime": 380000,
    "lastPhase": 2,
    "fightPercentage": 0.0,
+   "bossPercentage": 0.0,
    "size": 5,
    "friendlyPlayers": [
     1,

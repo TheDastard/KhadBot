@@ -23,7 +23,7 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
 
 | Fight | Outcome | Length | Purpose |
 |-------|---------|--------|---------|
-| 1 | wipe, boss 35%, phase 2 | 60 s | deaths, cutoff, missed interrupt, covered + uncovered window, unverified cooldown use |
+| 1 | wipe, fight 35% (boss HP 41%), phase 2 | 60 s | deaths, cutoff, missed interrupt, covered + uncovered window, unverified cooldown use |
 | 2 | kill | 80 s | clean-ish kill; both Cataclysms covered; every interrupt lands |
 
 ## What each event exists to test
@@ -60,7 +60,8 @@ Seven pulls recorded on 2026-10-11 from three public reports of one guild's Hero
 copied from that raw cache. API notes and costs: `docs/wcl-api.md`.
 
 Each report directory has the full `report.json` (every fight), but only the listed fights have pages, so
-offline ingest must pass `fight_ids`. Everything under a real report directory is stored in Git LFS (see
+offline ingest must pass `fight_ids`. `bossPercentage` was merged into each `report.json` afterwards
+(2026-10-11) from a live `fights { id bossPercentage }` query, when the report query started asking for it. Everything under a real report directory is stored in Git LFS (see
 `.gitattributes` here); run `git lfs pull` if the pages are pointer files. Pre-commit hooks skip these
 directories so the recorded bytes are never rewritten. Filters: `Buffs` uses the 17 cooldown-registry IDs from
 `config/registries/cooldowns.yaml`. Enemy `Casts` is recorded twice for Ula'tek pulls: unfiltered (`none`) and
