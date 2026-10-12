@@ -1,4 +1,5 @@
 # Ula'tek, final boss of The Venomous Abyss.
+# Open gaps for this file are tracked under "Ula'tek" in docs/follow-ups.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -346,6 +347,7 @@ damage_windows:
   - id: rage_of_the_shackled
     name: Rage of the Shackled
     # Raid-wide pulses about 4 s apart for 20 s; a 5 s window keeps one channel as one occurrence.
+    # expected_cooldowns is a guess (see docs/follow-ups.md).
     difficulties: [heroic]
     ability_ids: [1307367]
     cluster_window_ms: 5000
