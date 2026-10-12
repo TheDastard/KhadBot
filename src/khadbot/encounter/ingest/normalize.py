@@ -2,7 +2,7 @@
 encounter/ingest/normalize.py
 
 Raw WCL report metadata and event pages -> typed ``Pull`` / ``Actor`` models and one
-polars events frame per pull (schema in plan section 6.1).
+polars events frame per pull (schema: ``store.EVENT_SCHEMA``).
 
 Pages are turned into small frames and concatenated; no per-event Python objects are
 kept beyond a single page's JSON list.

@@ -1,7 +1,7 @@
 """
 tests/unit/encounter/test_perf.py
 
-Performance budgets (plan 16.5), run on real recorded WCL fixtures:
+Performance budgets, run on real recorded WCL fixtures:
 
 - Ingest: parse + normalize + store a full night in under 30 s, excluding network. The fixtures hold only
   the recorded pulls of each night, so this checks those pulls against the night budget.

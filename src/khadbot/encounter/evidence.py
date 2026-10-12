@@ -2,7 +2,7 @@
 encounter/evidence.py
 
 Evidence refs: parsing and resolving them, and reading the numbers out of a claim so they can be
-checked against the records the refs point at (plan sections 6.5 and 6.7).
+checked against the records the refs point at (the verify rules in analyst/verify.py).
 
 Ref kinds::
 
