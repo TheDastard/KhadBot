@@ -10,7 +10,7 @@ Performance budgets (plan 16.5), run on real recorded WCL fixtures:
 - Query tools: p95 under 200 ms per call on one analysed pull (the longest in each report).
 
 Skipped unless run with ``-m perf`` AND the real fixtures exist
-(tests/fixtures/wcl/<code>/ recorded by scripts/record_wcl_fixture.py).
+(tests/fixtures/encounter/wcl/<code>/ recorded by scripts/record_wcl_fixture.py).
 """
 
 from __future__ import annotations

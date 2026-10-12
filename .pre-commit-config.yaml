@@ -1,5 +1,5 @@
 # Recorded WarcraftLogs pages are byte-for-byte API output (and stored in Git LFS); never rewrite them.
-exclude: ^tests/fixtures/wcl/(?!SYNTH01/)[^/]+/
+exclude: ^tests/fixtures/encounter/wcl/(?!SYNTH01/)[^/]+/
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
