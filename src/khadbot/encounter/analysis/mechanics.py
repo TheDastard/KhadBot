@@ -1,8 +1,9 @@
 """
 encounter/analysis/mechanics.py
 
-Per-mechanic statistics over an annotated pull: clusters, hits, failures (with the players who
-failed), damage taken, and how many deaths the mechanic contributed to; plus a per-cluster breakdown.
+Per-mechanic statistics over an annotated pull: clusters, hits, failures (with the players charged
+with them, ``blamed_id``), damage taken, and how many deaths the mechanic contributed to; plus a
+per-cluster breakdown.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ def mechanic_stats(
     for mech in enc.mechanics:
         rows = a.frame.filter(pl.col("mechanic_id") == mech.id)
         hits = rows.filter(is_hit())
-        failed = rows.filter(pl.col("is_failure") & pl.col("target_friendly"))["target_id"].to_list()
+        failed = rows.filter(pl.col("is_failure"))["blamed_id"].drop_nulls().to_list()
         by_player = Counter(names.get(t, f"actor-{t}") for t in failed)
         top = sorted(by_player.items(), key=lambda kv: (-kv[1], kv[0]))[:TOP_FAILING_PLAYERS]
         out.append(
@@ -67,7 +68,7 @@ def mechanic_clusters(a: Annotated, mechanic_id: str, actors: list[Actor]) -> li
             pl.col("target_id").n_unique().alias("players"),
             pl.col("amount").fill_null(0).sum().alias("damage"),
             pl.col("is_failure").sum().alias("failures"),
-            pl.col("target_id").filter(pl.col("is_failure")).unique().alias("failed_ids"),
+            pl.col("blamed_id").filter(pl.col("is_failure")).drop_nulls().unique().alias("failed_ids"),
         )
         .sort("cluster_id")
     )

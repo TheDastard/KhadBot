@@ -84,7 +84,18 @@ class CooldownRegistry(_Strict):
 # ---------------------------------------------------------------------------
 
 TriggerName = Literal["pull", "boss_cast", "boss_aura_applied", "boss_hp_below", "time", "wcl_phase"]
-RuleName = Literal["any_hit", "hits_per_cluster_gt", "not_interrupted", "debuff_duration_gt", "soak_count_lt"]
+RuleName = Literal[
+    "any_hit",
+    "hits_per_cluster_gt",
+    "not_interrupted",
+    "debuff_duration_gt",
+    "soak_count_lt",
+    "hit_amount_gt",
+    "aura_applied",
+    "hits_on_non_tank",
+    "per_cluster",
+]
+BlameBy = Literal["cast_target", "aggro_holder"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
 Difficulty = Literal["lfr", "normal", "heroic", "mythic"]
 
@@ -107,7 +118,12 @@ _RULE_PARAM: dict[str, str | None] = {
     "not_interrupted": None,
     "debuff_duration_gt": "ms",
     "soak_count_lt": "value",
+    "hit_amount_gt": "value",
+    "aura_applied": None,
+    "hits_on_non_tank": "ms",
+    "per_cluster": None,
 }
+_BLAME_PARAM: dict[str, str] = {"cast_target": "ability_id", "aggro_holder": "npc_game_id"}
 
 
 class _Entry(_Strict):
@@ -146,16 +162,41 @@ class Phase(_Entry):
     start: PhaseTrigger
 
 
+class Blame(_Strict):
+    """
+    Who a ``per_cluster`` failure is charged to, looked up at the occurrence's first hit.
+
+    ``cast_target``: the friendly target of the latest enemy cast of ``ability_id`` in the ``ms`` before.
+    ``aggro_holder``: the player holding the NPC with ``npc_game_id`` (game ID, since a boss can have two
+    actors with one name): the latest melee swing or taunt on it in the ``ms`` before, from the Threat data.
+    """
+
+    by: BlameBy
+    ability_id: int | None = None
+    npc_game_id: int | None = None
+    ms: int = Field(10_000, gt=0)
+
+    @model_validator(mode="after")
+    def _required_param(self) -> Blame:
+        param = _BLAME_PARAM[self.by]
+        if getattr(self, param) is None:
+            raise ValueError(f"blame '{self.by}' requires '{param}'")
+        return self
+
+
 class FailureRule(_Strict):
     rule: RuleName
     value: int | None = None
     ms: int | None = None
+    blame: Blame | None = None
 
     @model_validator(mode="after")
     def _required_param(self) -> FailureRule:
         param = _RULE_PARAM[self.rule]
         if param is not None and getattr(self, param) is None:
             raise ValueError(f"failure rule '{self.rule}' requires '{param}'")
+        if (self.rule == "per_cluster") != (self.blame is not None):
+            raise ValueError("'blame' is required by failure rule 'per_cluster' and allowed on no other rule")
         return self
 
 

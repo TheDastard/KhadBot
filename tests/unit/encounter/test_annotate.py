@@ -172,6 +172,133 @@ def test_debuff_duration_gt():
     assert flagged == [(1, "applydebuff"), (3, "applydebuff")]
 
 
+def blamed(a):
+    """(seq, blamed_id) of every failure row."""
+    return a.frame.filter(pl.col("is_failure")).select("seq", "blamed_id").rows()
+
+
+def test_victim_rules_blame_the_player_hit():
+    a = run([hit(0, 1), hit(10, BOSS), hit(20, 2)], enc_with([mech({"rule": "any_hit"})]))
+    assert blamed(a) == [(0, 1), (2, 2)]
+    assert col(a, "blamed_id") == [1, None, 2]
+
+
+def test_not_interrupted_blames_no_one():
+    a = run([_cast(1_000)], enc_with([mech({"rule": "not_interrupted"}, kind="interrupt")]))
+    assert blamed(a) == [(0, None)]
+
+
+def test_hit_amount_gt():
+    rows = [
+        {**hit(0, 1), "unmitigated": 1_500_000},
+        {**hit(5, 2), "unmitigated": 400_000},
+        {**hit(10, 3, amount=900_000), "absorbed": 200_000},  # no unmitigated: amount + absorbed
+        {**hit(15, 4, amount=900_000)},
+    ]
+    a = run(rows, enc_with([mech({"rule": "hit_amount_gt", "value": 1_000_000})]))
+    assert blamed(a) == [(0, 1), (2, 3)]
+
+
+def test_aura_applied():
+    rows = [
+        _aura(0, "applydebuff", 3),
+        _aura(500, "removedebuff", 3),
+        {**_aura(600, "applydebuff", BOSS)},  # not a player
+        hit(700, 2),  # the mechanic's damage is not itself a failure
+    ]
+    a = run(rows, enc_with([mech({"rule": "aura_applied"}, kind="unavoidable")]))
+    assert blamed(a) == [(0, 3)]
+
+
+def _swing(t, target, src=11, inst=None):
+    """An NPC melee swing from the Threat data."""
+    return {
+        "t_ms": t,
+        "type": "cast",
+        "source_id": src,
+        "source_instance": inst,
+        "target_id": target,
+        "ability_id": 1,
+        "data_type": "Threat",
+    }
+
+
+def _taunt(t, player, npc=11, inst=None):
+    """A taunt debuff landing on an NPC, from the Threat data."""
+    return {
+        "t_ms": t,
+        "type": "applydebuff",
+        "source_id": player,
+        "target_id": npc,
+        "target_instance": inst,
+        "ability_id": 9,
+        "data_type": "Threat",
+    }
+
+
+def test_hits_on_non_tank():
+    rows = [
+        _swing(0, 1, inst=1),  # two adds sharing actor ID 11: instance 1 tanked by player 1,
+        _swing(500, 5, inst=2),  # instance 2 by player 5
+        {**hit(1_000, 1), "source_id": 11, "source_instance": 1},  # its own tank: fine
+        {**hit(1_000, 5), "source_id": 11, "source_instance": 1},  # the other add's tank: failure
+        {**hit(1_000, 2), "source_id": 11, "source_instance": 1},  # failure
+        {**hit(2_000, 2), "source_id": 11, "source_instance": 1},  # same player, same cluster: no second failure
+        {**hit(2_000, 3), "source_id": BOSS},  # the boss has no aggro holder: failure
+        _swing(9_000, 4, inst=1),
+        {**hit(20_000, 4), "source_id": 11, "source_instance": 1},  # holder's last swing 11 s ago: failure
+        _taunt(29_000, 3, inst=1),
+        {**hit(30_000, 3), "source_id": 11, "source_instance": 1},  # taunted it a second ago: fine
+    ]
+    a = run(rows, enc_with([mech({"rule": "hits_on_non_tank", "ms": 10_000}, window_ms=1_000)]))
+    assert blamed(a) == [(3, 5), (4, 2), (6, 3), (8, 4)]
+
+
+def test_per_cluster_blames_cast_target():
+    cast = {"t_ms": 1_000, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 555}
+    rows = [
+        {**cast, "target_id": 2, "t_ms": 0},  # older cast at a different target
+        cast,
+        hit(1_400, 3),
+        hit(1_400, 4),
+        hit(1_800, 5),
+        hit(30_000, 3),  # second occurrence, no cast in the 5 s before
+    ]
+    rule = {"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 555, "ms": 5_000}}
+    a = run(rows, enc_with([mech(rule, window_ms=2_000)]))
+    assert blamed(a) == [(2, 1), (5, None)]
+    assert a.frame.filter(pl.col("is_failure"))["cluster_id"].to_list() == [1, 2]
+
+
+def test_per_cluster_blames_aggro_holder():
+    rows = [
+        _swing(0, 1),
+        _swing(2_000, 2),  # the add (game ID 2) swung at player 2 ...
+        _taunt(3_000, 3),  # ... then player 3 taunted it and never reached melee
+        _swing(3_500, 4, src=BOSS),  # a different NPC
+        {**hit(4_000, 5, ability=1), "source_id": 11},  # a melee damage hit is not aggro evidence
+        hit(5_000, 4),
+        hit(5_000, 5),
+    ]
+    rule = {"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 2, "ms": 30_000}}
+    a = run(rows, enc_with([mech(rule, ability=100)]))
+    assert blamed(a) == [(5, 3)]
+
+
+def test_per_cluster_aggro_holder_outside_lookback_or_after_death():
+    rule = {"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 2, "ms": 5_000}}
+    old = [_swing(0, 1), hit(10_000, 4)]  # last swing 10 s before, lookback 5 s
+    assert blamed(run(old, enc_with([mech(rule)]))) == [(1, None)]
+    died = [_swing(0, 1), {"t_ms": 500, "type": "death", "target_id": 11, "data_type": "Threat"}, hit(1_000, 4)]
+    assert blamed(run(died, enc_with([mech(rule)]))) == [(2, None)]
+
+
+def test_per_cluster_without_a_match_still_fails():
+    rule = {"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 2}}
+    a = run([hit(0, 1), hit(10, 2)], enc_with([mech(rule)]))
+    assert blamed(a) == [(0, None)]
+
+
 # ===========================================================================
 # Damage windows
 # ===========================================================================
@@ -279,6 +406,15 @@ def test_cache_round_trip_and_invalidation(synth_ingested, synth_enc, tmp_path, 
     with pytest.raises(AssertionError, match="cache miss"):
         annotate_pull("SYNTH01:1", synth_ingested, synth_enc, cache=cache, cutoff_fraction=0.4)
     assert cache.get(first.pull, first.encfile_hash, "other-hash", 0.5) is None
+
+
+def test_cache_misses_after_annotation_version_change(synth_ingested, synth_enc, tmp_path, monkeypatch):
+    cache = AnnotationCache(tmp_path / "annotated")
+    first = annotate_pull("SYNTH01:1", synth_ingested, synth_enc, cache=cache)
+    ev_hash = synth_ingested.events_hash("SYNTH01:1")
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5) is not None
+    monkeypatch.setattr(annotate_mod, "ANNOTATION_VERSION", annotate_mod.ANNOTATION_VERSION + 1)
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5) is None
 
 
 def test_annotate_pull_unknown_pull(synth_ingested, synth_enc):
