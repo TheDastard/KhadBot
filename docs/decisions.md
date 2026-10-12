@@ -303,7 +303,7 @@ Outcome: **keep polars + parquet (D7 unchanged).** Measured on the dev machine o
 |----|------|--------|
 | H1 | Choose boss + three public reports | done 2026-10-11: Heroic Ula'tek (encounter 3492). Wipe-heavy night `trMgApZCVYkv3jdq`; clean kill `H7z1fqDXjRTFnbtg` fight 20, with the rest of that report as the messy night; second messy / early-learning night `QkVa6GHRK8yfrTbw`. See `docs/wcl-api.md`. |
 | H2 / S1 | Record real fixtures, run cost spike | done 2026-10-11: all 62 boss pulls ingested into `KHADBOT_DATA_DIR` (936 points); seven representative pulls copied to `tests/fixtures/wcl/` and stored in Git LFS (see its README); measurements in `docs/wcl-api.md`. |
-| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.1% (all player self-damage such as Spirit Link and Burning Rush), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 11, 10, 19, 12 and 28 failures; 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. To review: the failure rules, and whether Spectral Coils should also be a damage window. |
+| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.1% (all player self-damage such as Spirit Link and Burning Rush), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 11, 10, 19, 12 and 28 failures; 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. Open items for this file are under Ula'tek in `docs/follow-ups.md`. |
 | H4 | Fill cooldown durations in `cooldowns.yaml` | open |
 | H5 / S4 | Write golden questions | open |
 | H6 | Set eval thresholds | open |
@@ -338,40 +338,5 @@ and, where marked, a contract update in plan section 6.
 
 ## Open follow-ups
 
-Things raised in review that are not tasks in the plan yet.
-
-- **Track who players attack (wrong-target damage).** The Enemies side of WCL's Threat data records every
-  player and pet action aimed at an NPC, per NPC instance, and its `table` view gives bands of who was on
-  which NPC. That would show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
-  Heart during the three Rage of the Shackled windows when the Heart takes double damage, or ignoring a
-  priority add. Cost: about 12.7k events and 4.9 MB of raw pages per long pull (2 pages, a few points), or
-  551 kB for the table view. A next pass would need a "kill target" notion per phase or window in the
-  encounter file and a digest or query view of damage by target. DamageDone events would give the amounts;
-  the Threat Enemies events only say who was attacking.
-
-- **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
-  `m3-analyst-loop` → `m4-findings-fanout` are unmerged; `main` has none of the encounter work. Merge the stack
-  (in order, or `m4-findings-fanout` once) before starting M5.
-- **Code changes for the real-report contract** (plan v0.3.3, section 6): add `Pull.boss_hp_pct` and
-  `PullDigest.boss_hp_pct` (request `bossPercentage` in `GET_REPORT_META`), take `phase_reached` and the
-  `phase_trigger_unmatched` check from the last phase transition instead of `last_phase`, and fix the
-  `start_ms` / `end_ms` comments (milliseconds from report start). `raid_size` already matches.
-- **Exit checks that real fixtures now unblock**: the legacy comparison (M2.6) and digest goldens for the real
-  fixture pulls. The perf tests and the query-tool p95 now pass (see the event store spike above).
-- **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
-  pulls; H5 can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
-- **Enemy-Casts filter changes after H3.** The real fixtures were recorded with enemy Casts unfiltered (no encounter
-  file). Once `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml` exists, the CLI derives a filter and an offline ingest of these
-  fixtures misses that one data type. Tests should pass explicit IDs (as for SYNTH01), or the fixtures should be
-  re-recorded after H3.
-- **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` (the enrage fixture) has no enemy casts after
-  574 s of a 618 s pull, while *Fury Unleashed* damage continues. Find out whether the boss casts nothing during
-  the enrage or the log lost them before relying on enemy casts near the end of a pull.
-- **Git LFS budget.** The real fixtures are about 200 MB. On GitHub's free tier LFS storage and bandwidth are each
-  1 GB (bandwidth per month), so every full clone or CI checkout with LFS spends about 200 MB. Jobs that don't need
-  real fixtures can set `GIT_LFS_SKIP_SMUDGE=1`.
-
-Resolved 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/wcl/.gitattributes`) and pre-commit skips them;
-the `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
-uninstalled. The 12 skipped unit tests are the 12 perf tests, skipped by marker; none skip for a missing
-fixture.
+Moved to `docs/follow-ups.md` (2026-10-11), which tracks open work for the encounter system and for each
+encounter file.
