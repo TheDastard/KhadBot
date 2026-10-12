@@ -1,5 +1,5 @@
 """
-encounter/ingest.py
+encounter/ingest/pipeline.py
 
 Ingest orchestration: report metadata -> raw pages -> normalized events -> event store.
 
@@ -15,17 +15,17 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from khadbot.config import EncounterConfig, get_config
-from khadbot.encounter.fetch import (
+from khadbot.encounter.ingest.fetch import (
     MissingFixtureError,
     ProgressFn,
     RawPageCache,
     fetch_pull,
     specs_for,
 )
+from khadbot.encounter.ingest.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
+from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.models import IngestResult, Pull
-from khadbot.encounter.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
 from khadbot.encounter.store import EventStore, ParquetEventStore
-from khadbot.encounter.wcl_queries import GET_REPORT_META
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient
 
 logger = logging.getLogger(__name__)

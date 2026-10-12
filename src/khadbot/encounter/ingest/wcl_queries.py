@@ -1,5 +1,5 @@
 """
-encounter/wcl_queries.py
+encounter/ingest/wcl_queries.py
 
 GraphQL for encounter ingest: one report-metadata query and one paged events query.
 

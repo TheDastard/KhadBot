@@ -38,6 +38,10 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 - **Unknown keys in authored files are errors** (`extra="forbid"`), so typos fail fast.
 - **mypy**: clean on `main` since fdaed26, which also added `types-pyyaml` to dev deps; the encounter work adds no errors.
 - **Package casing (M0.1)** was committed on its own, as the plan requires, before the rest of M0.
+- **Ingest package (2026-10-11)**: `wcl_queries`, `fetch`, `normalize` and the ingest orchestration (now
+  `pipeline.py`) live in `encounter/ingest/`, under the module layout rule in CLAUDE.md. App code imports
+  `ingest_report` and `default_store` from the package. `EVENT_SCHEMA` and `empty_events` moved from `normalize`
+  to `store`, which owns the schema it persists, so the shared store never imports ingest internals.
 
 ### M2 (encounter file, annotation, digest)
 

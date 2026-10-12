@@ -10,7 +10,7 @@ from __future__ import annotations
 import polars as pl
 
 from khadbot.encounter.models import Actor, Pull
-from khadbot.encounter.normalize import EVENT_SCHEMA
+from khadbot.encounter.store import EVENT_SCHEMA
 
 PLAYERS = [1, 2, 3, 4, 5]
 BOSS = 10

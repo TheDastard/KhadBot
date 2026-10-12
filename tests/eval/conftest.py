@@ -36,8 +36,8 @@ from helpers.synth import (
 from khadbot.config import EncounterConfig
 from khadbot.encounter.config_files import load_registry
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.fetch import RawPageCache
 from khadbot.encounter.ingest import ingest_report
+from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
 
 _OUTCOMES: list[GoldenOutcome] = []

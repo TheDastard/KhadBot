@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from helpers.synth import FIXTURES
 from khadbot.encounter.config_files import load_registry
-from khadbot.encounter.fetch import RawPageCache
 from khadbot.encounter.ingest import ingest_report
+from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import IngestResult
 from khadbot.encounter.store import EventStore
 

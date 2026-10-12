@@ -3,8 +3,8 @@ paths:
   - "src/khadbot/tools/**"
   - "src/khadbot/encounter/query_tools.py"
   - "src/khadbot/encounter/conversation.py"
-  - "src/khadbot/encounter/fetch.py"
-  - "src/khadbot/encounter/wcl_queries.py"
+  - "src/khadbot/encounter/ingest/fetch.py"
+  - "src/khadbot/encounter/ingest/wcl_queries.py"
 ---
 
 # LangChain tools
@@ -35,6 +35,6 @@ paths:
 
 - HTTP goes through `httpx` async clients used as context managers. Credentials come from `config.py`, never from tool arguments or module globals, except user-supplied tokens for private data, which are passed per call and never logged or stored.
 - Clients raise typed exceptions and don't retry. Callers own retries and backoff, and honour `Retry-After` on rate limits.
-- GraphQL query strings are module-level constants (`tools/warcraftlogs/_queries.py`, `encounter/wcl_queries.py`). Don't build queries inline.
+- GraphQL query strings are module-level constants (`tools/warcraftlogs/_queries.py`, `encounter/ingest/wcl_queries.py`). Don't build queries inline.
 - Paginated APIs are followed to the end, or truncation is reported explicitly. Never silently use the first page.
 - Unit tests mock HTTP with `respx`; no tool test touches the network.

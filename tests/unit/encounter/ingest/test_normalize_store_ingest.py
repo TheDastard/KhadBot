@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_normalize_store_ingest.py
+tests/unit/encounter/ingest/test_normalize_store_ingest.py
 
 Normalizer, ParquetEventStore and ingest orchestration, all on the synthetic SYNTH01 fixture
 (offline; no network). Golden snapshots live in tests/golden/normalized; regenerate them with
@@ -13,9 +13,10 @@ import polars as pl
 import pytest
 from helpers.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
 
-from khadbot.encounter.fetch import MissingFixtureError, specs_for
 from khadbot.encounter.ingest import ingest_report
-from khadbot.encounter.normalize import EVENT_SCHEMA, events_hash, normalize_pull, parse_abilities, parse_report_meta
+from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
+from khadbot.encounter.ingest.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
+from khadbot.encounter.store import EVENT_SCHEMA
 
 CODE = "SYNTH01"
 
@@ -310,7 +311,7 @@ class TestIngest:
         assert "Healing" in result.failed["SYNTH01:1"]
 
     async def test_offline_without_cached_report_raises(self, synth_store, tmp_path):
-        from khadbot.encounter.fetch import RawPageCache
+        from khadbot.encounter.ingest.fetch import RawPageCache
 
         with pytest.raises(MissingFixtureError):
             await ingest_report("NOPE", store=synth_store, cache=RawPageCache(tmp_path / "empty"), offline=True)
@@ -325,7 +326,7 @@ class TestIngest:
 def test_instances_are_kept():
     from helpers.events import make_pull
 
-    from khadbot.encounter.normalize import normalize_pull
+    from khadbot.encounter.ingest.normalize import normalize_pull
 
     pull = make_pull()
     page = {

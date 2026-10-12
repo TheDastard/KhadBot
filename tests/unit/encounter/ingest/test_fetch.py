@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_fetch.py
+tests/unit/encounter/ingest/test_fetch.py
 
 RawPageCache, build_filter and the paginated fetcher. WCL is replaced by a stub client
 (no network, no respx); asyncio.sleep is patched so backoff tests run instantly.
@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from khadbot.encounter.fetch import (
+from khadbot.encounter.ingest.fetch import (
     DEFAULT_SPECS,
     MissingFixtureError,
     RawPageCache,
@@ -159,7 +159,7 @@ class TestRawPageCache:
 @pytest.fixture(autouse=True)
 def _no_sleep(monkeypatch):
     sleep = AsyncMock()
-    monkeypatch.setattr("khadbot.encounter.fetch.asyncio.sleep", sleep)
+    monkeypatch.setattr("khadbot.encounter.ingest.fetch.asyncio.sleep", sleep)
     return sleep
 
 
