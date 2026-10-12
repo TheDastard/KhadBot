@@ -9,7 +9,7 @@ source of truth; the committed `SYNTH01/` tree is its output.
 
 ## Layout
 
-Raw page cache layout (plan section 5.2), rooted here instead of `$KHADBOT_DATA_DIR/raw`:
+Raw page cache layout, rooted here instead of `$KHADBOT_DATA_DIR/raw`:
 
     SYNTH01/report.json                              # GraphQL `reportData.report` object
     SYNTH01/<fight>/<DataType>[-Enemies]/<filter_hash>/page_NNN.json

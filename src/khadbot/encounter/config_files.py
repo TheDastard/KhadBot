@@ -1,7 +1,7 @@
 """
 encounter/config_files.py
 
-Authored configuration for encounter review (plan section 6.2):
+Authored configuration for encounter review:
 
     config/registries/cooldowns.yaml                                          → CooldownRegistry
     config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml → EncounterFile

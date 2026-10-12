@@ -1,7 +1,7 @@
 """
 encounter/digest.py
 
-Per-pull digest: the deterministic summary the analyst reads first (plan section 6.4).
+Per-pull digest: the deterministic summary the analyst reads first.
 
 ``build_digest`` annotates a stored pull, runs the analysis functions, applies the caps, and records
 coverage and anomalies. ``render_digest`` turns it into compact text for the LLM. Times are rendered
@@ -323,5 +323,5 @@ def render_digest(d: PullDigest) -> str:
 
 
 def estimate_tokens(text: str) -> int:
-    """Rough token count used for the digest size budget (plan 6.4)."""
+    """Rough token count (``len(text) // 4``) used for the digest size budget."""
     return len(text) // 4

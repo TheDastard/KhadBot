@@ -92,7 +92,7 @@ class PhaseSpan(BaseModel):
 # Analysis records
 # ---------------------------------------------------------------------------
 
-Ref = str  # evidence reference, see make_ref and plan section 6.5
+Ref = str  # evidence reference: see make_ref here and evidence.parse_ref
 
 
 def actor_label(names: Mapping[int, str], actor_id: int, instance: int | None = None) -> str:

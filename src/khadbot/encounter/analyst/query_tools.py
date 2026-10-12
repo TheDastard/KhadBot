@@ -1,7 +1,7 @@
 """
 encounter/analyst/query_tools.py
 
-Analyst query tools (plan section 6.6). They read only from the event store and annotations,
+Analyst query tools. They read only from the event store and annotations,
 through ``EncounterData``; none of them can reach WCL.
 
 The pull scope and data come from the run config (``config["configurable"]["scope"]``, an

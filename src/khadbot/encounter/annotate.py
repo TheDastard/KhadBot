@@ -8,7 +8,7 @@ Added columns:
     phase_id           Utf8   phase active at t_ms (null before the pull or without an encounter file)
     mechanic_id        Utf8   mechanic owning ability_id (any event type)
     cluster_id         Int32  1-based cluster within the mechanic; set on hits only
-    is_failure         Bool   row is a failure under the mechanic's rule (plan 6.2)
+    is_failure         Bool   row is a failure under the mechanic's rule
     blamed_id          Int32  on failure rows, the player charged with the failure: the player hit for most
                               rules, the player a ``blame`` spec points at for ``per_cluster``; null if no one
 

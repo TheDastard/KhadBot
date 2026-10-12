@@ -1,7 +1,7 @@
 """
 tests/unit/encounter/test_config_files.py
 
-Cooldown registry and encounter file loading, validation and hashing (plan 6.2).
+Cooldown registry and encounter file loading, validation and hashing.
 Every validation rule has a failing case.
 """
 
