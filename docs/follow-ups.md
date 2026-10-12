@@ -20,7 +20,8 @@ file's header comment points to.
 - **Death records name the killing ability "Unknown Ability (0)".** Every death in the Heroic Ula'tek digests
   reads that way although the top hits show the real killing blow. WCL death events carry
   `killingAbilityGameID` and their `abilityGameID` may be 0; normalize it, or fall back to the overkill hit at
-  the death time.
+  the death time. Every death on all seven fixture pulls has `abilityGameID: 0` (see `docs/legacy-comparison.md`);
+  the fix changes the real-fixture digest goldens.
 - **Player self-damage registry.** Friendly-source damage (Spirit Link, Time Dilation, Burning Rush, trinkets)
   counts as unregistered encounter damage today; it is all of the 3.1% left on Ula'tek. Proposed: a shared
   `config/registries/friendly_damage.yaml` classing each ability as redistribution (Spirit Link, Tempered in
@@ -78,7 +79,6 @@ file's header comment points to.
 - **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
   `m3-analyst-loop` → `m4-findings-fanout` → `real-wcl-fixtures` are unmerged; `main` has none of the encounter
   work.
-- **Legacy comparison (M2.6)** still to do; the real fixture pulls it needs now exist.
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; the golden questions can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
 - **Git LFS budget.** The real fixtures are about 200 MB. On GitHub's free tier LFS storage and bandwidth are
@@ -114,6 +114,7 @@ human task table in `docs/decisions.md`).
 
 ## Resolved
 
+- 2026-10-11: the legacy comparison is in `docs/legacy-comparison.md`.
 - 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
 - 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the
   `start_ms` / `end_ms` comments fixed.
