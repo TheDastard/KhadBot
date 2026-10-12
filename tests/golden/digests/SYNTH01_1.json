@@ -23,6 +23,7 @@
   "anomalies": [
     "cooldown_unverified:900302"
   ],
+  "boss_hp_pct": 41.0,
   "boss_pct": 35.0,
   "cooldowns": [
     {

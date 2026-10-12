@@ -177,6 +177,7 @@ def build_pull_records(
         duration_ms=pull.duration_ms,
         phase_reached=a.phases[-1].phase_id if a.phases else None,
         boss_pct=pull.boss_pct,
+        boss_hp_pct=pull.boss_hp_pct,
         cutoff_ms=a.cutoff_ms,
         deaths=sorted(deaths, key=lambda d: (d.after_cutoff, d.t_ms))[:DEATH_CAP],
         mechanics=active_mechanics[:MECHANIC_CAP],
@@ -254,7 +255,9 @@ def render_digest(d: PullDigest) -> str:
         f"reached {d.phase_reached}" if d.phase_reached else "phase unknown",
     ]
     if d.boss_pct is not None:
-        head.append(f"boss {d.boss_pct:.1f}%")
+        head.append(f"fight {d.boss_pct:.1f}%")
+    if d.boss_hp_pct is not None:
+        head.append(f"boss HP {d.boss_hp_pct:.1f}%")
     if d.cutoff_ms is not None:
         head.append(f"cutoff {_s(d.cutoff_ms)}")
     head.append(f"coverage {d.coverage}")

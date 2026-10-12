@@ -70,9 +70,9 @@ ABILITIES = [
 
 FIGHTS = [
     # Wipe: 60 s, reaches phase 2, boss at 35%.
-    {"id": 1, "kill": False, "start": 100_000, "end": 160_000, "pct": 35.0, "last_phase": 2},
+    {"id": 1, "kill": False, "start": 100_000, "end": 160_000, "pct": 35.0, "hp_pct": 41.0, "last_phase": 2},
     # Kill: 80 s.
-    {"id": 2, "kill": True, "start": 300_000, "end": 380_000, "pct": 0.0, "last_phase": 2},
+    {"id": 2, "kill": True, "start": 300_000, "end": 380_000, "pct": 0.0, "hp_pct": 0.0, "last_phase": 2},
 ]
 
 MAX_HP = {TANK: 200_000, HEALER: 100_000, DPS1: 100_000, DPS2: 100_000, DPS3: 100_000}
@@ -359,6 +359,7 @@ def main() -> None:
                 "endTime": f["end"],
                 "lastPhase": f["last_phase"],
                 "fightPercentage": f["pct"],
+                "bossPercentage": f["hp_pct"],
                 "size": 5,
                 "friendlyPlayers": PLAYERS,
                 "phaseTransitions": [{"id": 1, "startTime": f["start"]}, {"id": 2, "startTime": f["start"] + 35_000}],

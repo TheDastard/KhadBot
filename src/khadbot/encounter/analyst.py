@@ -114,7 +114,7 @@ The question is about pull {pull}. Its digest (every record line starts with its
 {digest}"""
 
 MULTI_PULL_CONTEXT = """\
-The question is about these pulls (pull key, outcome, duration, boss health, phase reached, deaths):
+The question is about these pulls (pull key, outcome, duration, fight progress, boss health, phase reached, deaths):
 {pulls}
 
 Use compare_pulls for patterns across pulls and get_digest to look at one pull."""
@@ -301,8 +301,8 @@ async def scope_node(state: AnalystState, config: RunnableConfig) -> dict[str, A
     else:
         rows = list_pulls_result(AnalystScope(run.data, tuple(pulls))).data
         lines = [
-            f"- {r['pull_key']}: {r['outcome']}, {r['duration_ms']} ms, boss {r['boss_pct']}%, "
-            f"reached {r['phase_reached']}, {r['deaths']} deaths [{r['ref']}]"
+            f"- {r['pull_key']}: {r['outcome']}, {r['duration_ms']} ms, fight {r['boss_pct']}%, "
+            f"boss HP {r['boss_hp_pct']}%, reached {r['phase_reached']}, {r['deaths']} deaths [{r['ref']}]"
             for r in rows
             if isinstance(r, dict)
         ]

@@ -156,7 +156,7 @@ def phase_at(phases: list[PhaseSpan], t_ms: int) -> str | None:
 # Tool logic
 # ---------------------------------------------------------------------------
 
-_LIST_FIELDS = ("ref", "pull_key", "outcome", "duration_ms", "boss_pct", "phase_reached", "deaths")
+_LIST_FIELDS = ("ref", "pull_key", "outcome", "duration_ms", "boss_pct", "boss_hp_pct", "phase_reached", "deaths")
 
 
 def list_pulls_result(scope: AnalystScope) -> ToolResult:
@@ -303,7 +303,14 @@ def compare_pulls_result(scope: AnalystScope, metric: CompareMetric, mechanic_id
         if metric == "deaths":
             rows.append({**base, "deaths": s["deaths"], "deaths_before_cutoff": s["deaths_before_cutoff"]})
         elif metric == "phase_reached":
-            rows.append({**base, "phase_reached": s["phase_reached"], "boss_pct": s["boss_pct"]})
+            rows.append(
+                {
+                    **base,
+                    "phase_reached": s["phase_reached"],
+                    "boss_pct": s["boss_pct"],
+                    "boss_hp_pct": s["boss_hp_pct"],
+                }
+            )
         elif metric == "duration":
             rows.append({**base, "duration_ms": s["duration_ms"]})
         else:
@@ -332,7 +339,7 @@ def compare_pulls_result(scope: AnalystScope, metric: CompareMetric, mechanic_id
 
 @tool
 def list_pulls(*, config: RunnableConfig) -> str:
-    """List the pulls in this request: outcome, duration, boss health, phase reached and death count.
+    """List the pulls in this request: outcome, duration, fight progress, boss health, phase reached and death count.
 
     Use it first when the request covers several pulls, to pick which ones to look at.
     """
@@ -443,7 +450,7 @@ def compare_pulls(metric: CompareMetric, mechanic_id: str | None = None, *, conf
     Use it for questions about patterns across pulls instead of querying each pull separately.
 
     Args:
-        metric: "deaths" (total and before the wipe cutoff), "mechanic_failures" (needs mechanic_id), "phase_reached" (with boss health) or "duration".
+        metric: "deaths" (total and before the wipe cutoff), "mechanic_failures" (needs mechanic_id), "phase_reached" (with fight progress and boss health) or "duration".
         mechanic_id: Mechanic ID for metric "mechanic_failures", for example "swirl".
     """  # noqa: E501
     return compare_pulls_result(scope_from(config), metric, mechanic_id).model_dump_json()

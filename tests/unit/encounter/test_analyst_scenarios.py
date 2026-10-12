@@ -225,7 +225,7 @@ async def test_multi_pull_context_and_cross_pull_finding(script, synth_data):
     report = await run_analysis(request(P1, P2, question="Did Swirl get better?"), store=synth_data)
 
     system = model.seen[0][0].content
-    assert "- SYNTH01:1: wipe, 60000 ms, boss 35.0%, reached p2, 4 deaths [ev:SYNTH01:1:pull]" in system
+    assert "- SYNTH01:1: wipe, 60000 ms, fight 35.0%, boss HP 41.0%, reached p2, 4 deaths [ev:SYNTH01:1:pull]" in system
     assert "- SYNTH01:2: kill" in system and "PULL SYNTH01:1" not in system
     assert [f.scope for f in report.findings] == ["cross_pull"]
     assert set(report.produced_by.events_hashes) == {P1, P2}
