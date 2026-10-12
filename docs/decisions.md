@@ -330,7 +330,9 @@ and, where marked, a contract update in plan section 6.
   written before the change still loads; the `pull` ref, `list_pulls` and `compare_pulls(metric="phase_reached")`
   carry it. The rendered digest header reads `fight 35.0% | boss HP 41.0%` (was `boss 35.0%`, which was fight
   progress). The analyst's multi-pull context and the `list_pulls` / `compare_pulls` docstrings called
-  `boss_pct` "boss health"; they now name both figures, which changes the analyst prompt version. The recorded `report.json` files (fixtures and `KHADBOT_DATA_DIR`) had
+  `boss_pct` "boss health"; they now name both figures, which changes the analyst prompt version. Ingest now
+  rewrites a pull whose metadata changed even when its `events_hash` did not, so a field added to the report
+  query reaches stored pulls. The recorded `report.json` files (fixtures and `KHADBOT_DATA_DIR`) had
   `bossPercentage` merged in from a live `fights { id bossPercentage }` query; nothing else in them changed.
 - **Rosters come from each pull.** Report-wide player actors include everyone the logger saw (276 in
   `H7z1fqDXjRTFnbtg`). Anything that lists "the raid" must use the pull's friendly players, never
