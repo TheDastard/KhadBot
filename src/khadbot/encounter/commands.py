@@ -199,15 +199,16 @@ def format_pulls(code: str, pulls: list[Pull]) -> str:
     lines = [
         f"### Pulls `{code}`",
         "",
-        "| Fight | Encounter | Outcome | Duration | Boss % | Last phase |",
-        "|---|---|---|---|---|---|",
+        "| Fight | Encounter | Outcome | Duration | Fight % | Boss HP % | Last phase |",
+        "|---|---|---|---|---|---|---|",
     ]
     for p in pulls:
         pct = f"{p.boss_pct:.1f}" if p.boss_pct is not None else "-"
+        hp = f"{p.boss_hp_pct:.1f}" if p.boss_hp_pct is not None else "-"
         outcome = "kill" if p.kill else "wipe"
         phase = p.last_phase if p.last_phase is not None else "-"
         lines.append(
-            f"| {p.fight_id} | {p.encounter_name} | {outcome} | {p.duration_ms / 1000:.1f}s | {pct} | {phase} |"
+            f"| {p.fight_id} | {p.encounter_name} | {outcome} | {p.duration_ms / 1000:.1f}s | {pct} | {hp} | {phase} |"
         )
     return "\n".join(lines)
 

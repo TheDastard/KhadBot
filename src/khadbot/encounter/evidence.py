@@ -171,6 +171,7 @@ def pull_summary(r: PullRecords) -> dict[str, Any]:
         "outcome": d.outcome,
         "duration_ms": d.duration_ms,
         "boss_pct": d.boss_pct,
+        "boss_hp_pct": d.boss_hp_pct,
         "phase_reached": d.phase_reached,
         "cutoff_ms": d.cutoff_ms,
         "deaths": len(r.deaths),

@@ -32,11 +32,12 @@ class Pull(BaseModel):
     encounter_name: str
     difficulty: int | None
     kill: bool
-    start_ms: int  # report-relative, as WCL reports it
-    end_ms: int  # report-relative
+    start_ms: int  # ms from report start, as WCL reports it
+    end_ms: int  # ms from report start
     duration_ms: int
     last_phase: int | None
-    boss_pct: float | None  # WCL fightPercentage, 0-100
+    boss_pct: float | None  # WCL fightPercentage, 0-100: progress through the whole fight
+    boss_hp_pct: float | None = None  # WCL bossPercentage, 0-100: the boss's health
     phase_transitions: list[tuple[int, int]] = []  # (phase id, fight-relative ms), if WCL provides them
     friendly_player_ids: list[int]
 
@@ -219,7 +220,8 @@ class PullDigest(BaseModel):
     outcome: Literal["kill", "wipe"]
     duration_ms: int
     phase_reached: str | None
-    boss_pct: float | None
+    boss_pct: float | None  # fight progress (fightPercentage)
+    boss_hp_pct: float | None = None  # boss health (bossPercentage)
     cutoff_ms: int | None
     deaths: list[DeathRecord]  # cap 10; before-cutoff first
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage

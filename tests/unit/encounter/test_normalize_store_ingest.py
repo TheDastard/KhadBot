@@ -48,6 +48,7 @@ class TestParseReportMeta:
         assert wipe.duration_ms == 60_000
         assert wipe.encounter_id == 90001
         assert wipe.boss_pct == 35.0
+        assert wipe.boss_hp_pct == 41.0
         assert wipe.phase_transitions == [(1, 0), (2, 35_000)]
         assert wipe.friendly_player_ids == [1, 2, 3, 4, 5]
 

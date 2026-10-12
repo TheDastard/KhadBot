@@ -164,8 +164,8 @@ class TestPullsCommand:
     async def test_lists_pulls(self, local_store):
         out = await pulls_command("")
         assert "### Pulls `SYNTH01`" in out
-        assert "| 1 | Synthetic Boss | wipe | 60.0s | 35.0 | 2 |" in out
-        assert "| 2 | Synthetic Boss | kill | 80.0s | 0.0 | 2 |" in out
+        assert "| 1 | Synthetic Boss | wipe | 60.0s | 35.0 | 41.0 | 2 |" in out
+        assert "| 2 | Synthetic Boss | kill | 80.0s | 0.0 | 0.0 | 2 |" in out
 
     async def test_unknown_report(self, local_store):
         assert "No pulls stored for `NOPE`" in await pulls_command("NOPE")

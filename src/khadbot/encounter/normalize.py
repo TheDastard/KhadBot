@@ -117,6 +117,7 @@ def parse_report_meta(code: str, meta: dict) -> tuple[list[Pull], list[Actor]]:
                 duration_ms=end - start,
                 last_phase=f.get("lastPhase"),
                 boss_pct=f.get("fightPercentage"),
+                boss_hp_pct=f.get("bossPercentage"),
                 phase_transitions=[(t["id"], int(t["startTime"]) - start) for t in f.get("phaseTransitions") or []],
                 friendly_player_ids=list(f.get("friendlyPlayers") or []),
             )
