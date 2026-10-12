@@ -1,4 +1,4 @@
-# Cooldown registry (plan section 6.2).
+# Cooldown registry.
 #
 # Ported from MAJOR_COOLDOWN_IDS in tools/warcraftlogs/encounter.py. Durations are null and
 # every entry is unverified until a human fills them in. `kind` is a first-pass port
