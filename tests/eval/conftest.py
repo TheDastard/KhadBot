@@ -50,7 +50,7 @@ def golden_questions() -> list[GoldenQuestion]:
 
 def _ingest(code: str, store: ParquetEventStore) -> None:
     if not (FIXTURES / "wcl" / code).is_dir():
-        pytest.fail(f"golden questions need report {code}, but tests/fixtures/wcl/{code} is not recorded")
+        pytest.fail(f"golden questions need report {code}, but tests/fixtures/encounter/wcl/{code} is not recorded")
     if code == "SYNTH01":
         filters = {"registry_spell_ids": SYNTH_REGISTRY_IDS, "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS}
     else:

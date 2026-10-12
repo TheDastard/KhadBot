@@ -1,0 +1,37 @@
+{
+ "data": [
+  {
+   "timestamp": 108000,
+   "type": "death",
+   "sourceID": 10,
+   "targetID": 3,
+   "abilityGameID": 900101,
+   "fight": 0
+  },
+  {
+   "timestamp": 123000,
+   "type": "death",
+   "sourceID": 10,
+   "targetID": 5,
+   "abilityGameID": 900102,
+   "fight": 0
+  },
+  {
+   "timestamp": 141000,
+   "type": "death",
+   "sourceID": 10,
+   "targetID": 4,
+   "abilityGameID": 900102,
+   "fight": 0
+  },
+  {
+   "timestamp": 150000,
+   "type": "death",
+   "sourceID": 10,
+   "targetID": 1,
+   "abilityGameID": 900010,
+   "fight": 0
+  }
+ ],
+ "nextPageTimestamp": null
+}

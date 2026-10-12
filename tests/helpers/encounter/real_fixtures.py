@@ -1,7 +1,7 @@
 """
 tests/helpers/encounter/real_fixtures.py
 
-The recorded WCL fixtures under tests/fixtures/wcl/<code>/ (every report directory except SYNTH01): which reports
+The recorded WCL fixtures under tests/fixtures/encounter/wcl/<code>/ (every report directory except SYNTH01): which reports
 are usable, which fights have pages, and an offline ingest of those fights.
 
 The pages live in Git LFS. A checkout without ``git lfs pull`` (or with ``GIT_LFS_SKIP_SMUDGE=1``) has pointer files
