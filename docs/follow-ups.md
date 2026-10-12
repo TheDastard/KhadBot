@@ -26,9 +26,25 @@ file's header comment points to.
   Pain, Seriously Sharp Seashell); exclude friendly-source damage from the unregistered share; report
   self-inflicted damage per player; flag it in death windows; list unclassified friendly-source abilities the
   way unregistered boss abilities are listed.
-- **Positions.** `x` / `y` / `facing` are already in the raw pages. Keeping them grows parquet by 39% and
-  normalize time by about 2 s per night (`docs/wcl-api.md`). They would answer "was the aggro holder in melee
-  range" and could make standing-in-it mechanics such as Mephitic Thrash detectable. Waiting on a decision.
+- **Investigate position data as a signal.** Events with `includeResources` carry `x`, `y`, `facing` and
+  `mapID` for one unit (`resourceActor`: 1 source, 2 target), on about 73% of rows. They are already in the raw
+  pages, so keeping them costs no API points: parquet grows by 39% and normalize by about 2 s per night
+  (`docs/wcl-api.md`). What to find out:
+  - **Which questions it answers.** Candidates: was the aggro holder in melee range when Unchecked Rage or
+    Rattler Slam fired (separates a tank out of position from a tank who never got aggro); who stood inside
+    Mephitic Thrash's 35 yards or Circling Prey's 13 yards; who failed to spread for Volatile Purge; who stood
+    in a soak.
+  - **Whether positions are fresh enough.** A unit's position only updates on events where it is the resource
+    actor. Measure how stale the latest position is at the moments that matter, per role (tanks, melee,
+    ranged, the boss).
+  - **The distance scale.** The units are not documented. Calibrate from known events instead of assuming a
+    scale: boss-to-target distance at Ula'tek's melee swings was 1,336 to 2,026 units (5th to 95th percentile)
+    on the recorded pulls; journal radii (13 and 35 yards) give two more anchors if hits inside and outside them
+    can be told apart.
+  - **The shape of it.** Columns on every event row, or a separate per-pull position table sampled per actor,
+    and a query helper such as "distance between two actors at `t`".
+  Decide from that whether to keep positions, for which questions, and in what form. A scratch spike script
+  measured the storage and timing; nothing is in the codebase yet.
 - **Wrong-target damage.** The Enemies side of WCL's Threat data records every player and pet action aimed at
   an NPC, per instance, and its `table` view gives bands of who was on which NPC. That would show damage on
   the wrong target, such as hitting Ula'tek instead of the Venomous Heart during Rage of the Shackled, or
@@ -88,7 +104,7 @@ human task table in `docs/decisions.md`).
 - **Soul Constrictor** soakers are an undetected failure; needs the hit-while-debuffed rule above.
 - **Blightscale Viper hatches** are counted as damage but charged to no one; needs the add-cause rule above.
 - **Mephitic Thrash** has no rule: the logs give players inside and outside the sweep the same impact and DoT.
-  Positions may make it detectable.
+  The position investigation above may make it detectable (distance from Gore Rattle at the impact).
 - **Ingested Venom** (1313529) is tagged as the Serpent's Bite soak debuff on the raid's belief; confirm.
 - **Normal and Mythic** are not covered: every entry lists `heroic` only. Check each entry against logs from
   those difficulties before adding them.
