@@ -19,36 +19,15 @@ import statistics
 import time
 
 import pytest
-from helpers.synth import FIXTURES
+from helpers.real_fixtures import REAL_REPORTS, ingest_fixture
 
 from khadbot.encounter import query_tools as qt
 from khadbot.encounter.annotate import annotate_pull
 from khadbot.encounter.config_files import load_encounter_view, load_registry
 from khadbot.encounter.digest import build_digest
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.fetch import RawPageCache
-from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.query_tools import AnalystScope
 from khadbot.encounter.store import ParquetEventStore
-
-REAL_REPORTS = sorted(p.name for p in (FIXTURES / "wcl").iterdir() if p.is_dir() and p.name != "SYNTH01")
-
-
-def _fixture_fights(code: str) -> list[int]:
-    """Fights with recorded pages. report.json lists every fight, but only these are in the fixture."""
-    return sorted(int(p.name) for p in (FIXTURES / "wcl" / code).iterdir() if p.is_dir() and p.name.isdigit())
-
-
-async def _ingest(code: str, store: ParquetEventStore):
-    # The fixtures' Buffs pages were recorded with the registry filter; enemy Casts are unfiltered.
-    return await ingest_report(
-        code,
-        _fixture_fights(code),
-        store=store,
-        cache=RawPageCache(FIXTURES / "wcl"),
-        offline=True,
-        registry_spell_ids=load_registry().spell_ids(),
-    )
 
 
 @pytest.mark.perf
@@ -56,7 +35,7 @@ async def _ingest(code: str, store: ParquetEventStore):
 @pytest.mark.parametrize("code", REAL_REPORTS)
 async def test_ingest_budget(code, tmp_path):
     t0 = time.perf_counter()
-    result = await _ingest(code, ParquetEventStore(tmp_path / "events"))
+    result = await ingest_fixture(code, ParquetEventStore(tmp_path / "events"))
     elapsed = time.perf_counter() - t0
     assert not result.failed
     assert result.pulls
@@ -65,7 +44,7 @@ async def test_ingest_budget(code, tmp_path):
 
 async def _ingested(code, tmp_path) -> ParquetEventStore:
     store = ParquetEventStore(tmp_path / "events")
-    result = await _ingest(code, store)
+    result = await ingest_fixture(code, store)
     assert not result.failed
     assert result.pulls
     return store
