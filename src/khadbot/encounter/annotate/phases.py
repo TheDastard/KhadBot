@@ -1,5 +1,5 @@
 """
-encounter/phases.py
+encounter/annotate/phases.py
 
 Phase detection: turn an encounter file's ordered phase triggers into fight-relative spans.
 

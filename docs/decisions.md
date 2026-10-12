@@ -54,6 +54,14 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `review.py` because the package exports a `review` function, which would shadow it. The graph's
   `make_run`, `analysis_config` and `invoke` are public because the review graph uses them. Code and
   prompts moved unchanged: all three prompt versions match the previous layout and `GRAPH_VERSION` stays.
+- **Annotate package (2026-10-12)**: `phases.py` and `annotate.py` form `encounter/annotate/`: `frame.py`
+  (`Annotated`, the column schema, `is_hit`, `type_is`, `aggro_events`, `ANNOTATION_VERSION`), `failures.py`
+  (the failure rules and blame, where the planned stack-count, hit-while-debuffed and add-cause rules go),
+  `pipeline.py` (`annotate()`, clusters, wipe cutoff), `cache.py` (`AnnotationCache`, `annotate_pull`) and
+  `phases.py`. `frame.py` exists so the failure rules and `annotate()` don't import each other. The core
+  module is not `annotate.py` because the package exports an `annotate` function. App code imports from the
+  package as before. Code moved unchanged (`_failures` is now the public `mechanic_failures`), so annotated
+  frames are identical and `ANNOTATION_VERSION` stays 3.
 - **Encounter fixtures (2026-10-12)**: `wcl/`, `wcl_views/`, `encounters/` and `registries/` live under
   `tests/fixtures/encounter/`, next to the coach payload modules in `tests/fixtures/`. `FIXTURES` in
   `tests/helpers/encounter/synth.py` names that encounter root. The Git LFS rules move with `wcl/`, and the

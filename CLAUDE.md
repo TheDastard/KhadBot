@@ -28,9 +28,10 @@ src/khadbot/
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
-  encounter/         # models, config_files, store, phases, annotate, digest, evidence, findings,
-                     # CLI commands; conversation and plan to come
+  encounter/         # models, config_files, store, digest, evidence, findings, CLI commands;
+                     # conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report
+    annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
     analysis/        # deaths, mechanics, cooldowns, aggro
     analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
   cli/               # Rich + prompt_toolkit REPL

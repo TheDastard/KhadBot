@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_phases.py
+tests/unit/encounter/annotate/test_phases.py
 
 Phase detection: each trigger type, ordering, an unmatched trigger, and SYNTH01.
 """
@@ -9,8 +9,8 @@ from __future__ import annotations
 import pytest
 from helpers.encounter.events import BOSS, make_events, make_pull
 
+from khadbot.encounter.annotate.phases import boss_ids_of, detect_phases, unmatched_phase
 from khadbot.encounter.config_files import parse_encounter
-from khadbot.encounter.phases import boss_ids_of, detect_phases, unmatched_phase
 
 
 def enc_with(*triggers: dict):

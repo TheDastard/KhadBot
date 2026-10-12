@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_annotate.py
+tests/unit/encounter/annotate/test_annotate.py
 
 Annotation: cluster boundaries, each failure rule positive and negative, damage windows,
 the wipe cutoff, enc=None, and the on-disk annotation cache.
@@ -11,8 +11,8 @@ import polars as pl
 import pytest
 from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
 
-from khadbot.encounter import annotate as annotate_mod
 from khadbot.encounter.annotate import ANNOTATION_COLUMNS, AnnotationCache, annotate, annotate_pull
+from khadbot.encounter.annotate import cache as annotate_mod
 from khadbot.encounter.config_files import encfile_hash, parse_encounter
 
 ACTORS = make_actors()
