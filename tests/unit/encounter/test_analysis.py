@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
+from helpers.encounter.real_fixtures import REAL_REPORTS
 
 from khadbot.encounter.analysis.aggro import aggro_bands, aggro_holder, aggro_summaries
 from khadbot.encounter.analysis.cooldowns import aura_intervals, cooldown_uses, window_coverage
@@ -398,6 +399,7 @@ def _overlap(a: list[tuple[int, int]], b: list[tuple[int, int]]) -> int:
     return sum(max(0, min(e1, e2) - max(s1, s2)) for s1, e1 in a for s2, e2 in b)
 
 
+@pytest.mark.skipif(not REAL_REPORTS, reason="real WCL fixtures not pulled from Git LFS")
 @pytest.mark.parametrize(
     ("code", "fight", "wcl_bands", "differing"),
     [
