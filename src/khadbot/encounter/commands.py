@@ -38,7 +38,8 @@ _last_report: str | None = None
 # /ingest
 # ---------------------------------------------------------------------------
 
-INGEST_USAGE = "Usage: /ingest <report-code> [--fights 3,4] [--offline]"
+INGEST_USAGE = "Usage: /ingest <report-code> [--fights 3,4] [--offline | --refresh-meta]"
+REFRESH_OFFLINE_ERROR = "--refresh-meta refetches report metadata from WarcraftLogs and cannot be used with --offline."
 
 
 class UsageError(Exception):
@@ -69,6 +70,7 @@ def ingest_parser() -> argparse.ArgumentParser:
     parser.add_argument("code")
     parser.add_argument("--fights")
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--refresh-meta", action="store_true")
     return parser
 
 
@@ -111,10 +113,17 @@ async def ingest_command(arg: str) -> str:
     try:
         ns = ingest_parser().parse_args(shlex.split(arg))
         fights = parse_fights(ns.fights)
+        if ns.refresh_meta and ns.offline:
+            raise UsageError(f"{REFRESH_OFFLINE_ERROR}\n\n{INGEST_USAGE}")
     except UsageError as exc:
         return f"**{exc}**"
     result = await ingest_report(
-        ns.code, fights, offline=ns.offline, progress=_console_progress, **default_filter_kwargs()
+        ns.code,
+        fights,
+        offline=ns.offline,
+        refresh_meta=ns.refresh_meta,
+        progress=_console_progress,
+        **default_filter_kwargs(),
     )
     global _last_report
     if result.pulls or result.skipped:

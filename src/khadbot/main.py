@@ -48,7 +48,7 @@ def _run_cli() -> None:
     asyncio.run(run_cli(agent_fn, commands=commands))
 
 
-def _run_ingest(code: str, fights: str | None, offline: bool) -> None:
+def _run_ingest(code: str, fights: str | None, offline: bool, refresh_meta: bool = False) -> None:
     from rich.console import Console
     from rich.markdown import Markdown
 
@@ -61,7 +61,14 @@ def _run_ingest(code: str, fights: str | None, offline: bool) -> None:
         console.print(f"[dim]{pull_key}  {stage}  {pct:.0%}[/dim]")
 
     result = asyncio.run(
-        ingest_report(code, parse_fights(fights), offline=offline, progress=progress, **default_filter_kwargs())
+        ingest_report(
+            code,
+            parse_fights(fights),
+            offline=offline,
+            refresh_meta=refresh_meta,
+            progress=progress,
+            **default_filter_kwargs(),
+        )
     )
     console.print(Markdown(format_ingest_result(result)))
     if result.failed:
@@ -103,6 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("code", help="WarcraftLogs report code")
     ingest.add_argument("--fights", help="Comma-separated fight IDs (default: all encounter fights)")
     ingest.add_argument("--offline", action="store_true", help="Use only the raw page cache; never call WCL")
+    ingest.add_argument(
+        "--refresh-meta",
+        action="store_true",
+        help="Refetch only the report metadata and update stored pulls; event pages come from the raw cache",
+    )
     digest = sub.add_parser("digest", help="Print the deterministic digest for one ingested pull")
     digest.add_argument("code", help="WarcraftLogs report code")
     digest.add_argument("fight", type=int, help="Fight ID")
@@ -114,13 +126,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    args = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
+    parser = build_parser()
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
+    if command == "ingest" and args.refresh_meta and args.offline:
+        from khadbot.encounter.commands import REFRESH_OFFLINE_ERROR
+
+        parser.error(REFRESH_OFFLINE_ERROR)
 
     if command == "cli":
         _run_cli()
     elif command == "ingest":
-        _run_ingest(args.code, args.fights, args.offline)
+        _run_ingest(args.code, args.fights, args.offline, args.refresh_meta)
     elif command == "digest":
         _run_digest(args.code, args.fight, args.json, args.unregistered)
 

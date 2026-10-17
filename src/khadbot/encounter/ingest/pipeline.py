@@ -5,6 +5,9 @@ Ingest orchestration: report metadata -> raw pages -> normalized events -> event
 
 Resumable through the raw page cache and idempotent through ``events_hash``: a pull whose
 recomputed hash and metadata match the stored ones is skipped without rewriting anything.
+
+``refresh_meta`` refetches only ``report.json`` and re-normalizes the stored pulls from their cached
+pages, so a field added to the report query reaches pulls ingested before it without any event request.
 """
 
 from __future__ import annotations
@@ -39,8 +42,10 @@ def default_store() -> ParquetEventStore:
     return ParquetEventStore(Path(EncounterConfig().data_dir) / "events")
 
 
-async def _report_meta(client: WarcraftLogsClient | None, cache: RawPageCache, code: str, *, offline: bool) -> dict:
-    if (meta := cache.report_meta(code)) is not None:
+async def _report_meta(
+    client: WarcraftLogsClient | None, cache: RawPageCache, code: str, *, offline: bool, refresh: bool = False
+) -> dict:
+    if not refresh and (meta := cache.report_meta(code)) is not None:
         return meta
     if offline or client is None:
         raise MissingFixtureError(f"Report metadata for '{code}' is not in the raw cache.")
@@ -70,13 +75,20 @@ async def ingest_report(
     client: WarcraftLogsClient | None = None,
     registry_spell_ids: Sequence[int] | None = None,
     enemy_cast_ids: Mapping[int, Sequence[int]] | None = None,
+    refresh_meta: bool = False,
 ) -> IngestResult:
     """
     Ingest the requested fights of ``code`` (all encounter fights when ``fight_ids`` is None).
 
     ``registry_spell_ids`` filter the Buffs fetch; ``enemy_cast_ids`` maps encounter_id -> ability IDs for
     the enemy-Casts filter. A failure in one pull is recorded in ``failed`` and the rest continue.
+
+    ``refresh_meta`` refetches the report metadata and rewrites the stored pulls whose metadata changed,
+    reading their events from the raw page cache only; fights not stored yet are left alone. It needs WCL,
+    so it cannot be combined with ``offline``.
     """
+    if refresh_meta and offline:
+        raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
     store = store or default_store()
     cache = cache or default_cache()
 
@@ -86,7 +98,7 @@ async def ingest_report(
             client = await stack.enter_async_context(WarcraftLogsClient(wcl.client_id, wcl.client_secret))
 
         before = await _points_spent(client) if client and not offline else None
-        meta = await _report_meta(client, cache, code, offline=offline)
+        meta = await _report_meta(client, cache, code, offline=offline, refresh=refresh_meta)
         pulls, actors = parse_report_meta(code, meta)
         store.write_actors(code, actors)
         store.write_abilities(code, parse_abilities(meta))
@@ -103,11 +115,19 @@ async def ingest_report(
         ingested: list[str] = []
         skipped: list[str] = []
         stored = {p.fight_id: p for p in store.pulls(code)}
+        if refresh_meta:
+            for p in wanted:
+                if fight_ids is not None and p.fight_id not in stored:
+                    failed[p.pull_key] = "not ingested yet; a metadata refresh only updates stored pulls"
+            wanted = [p for p in wanted if p.fight_id in stored]
         for pull in wanted:
             key = pull.pull_key
             try:
                 specs = specs_for(registry_spell_ids, (enemy_cast_ids or {}).get(pull.encounter_id))
-                truncated = await fetch_pull(client, cache, code, pull, specs, offline=offline, progress=progress)
+                # A metadata refresh never requests event pages: they come from the raw cache only.
+                truncated = await fetch_pull(
+                    client, cache, code, pull, specs, offline=offline or refresh_meta, progress=progress
+                )
                 if progress:
                     progress(key, "normalizing", 1.0)
                 pages = {s.dir_name: cache.pages(code, pull.fight_id, s) for s in specs}

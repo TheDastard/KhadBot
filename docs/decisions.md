@@ -217,6 +217,11 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   change. `death_records` treats a death ability of 0 as unknown, so events normalized earlier fall back to the
   last hit. This changes `events_hash` for every real pull, which invalidates cached findings; stored nights need
   an offline re-ingest. SYNTH01's death rows now use WCL's shape so the synthetic fixture exercises the same path.
+- **Report metadata refresh (2026-10-16)**: `ingest --refresh-meta` (and `/ingest --refresh-meta`) refetches only
+  `report.json`, then re-normalizes the pulls already in the store from the raw page cache and rewrites those
+  whose metadata or events changed. It never requests event pages: fights not stored yet are left alone (named
+  fights not stored are reported as failed), and a pull whose pages are missing from the cache fails. It needs
+  WCL, so it is a usage error with `--offline`.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
 

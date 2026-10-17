@@ -44,3 +44,9 @@ Add a bullet:
   `abilityGameID` is 0 or missing, and `source_id` from `killerID` when `sourceID` is -1, for Deaths `death` rows.
   The event schema does not change. Death records treat a death ability of 0 as unknown, so events normalized
   before this rule fall back to the last hit.
+
+Add after the `events_hash` paragraph:
+
+`ingest --refresh-meta` refetches only `report.json` and re-normalizes the pulls already stored from the raw page
+cache, rewriting those whose metadata or events changed. It never requests event pages and cannot run with
+`--offline`.

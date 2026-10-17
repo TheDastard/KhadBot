@@ -16,6 +16,7 @@ from helpers.encounter.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
 from khadbot.encounter.ingest.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
+from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.store import EVENT_SCHEMA
 
 CODE = "SYNTH01"
@@ -25,6 +26,22 @@ CODE = "SYNTH01"
 def meta(synth_cache):
     pulls, actors = parse_report_meta(CODE, synth_cache.report_meta(CODE))
     return {p.fight_id: p for p in pulls}, actors
+
+
+class MetaOnlyClient:
+    """A WCL client that answers only the report-metadata query; any events request fails the test."""
+
+    def __init__(self, meta: dict) -> None:
+        self.meta = meta
+        self.queries: list[str] = []
+
+    async def query(self, gql: str, variables: dict | None = None, **_) -> dict:
+        self.queries.append(gql)
+        assert gql == GET_REPORT_META, "a metadata refresh must not request event pages"
+        return {"reportData": {"report": self.meta}}
+
+    async def rate_limit(self) -> dict:
+        return {"pointsSpentThisHour": 0.0}
 
 
 def frame_for(synth_cache, meta, fight: int) -> pl.DataFrame:
@@ -330,6 +347,42 @@ class TestIngest:
 
         with pytest.raises(MissingFixtureError):
             await ingest_report("NOPE", store=synth_store, cache=RawPageCache(tmp_path / "empty"), offline=True)
+
+    async def test_refresh_meta_requests_only_metadata(self, synth_ingest_kwargs, synth_cache):
+        await ingest_report(CODE, **synth_ingest_kwargs)
+        store = synth_ingest_kwargs["store"]
+        pages = sorted(p for p in (synth_cache.root / CODE).rglob("*") if p.is_file() and p.name != "report.json")
+        before = {p: (p.stat().st_mtime_ns, p.read_bytes()) for p in pages}
+        meta = orjson.loads(orjson.dumps(synth_cache.report_meta(CODE)))
+        meta["fights"][0]["bossPercentage"] = 40.0  # WCL now reports a different value for fight 1
+        client = MetaOnlyClient(meta)
+
+        kwargs = {**synth_ingest_kwargs, "offline": False}
+        result = await ingest_report(CODE, client=client, refresh_meta=True, **kwargs)
+
+        assert client.queries == [GET_REPORT_META]
+        assert result.pulls == ["SYNTH01:1"] and result.skipped == ["SYNTH01:2"] and result.failed == {}
+        assert next(p for p in store.pulls(CODE) if p.fight_id == 1).boss_hp_pct == 40.0
+        assert synth_cache.report_meta(CODE)["fights"][0]["bossPercentage"] == 40.0
+        assert {p: (p.stat().st_mtime_ns, p.read_bytes()) for p in pages} == before
+
+    async def test_refresh_meta_leaves_unstored_fights_alone(self, synth_ingest_kwargs, synth_cache):
+        await ingest_report(CODE, [2], **synth_ingest_kwargs)
+        store = synth_ingest_kwargs["store"]
+        client = MetaOnlyClient(synth_cache.report_meta(CODE))
+        kwargs = {**synth_ingest_kwargs, "offline": False}
+
+        everything = await ingest_report(CODE, client=client, refresh_meta=True, **kwargs)
+        assert everything.pulls == [] and everything.skipped == ["SYNTH01:2"] and everything.failed == {}
+
+        named = await ingest_report(CODE, [1, 2], client=client, refresh_meta=True, **kwargs)
+        assert list(named.failed) == ["SYNTH01:1"] and "not ingested yet" in named.failed["SYNTH01:1"]
+        assert [p.fight_id for p in store.pulls(CODE)] == [2]
+        assert client.queries == [GET_REPORT_META, GET_REPORT_META]
+
+    async def test_refresh_meta_cannot_run_offline(self, synth_ingest_kwargs):
+        with pytest.raises(ValueError, match="offline"):
+            await ingest_report(CODE, refresh_meta=True, **synth_ingest_kwargs)
 
     async def test_progress_reports_each_pull(self, synth_ingest_kwargs):
         seen = []
