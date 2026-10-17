@@ -68,7 +68,17 @@ Before every commit, reread the full message and remove anything from either lis
 
 ## Workflow
 
-- Commit or push only when the user asks. Branch off `main` first; don't commit to `main` directly.
+- Commit or push only when the user asks. Branch off `main` first; don't commit to `main` directly, apart from the trivial changes described under "Branches and merging".
 - Run `mise run check` (or the uv equivalents in CLAUDE.md) before committing.
 - One logical change per commit. Don't mix formatting-only churn with behaviour changes.
 - Never commit `.env`, `.khadbot_data/`, recorded data containing private report codes the user hasn't approved, or API keys.
+
+## Branches and merging
+
+- One task per branch, each in its own worktree under `.claude/worktrees/`, branched from current `main`. Work in the worktree; never `cd` back to the main checkout to run git.
+- `main` history stays linear: rebase the branch onto `main`, then fast-forward `main` to it. No merge commits, no squash merges on GitHub.
+- Rewrite the branch's history freely until it is pushed (fold fixes into the commit they belong to). After a push, rewrite only your own branch, and push it with `--force-with-lease`, never `--force`.
+- `main` moves only after CI is green on the exact commit being fast-forwarded.
+- After `main` is pushed, delete the branch locally and on GitHub, and remove its worktree.
+- Pushing a branch, moving `main` and deleting branches each need the user's go-ahead, like commits. `/land` runs the whole sequence once they ask for it.
+- **Trivial changes** can be committed directly on `main`, with no branch or worktree: a typo, a wording fix in docs or comments, a broken link. A change is trivial only if it changes no behaviour, test, config, dependency, contract or generated file, and fits in one small commit. Still run `mise run check` first, follow the commit rules, and commit and push only when asked. After pushing, confirm CI on `main` is green, and fix a red run straight away. When in doubt, use a branch.
