@@ -39,7 +39,7 @@ has goldens or generated files, regenerate them rather than hand-merging (`uv ru
 ```bash
 git push -u origin <branch>                    # first push
 git push --force-with-lease origin <branch>    # after a rebase or a folded fix
-uv run --no-project python -I .claude/skills/land/wait_for_ci.py "$(git rev-parse HEAD)"
+uv run --no-project python -I .claude/skills/land/wait_for_ci.py "$(git rev-parse HEAD)" --branch <branch>
 ```
 
 `wait_for_ci.py` waits for every Actions run on that exact commit, then prints each job's result and, for failures,
@@ -75,11 +75,12 @@ Then push it:
 
 ```bash
 git push origin refs/heads/main:refs/heads/main
-uv run --no-project python -I <worktree>/.claude/skills/land/wait_for_ci.py "$(git rev-parse refs/heads/main)"
+uv run --no-project python -I <worktree>/.claude/skills/land/wait_for_ci.py "$(git rev-parse refs/heads/main)" --branch main
 ```
 
-Pushing `main` starts CI again on the same commit; `wait_for_ci.py` reports every run on it. Tell the user if it
-isn't green.
+Pushing `main` starts CI again on the same commit; `wait_for_ci.py` reports every run on it. Always pass
+`--branch main`: the branch run on that commit has already finished, and without it the script can return as soon as
+it sees that old run, before GitHub has registered `main`'s. Tell the user if it isn't green.
 
 ## 6. Clean up
 
