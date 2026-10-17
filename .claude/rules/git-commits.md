@@ -54,7 +54,7 @@ Repo-wide:
 | `repo` | Package layout, entry point, dependencies, tooling, Claude rules |
 | `tests` | Test infrastructure shared across the app (`tests/conftest.py`, `tests/helpers/fake_llm.py`) and non-encounter tests |
 | `fixtures` | Non-encounter test fixtures |
-| `eval` | Eval tooling shared across the app (the `test-eval` target, eval markers) |
+| `eval` | Eval tooling shared across the app (the `test:eval` task, eval markers) |
 | `docs` | Commits that change only documentation |
 
 For tests, fixtures and evals, prefer the system's own tag (`encounter-tests`, `encounter-fixtures`, `encounter-eval`) whenever the change belongs to one system. Use the broader `tests`, `fixtures` or `eval` only when it is shared across systems or belongs to no single one. If no tag fits, add one to this list in the same commit rather than stretching an existing tag.
@@ -69,6 +69,6 @@ Before every commit, reread the full message and remove anything from either lis
 ## Workflow
 
 - Commit or push only when the user asks. Branch off `main` first; don't commit to `main` directly.
-- Run `make check` (or the uv equivalents in CLAUDE.md) before committing.
+- Run `mise run check` (or the uv equivalents in CLAUDE.md) before committing.
 - One logical change per commit. Don't mix formatting-only churn with behaviour changes.
 - Never commit `.env`, `.khadbot_data/`, recorded data containing private report codes the user hasn't approved, or API keys.

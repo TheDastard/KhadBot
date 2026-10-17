@@ -5,7 +5,7 @@ Fixtures for the golden-question eval: the question set, the recorded reports it
 offline into a session store, and an outcome collector that prints the pass rate per model.
 
 These tests call a real LLM (the analyst role from ``llm_factory``) and cost money on hosted
-providers, so they run only when selected: ``uv run pytest tests/eval -m eval`` (``make test-eval``).
+providers, so they run only when selected: ``uv run pytest tests/eval -m eval`` (``mise run test:eval``).
 
 Environment:
     KHADBOT_EVAL_MIN_PASS_RATE   Fail the run below this pass rate (0-1). Unset: report only.
