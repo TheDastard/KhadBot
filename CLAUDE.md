@@ -42,7 +42,7 @@ config/
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # cooldowns.yaml
-scripts/             # WCL fixture recorder, distclean
+scripts/             # WCL fixture recorder, clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
@@ -59,17 +59,21 @@ Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignore
 
 ## Commands
 
-The Makefile forces `cmd.exe`. From Git Bash, call uv directly.
+Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `mise tasks` lists them all. Each runs
+the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
+`install:cli`); name new tasks the same way.
 
-| Task | make | uv |
+| Task | mise | uv |
 |---|---|---|
-| Install everything | `make install-dev` | `uv sync --extra dev` |
-| Lint + typecheck + unit tests (gate for every commit) | `make check` | `uv run ruff check src tests && uv run mypy src && uv run pytest tests/unit` |
-| Unit tests | `make test-unit` | `uv run pytest tests/unit` |
-| Integration tests (needs Ollama or Groq) | `make test-integ` | `uv run pytest tests/integration` |
-| Golden evals (Anthropic; costs money) | `make test-eval` | `uv run pytest tests/eval` |
-| Format | `make format` | `uv run ruff format src tests && uv run ruff check --fix src tests` |
-| Run the CLI | `make cli` | `uv run python main.py cli` |
+| Install everything | `mise run install` | `uv sync --extra dev` |
+| Lint + typecheck + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests && uv run mypy src && uv run pytest tests/unit` |
+| Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
+| Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
+| Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
+| Format | `mise run format` | `uv run ruff format src tests && uv run ruff check --fix src tests` |
+| Run the CLI | `mise run cli` | `uv run python main.py cli` |
+| Remove caches and build output | `mise run clean` | `scripts/clean.ps1` |
+| Same, then delete `.venv` | `mise run clean:all` | `scripts/clean.ps1`, then `scripts/distclean.ps1` |
 
 Add `--no-cov` to pytest for faster local runs; coverage is on by default in `addopts`.
 
@@ -78,7 +82,8 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 - **Warnings are errors.** `pyproject.toml` turns `DeprecationWarning` and `PendingDeprecationWarning` into errors, so a new dependency that warns will fail the suite. Fix the cause, or add a narrow `ignore` entry with a comment naming the library.
 - **One LLM patch point.** Tests replace `khadbot.llm_factory.get_llm`. Always call it through the module (`llm_factory.get_llm(role=...)`), never `from khadbot.llm_factory import get_llm` at module top, or the patch won't reach your code.
 - **Fake models and tools.** `GenericFakeChatModel` has no `bind_tools`. Use the tool-capable fake in `tests/helpers/fake_llm.py`.
-- **Python** is 3.13 in the venv; `requires-python = ">=3.12,<3.15"`; ruff and mypy target 3.12. Don't use 3.13-only syntax.
+- **Python** is 3.14 in `.venv`, pinned by `.python-version`; `requires-python = ">=3.12,<3.15"`; ruff and mypy target 3.12. Don't use syntax newer than 3.12.
+- **uv owns `.venv`.** Don't add Python to `mise.toml`; mise only pins Node and pnpm and runs tasks.
 - **Package name** is `khadbot`, all lowercase, on disk and in git. Windows ignores case but Linux and CI don't, so never create a differently cased path.
 
 ## Code conventions

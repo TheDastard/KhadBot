@@ -1,0 +1,100 @@
+# mise.toml — KhadBot tool versions and tasks. Run `mise tasks` to list them, `mise run <task>` to run one.
+#
+# Python and .venv belong to uv (.python-version, pyproject.toml, uv.lock): never add python to [tools] or turn on
+# _.python.venv. Every task is one plain command, with env vars in `env`, so it runs the same from cmd, PowerShell
+# and Git Bash. Variants of one task share a `group:` prefix (`test:unit`), and `mise run "group:*"` runs them all.
+
+# ── Tools ───────────────────────────────────────────────────────────────────
+[tools]
+node = "24"
+pnpm = "12"
+
+
+# ── Environment ─────────────────────────────────────────────────────────────
+[tasks.install]
+description = "Install runtime, CLI and dev dependencies into .venv"
+run = "uv sync --extra dev"
+
+[tasks."install:runtime"]
+description = "Install runtime dependencies only"
+run = "uv sync --no-dev"
+
+[tasks."install:cli"]
+description = "Install runtime and CLI dependencies (rich, prompt_toolkit)"
+run = "uv sync --no-dev --extra cli"
+
+
+# ── Run ─────────────────────────────────────────────────────────────────────
+[tasks.cli]
+description = "Launch the interactive CLI"
+run = "uv run python main.py cli"
+
+
+# ── Testing ─────────────────────────────────────────────────────────────────
+[tasks.check]
+description = "Lint, typecheck and unit tests: the gate for every commit"
+run = ["uv run ruff check src tests", "uv run mypy src", "uv run pytest tests/unit"]
+
+[tasks.test]
+description = "Run all tests"
+run = "uv run pytest tests"
+
+[tasks."test:unit"]
+description = "Unit tests only (no LLM inference, no network)"
+run = "uv run pytest tests/unit"
+
+# Defaults to Ollama; override with LLM_PROVIDER=groq.
+[tasks."test:integ"]
+description = "Integration tests; needs Ollama (default) or LLM_PROVIDER=groq"
+env = { LLM_PROVIDER = "{{ get_env(name='LLM_PROVIDER', default='ollama') }}" }
+run = "uv run pytest tests/integration"
+
+# Expensive: run deliberately, never in CI. Requires ANTHROPIC_API_KEY; LANGSMITH_API_KEY adds per-question
+# feedback to the traces. Gate with KHADBOT_EVAL_MIN_PASS_RATE (0-1); unset reports the pass rate only.
+[tasks."test:eval"]
+description = "Golden evals against Anthropic; costs money"
+env = { LLM_PROVIDER = "anthropic", LANGCHAIN_TRACING_V2 = "true" }
+run = "uv run pytest tests/eval -m eval -s --no-cov"
+
+
+# ── Code quality ────────────────────────────────────────────────────────────
+[tasks.lint]
+description = "Lint with ruff (read-only)"
+run = "uv run ruff check src tests"
+
+# Writes files; run lint separately for a read-only check.
+[tasks.format]
+description = "Format and auto-fix with ruff (writes files)"
+run = ["uv run ruff format src tests", "uv run ruff check --fix src tests"]
+
+[tasks.typecheck]
+description = "Type-check with mypy"
+run = "uv run mypy src"
+
+
+# ── Dashboard API ───────────────────────────────────────────────────────────
+[tasks.serve]
+description = "Dashboard API on 127.0.0.1:8000; reads KHADBOT_DATA_DIR"
+run = "uv run python main.py serve"
+
+
+# ── Generated files ─────────────────────────────────────────────────────────
+[tasks."gen:contracts"]
+description = "Regenerate contracts/openapi.json from the API"
+run = "uv run python scripts/gen_contracts.py"
+
+[tasks."gen:fixture-data"]
+description = "Build .khadbot_fixture_data from the recorded fixtures (offline)"
+run = "uv run python scripts/build_fixture_data.py --out .khadbot_fixture_data"
+
+
+# ── Cleanup ─────────────────────────────────────────────────────────────────
+[tasks.clean]
+description = "Remove caches and build output (keeps .venv, .env and .khadbot_data/)"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1"
+
+# Stops processes running from the venv (e.g. ruff.exe held open by the editor), then retries the delete.
+[tasks."clean:all"]
+description = "clean, then delete .venv (stops processes holding it open)"
+depends = ["clean"]
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 -Venv .venv"

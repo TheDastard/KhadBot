@@ -13,10 +13,11 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 | D5 | Prompt versioning | `prompt_version` = SHA-256[:12] of prompts, tools, schemas, verify rules; `GRAPH_VERSION` manual | Cache keys invalidate when behaviour changes | 2026-10-10 |
 | D6 | Ingest execution | Inline async with progress callback; resumable via raw page cache; idempotent via `events_hash` | No job queue needed for a CLI | 2026-10-10 |
 | D7 | Event store | polars + parquet, one file per pull, behind an `EventStore` protocol (S2 may swap to DuckDB) | Cheap, columnar, no server | 2026-10-10 |
-| D8 | Runtime | Python only, target 3.13, `requires-python >=3.12` | Matches the venv | 2026-10-10 |
+| D8 | Runtime | Python only; `.venv` runs 3.14, pinned by `.python-version`; `requires-python >=3.12,<3.15`; ruff and mypy target 3.12 (updated 2026-10-17, see D12) | Pinned so local, CI and every worktree build the same venv; linting against the oldest supported version keeps newer syntax out | 2026-10-10 |
 | D9 | Local persistence | Everything under `KHADBOT_DATA_DIR` (default `.khadbot_data/`); SQLite for findings/plans; `AsyncSqliteSaver` for checkpoints (M5) | One gitignored directory | 2026-10-10 |
 | D10 | Package location | One sub-package, `src/khadbot/encounter/`, grouped inside by the module layout rule in CLAUDE.md: a sub-package for three or more modules that form one stage, reached through one or two entry points, with internals nothing else imports | A folder only earns its place when it hides something; shared contracts stay at the parent level | 2026-10-11 |
 | D11 | Analyst output | Analyst ends by calling a `submit_report` tool whose schema is `AnalysisReport` | Works across Groq, Ollama, Anthropic and fakes | 2026-10-10 |
+| D12 | Tooling | One owner per job. uv owns the Python version (`.python-version`), `.venv` and Python packages, and stays a standalone install with `[tool.uv] required-version` as its floor. pnpm owns `web/node_modules`. mise pins Node and pnpm in `mise.toml` and runs every task (`mise run check` and so on), locally and in CI. The Makefile and Chocolatey `make` are gone. mise never manages Python or the venv: no `python` in `[tools]`, no `_.python.venv`; tasks reach `.venv` only through `uv run`. Tasks are single plain commands with env vars in `env`. Variants of one task share a `group:` prefix (`install:cli`, `test:unit`, `gen:contracts`, `clean:all`); bare `install` is the full dev install. | The Makefile forced `cmd.exe`, so CI and Git Bash couldn't run it, and Node and pnpm had no pin. mise over `just`: `just` is a fine task runner but can't pin Node and pnpm, which would stay a manual install. uv stays outside mise because two tools creating the venv is the failure to avoid, and `uv run` already syncs `.venv` against `uv.lock`. Plain commands behave the same in cmd, PowerShell and Git Bash. | 2026-10-17 |
 
 ## Implementation notes (deviations from the plan text)
 
@@ -269,7 +270,7 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   answered "ignored" and not run.
 - **Golden eval harness**: question schema, loading and the deterministic checks live in `tests/helpers/encounter/golden.py`
   (unit-tested on SYNTH01); `tests/eval/` runs them on a real analyst model. Eval tests carry an `eval` marker and,
-  like `perf`, are skipped unless selected (`-m eval`; `make test-eval` passes it). Recorded reports the questions
+  like `perf`, are skipped unless selected (`-m eval`; `mise run test:eval` passes it). Recorded reports the questions
   name are ingested offline into a session store. The pass rate per model and ref-resolution counts are printed
   at the end and written to `$KHADBOT_DATA_DIR/eval/golden-<timestamp>.json`. `KHADBOT_EVAL_MIN_PASS_RATE` gates
   the run once thresholds are set (unset: report only); `KHADBOT_GOLDEN_QUESTIONS` points at another question

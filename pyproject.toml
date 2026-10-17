@@ -73,6 +73,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.uv]
+# uv owns the Python version (.python-version) and .venv; mise only pins Node and pnpm and runs tasks.
+required-version = ">=0.13"
+
 [tool.pytest.ini_options]
 # Auto-mode means you don't need @pytest.mark.asyncio on every async test.
 # Many LangChain components are async.
@@ -101,6 +105,8 @@ filterwarnings = [
     # Suppress known Pydantic v1 UserWarnings from langchain_core internals
     "ignore::UserWarning:pydantic",
     "ignore::UserWarning:langchain_core",
+    # langchain_core's callback manager calls asyncio.iscoroutinefunction, deprecated in Python 3.14
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:langchain_core",
 ]
 
 [tool.ruff]
