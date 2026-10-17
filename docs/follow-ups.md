@@ -40,15 +40,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
     and a query helper such as "distance between two actors at `t`".
   Decide from that whether to keep positions, for which questions, and in what form. A scratch spike script
   measured the storage and timing; nothing is in the codebase yet.
-- **Wrong-target damage.** The Enemies side of WCL's Threat data records every player and pet action aimed at
-  an NPC, per instance, and its `table` view gives bands of who was on which NPC. That would show damage on
-  the wrong target, such as hitting Ula'tek instead of the Venomous Heart during Rage of the Shackled, or
-  ignoring a priority add. Cost: about 12.7k events and 4.9 MB of raw pages per long pull (2 pages, a few
-  points), or 551 kB for the table view. Needs a "kill target" per phase or window in the encounter file and
-  DamageDone events for the amounts; the Threat events only say who was attacking.
-- **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` has no enemy casts after 574 s of a 618 s pull
-  while Fury Unleashed damage continues. Find out whether the boss casts nothing during the enrage or the log
-  lost them before relying on enemy casts near the end of a pull.
+- **Wrong-target damage.** Show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
+  Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/decisions.md`, "Log
+  investigations"; proposed contract text in `docs/plan-changes.md` under `encounter/spike-logs`): fetch
+  friendly DamageDone for the amounts and not the Enemies side of Threat; add a `kill_targets` block to encounter
+  files (spans from a damage window, a phase or an NPC's lifetime), an `off_target_share_gt {value}` failure rule
+  and a `KILL TARGETS` digest section. Steps:
+  1. With WCL credentials, check DamageDone on one long recorded pull: the event fields (`targetInstance`,
+     `amount`, `absorbed`), pages, size and points. Record them in `docs/wcl-api.md`.
+  2. Add the fetch spec and normalize it (damage rows with a friendly source and an NPC target).
+  3. Add the encounter-file block, the rule, the digest section and a `kill:<id>` ref.
+  4. Author the Ula'tek entry: the Venomous Heart (game ID 267460) during `rage_of_the_shackled`.
 
 ### Failure rules
 
@@ -57,8 +59,13 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Hit while carrying a debuff.** No rule can say "taking this mechanic while debuffed with X is a failure"
   (soaking Spectral Coils with Soul Constrictor). A rule that joins hits to the target's active auras would.
 - **Charging the cause of an add.** Damage from an add that should not have spawned (a hatched Blightscale
-  Viper) is counted, but nobody is charged for letting it spawn. Needs a way to link the spawn to the event
-  that caused it.
+  Viper) is counted, but nobody is charged for letting it spawn. Adds have no spawn event, but the hatch shows
+  as the egg's aura coming off its carrier (`docs/decisions.md`, "Log investigations"). Implement the proposed
+  `aura_removed_by {ability_ids, on_death}` rule (`docs/plan-changes.md` under `encounter/spike-logs`). Each
+  removal of the mechanic's aura from a player, followed within 200 ms by a hit from `ability_ids` on that
+  player, is a failure charged to them. With `on_death: true`, a removal followed within 200 ms by the
+  player's death is a failure charged to no one. The failure is on the remove row and belongs to no cluster.
+  Validation: `ability_ids` non-empty, `blame` rejected. Bump `ANNOTATION_VERSION`.
 - **Failures charged to no one.** Occurrences with no aggro holder (an untanked boss at a stage start, a tail
   never picked up) and soak failures can only be charged once the raid plan's assignments exist (plan section
   14).
@@ -86,7 +93,20 @@ human task table in `docs/decisions.md`).
   stay before it counts as a failure (`debuff_duration_gt {ms}` once known).
 - **Acidic Expulsion** should fail past 2 stacks; needs the stack-count rule above.
 - **Soul Constrictor** soakers are an undetected failure; needs the hit-while-debuffed rule above.
-- **Blightscale Viper hatches** are counted as damage but charged to no one; needs the add-cause rule above.
+- **Blightscale Viper hatches** are counted as damage but charged to no one. Once the `aura_removed_by` rule
+  above exists, give `malignant_shell` `failure: {rule: aura_removed_by, ability_ids: [1292403], on_death: true}`.
+  Over the 47 pulls that charges 29 shells broken by Caustic Waves and counts 125 carrier deaths. Each of the 29
+  was followed by a Viper, and 101 of the deaths were. 29 of the 153 Vipers have no shell removal in the 8 s
+  before them and stay uncharged: they come in groups at 198 to 262 s and 395 to 468 s, and nothing fetched
+  shows their cause.
+- **Rage of the Shackled's cast is not in the file.** The channel's cast (1286860) and the Venomous Heart's
+  cast (1299526) aren't listed, so the filtered enemy Casts page misses both; the unfiltered page has all 55 of
+  each. Decide at the file review whether `rage_of_the_shackled` should list the cast. Check first how a damage
+  window treats an enemy cast row. Adding it changes the Casts filter, so enemy Casts are refetched for every
+  Ula'tek pull.
+- **Hits with no enemy cast.** One Circling Prey (`H7z1fqDXjRTFnbtg:15` at 594.6 s) has no cast, the only one
+  of 17, and neither Fury Unleashed ID is ever cast. Write rules that use Ula'tek's casts so a missing cast
+  changes only who is charged, never whether the occurrence counts.
 - **Mephitic Thrash** has no rule: the logs give players inside and outside the sweep the same impact and DoT.
   The position investigation above may make it detectable (distance from Gore Rattle at the impact).
 - **Ingested Venom** (1313529) is tagged as the Serpent's Bite soak debuff on the raid's belief; confirm.
@@ -97,6 +117,10 @@ human task table in `docs/decisions.md`).
 
 ## Resolved
 
+- 2026-10-16: the log didn't lose the enemy casts before the enrage; the boss stopped casting. On
+  `H7z1fqDXjRTFnbtg:15` Ula'tek channels Rage of the Shackled from 573.7 to 593.7 s and casts nothing during any
+  channel on record; the enrage at 598.8 s is never cast (`docs/decisions.md`, "Log investigations").
+  What's left is under Ula'tek.
 - 2026-10-11: the legacy comparison is in `docs/legacy-comparison.md`.
 - 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
 - 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the

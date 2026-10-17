@@ -408,6 +408,115 @@ and, where marked, a contract update in plan section 6.
   to 365 s into every pull that reached it. Use these IDs in `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`; a `wcl_phase` trigger
   works for every Ula'tek phase. The enrage is *Fury Unleashed* (confirmed by the raid leader).
 
+## Log investigations (2026-10-16)
+
+Three questions answered from the recorded Heroic Ula'tek pulls (47 pulls, three nights), read from the raw
+pages with scratch scripts and no WCL calls. The API behaviour behind them is in `docs/wcl-api.md` (Events, and
+Instances and positions). The proposed contract text is in `docs/plan-changes.md` under
+`encounter/spike-logs`; none of it is implemented.
+
+### Enemy casts near the end of a pull: the boss stops casting, the log doesn't lose them
+
+Measurements:
+
+- **Only `H7z1fqDXjRTFnbtg:15` reached the enrage.** It is the one pull of the 47 with Fury Unleashed damage.
+  Its last enemy cast is at 573.7 s of 618.0 s: Ula'tek finishing Rage of the Shackled (cast 1286860, begun at
+  567.2 s) and the Venomous Heart casting Venomous Heart (1299526) in the same millisecond.
+- **Rage of the Shackled is a 20 s channel, and Ula'tek casts nothing while channeling.** Its pulses (1307367)
+  start 0 to 54 ms after the cast and the last one lands 19.97 to 20.06 s after it. Across all 55 channels,
+  Ula'tek has no cast or begincast during the channel. On `H7z1fqDXjRTFnbtg:15` it runs from 573.7 to 593.7 s.
+- **After the channel, two hits have no cast.** Circling Prey damage at 594.6 s (13 hits, 5 deaths) has no
+  Circling Prey cast in the 52 s before it, the only one of the 17 Circling Prey occurrences without its cast
+  0.1 to 1.2 s earlier. Fury Unleashed starts at 598.8 s (3 hits of 1286905, then 1295004 every second to
+  617.8 s), and neither Fury Unleashed ID is ever cast. With one enrage on record, the logs can't tell whether
+  the enrage is never cast or its cast was lost.
+- **Ula'tek's other events stop too.** After 598.8 s its only events in any data type are Fury Unleashed and
+  Necrotic Vapors damage. Its last Threat swing is at 595.4 s and its last debuff on a player at 595.0 s. At
+  least two players were still alive until 617.8 s.
+- **The filtered enemy Casts page misses the channel.** The Casts filter is the encounter file's ability IDs,
+  and the Ula'tek file lists only the pulse (1307367), not the cast (1286860) or the Venomous Heart's cast. Casts
+  that appear only in the unfiltered pages: Writhing Gestation (Blightscale Clutch 208, Doomscale Warden 60),
+  Call of the Serpent (1304012 64, 1300751 37), Shadow Molt 64, Rage of the Shackled 55, Venomous Heart 55,
+  Defect: Weakened 40, three Submerge IDs (60 in all).
+- **The same channel ends other pulls.** The kill `H7z1fqDXjRTFnbtg:20` starts it at 573.7 s and ends 5.5 s
+  later, inside it. `QkVa6GHRK8yfrTbw:22` starts one at 129.0 s and wipes at 158.0 s. Every other boss pull on
+  the three nights, on every boss, has an enemy cast in its last 10 s.
+
+What this means for rules:
+
+- A missing enemy cast is never evidence that a mechanic didn't happen. `cast_target` blame then finds no one,
+  and `per_cluster` still counts the occurrence (as it does today).
+- Detect the enrage from its first damage (1286905), never from a cast.
+- Whether the file should list the channel's cast (1286860) is left to the Ula'tek review (see
+  `docs/follow-ups.md`); adding it changes the Casts filter, so every pull's enemy Casts would be refetched.
+
+### Viper spawns: charge the carrier whose egg broke on Caustic Waves, with a new rule on the shell
+
+Measurements:
+
+- **A Blightscale egg is not an actor.** Its only trace is the Malignant Shell debuff (1295360, applied by
+  Ula'tek) on the player carrying it, plus that debuff's damage (1297213). The debuff's removal is the only
+  event at a hatch. The Doomscale Egg (game ID 268164) is a different egg and is an actor: it begins casting
+  Hatching Doom (1306862).
+- **A Viper's first event** is an Acidic Burst begincast (52 of 153 Vipers), a Threat melee swing (46), melee
+  damage (20), or a player's cast aimed at it. It comes 0.5, 2.2 and 5.5 s (10th, 50th and 90th percentile)
+  after the nearest shell removal before it.
+- **What happens to the carrier at the removal decides the add.** Each of the 1,235 removals, classified by what
+  happened to the carrier in the 200 ms after it:
+
+  | At the removal | Removals | A Viper appears within 8 s | A Rawling appears within 8 s |
+  |---|---|---|---|
+  | Spectral Coils hit (1287265) | 747 | 60 | 746 |
+  | Carrier's death | 125 | 101 | 42 |
+  | Caustic Waves hit (1292403, Ula'tek's wave) | 29 | 29 | 0 |
+  | Another hit | 99 | 17 | 88 |
+  | Nothing | 235 | 19 | 230 |
+
+  The counts aren't one-to-one: several removals often land together and each one sees every add that appears
+  after it. A shell broken by Spectral Coils hatches Rawlings; one broken by Caustic Waves always hatched a
+  Viper; the carrier's death usually did (17 of the 23 deaths to Spectral Coils itself were followed by a
+  Viper). No shell came off at a hit from the other Caustic Waves IDs or from Deadly Venom.
+- **153 Vipers (by instance) on 30 of the 47 pulls.** 122 have a removal at a Caustic Waves hit or a death in
+  the 8 s before, 2 only other removals, and 29 have no shell removal at all in that time. Those 29 come in
+  groups at 198 to 262 s and 395 to 468 s (for example `QkVa6GHRK8yfrTbw:20` at 395.6 to 399.3 s and
+  `trMgApZCVYkv3jdq:16` at 396.4 to 400.0 s). Nothing fetched shows their cause: there is no egg actor, no cast
+  and no debuff change.
+- **Positions don't sharpen the link.** The carrier's last known position and the Viper's first one are a median
+  of 660 to 760 units apart, depending on the cause (Ula'tek's melee swings land at 1,336 to 2,026).
+
+Proposed: a failure rule `aura_removed_by {ability_ids, on_death}` on the `malignant_shell` mechanic. Each
+removal of the mechanic's aura from a player within 200 ms before a hit from one of `ability_ids` on them is a
+failure charged to that player. With `on_death: true`, a removal within 200 ms before the player's death is
+also a failure, charged to no one. Why this shape:
+
+- **A rule on the shell, not a blame spec on the Viper.** A blame spec only charges `per_cluster` occurrences,
+  and a Viper's damage forms many clusters over its life, not one per hatch. Nothing marks the hatch on the
+  Viper's side. The removal row is one event that names the carrier and the moment.
+- **A death counts but isn't charged.** The death is already charged by the mechanic that killed the carrier,
+  so charging the egg too would count one mistake twice.
+- **29 of the 153 Vipers stay uncharged**, because nothing fetched shows their cause.
+
+### Wrong-target damage: fetch DamageDone for amounts, and don't fetch the Enemies side of Threat
+
+Measurements, from the data already fetched:
+
+- **The Venomous Heart (game ID 267460) appears only through casts.** It casts Venomous Heart (1299526) once
+  per Rage of the Shackled: 55 casts for 55 channels, 52 of them within 50 ms of the channel's cast. It deals no
+  damage, never swings, and has no death in the Threat data, so its lifetime has to come from the channel.
+- **Where players aimed during the channels.** Players' casts aimed at an NPC hit the Venomous Heart 13,936
+  times and Ula'tek 755 times (plus 117 on Rawlings; 8,409 casts had no target). Of the 938 player-channels with
+  at least 5 aimed casts, 13 put half or more of them on Ula'tek.
+
+The Enemies Threat events (about 12.7k events and 4.9 MB per long pull) and the 551 kB table view only say who
+aimed at which NPC, never how much damage landed. So DamageDone is needed either way, and its rows already name
+the NPC and instance they hit, which is all a wrong-target rule judges. Player spells' aim is already in the
+friendly Casts data, as above. What Threat would add is the aim of auto-attacks and pets, which tells a cleave
+from a wrong target. That isn't worth 4.9 MB per pull before the simple rule exists, and the table view would
+also need its own query and storage format. The proposal (a `kill_targets` block in the encounter file, an
+`off_target_share_gt` rule and a `KILL TARGETS` digest section) is in `docs/plan-changes.md`. Before it's
+built, someone with WCL credentials has to check DamageDone on the live schema: its fields, page count and size
+on one long pull, recorded in `docs/wcl-api.md`.
+
 ## Open follow-ups
 
 Moved to `docs/follow-ups.md` (2026-10-11), which tracks open work for the encounter system and for each

@@ -65,6 +65,23 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
 - Events also carry fields KhadBot ignores (`classResources`, `buffs`, `attackPower`, ...). They make raw pages
   large: a 10-minute pull is about 60 MB of compact JSON, mostly Healing.
 
+Checked on the 47 Heroic Ula'tek pulls (2026-10-16); the encounter details are in `docs/decisions.md`, "Log
+investigations".
+
+- **A channeling NPC logs one `cast`, then nothing until the channel ends.** Its damage carries on, and some
+  damage is never cast at all (an enrage). A quiet enemy Casts page doesn't mean the NPC did nothing:
+  `H7z1fqDXjRTFnbtg:15` has no enemy cast in its last 44 s, a 20 s channel followed by an enrage that is never
+  cast.
+- **A filtered Casts page holds only the filtered IDs.** A cast whose ID isn't in the filter is missing even when
+  the damage it leads to is listed: on `H7z1fqDXjRTFnbtg:15` the filtered page's last cast is at 567.4 s and the
+  unfiltered page's at 573.7 s.
+- **An aura's removal is logged before what removed it.** When a hit or a death takes an aura off a player, the
+  `removedebuff` row comes first: the hit 0 to 50 ms later (rarely up to 200 ms), the death up to 200 ms later.
+  Match a removal to what follows it, not what precedes it (1,235 removals of one debuff).
+- **Friendly Casts carry the aimed target** (`targetID`) of player spells. A cast with no target names actor
+  -1, the Environment. Auto-attacks and pet spells appear only on the Enemies side of Threat, and no fetched data
+  type records damage done to an NPC: that needs DamageDone, which this file doesn't cover yet.
+
 ## Measured cost (2026-10-11)
 
 Recorded with `main.py ingest` (Buffs filtered to the 17 cooldown-registry IDs; enemy Casts unfiltered because
@@ -144,3 +161,9 @@ whom. `hostilityType` picks the direction.
   8 ms per pull. Distances between Ula'tek and the target of its melee swings are 1,336 to 2,026 units (5th to
   95th percentile, n=1,095), so "in melee" can be tested empirically without knowing the unit scale. At the
   Unchecked Rage above, Shinrael (holding aggro) was 3,021 units away and Mekerakesh 1,296.
+- **NPCs have no spawn event.** No fetched data type records an NPC appearing. Its first event (a cast, a melee
+  swing, damage, or a player's cast aimed at it) is the earliest sign of it, so its spawn time is unknown, and
+  its first position comes from that event, after it may have moved. Something a player carries as a debuff (an
+  egg on Ula'tek) isn't an actor at all; only the debuff shows it.
+- **Some NPCs appear only as targets.** An NPC that deals no damage and never swings shows up only in its own
+  casts and in players' casts aimed at it, with no death in the Threat data (the Venomous Heart on Ula'tek).
