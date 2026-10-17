@@ -336,7 +336,7 @@ def write_pages(directory: Path, events: list[dict], *, split: bool) -> None:
     for i, chunk in enumerate(chunks):
         nxt = chunks[i + 1][0]["timestamp"] if i + 1 < len(chunks) else None
         (directory / f"page_{i:03d}.json").write_text(
-            json.dumps({"data": chunk, "nextPageTimestamp": nxt}, indent=1), encoding="utf-8"
+            json.dumps({"data": chunk, "nextPageTimestamp": nxt}, indent=1) + "\n", encoding="utf-8"
         )
     (directory / "_complete").write_text("", encoding="utf-8")
 
@@ -372,7 +372,7 @@ def main() -> None:
         "masterData": {"actors": ACTORS, "abilities": ABILITIES},
         "fights": fights_meta,
     }
-    (OUT / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
+    (OUT / "report.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
 
     for f in FIGHTS:
         for dirname, events in build_fight(f).items():

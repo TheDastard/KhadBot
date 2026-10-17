@@ -60,9 +60,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Enemy casts stop before the enrage.** `H7z1fqDXjRTFnbtg:15` has no enemy casts after 574 s of a 618 s pull
   while Fury Unleashed damage continues. Find out whether the boss casts nothing during the enrage or the log
   lost them before relying on enemy casts near the end of a pull.
-- **Synthetic fixture newlines.** `tests/fixtures/encounter/wcl/build_synth.py` writes JSON without a final newline and
-  the pre-commit hook adds one, so regenerating the fixture shows a one-character diff per file. Write the
-  newline in the generator.
 
 ### Failure rules
 

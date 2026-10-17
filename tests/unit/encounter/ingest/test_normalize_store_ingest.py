@@ -178,7 +178,7 @@ class TestNormalize:
         path = GOLDEN / "normalized" / f"SYNTH01_{fight}.json"
         if update_goldens:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(orjson.dumps(actual, option=orjson.OPT_INDENT_2))
+            path.write_bytes(orjson.dumps(actual, option=orjson.OPT_INDENT_2) + b"\n")
         assert actual == orjson.loads(path.read_bytes())
 
 
