@@ -32,12 +32,24 @@ class TestIngestSubcommand:
     def test_parses_args(self):
         with patch("khadbot.main._run_ingest") as run:
             main(["ingest", "ABC123", "--fights", "3,4", "--offline"])
-        run.assert_called_once_with("ABC123", "3,4", True)
+        run.assert_called_once_with("ABC123", "3,4", True, False)
 
     def test_defaults(self):
         with patch("khadbot.main._run_ingest") as run:
             main(["ingest", "ABC123"])
-        run.assert_called_once_with("ABC123", None, False)
+        run.assert_called_once_with("ABC123", None, False, False)
+
+    def test_refresh_meta(self):
+        with patch("khadbot.main._run_ingest") as run:
+            main(["ingest", "ABC123", "--refresh-meta"])
+        run.assert_called_once_with("ABC123", None, False, True)
+
+    def test_refresh_meta_with_offline_is_a_usage_error(self, capsys):
+        with patch("khadbot.main._run_ingest") as run, pytest.raises(SystemExit) as exc:
+            main(["ingest", "ABC123", "--refresh-meta", "--offline"])
+        assert exc.value.code == 2
+        assert "--refresh-meta" in capsys.readouterr().err
+        run.assert_not_called()
 
     def test_requires_code(self):
         with pytest.raises(SystemExit):

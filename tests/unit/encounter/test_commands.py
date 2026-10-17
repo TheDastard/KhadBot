@@ -85,6 +85,20 @@ class TestHandler:
         m.assert_not_awaited()
         assert "Usage: /ingest" in out
 
+    async def test_refresh_meta_is_passed_through(self):
+        with patch(
+            "khadbot.encounter.commands.ingest_report", new=AsyncMock(return_value=result(pulls=["ABC:3"]))
+        ) as m:
+            await ingest_command("ABC --refresh-meta")
+        assert m.await_args.kwargs["refresh_meta"] is True
+        assert m.await_args.kwargs["offline"] is False
+
+    async def test_refresh_meta_with_offline_is_a_usage_error(self):
+        with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock()) as m:
+            out = await ingest_command("ABC --refresh-meta --offline")
+        m.assert_not_awaited()
+        assert "--refresh-meta" in out and "Usage: /ingest" in out
+
 
 class TestIngestRemembersReport:
     async def test_sets_last_report(self, monkeypatch):
