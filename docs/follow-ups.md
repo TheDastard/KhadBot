@@ -9,6 +9,9 @@ file's header comment points to.
 
 ## Encounter system
 
+The next track is the digest dashboard; the conversation agent and everything that needs it are deferred. Work
+plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
+
 ### Data and ingest
 
 - **Phase reached from phase transitions** (plan section 6.1). Take `phase_reached` and the
@@ -76,9 +79,6 @@ file's header comment points to.
 
 ### Process and repo
 
-- **Merge the stacked branches before M5.** `encounter/m0-m1-groundwork-data-layer` → `m2-annotation-digest` →
-  `m3-analyst-loop` → `m4-findings-fanout` → `real-wcl-fixtures` are unmerged; `main` has none of the encounter
-  work.
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; the golden questions can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
 - **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
