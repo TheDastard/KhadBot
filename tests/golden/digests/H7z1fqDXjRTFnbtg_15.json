@@ -267,8 +267,8 @@
       "active_defensives": [],
       "actor_id": 4,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1,
+      "killing_ability_name": "Melee",
       "mechanic_ids": [
         "necrotic_vapors",
         "volatile_purge_dot"
@@ -324,8 +324,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1292403,
+      "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
         "caustic_waves",
         "necrotic_vapors",
@@ -382,8 +382,8 @@
       "active_defensives": [],
       "actor_id": 7,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1292403,
+      "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
         "caustic_waves",
         "mothers_wrath_tank",
@@ -442,8 +442,8 @@
       "active_defensives": [],
       "actor_id": 21,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1292403,
+      "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
         "acidic_expulsion",
         "caustic_waves",
@@ -501,8 +501,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1292403,
+      "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
         "acidic_expulsion",
         "caustic_waves",
@@ -560,8 +560,8 @@
       "active_defensives": [],
       "actor_id": 10,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "acidic_expulsion",
         "circling_prey",
@@ -621,8 +621,8 @@
       "active_defensives": [],
       "actor_id": 16,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1297338,
+      "killing_ability_name": "Deadly Venom",
       "mechanic_ids": [
         "acidic_expulsion",
         "circling_prey",
@@ -682,8 +682,8 @@
       "active_defensives": [],
       "actor_id": 13,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1316357,
+      "killing_ability_name": "Volatile Purge",
       "mechanic_ids": [
         "acidic_expulsion",
         "circling_prey",
@@ -742,8 +742,8 @@
       "active_defensives": [],
       "actor_id": 19,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1292403,
+      "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
         "acidic_expulsion",
         "caustic_waves",
@@ -801,8 +801,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1305878,
+      "killing_ability_name": "Volatile Purge",
       "mechanic_ids": [
         "caustic_waves",
         "necrotic_vapors",
@@ -994,7 +994,7 @@
   "phase_reached": "p3",
   "produced_from": {
     "encfile_hash": "84163c7ea074",
-    "events_hash": "aceb876ba2f6c3b12dc51e9ee29682fde08e0aae7c52ac5325cd2ce29081b492",
+    "events_hash": "8da19d04be496f5e651a4a16e30a2d5d5b249de1859e9142f0d805d49fa6269f",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:15",

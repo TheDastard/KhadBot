@@ -103,17 +103,19 @@ event and table payloads do not have.
   entries use `guid`, so every entry has spell ID 0. Its `players_hit` is `len(sources)`, the number of NPCs
   that dealt the damage, not the number of players hit.
 
-### Shared defect, still open
+### Shared defect, fixed since
 
-- **Killing ability name.** Every digest death names its killing ability "Unknown Ability" (ability ID 0). Death
-  events carry `abilityGameID: 0` and the real ability in `killingAbilityGameID`, which normalize does not keep.
-  The digest's top hits and overkill are correct; only the name is missing. The fix is tracked in
-  `docs/follow-ups.md`. The real-fixture digest goldens record the current output and change when it is fixed.
+- **Killing ability name.** When this comparison ran, every digest death named its killing ability "Unknown
+  Ability" (ability ID 0). Death events carry `abilityGameID: 0` and `sourceID: -1`, with the real ability in
+  `killingAbilityGameID` and the killer in `killerID`. Normalize now fills `ability_id` and `source_id` from those
+  fields (2026-10-16), and death records treat an ability of 0 as unknown, so data ingested earlier falls back to
+  the last hit. All 136 deaths on the seven pulls now name their killing ability, and the real-fixture digest
+  goldens were regenerated with the fix.
 
 ## Conclusion
 
 The digest agrees with the legacy tool where the legacy tool works (who died when, which abilities did the most
 damage, total damage taken). Every other difference comes from a legacy defect: six known ones, confirmed on
 real data, and four new ones that left the legacy cooldown timeline, pre-death windows, killing blows and
-ability IDs empty on real reports. None of them is reproduced. The one defect both sides share, the killing
-ability name, stays open in `docs/follow-ups.md`.
+ability IDs empty on real reports. None of them is reproduced. The one defect both sides shared, the killing
+ability name, has since been fixed in the digest.

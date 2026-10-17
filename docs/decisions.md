@@ -203,7 +203,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   seven fixture pulls. Deaths agree exactly (136 of 136); every other difference is a legacy defect. It found four
   defects not in the plan's list (no cooldown is ever matched, pre-death windows hold only self-damage, killing
   blow and overkill always blank, ability-table IDs always 0), and one defect both sides share (the killing ability
-  name, in `docs/follow-ups.md`).
+  name, fixed on 2026-10-16).
 - **Real-fixture goldens (2026-10-11)**: `tests/unit/encounter/test_real_fixtures.py` snapshots the first 20
   normalized events and the full digest of every recorded fixture pull (`tests/golden/{normalized,digests}/
   <code>_<fight>.json`), using the encounter files and registry under `config/`, and checks every rendered digest
@@ -211,6 +211,12 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   An edit to an encounter file or the registry changes these goldens; regenerate with `--update-goldens` and review
   the digest diff. Fixture ingest (`tests/helpers/encounter/real_fixtures.py`, shared with the perf tests) reads enemy Casts
   unfiltered, so editing an encounter file's ability IDs never leaves the fixtures without that data type.
+- **Death rows take the killing blow (2026-10-16)**: WCL Deaths rows carry `abilityGameID: 0` and `sourceID: -1`,
+  so every death record named "Unknown Ability (0)". Normalize now sets `ability_id` from `killingAbilityGameID`
+  when `abilityGameID` is 0 or missing and `source_id` from `killerID` when `sourceID` is -1; there is no schema
+  change. `death_records` treats a death ability of 0 as unknown, so events normalized earlier fall back to the
+  last hit. This changes `events_hash` for every real pull, which invalidates cached findings; stored nights need
+  an offline re-ingest. SYNTH01's death rows now use WCL's shape so the synthetic fixture exercises the same path.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
 

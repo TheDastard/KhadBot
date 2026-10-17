@@ -140,6 +140,21 @@ class TestNormalize:
         assert dmg["hp_pct"].max() <= 100.0
         assert df.filter(pl.col("type") == "cast")["hp_pct"].null_count() > 0
 
+    def test_death_rows_carry_the_killing_blow(self, synth_cache, meta):
+        # WCL death rows have abilityGameID 0 and sourceID -1; killingAbilityGameID and killerID fill them.
+        df = frame_for(synth_cache, meta, 1)
+        deaths = df.filter((pl.col("data_type") == "Deaths") & (pl.col("type") == "death"))
+        assert deaths.select("t_ms", "source_id", "target_id", "ability_id").rows()[0] == (8_000, 10, 3, 900101)
+        assert 0 not in deaths["ability_id"].to_list()
+        assert -1 not in deaths["source_id"].to_list()
+        assert not deaths["source_friendly"].any()
+
+    def test_death_row_without_killer_fields_is_kept_as_is(self, meta):
+        pulls, actors = meta
+        row = {"timestamp": pulls[1].start_ms + 5, "type": "death", "sourceID": -1, "targetID": 3, "abilityGameID": 0}
+        df = normalize_pull(pulls[1], actors, {"Deaths": [{"data": [row]}]})
+        assert df.select("source_id", "ability_id").rows() == [(-1, 0)]
+
     def test_one_shot_overkill_is_kept(self, synth_cache, meta):
         df = frame_for(synth_cache, meta, 1)
         shot = df.filter((pl.col("type") == "damage") & (pl.col("t_ms") == 8_000) & (pl.col("overkill") > 0))
