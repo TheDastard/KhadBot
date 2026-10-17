@@ -17,9 +17,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Phase reached from phase transitions** (plan section 6.1). Take `phase_reached` and the
   `phase_trigger_unmatched` check from the last phase transition instead of `last_phase`, which is an ordinal
   within stages or intermissions, not a phase ID. `/pulls` also shows `last_phase` as "Last phase".
-- **Cached report metadata never refreshes.** Ingest reads `report.json` from the raw cache whenever it exists,
-  so a field added to `GET_REPORT_META` never reaches reports already cached (`bossPercentage` was merged in by
-  hand). Add a way to refetch only the metadata, such as an `ingest --refresh-meta` flag.
 - **Player self-damage registry.** Friendly-source damage (Spirit Link, Time Dilation, Burning Rush, trinkets)
   counts as unregistered encounter damage today; it is all of the 3.1% left on Ula'tek. Proposed: a shared
   `config/registries/friendly_damage.yaml` classing each ability as redistribution (Spirit Link, Tempered in
