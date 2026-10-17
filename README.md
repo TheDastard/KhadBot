@@ -13,12 +13,15 @@ KhadBot has two modes, chosen explicitly by the user with `/mode`:
 
 ## Requirements
 
-Windows is the primary platform. Two tools are required:
+Windows is the primary platform. `scripts/setup.ps1` installs and configures everything below (see [Setup](#setup));
+this section is what it does, for reference or a manual install.
 
 | Tool | Why | Install |
 |---|---|---|
+| [Git](https://git-scm.com/) with Git LFS | The recorded WCL fixtures are stored in Git LFS | `winget install Git.Git` (includes LFS) |
 | [uv](https://docs.astral.sh/uv/) (0.13 or later) | Python version, virtual environment and dependency management | `winget install astral-sh.uv` |
 | [mise](https://mise.jdx.dev/) | Pins Node and pnpm, and runs every project task (`mise run <task>`) | `winget install jdx.mise` |
+| [GitHub CLI](https://cli.github.com/) (optional) | Lets `/land` watch CI with `gh`; it falls back to the public API | `winget install GitHub.cli` |
 
 You do not need to install Python yourself: uv provides the version pinned in `.python-version` (the project supports
 Python 3.12 to 3.14). Each tool owns one job: uv owns Python and `.venv`, mise owns Node, pnpm and the tasks. Never add
@@ -26,15 +29,11 @@ Python to `mise.toml`.
 
 ### One-time mise setup
 
-1. Add `%LOCALAPPDATA%\mise\shims` to your user `PATH`, so `node` and `pnpm` resolve in every shell, including
-   editors and tools that don't run your shell profile.
-2. Trust the project's `mise.toml` (and every worktree under it) by adding this to
-   `%USERPROFILE%\.config\mise\config.toml`, with your clone's path:
+Add `%LOCALAPPDATA%\mise\shims` to your user `PATH` (`scripts/setup.ps1` does this), so `node` and `pnpm` resolve in
+every shell, including editors and tools that don't run your shell profile. `mise run` finds them without it.
 
-   ```toml
-   [settings]
-   trusted_config_paths = ["D:/Development/Projects/KhadBot"]
-   ```
+The project's `mise.toml` needs no `mise trust`: tool pins and tasks work in an untrusted checkout, so every worktree
+works as soon as it's created.
 
 ## Setup
 
@@ -43,16 +42,23 @@ Python to `mise.toml`.
 git clone <repo-url> KhadBot
 cd KhadBot
 
-# 2. Install Node and pnpm, then the Python dependencies (uv creates .venv on first run)
-mise install
-mise run install
+# 2. Install the tools and dependencies (add -WithGitHubCli for gh)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 
-# 3. Configure your LLM provider and API keys
-copy .env.example .env
-# Edit .env: set LLM_PROVIDER, the matching API key, and WARCRAFTLOGS_CLIENT_ID/SECRET
+# 3. Configure your LLM provider and API keys in .env (the script creates it from .env.example)
+# Set LLM_PROVIDER, the matching API key, and WARCRAFTLOGS_CLIENT_ID/SECRET
 ```
 
-Lighter installs are available if you do not need the dev tooling:
+The script skips anything already in place, so it is safe to rerun. It installs Git, uv and mise with winget if
+they're missing, puts mise's shims on your user `PATH`, downloads the LFS fixtures, runs `mise install` and
+`mise run install`, installs the pre-commit hooks, and creates `.env` if there isn't one. `-SkipInstall` only checks
+and configures, and lists anything still missing. Open a new shell afterwards so the `PATH` change applies.
+
+To do it by hand instead: install the tools above, follow the one-time mise setup, then run `git lfs pull`,
+`mise install`, `mise run install`, `uv run pre-commit install` and `copy .env.example .env`.
+
+After setup you rarely need to install anything by hand: `uv run`, which every task uses, syncs `.venv` with
+`uv.lock` first. The install tasks are for a fresh `.venv` or a lighter one:
 
 | Command | Installs |
 |---|---|
@@ -103,7 +109,7 @@ Tasks are plain `uv` commands, so they run the same from cmd, PowerShell and Git
 without mise (see `mise.toml`). Set environment variables in your shell before the task, for example
 `LLM_PROVIDER=groq mise run test:integ` from Git Bash.
 
-Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.yaml`; enable them with `uv run pre-commit install`.
+Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.yaml`; the setup script enables them, or run `uv run pre-commit install`.
 
 ## Project Structure
 
@@ -123,7 +129,7 @@ KhadBot/
 │   ├── registries/        # cooldown registry
 │   ├── personas/          # khadgar, thrall, xalatath
 │   └── templates/         # Jinja prompt template
-├── scripts/               # clean.ps1, distclean.ps1, WarcraftLogs fixture recording
+├── scripts/               # setup.ps1, clean.ps1, distclean.ps1, WarcraftLogs fixture recording
 ├── tests/                 # unit/, integration/, eval/, fixtures/, golden/
 ├── main.py                # CLI entrypoint (mise run cli)
 ├── mise.toml              # Node and pnpm versions, project tasks
