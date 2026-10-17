@@ -16,7 +16,7 @@ from collections.abc import Iterable
 import orjson
 import polars as pl
 
-from khadbot.encounter.models import Actor, Pull
+from khadbot.encounter.models import Actor, Pull, WclPhase
 from khadbot.encounter.store import EVENT_SCHEMA, empty_events
 
 # ---------------------------------------------------------------------------
@@ -75,6 +75,14 @@ def parse_report_meta(code: str, meta: dict) -> tuple[list[Pull], list[Actor]]:
         )
         for a in (meta.get("masterData") or {}).get("actors") or []
     ]
+    phases = {
+        e["encounterID"]: [
+            WclPhase(id=p["id"], name=p.get("name") or str(p["id"]), is_intermission=bool(p.get("isIntermission")))
+            for p in e.get("phases") or []
+        ]
+        for e in meta.get("phases") or []
+        if e.get("encounterID") is not None
+    }
     pulls = []
     for f in meta.get("fights") or []:
         start, end = int(f["startTime"]), int(f["endTime"])
@@ -94,6 +102,7 @@ def parse_report_meta(code: str, meta: dict) -> tuple[list[Pull], list[Actor]]:
                 boss_hp_pct=f.get("bossPercentage"),
                 phase_transitions=[(t["id"], int(t["startTime"]) - start) for t in f.get("phaseTransitions") or []],
                 friendly_player_ids=list(f.get("friendlyPlayers") or []),
+                wcl_phases=phases.get(f.get("encounterID") or 0, []),
             )
         )
     return pulls, actors

@@ -87,5 +87,28 @@ def unmatched_phase(spans: list[PhaseSpan], enc: EncounterFile) -> str | None:
     return enc.phases[len(spans)].id if len(spans) < len(enc.phases) else None
 
 
+def unmatched_phases(pull: Pull, spans: list[PhaseSpan], enc: EncounterFile) -> list[str]:
+    """
+    Encounter-file phases WCL says the pull reached but the triggers did not detect, in file order.
+
+    A phase with a ``wcl_phase`` trigger is reached when its WCL phase ID is among the pull's transitions.
+    Phases with other triggers are judged by count: the pull has more distinct WCL transitions than detected
+    phases, and each one flagged accounts for one of those extra transitions.
+    """
+    detected = {s.phase_id for s in spans}
+    seen = {phase for phase, _ in pull.phase_transitions}
+    missed = len(seen) - len(spans)
+    out: list[str] = []
+    for phase in enc.phases:
+        if phase.id in detected:
+            continue
+        if phase.start.trigger == "wcl_phase":
+            if phase.start.phase in seen:
+                out.append(phase.id)
+        elif len(out) < missed:
+            out.append(phase.id)
+    return out
+
+
 def boss_ids_of(actors: Iterable[Actor]) -> set[int]:
     return {a.actor_id for a in actors if a.kind == "boss"}

@@ -1,7 +1,8 @@
 """
 tests/unit/encounter/annotate/test_phases.py
 
-Phase detection: each trigger type, ordering, an unmatched trigger, and SYNTH01.
+Phase detection: each trigger type, ordering, an unmatched trigger, and SYNTH01; detected phases checked
+against WCL's phase transitions.
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from __future__ import annotations
 import pytest
 from helpers.encounter.events import BOSS, make_events, make_pull
 
-from khadbot.encounter.annotate.phases import boss_ids_of, detect_phases, unmatched_phase
+from khadbot.encounter.annotate.phases import boss_ids_of, detect_phases, unmatched_phase, unmatched_phases
 from khadbot.encounter.config_files import parse_encounter
 
 
@@ -89,3 +90,51 @@ def test_synth_reaches_p2(synth_ingested, synth_enc, fight, p2_start, duration):
         ("p1", 0, p2_start),
         ("p2", p2_start, duration),
     ]
+
+
+# ===========================================================================
+# unmatched_phases: detected phases against WCL's transitions
+# ===========================================================================
+
+
+def _unmatched(enc, transitions):
+    pull = make_pull(phase_transitions=transitions)
+    return unmatched_phases(pull, detect_phases(pull, EVENTS, enc, {BOSS}), enc)
+
+
+def test_wcl_phase_trigger_seen_in_transitions_but_not_detected():
+    # WCL phase 2 started at 5 s, before p2 (the boss cast at 10 s); p3 searches only after 10 s and misses it.
+    enc = enc_with({"trigger": "boss_cast", "ability_id": 500}, {"trigger": "wcl_phase", "phase": 2})
+    assert _unmatched(enc, [(1, 0), (2, 5_000)]) == ["p3"]
+
+
+def test_wcl_phase_trigger_absent_from_transitions_is_not_flagged():
+    # An early wipe that never reached WCL phase 3, even though WCL counts more transitions than detected phases.
+    enc = enc_with({"trigger": "wcl_phase", "phase": 3})
+    assert _unmatched(enc, [(1, 0), (2, 20_000)]) == []
+
+
+def test_other_trigger_flagged_when_wcl_saw_more_phases():
+    enc = enc_with({"trigger": "boss_cast", "ability_id": 999})  # never cast
+    assert _unmatched(enc, [(1, 0), (2, 20_000)]) == ["p2"]
+
+
+def test_other_trigger_not_flagged_when_counts_match():
+    enc = enc_with({"trigger": "boss_cast", "ability_id": 999})
+    assert _unmatched(enc, [(1, 0)]) == []
+    assert _unmatched(enc, []) == []  # no transitions from WCL at all (some Mythic pulls)
+
+
+def test_count_rule_flags_only_as_many_phases_as_wcl_saw():
+    enc = enc_with(*({"trigger": "boss_cast", "ability_id": 999} for _ in range(3)))  # p2..p4 never cast
+    assert _unmatched(enc, [(1, 0), (2, 20_000), (3, 30_000)]) == ["p2", "p3"]
+
+
+def test_repeated_transition_ids_count_once():
+    enc = enc_with({"trigger": "boss_cast", "ability_id": 999})
+    assert _unmatched(enc, [(1, 0), (1, 20_000)]) == []
+
+
+def test_every_phase_detected():
+    enc = enc_with({"trigger": "boss_cast", "ability_id": 500})
+    assert _unmatched(enc, [(1, 0), (2, 10_000)]) == []

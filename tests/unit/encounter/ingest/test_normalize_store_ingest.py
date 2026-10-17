@@ -17,6 +17,7 @@ from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
 from khadbot.encounter.ingest.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
+from khadbot.encounter.models import Pull, WclPhase
 from khadbot.encounter.store import EVENT_SCHEMA
 
 CODE = "SYNTH01"
@@ -69,6 +70,35 @@ class TestParseReportMeta:
         assert wipe.boss_hp_pct == 41.0
         assert wipe.phase_transitions == [(1, 0), (2, 35_000)]
         assert wipe.friendly_player_ids == [1, 2, 3, 4, 5]
+
+    def test_wcl_phases_name_the_transitions(self, meta):
+        pulls, _ = meta
+        wipe = pulls[1]
+        assert wipe.wcl_phases == [
+            WclPhase(id=1, name="Synth Stage One", is_intermission=False),
+            WclPhase(id=2, name="Synth Stage Two", is_intermission=False),
+        ]
+        assert wipe.wcl_phase_reached() == "Synth Stage Two"
+
+    def test_wcl_phases_are_matched_by_encounter(self, synth_cache):
+        raw = synth_cache.report_meta(CODE)
+        other = {"encounterID": 1, "phases": [{"id": 2, "name": "Elsewhere", "isIntermission": True}]}
+        pulls, _ = parse_report_meta(CODE, {**raw, "phases": [other]})
+        assert pulls[0].wcl_phases == []
+        assert pulls[0].wcl_phase_reached() == "2"  # unnamed: the phase ID as text
+
+    def test_report_without_phases(self, synth_cache):
+        raw = {k: v for k, v in synth_cache.report_meta(CODE).items() if k != "phases"}
+        pulls, _ = parse_report_meta(CODE, raw)
+        assert all(p.wcl_phases == [] for p in pulls)
+        no_transitions = pulls[0].model_copy(update={"phase_transitions": []})
+        assert no_transitions.wcl_phase_reached() is None
+
+    def test_old_pulls_json_without_wcl_phases_loads(self, meta):
+        pulls, _ = meta
+        stored = orjson.loads(pulls[1].model_dump_json())
+        del stored["wcl_phases"]
+        assert Pull.model_validate(stored).wcl_phases == []
 
     def test_actor_kinds(self, meta):
         _, actors = meta

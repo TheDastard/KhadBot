@@ -50,6 +50,14 @@ query GetReportMeta($code: String!) {
           startTime
         }
       }
+      phases {
+        encounterID
+        phases {
+          id
+          name
+          isIntermission
+        }
+      }
     }
   }
 }
