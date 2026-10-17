@@ -18,7 +18,7 @@ from pathlib import Path
 import orjson
 import polars as pl
 import pytest
-from helpers.encounter.real_fixtures import REAL_PULLS, REAL_REPORTS, ingest_fixture
+from helpers.encounter.real_fixtures import REAL_PULLS, REAL_REPORTS, WCL_FIXTURES, ingest_fixture
 from helpers.encounter.synth import GOLDEN
 
 from khadbot.encounter.config_files import load_registry
@@ -83,6 +83,29 @@ def test_digest_golden(real_store, registry, pull_key, update_goldens):
 def test_rendered_digest_fits_token_ceiling(real_store, registry, pull_key):
     text = render_digest(build_digest(pull_key, real_store, registry=registry))
     assert estimate_tokens(text) <= MAX_DIGEST_TOKENS
+
+
+@pytest.mark.parametrize("pull_key", REAL_PULLS)
+def test_death_rows_carry_the_killing_blow(real_store, pull_key):
+    code, fight = pull_key.split(":")
+    raw = [
+        e
+        for page in sorted((WCL_FIXTURES / code / fight / "Deaths").rglob("page_*.json"))
+        for e in orjson.loads(page.read_bytes())["data"]
+        if e["type"] == "death"
+    ]
+    assert raw and all(e["abilityGameID"] == 0 and e["sourceID"] == -1 for e in raw)  # WCL's placeholders
+    deaths = real_store.events(pull_key, types=["death"]).filter(pl.col("data_type").cast(pl.Utf8) == "Deaths")
+    expected = [(e["targetID"], e["killerID"], e["killingAbilityGameID"]) for e in raw]
+    assert deaths.select("target_id", "source_id", "ability_id").rows() == expected
+
+
+@pytest.mark.parametrize("pull_key", REAL_PULLS)
+def test_no_death_names_the_placeholder_ability(real_store, registry, pull_key):
+    digest = build_digest(pull_key, real_store, registry=registry)
+    assert digest.deaths
+    assert all(d.killing_ability_id not in (None, 0) for d in digest.deaths)
+    assert "Unknown Ability (0)" not in render_digest(digest)
 
 
 def test_every_fixture_pull_has_both_progress_figures(real_store):

@@ -133,11 +133,26 @@ def _keep(e: dict, data_type: str, friendly: set[int]) -> bool:
     return not (typ == "cast" and e.get("sourceID") in friendly)
 
 
+def _death_row(e: dict) -> dict:
+    """
+    WCL Deaths rows name no ability (``abilityGameID: 0``) and no source (``sourceID: -1``); the killing
+    blow is in ``killingAbilityGameID`` and ``killerID``. Fill the plain fields from those.
+    """
+    fixed = dict(e)
+    if not e.get("abilityGameID") and e.get("killingAbilityGameID") is not None:
+        fixed["abilityGameID"] = e["killingAbilityGameID"]
+    if e.get("sourceID", -1) == -1 and e.get("killerID") is not None:
+        fixed["sourceID"] = e["killerID"]
+    return fixed
+
+
 def _page_frame(events: list[dict], data_type: str, start_ms: int, friendly: set[int]) -> pl.DataFrame:
     cols: dict[str, list] = {name: [] for name in EVENT_SCHEMA if name != "seq"}
     for e in events:
         if not _keep(e, data_type, friendly):
             continue
+        if data_type == "Deaths" and e.get("type") == "death":
+            e = _death_row(e)
         cols["t_ms"].append(int(e["timestamp"]) - start_ms)
         cols["data_type"].append(data_type)
         cols["type"].append(e.get("type", ""))

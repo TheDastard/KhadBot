@@ -55,8 +55,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "malignant_shell",
         "necrotic_vapors",
@@ -113,8 +113,8 @@
       "active_defensives": [],
       "actor_id": 12,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "malignant_shell",
         "necrotic_vapors",
@@ -171,8 +171,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1,
+      "killing_ability_name": "Melee",
       "mechanic_ids": [
         "blightscale_viper",
         "necrotic_vapors",
@@ -229,8 +229,8 @@
       "active_defensives": [],
       "actor_id": 11,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -288,8 +288,8 @@
       "active_defensives": [],
       "actor_id": 14,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -347,8 +347,8 @@
       "active_defensives": [],
       "actor_id": 20,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -406,8 +406,8 @@
       "active_defensives": [],
       "actor_id": 10,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "necrotic_vapors",
@@ -464,8 +464,8 @@
       "active_defensives": [],
       "actor_id": 1,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -523,8 +523,8 @@
       "active_defensives": [],
       "actor_id": 161,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -582,8 +582,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1299206,
+      "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -737,7 +737,7 @@
   "phase_reached": "p1",
   "produced_from": {
     "encfile_hash": "84163c7ea074",
-    "events_hash": "4e3c984e4d24d1adbeaa2aa9af4651947243b190342d428fa63834438d2cac62",
+    "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",

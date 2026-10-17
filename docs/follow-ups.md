@@ -20,11 +20,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Cached report metadata never refreshes.** Ingest reads `report.json` from the raw cache whenever it exists,
   so a field added to `GET_REPORT_META` never reaches reports already cached (`bossPercentage` was merged in by
   hand). Add a way to refetch only the metadata, such as an `ingest --refresh-meta` flag.
-- **Death records name the killing ability "Unknown Ability (0)".** Every death in the Heroic Ula'tek digests
-  reads that way although the top hits show the real killing blow. WCL death events carry
-  `killingAbilityGameID` and their `abilityGameID` may be 0; normalize it, or fall back to the overkill hit at
-  the death time. Every death on all seven fixture pulls has `abilityGameID: 0` (see `docs/legacy-comparison.md`);
-  the fix changes the real-fixture digest goldens.
 - **Player self-damage registry.** Friendly-source damage (Spirit Link, Time Dilation, Burning Rush, trinkets)
   counts as unregistered encounter damage today; it is all of the 3.1% left on Ula'tek. Proposed: a shared
   `config/registries/friendly_damage.yaml` classing each ability as redistribution (Spirit Link, Tempered in

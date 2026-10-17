@@ -3,10 +3,12 @@
   {
    "timestamp": 355000,
    "type": "death",
-   "sourceID": 10,
+   "sourceID": -1,
    "targetID": 5,
-   "abilityGameID": 900102,
-   "fight": 0
+   "abilityGameID": 0,
+   "fight": 0,
+   "killerID": 10,
+   "killingAbilityGameID": 900102
   }
  ],
  "nextPageTimestamp": null

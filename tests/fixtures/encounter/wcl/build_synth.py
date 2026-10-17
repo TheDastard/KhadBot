@@ -152,10 +152,13 @@ class Sim:
                 {
                     "timestamp": self.start + t,
                     "type": "death",
-                    "sourceID": src,
+                    # As in real reports: no source or ability on the row itself, the killing blow beside it.
+                    "sourceID": -1,
                     "targetID": tgt,
-                    "abilityGameID": ability,
+                    "abilityGameID": 0,
                     "fight": 0,
+                    "killerID": src,
+                    "killingAbilityGameID": ability,
                 }
             )
 
