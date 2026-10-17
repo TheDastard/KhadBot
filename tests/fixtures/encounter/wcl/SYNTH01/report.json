@@ -211,5 +211,22 @@
     }
    ]
   }
+ ],
+ "phases": [
+  {
+   "encounterID": 90001,
+   "phases": [
+    {
+     "id": 1,
+     "name": "Synth Stage One",
+     "isIntermission": false
+    },
+    {
+     "id": 2,
+     "name": "Synth Stage Two",
+     "isIntermission": false
+    }
+   ]
+  }
  ]
 }

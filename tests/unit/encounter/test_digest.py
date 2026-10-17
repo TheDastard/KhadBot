@@ -130,7 +130,7 @@ def test_coverage_none_without_encounter_file(digest_of, tmp_path):
     d = digest_of(1, root=tmp_path / "empty")
     assert d.coverage == "none"
     assert d.mechanics == [] and d.coverage_windows == []
-    assert d.phase_reached is None
+    assert d.phase_reached == "Synth Stage Two"  # WCL's name for the last phase transition
     assert d.produced_from["encfile_hash"] == "none"
     assert not any(a.startswith("unregistered_damage") for a in d.anomalies)
 
@@ -172,16 +172,38 @@ def test_no_hp_data(digest_of, synth_ingested):
     assert d.deaths[0].time_to_die_ms is None
 
 
-def test_phase_trigger_unmatched_only_when_expected(digest_of, tmp_path):
+def test_phase_trigger_unmatched_when_wcl_saw_the_phase(digest_of, tmp_path):
+    # Both pulls have WCL transitions into phase 2, but p2's trigger now names a spell the boss never casts.
+    root = write_enc(tmp_path, lambda d: d["phases"][1]["start"].update(ability_id=999_999))
+    for fight in (1, 2):
+        d = digest_of(fight, root=root)
+        assert "phase_trigger_unmatched:p2" in d.anomalies
+        assert d.phase_reached == "p1"
+
+
+def test_phase_trigger_unmatched_not_raised_for_a_phase_wcl_never_saw(digest_of, tmp_path):
+    # A later phase neither pull reached by WCL's transitions; WCL lastPhase plays no part.
     root = write_enc(
         tmp_path,
         lambda d: d["phases"].append(
             {"id": "p3", "name": "P3", "difficulties": ["mythic"], "start": {"trigger": "time", "t_ms": 999_999}}
         ),
     )
-    # The kill must have gone through every phase; the wipe (WCL last_phase 2, both reached) may not have.
-    assert "phase_trigger_unmatched:p3" in digest_of(2, root=root).anomalies
-    assert not any(a.startswith("phase_trigger") for a in digest_of(1, root=root).anomalies)
+    for fight in (1, 2):
+        assert not any(a.startswith("phase_trigger") for a in digest_of(fight, root=root).anomalies)
+
+
+def test_wcl_phase_trigger_unmatched(digest_of, tmp_path):
+    # WCL phase 2 began at 35 s in both pulls; a p3 waiting for it after p2 (detected at 30 s or 35 s) can miss it.
+    root = write_enc(
+        tmp_path,
+        lambda d: d["phases"].append(
+            {"id": "p3", "name": "P3", "difficulties": ["mythic"], "start": {"trigger": "wcl_phase", "phase": 2}}
+        ),
+    )
+    assert "phase_trigger_unmatched:p3" in digest_of(1, root=root).anomalies  # p2 at 35 s: same ms, not after
+    assert digest_of(2, root=root).phase_reached == "p3"  # p2 at 30 s, WCL phase 2 at 35 s
+    assert not any(a.startswith("phase_trigger") for a in digest_of(2, root=root).anomalies)
 
 
 # ===========================================================================
@@ -220,5 +242,5 @@ def test_render_size_estimate(digest_of):
 
 def test_render_without_encounter_file(digest_of, tmp_path):
     text = render_digest(digest_of(1, root=tmp_path / "empty"))
-    assert "phase unknown" in text and "coverage none" in text
+    assert "reached Synth Stage Two" in text and "coverage none" in text
     assert "MECHANICS" not in text and "DAMAGE WINDOWS" not in text

@@ -4,7 +4,7 @@ encounter/models.py
 Pydantic models shared across encounter review. Times inside a pull are
 fight-relative milliseconds unless a field says otherwise.
 
-Ingest models: Pull, Actor, FetchSpec, IngestResult.
+Ingest models: WclPhase, Pull, Actor, FetchSpec, IngestResult.
 Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
 WindowCoverage, PullDigest.
 Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisReport.
@@ -25,6 +25,14 @@ from pydantic import BaseModel, Field
 DataType = Literal["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing", "Threat"]
 
 
+class WclPhase(BaseModel):
+    """One of an encounter's phases as WCL names them (``report.phases``)."""
+
+    id: int
+    name: str
+    is_intermission: bool = False
+
+
 class Pull(BaseModel):
     report_code: str
     fight_id: int
@@ -40,10 +48,18 @@ class Pull(BaseModel):
     boss_hp_pct: float | None = None  # WCL bossPercentage, 0-100: the boss's health
     phase_transitions: list[tuple[int, int]] = []  # (phase id, fight-relative ms), if WCL provides them
     friendly_player_ids: list[int]
+    wcl_phases: list[WclPhase] = []  # the encounter's phases from report.phases; names the transition IDs
 
     @property
     def pull_key(self) -> str:
         return f"{self.report_code}:{self.fight_id}"
+
+    def wcl_phase_reached(self) -> str | None:
+        """WCL's name for the last phase transition (its ID as text when unnamed); None without transitions."""
+        if not self.phase_transitions:
+            return None
+        last = self.phase_transitions[-1][0]
+        return next((p.name for p in self.wcl_phases if p.id == last), str(last))
 
 
 class Actor(BaseModel):
