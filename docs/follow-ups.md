@@ -81,9 +81,6 @@ file's header comment points to.
   work.
 - **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
   pulls; the golden questions can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
-- **Git LFS budget.** The real fixtures are about 200 MB. On GitHub's free tier LFS storage and bandwidth are
-  each 1 GB (bandwidth per month), so every full clone or CI checkout with LFS spends about 200 MB. Jobs that
-  don't need real fixtures can set `GIT_LFS_SKIP_SMUDGE=1`.
 - **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
   section 6.2 has the current layout.
 
@@ -126,3 +123,6 @@ human task table in `docs/decisions.md`).
   and the filtered pages.
 - 2026-10-11: the perf tests ingest only the recorded fixture fights and pass, and the query-tool p95 meets its
   budget (see the event store spike in `docs/decisions.md`).
+- 2026-10-16: Git LFS budget. The `check` CI job (`.github/workflows/check.yml`) checks out without LFS
+  (`GIT_LFS_SKIP_SMUDGE=1`), so it spends no LFS bandwidth and the tests that need real fixtures skip. The
+  `real-fixtures` job downloads them (about 200 MB per run) and only runs when started by hand.

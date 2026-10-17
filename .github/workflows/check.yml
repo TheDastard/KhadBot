@@ -1,0 +1,69 @@
+# Lint, typecheck and unit tests.
+#
+# The real WCL fixtures live in Git LFS (about 200 MB) and GitHub's free tier allows 1 GB of LFS bandwidth a
+# month, so the `check` job never downloads them: the tests that need them see pointer files and skip. The
+# `real-fixtures` job downloads them and only runs when started by hand from the Actions tab.
+#
+# uv reads the Python version from .python-version and owns .venv. mise only runs the tasks here; it installs no
+# tools because this job doesn't need Node.
+#
+# The WarcraftLogs credentials are placeholders. Config requires them to be set, and unit tests never call WCL;
+# locally they come from .env, which load_dotenv finds by walking up from the source tree.
+
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WARCRAFTLOGS_CLIENT_ID: ci-placeholder
+  WARCRAFTLOGS_CLIENT_SECRET: ci-placeholder
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    if: github.event_name != 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+      # Trust the checkout's mise.toml, and don't install Node and pnpm when a task runs.
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+      # setup-uv publishes no major-version tags, so it is pinned to a full release.
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - uses: jdx/mise-action@v5
+        with:
+          install: false
+      - run: uv sync --locked --extra dev
+      - run: mise run check
+
+  real-fixtures:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: true
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - run: uv run pytest tests/unit -m "not perf"
