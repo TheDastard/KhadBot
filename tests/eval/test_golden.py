@@ -6,7 +6,7 @@ analyst-role model on recorded reports, then applies the deterministic checks fr
 tests/helpers/encounter/golden.py. Cited refs must always resolve; the pass rate per model is printed at
 the end and gated by KHADBOT_EVAL_MIN_PASS_RATE when it is set.
 
-Run deliberately: ``uv run pytest tests/eval -m eval`` (``make test-eval``).
+Run deliberately: ``uv run pytest tests/eval -m eval`` (``mise run test:eval``).
 """
 
 from __future__ import annotations

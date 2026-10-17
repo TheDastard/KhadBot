@@ -17,10 +17,24 @@ Windows is the primary platform. Two tools are required:
 
 | Tool | Why | Install |
 |---|---|---|
-| [uv](https://docs.astral.sh/uv/) | Python version, virtual environment and dependency management | `winget install astral-sh.uv` |
-| GNU make (via [Chocolatey](https://chocolatey.org/install)) | Task runner for install, test, lint and cleanup | `choco install make` |
+| [uv](https://docs.astral.sh/uv/) (0.13 or later) | Python version, virtual environment and dependency management | `winget install astral-sh.uv` |
+| [mise](https://mise.jdx.dev/) | Pins Node and pnpm, and runs every project task (`mise run <task>`) | `winget install jdx.mise` |
 
-You do not need to install Python yourself — uv provides it (the project requires Python 3.12+).
+You do not need to install Python yourself: uv provides the version pinned in `.python-version` (the project supports
+Python 3.12 to 3.14). Each tool owns one job: uv owns Python and `.venv`, mise owns Node, pnpm and the tasks. Never add
+Python to `mise.toml`.
+
+### One-time mise setup
+
+1. Add `%LOCALAPPDATA%\mise\shims` to your user `PATH`, so `node` and `pnpm` resolve in every shell, including
+   editors and tools that don't run your shell profile.
+2. Trust the project's `mise.toml` (and every worktree under it) by adding this to
+   `%USERPROFILE%\.config\mise\config.toml`, with your clone's path:
+
+   ```toml
+   [settings]
+   trusted_config_paths = ["D:/Development/Projects/KhadBot"]
+   ```
 
 ## Setup
 
@@ -29,8 +43,9 @@ You do not need to install Python yourself — uv provides it (the project requi
 git clone <repo-url> KhadBot
 cd KhadBot
 
-# 2. Install dependencies (uv creates .venv on first run)
-make install-dev
+# 2. Install Node and pnpm, then the Python dependencies (uv creates .venv on first run)
+mise install
+mise run install
 
 # 3. Configure your LLM provider and API keys
 copy .env.example .env
@@ -41,16 +56,17 @@ Lighter installs are available if you do not need the dev tooling:
 
 | Command | Installs |
 |---|---|
-| `make install` | Runtime dependencies only |
-| `make install-cli` | Runtime + CLI (`rich`, `prompt_toolkit`) |
-| `make install-dev` | Runtime + CLI + dev tools (pytest, ruff, mypy, pre-commit) |
+| `mise run install` | Runtime + CLI + dev tools (pytest, ruff, mypy, pre-commit) |
+| `mise run install:cli` | Runtime + CLI (`rich`, `prompt_toolkit`) |
+| `mise run install:runtime` | Runtime dependencies only |
 
-Run `make` with no arguments to list every target.
+Run `mise tasks` to list every task. Variants of one task share a prefix (`install:cli`, `test:unit`), and
+`mise run "test:*"` runs every task in a group.
 
 ## Run the CLI
 
 ```powershell
-make cli
+mise run cli
 ```
 
 The CLI starts in `coach` mode. Commands: `/help`, `/mode coach|encounter`, `/ingest <report>`, `/digest <pull>`, `/clear`, `/exit`.
@@ -74,13 +90,18 @@ Example questions:
 
 | Command | What it does |
 |---|---|
-| `make check` | All read-only gates: lint + typecheck + unit tests. Run before every commit. |
-| `make test-unit` | Unit tests only (no LLM inference, no network) |
-| `make test-integ` | Integration tests; needs a running LLM backend (Ollama by default, or `LLM_PROVIDER=groq`) |
-| `make test-eval` | Golden-question eval via LangSmith (Anthropic only, expensive) |
-| `make lint` / `make format` / `make typecheck` | ruff check, ruff format + fix, mypy |
-| `make clean` | Remove caches and build artifacts |
-| `make distclean` | `clean` plus delete `.venv`. Stops processes running from the venv (e.g. a `ruff.exe` held open by the editor) and retries; if files stay locked it lists them. |
+| `mise run check` | All read-only gates: lint + typecheck + unit tests. Run before every commit. |
+| `mise run test` | Every test suite |
+| `mise run test:unit` | Unit tests only (no LLM inference, no network) |
+| `mise run test:integ` | Integration tests; needs a running LLM backend (Ollama by default, or `LLM_PROVIDER=groq`) |
+| `mise run test:eval` | Golden-question eval via LangSmith (Anthropic only, expensive) |
+| `mise run lint` / `mise run format` / `mise run typecheck` | ruff check, ruff format + fix, mypy |
+| `mise run clean` | Remove caches and build artifacts. Leaves `.venv`, `.env` and `.khadbot_data/` alone. |
+| `mise run clean:all` | `clean` plus delete `.venv`. Stops processes running from the venv (e.g. a `ruff.exe` held open by the editor) and retries; if files stay locked it lists them. |
+
+Tasks are plain `uv` commands, so they run the same from cmd, PowerShell and Git Bash, and each one also works
+without mise (see `mise.toml`). Set environment variables in your shell before the task, for example
+`LLM_PROVIDER=groq mise run test:integ` from Git Bash.
 
 Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.yaml`; enable them with `uv run pre-commit install`.
 
@@ -102,10 +123,11 @@ KhadBot/
 │   ├── registries/        # cooldown registry
 │   ├── personas/          # khadgar, thrall, xalatath
 │   └── templates/         # Jinja prompt template
-├── scripts/               # distclean.ps1, WarcraftLogs fixture recording
+├── scripts/               # clean.ps1, distclean.ps1, WarcraftLogs fixture recording
 ├── tests/                 # unit/, integration/, eval/, fixtures/, golden/
-├── main.py                # CLI entrypoint (make cli)
-├── Makefile
+├── main.py                # CLI entrypoint (mise run cli)
+├── mise.toml              # Node and pnpm versions, project tasks
+├── .python-version        # Python version uv uses for .venv
 └── pyproject.toml         # dependencies (managed with uv)
 ```
 
