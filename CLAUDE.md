@@ -42,7 +42,7 @@ config/
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # cooldowns.yaml
-scripts/             # WCL fixture recorder, clean and distclean
+scripts/             # setup, WCL fixture recorder, clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
@@ -62,6 +62,10 @@ Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignore
 Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `mise tasks` lists them all. Each runs
 the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
 `install:cli`); name new tasks the same way.
+
+A new machine or clone runs `scripts/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`). After that
+`uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
+`mise trust`.
 
 | Task | mise | uv |
 |---|---|---|
