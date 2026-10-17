@@ -90,8 +90,8 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   `failures_by_player`; `soak_count_lt` failures mark a cluster's first row.
 - **`time_to_die_ms`** is None when the actor had no reading at >= 90% HP in that life (not only when HP data is
   missing). A second death's window and time-to-die are clipped to after the previous death (battle res).
-- **Anomalies**: `phase_trigger_unmatched:<id>` is raised only when the pull should have reached that phase (a kill,
-  or WCL `last_phase` greater than the phases detected); an early wipe never reaching P2 is not an anomaly.
+- **Anomalies**: `phase_trigger_unmatched:<id>` is raised only when WCL's phase transitions show the pull reached
+  that phase (rule since 2026-10-16 below); an early wipe never reaching P2 is not an anomaly.
   `missing_data_type:<T>` checks only DamageTaken, Casts and Healing, which every real pull has; zero Deaths,
   Interrupts or Dispels rows are legitimate. `unregistered_damage:<pct>` is raised only when an encounter file
   exists and the share is >= 10%.
@@ -222,6 +222,18 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   whose metadata or events changed. It never requests event pages: fights not stored yet are left alone (named
   fights not stored are reported as failed), and a pull whose pages are missing from the cache fails. It needs
   WCL, so it is a usage error with `--offline`.
+- **WCL phases and phase reached (2026-10-16)**: `GET_REPORT_META` requests `report.phases` and each `Pull`
+  carries its encounter's `wcl_phases` (id, name, is_intermission; empty by default, so old `pulls.json` files
+  load). The query's `encounterID` field was confirmed on 2026-10-17, when `--refresh-meta` refetched the three
+  local reports. `phase_reached` stays the last detected
+  encounter-file phase ID; without an encounter file it is WCL's name for the last `phase_transitions` entry, or
+  its ID as text when unnamed. `phase_trigger_unmatched:<id>` (`annotate.unmatched_phases`) is raised for an
+  undetected encounter-file phase whose `wcl_phase` trigger ID is among the pull's transitions; for undetected
+  phases with other triggers, it is raised in file order for as many phases as the pull has distinct WCL
+  transitions beyond the phases detected. `last_phase` is no longer read by any digest logic, and a kill no
+  longer raises the anomaly by itself: a kill whose transitions match the detected phases is consistent.
+  `/pulls` shows "Phase reached" (the WCL name) in place of "Last phase". Re-ingested offline, none of the 47
+  recorded Heroic Ula'tek pulls (the ones with an encounter file) raises the anomaly.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
 

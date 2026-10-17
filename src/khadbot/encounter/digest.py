@@ -22,7 +22,7 @@ from khadbot.encounter.analysis.aggro import aggro_summaries
 from khadbot.encounter.analysis.cooldowns import cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
 from khadbot.encounter.analysis.mechanics import mechanic_stats
-from khadbot.encounter.annotate import Annotated, AnnotationCache, annotate_pull
+from khadbot.encounter.annotate import Annotated, AnnotationCache, annotate_pull, unmatched_phases
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
@@ -159,9 +159,9 @@ def build_pull_records(
     anomalies += [f"missing_data_type:{t}" for t in REQUIRED_DATA_TYPES if t not in present]
     if a.frame["hp_pct"].null_count() == a.frame.height:
         anomalies.append("no_hp_data")
-    # An early wipe legitimately never reaches later phases; only flag a trigger the pull should have hit.
-    if a.unmatched_phase and (pull.kill or (pull.last_phase or 0) > len(a.phases)):
-        anomalies.append(f"phase_trigger_unmatched:{a.unmatched_phase}")
+    # An early wipe legitimately never reaches later phases; only flag a phase WCL's transitions say it reached.
+    if enc is not None:
+        anomalies += [f"phase_trigger_unmatched:{p}" for p in unmatched_phases(pull, a.phases, enc)]
     unverified = sorted({c.spell_id for c in cooldowns if not (e := registry.get(c.spell_id)) or not e.verified})
     anomalies += [f"cooldown_unverified:{s}" for s in unverified]
     if enc is not None and unregistered_pct >= FULL_COVERAGE_MAX_PCT:
@@ -175,7 +175,8 @@ def build_pull_records(
         encounter_name=pull.encounter_name,
         outcome="kill" if pull.kill else "wipe",
         duration_ms=pull.duration_ms,
-        phase_reached=a.phases[-1].phase_id if a.phases else None,
+        # The encounter file's phase when there is one; otherwise WCL's name for the last phase transition.
+        phase_reached=a.phases[-1].phase_id if a.phases else pull.wcl_phase_reached(),
         boss_pct=pull.boss_pct,
         boss_hp_pct=pull.boss_hp_pct,
         cutoff_ms=a.cutoff_ms,

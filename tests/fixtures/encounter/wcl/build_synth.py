@@ -374,6 +374,15 @@ def main() -> None:
         "zone": {"id": 9000, "name": "Synthetic Citadel"},
         "masterData": {"actors": ACTORS, "abilities": ABILITIES},
         "fights": fights_meta,
+        "phases": [
+            {
+                "encounterID": 90001,
+                "phases": [
+                    {"id": 1, "name": "Synth Stage One", "isIntermission": False},
+                    {"id": 2, "name": "Synth Stage Two", "isIntermission": False},
+                ],
+            }
+        ],
     }
     (OUT / "report.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
 
