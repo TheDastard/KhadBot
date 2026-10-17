@@ -6,6 +6,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace # trim unnecessary whitespace
+        args: [--markdown-linebreak-ext=md] # keep Markdown's two-space line breaks
       - id: end-of-file-fixer   # ensure files end with a newline
       - id: check-yaml          # validates syntax of yaml files
   - repo: https://github.com/astral-sh/ruff-pre-commit
