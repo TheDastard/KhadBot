@@ -144,6 +144,18 @@ class TestDeathsEdgeCases:
         (d,) = death_records(a, ACTORS, abilities={300: "Smash"})
         assert (d.killing_ability_id, d.killing_ability_name) == (300, "Smash")
 
+    def test_death_ability_zero_falls_back_to_last_hit(self):
+        # Events normalized before the killing ability was filled in carry WCL's placeholder 0.
+        rows = [_hit(1_000, 1, 10_000, ability=300), _death(1_000, 1, ability=0)]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS, abilities={0: "Unknown Ability", 300: "Smash"})
+        assert (d.killing_ability_id, d.killing_ability_name) == (300, "Smash")
+
+    def test_death_ability_zero_without_hits_is_unknown(self):
+        a = annotate(make_pull(), make_events([_death(1_000, 1, ability=0)]), None, ACTORS)
+        (d,) = death_records(a, ACTORS, abilities={0: "Unknown Ability"})
+        assert (d.killing_ability_id, d.killing_ability_name) == (None, None)
+
 
 # ===========================================================================
 # Mechanics

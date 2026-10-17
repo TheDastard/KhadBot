@@ -3,34 +3,42 @@
   {
    "timestamp": 108000,
    "type": "death",
-   "sourceID": 10,
+   "sourceID": -1,
    "targetID": 3,
-   "abilityGameID": 900101,
-   "fight": 0
+   "abilityGameID": 0,
+   "fight": 0,
+   "killerID": 10,
+   "killingAbilityGameID": 900101
   },
   {
    "timestamp": 123000,
    "type": "death",
-   "sourceID": 10,
+   "sourceID": -1,
    "targetID": 5,
-   "abilityGameID": 900102,
-   "fight": 0
+   "abilityGameID": 0,
+   "fight": 0,
+   "killerID": 10,
+   "killingAbilityGameID": 900102
   },
   {
    "timestamp": 141000,
    "type": "death",
-   "sourceID": 10,
+   "sourceID": -1,
    "targetID": 4,
-   "abilityGameID": 900102,
-   "fight": 0
+   "abilityGameID": 0,
+   "fight": 0,
+   "killerID": 10,
+   "killingAbilityGameID": 900102
   },
   {
    "timestamp": 150000,
    "type": "death",
-   "sourceID": 10,
+   "sourceID": -1,
    "targetID": 1,
-   "abilityGameID": 900010,
-   "fight": 0
+   "abilityGameID": 0,
+   "fight": 0,
+   "killerID": 10,
+   "killingAbilityGameID": 900010
   }
  ],
  "nextPageTimestamp": null

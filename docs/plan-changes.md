@@ -32,3 +32,15 @@ that names a mise task: tasks that are variants of one group use a `group:` pref
 
 New tasks follow the same rule: D2's web tasks become `gen:types` (not `gen-types`), and `dev-web` and `e2e` take a
 group prefix where they have siblings (for example `web:dev`, `test:e2e`).
+
+## encounter/ingest-metadata
+
+### Refactor plan 6.1 (Ingest models)
+
+Add a bullet:
+
+- **Death rows** from WCL carry `abilityGameID: 0` and `sourceID: -1`, with the killing blow in
+  `killingAbilityGameID` and the killer in `killerID`. Normalize sets `ability_id` from `killingAbilityGameID` when
+  `abilityGameID` is 0 or missing, and `source_id` from `killerID` when `sourceID` is -1, for Deaths `death` rows.
+  The event schema does not change. Death records treat a death ability of 0 as unknown, so events normalized
+  before this rule fall back to the last hit.

@@ -141,8 +141,8 @@
       "active_defensives": [],
       "actor_id": 33,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1,
+      "killing_ability_name": "Melee",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -200,8 +200,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "blight_vein",
         "necrotic_vapors"
@@ -257,8 +257,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "blight_vein",
         "necrotic_vapors",
@@ -315,8 +315,8 @@
       "active_defensives": [],
       "actor_id": 23,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "blight_vein",
         "malignant_shell",
@@ -373,8 +373,8 @@
       "active_defensives": [],
       "actor_id": 41,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "blight_vein",
         "malignant_shell",
@@ -431,8 +431,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1286835,
+      "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -489,8 +489,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1308275,
+      "killing_ability_name": "Putrid Membrane",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -547,8 +547,8 @@
       "active_defensives": [],
       "actor_id": 56,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1,
+      "killing_ability_name": "Melee",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -606,8 +606,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1308275,
+      "killing_ability_name": "Putrid Membrane",
       "mechanic_ids": [
         "blightscale_viper",
         "necrotic_vapors",
@@ -664,8 +664,8 @@
       "active_defensives": [],
       "actor_id": 42,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1297213,
+      "killing_ability_name": "Malignant Shell",
       "mechanic_ids": [
         "blightscale_viper",
         "malignant_shell",
@@ -830,7 +830,7 @@
   "phase_reached": "p2",
   "produced_from": {
     "encfile_hash": "84163c7ea074",
-    "events_hash": "e52badd43b8c97fe84138ed2958d2548d2486973fd106540ae21cecc4c01bf9a",
+    "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "trMgApZCVYkv3jdq:11",

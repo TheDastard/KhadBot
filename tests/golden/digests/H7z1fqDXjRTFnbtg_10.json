@@ -39,8 +39,8 @@
       "active_defensives": [],
       "actor_id": 10,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "malignant_shell",
         "mothers_wrath_raid",
@@ -98,8 +98,8 @@
       "active_defensives": [],
       "actor_id": 15,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "malignant_shell",
         "mothers_wrath_raid",
@@ -157,8 +157,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -215,8 +215,8 @@
       "active_defensives": [],
       "actor_id": 8,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -273,8 +273,8 @@
       "active_defensives": [],
       "actor_id": 4,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -331,8 +331,8 @@
       "active_defensives": [],
       "actor_id": 13,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -389,8 +389,8 @@
       "active_defensives": [],
       "actor_id": 6,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -447,8 +447,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -505,8 +505,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "mothers_wrath_raid",
         "necrotic_vapors",
@@ -563,8 +563,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1301122,
+      "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
         "malignant_shell",
         "mothers_wrath_raid",
@@ -714,7 +714,7 @@
   "phase_reached": "p1",
   "produced_from": {
     "encfile_hash": "84163c7ea074",
-    "events_hash": "202587a780a8b781cff3d6e1522bd66be9b0b6e713e1383a9cf71183d9230442",
+    "events_hash": "3fe207f447b2e72fefd1f2bf20710b325d7b78fcc4db36d53841bfca6c7902e6",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:10",

@@ -56,6 +56,10 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
 - Filter syntax confirmed: `ability.id IN (633,1022,...)` (comma-separated, no spaces). Used for friendly Buffs
   (cooldown registry IDs) and enemy Casts (encounter-file ability IDs).
 
+- **Deaths rows name no ability or source.** Every recorded `death` row has `abilityGameID: 0` and `sourceID: -1`;
+  the killing blow is in `killingAbilityGameID` and the killer in `killerID`, for example
+  `{"type":"death","sourceID":-1,"targetID":10,"abilityGameID":0,"killerID":233,"killingAbilityGameID":1301122}`.
+  Normalize fills `ability_id` and `source_id` from those two fields.
 - `includeResources: true` adds `hitPoints` / `maxHitPoints` to events. About 85 to 90% of friendly `damage`
   events carry them across all 62 recorded pulls; the rest have none, so code must tolerate missing HP.
 - Events also carry fields KhadBot ignores (`classResources`, `buffs`, `attackPower`, ...). They make raw pages

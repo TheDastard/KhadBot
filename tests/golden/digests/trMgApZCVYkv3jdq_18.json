@@ -164,8 +164,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1293146,
+      "killing_ability_name": "Serpent's Bite",
       "mechanic_ids": [
         "necrotic_vapors",
         "serpents_bite",
@@ -222,8 +222,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -281,8 +281,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -340,8 +340,8 @@
       "active_defensives": [],
       "actor_id": 47,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -400,8 +400,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -459,8 +459,8 @@
       "active_defensives": [],
       "actor_id": 14,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -518,8 +518,8 @@
       "active_defensives": [],
       "actor_id": 23,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -577,8 +577,8 @@
       "active_defensives": [],
       "actor_id": 33,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -636,8 +636,8 @@
       "active_defensives": [],
       "actor_id": 24,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -694,8 +694,8 @@
       "active_defensives": [],
       "actor_id": 42,
       "after_cutoff": false,
-      "killing_ability_id": 0,
-      "killing_ability_name": "Unknown Ability",
+      "killing_ability_id": 1318329,
+      "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
         "calcified_corpse",
         "necrotic_vapors",
@@ -881,7 +881,7 @@
   "phase_reached": "p3",
   "produced_from": {
     "encfile_hash": "84163c7ea074",
-    "events_hash": "d824fa6e42ed0ca4b8d43507d03fce18f47ed84bbef28638055e66ed7c363a90",
+    "events_hash": "beb4f5529aa7922491e4c218169c939ebbf10470efe0918cd0bb1015edfe9216",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "trMgApZCVYkv3jdq:18",

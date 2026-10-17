@@ -62,7 +62,8 @@ def death_records(
         heals = window.filter(type_is("heal"))
 
         killing_blow = damage.row(-1, named=True) if damage.height else None
-        killing_ability = death_ability if death_ability is not None else (killing_blow or {}).get("ability_id")
+        # A death ability of 0 (events normalized before the killing ability was filled in) is unknown too.
+        killing_ability = death_ability or (killing_blow or {}).get("ability_id")
 
         top = damage.with_columns(pl.col("amount").fill_null(0)).sort("amount", descending=True, maintain_order=True)
         top_hits = [
