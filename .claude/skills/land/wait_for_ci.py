@@ -5,10 +5,13 @@ Wait for every GitHub Actions run on one commit to finish, then report each job.
 failed steps and GitHub's annotations, which carry the error message (for example an action tag that doesn't
 resolve). Exits 0 when every run succeeded, 1 otherwise.
 
+With ``--branch`` it also waits until a run for that branch exists. Pushing ``main`` to a commit whose branch run has
+already finished would otherwise report that old run before GitHub registers the new one.
+
 Uses the GitHub CLI when it is installed and logged in; otherwise the public REST API (the repo is public), with
 GITHUB_TOKEN if set. Standard library only, so it runs with ``uv run --no-project python -I``.
 
-Usage: wait_for_ci.py <commit-sha> [--timeout-min 30]
+Usage: wait_for_ci.py <commit-sha> [--branch <name>] [--timeout-min 30]
 """
 
 from __future__ import annotations
@@ -68,14 +71,18 @@ def api(path: str) -> object:
 POLL_SECONDS = 15 if USE_GH or os.environ.get("GITHUB_TOKEN") else 45
 
 
-def wait(repo: str, sha: str, timeout_min: int) -> list[dict]:
+def wait(repo: str, sha: str, timeout_min: int, branch: str | None = None) -> list[dict]:
+    """Poll until every run on ``sha`` is completed and, with ``branch``, at least one of them ran for that branch."""
     deadline = time.monotonic() + timeout_min * 60
     while True:
         runs = api(f"repos/{repo}/actions/runs?head_sha={sha}&per_page=20")["workflow_runs"]  # type: ignore[index]
-        if runs and all(r["status"] == "completed" for r in runs):
+        has_branch_run = branch is None or any(r["head_branch"] == branch for r in runs)
+        if runs and has_branch_run and all(r["status"] == "completed" for r in runs):
             return runs
         if time.monotonic() > deadline:
-            states = ", ".join(f"{r['name']}: {r['status']}" for r in runs) or "no runs yet"
+            states = ", ".join(f"{r['name']} ({r['head_branch']}): {r['status']}" for r in runs) or "no runs yet"
+            if not has_branch_run:
+                states += f"; no run for branch {branch}"
             sys.exit(f"timed out after {timeout_min} min ({states})")
         time.sleep(POLL_SECONDS)
 
@@ -102,11 +109,13 @@ def report(repo: str, runs: list[dict]) -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[1])
     parser.add_argument("sha", help="full commit SHA, e.g. $(git rev-parse HEAD)")
+    parser.add_argument("--branch", help="also wait until a run for this branch exists, e.g. main after pushing it")
     parser.add_argument("--timeout-min", type=int, default=30)
     args = parser.parse_args()
     repo = _repo_slug()
-    print(f"waiting for CI on {repo}@{args.sha[:7]} ({'gh' if USE_GH else 'public API'})", flush=True)
-    sys.exit(0 if report(repo, wait(repo, args.sha, args.timeout_min)) else 1)
+    target = f"{repo}@{args.sha[:7]}" + (f" on {args.branch}" if args.branch else "")
+    print(f"waiting for CI on {target} ({'gh' if USE_GH else 'public API'})", flush=True)
+    sys.exit(0 if report(repo, wait(repo, args.sha, args.timeout_min, args.branch)) else 1)
 
 
 if __name__ == "__main__":
