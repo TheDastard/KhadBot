@@ -10,8 +10,8 @@ the branch and worktree go away afterwards. Every push and every change to `main
 invoking this skill; anything outside these steps (pushing other branches, force-pushing `main`, deleting branches
 that aren't this one) still needs its own go-ahead.
 
-Run every git command from the task's worktree. `main` is usually not checked out anywhere, so update it by ref
-(`refs/heads/main`), never by switching branches.
+Steps 1 to 4 run from the task's worktree; steps 5 and 6 run from the main checkout. Name `main` by ref
+(`refs/heads/main`) and never switch branches in a checkout to reach it.
 
 ## 1. Preflight
 
@@ -52,27 +52,42 @@ gotcha in CLAUDE.md). Never move `main` past a red or still-running run.
 
 ## 5. Fast-forward main and push it
 
+Leave the task's worktree first (`ExitWorktree` with `keep`). `main` is often checked out in the main checkout, and
+a session isolated in a worktree can't run git there; the cleanup in step 6 also needs you outside the worktree.
+Everything from here on runs from the main checkout, and calls the task worktree's copy of `wait_for_ci.py` by path
+(the main checkout may be on a branch that doesn't have it yet).
+
 ```bash
 git fetch origin
-git merge-base --is-ancestor refs/remotes/origin/main HEAD    # main hasn't moved since step 2
-git fetch . "refs/heads/<branch>:refs/heads/main"             # refuses anything but a fast-forward
-git push origin refs/heads/main:refs/heads/main
+git merge-base --is-ancestor refs/remotes/origin/main refs/heads/<branch>   # main hasn't moved since step 2
 ```
 
-If `main` moved in the meantime, go back to step 2. If `main` is checked out in some worktree, `git fetch .` refuses
-to update it; run `git merge --ff-only <branch>` in that worktree instead, with the user's go-ahead.
+If `main` moved in the meantime, re-enter the worktree (`EnterWorktree` with its path) and go back to step 2.
+Otherwise move `main` in whichever way its checkout state allows; both refuse anything but a fast-forward:
 
-Pushing `main` starts CI again on the same commit. Wait for it with `wait_for_ci.py` (it reports every run on the
-commit) and tell the user if it isn't green.
+- `main` checked out nowhere (`git worktree list` doesn't show `[main]`):
+  `git fetch . "refs/heads/<branch>:refs/heads/main"`
+- `main` checked out in the main checkout: confirm `git status --short` is empty there, then
+  `git merge --ff-only refs/heads/<branch>`. If it has uncommitted changes, stop and ask the user.
+- `main` checked out in some other worktree: stop and ask the user.
+
+Then push it:
+
+```bash
+git push origin refs/heads/main:refs/heads/main
+uv run --no-project python -I <worktree>/.claude/skills/land/wait_for_ci.py "$(git rev-parse refs/heads/main)"
+```
+
+Pushing `main` starts CI again on the same commit; `wait_for_ci.py` reports every run on it. Tell the user if it
+isn't green.
 
 ## 6. Clean up
 
-1. Leave the worktree first (`ExitWorktree` with `keep`); a session can't delete the branch it is on.
-2. Stop anything still running from the worktree's `.venv` and delete it. On Windows a process holding a file open
+1. Stop anything still running from the worktree's `.venv` and delete it. On Windows a process holding a file open
    makes `git worktree remove` fail halfway:
    `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 -Venv <worktree>/.venv`
    (this also stops a CI watcher started from that venv, so finish step 5 first).
-3. From the main checkout:
+2. From the main checkout:
    ```bash
    git worktree remove --force <worktree>     # only ignored files remain: caches, htmlcov
    git branch -d <branch>                     # -d, not -D: refuses if the branch isn't on main

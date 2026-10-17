@@ -38,8 +38,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
-      # Trust the checkout's mise.toml, and don't install Node and pnpm when a task runs.
-      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+      # Don't install Node and pnpm when a task runs.
       MISE_TASK_RUN_AUTO_INSTALL: "false"
     steps:
       - uses: actions/checkout@v7
