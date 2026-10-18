@@ -15,8 +15,10 @@ the effects of a spell it triggers, do one of these things:
   Avenging Wrath, Power Infusion).
 
 The first three make a defensive-cooldown candidate (``defensive_candidates``), the last an offensive one
-(``offensive_candidates``). A spell whose own effects are offensive and whose only defensive effects come
-from a spell it triggers (a leap's brief immunity, a pet's shield) is offensive only. Its ``target`` comes
+(``offensive_candidates``). On a spell with an offensive effect, a defensive aura shorter than 2 s from a
+spell the cast triggers (a leap's landing immunity) and any support aura don't make it a defensive
+candidate, and two offensive cooldowns whose defensive effects the data can't set apart are skipped by name
+(``_NOT_DEFENSIVE``). Its ``target`` comes
 from who the effect lands on: only the caster is ``personal``, one chosen ally is ``external``, an area or
 the raid is ``raid``. Casts that work through an area trigger, a totem or a scripted effect fall back to
 same-name spells for their aura. All of this is a heuristic; every candidate is unverified until a human
@@ -223,17 +225,24 @@ def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
 
 
 _DEFENSIVE_ROLES = frozenset({"defensive", "healing", "support"})
+# On a spell with an offensive effect, a defensive aura from a spell it triggers that lasts less than this is a
+# side effect, not a cooldown: Havoc's Metamorphosis (191427) is immune for 1 s on landing (201453). Cloak of
+# Shadows' own 1 s immunity (35729) still counts, since Cloak has no offensive effect.
+_MIN_TRIGGERED_DEFENSIVE_MS = 2_000
+# Offensive cooldowns whose defensive effects the data can't tell apart from a defensive cooldown's (build
+# 12.1.5.70448). Each is left out of the defensive candidates.
+_NOT_DEFENSIVE: dict[int, str] = {
+    19574: "Bestial Wrath: its pet aura (186254) carries the damage bonus and an absorb in one spell",
+    107574: "Avatar: a talent puts AoE avoidance and damage reduction on the cast itself",
+}
 
 
-def _offensive_only(spell_id: int, hits: list[_Hit]) -> bool:
-    """
-    True when the cast's own effects are offensive and every defensive or healing effect comes from a spell it
-    triggers: Metamorphosis's leap is briefly immune and Bestial Wrath shields the pet, but neither is a
-    defensive cooldown.
-    """
-    own_offensive = any(h.role == "offensive" and h.effect.spell_id == spell_id for h in hits)
-    triggered_only = all(h.effect.spell_id != spell_id for h in hits if h.role in ("defensive", "healing"))
-    return own_offensive and triggered_only
+def _side_effect(data: ClientData, spell_id: int, hit: _Hit) -> bool:
+    """A defensive hit from a triggered spell too short to be a cooldown (``_MIN_TRIGGERED_DEFENSIVE_MS``)."""
+    if hit.role != "defensive" or hit.effect.spell_id == spell_id:
+        return False
+    aura = data.spells.get(hit.effect.spell_id)
+    return aura is not None and 0 < aura.duration_ms < _MIN_TRIGGERED_DEFENSIVE_MS
 
 
 def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
@@ -253,14 +262,23 @@ def _classify(data: ClientData, spell_id: int, *, offensive: bool, min_cooldown_
     owner = data.player_spells.get(spell_id)
     if spell is None or owner is None or spell.effective_cooldown_ms < min_cooldown_s * 1000:
         return None
-    every = list(_hits(data, spell_id))
-    if not offensive and _offensive_only(spell_id, every):
+    if not offensive and spell_id in _NOT_DEFENSIVE:
         return None
     roles = {"offensive"} if offensive else _DEFENSIVE_ROLES
-    hits = [h for h in every if h.role in roles]
+    every = list(_hits(data, spell_id))
+    linked = _same_name_hits(data, spell)
+    # On an offensive cooldown, other auras on the ally (Power Infusion's second aura) and a brief triggered
+    # immunity (Metamorphosis's landing) belong to the offensive effect, not to a defensive cooldown.
+    has_offensive = any(h.role == "offensive" for h in [*every, *linked])
+
+    def keep(h: _Hit) -> bool:
+        side = has_offensive and (h.role == "support" or _side_effect(data, spell_id, h))
+        return h.role in roles and not side
+
+    hits = [h for h in every if keep(h)]
     same_name = False
     if not any(h.role != "support" for h in hits):
-        fallback = [h for h in _same_name_hits(data, spell) if h.role in roles]
+        fallback = [h for h in linked if keep(h)]
         if fallback:
             hits, same_name = fallback, True
     if not hits:
