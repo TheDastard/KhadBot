@@ -87,7 +87,6 @@ human task table in `docs/decisions.md`).
   needs.
 - **Poisonous Bite** is a dispel mechanic with no failure rule: no source says how long the stacking DoT may
   stay before it counts as a failure (`debuff_duration_gt {ms}` once known).
-- **Acidic Expulsion** should fail past 2 stacks; needs the stack-count rule above.
 - **Soul Constrictor** soakers are an undetected failure. The `hit_while_aura` rule exists, but the logs don't
   show who soaked while debuffed: Soul Constrictor (1300685) is never reapplied to a player who has it (0 of 2,400
   applications over 209 Coils), every player hit takes the same amount, and the share debuffed per Coils ranges
