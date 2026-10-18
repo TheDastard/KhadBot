@@ -6,6 +6,9 @@
 #      needed: the project's mise.toml uses nothing that requires it.
 #   3. Git LFS hooks, so the recorded WCL fixtures download as real files.
 #   4. Node and pnpm (`mise install`), the Python environment (`mise run install`) and the pre-commit hooks.
+#      Every worktree shares the main clone's hooks, and `pre-commit install` writes the path of the Python that
+#      ran it into them, so the hooks are installed from the main checkout only. A worktree just checks them;
+#      installing from one would break the hooks for every checkout once that worktree is removed.
 #   5. .env copied from .env.example if it doesn't exist yet. Fill in its keys yourself.
 #
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
@@ -36,6 +39,16 @@ function Has($command) { [bool](Get-Command $command -ErrorAction SilentlyContin
 # which new shells pick up.
 function Add-SessionPath($dir) {
     if ((Test-Path $dir) -and -not (($env:PATH -split ";") -contains $dir)) { $env:PATH = "$dir;$env:PATH" }
+}
+
+# The Python the shared pre-commit hook runs, if the hook exists and that Python is still there.
+function Test-PreCommitHook($hooksDir) {
+    $hook = Join-Path $hooksDir "pre-commit"
+    if (-not (Test-Path $hook)) { return $null }
+    $line = Select-String -Path $hook -Pattern "^INSTALL_PYTHON='(.*)'$" | Select-Object -First 1
+    if (-not $line) { return $null }
+    $python = $line.Matches[0].Groups[1].Value
+    if (Test-Path $python) { return $python } else { return $null }
 }
 
 function Install-WingetPackage($id, $name) {
@@ -101,6 +114,7 @@ Step "Git LFS"
 # The main clone, even when this runs from a worktree: worktrees share its LFS objects and its .env.
 $commonDir = git -C $PSScriptRoot rev-parse --path-format=absolute --git-common-dir
 $cloneRoot = (Split-Path -Parent $commonDir) -replace "\\", "/"
+$inWorktree = (git -C $PSScriptRoot rev-parse --show-toplevel) -ne $cloneRoot
 
 git lfs install | Out-Null
 Ok "Git LFS hooks installed"
@@ -124,6 +138,13 @@ try {
         if ($LASTEXITCODE -ne 0) { Problem "mise install failed" } else { Ok "Node $(node --version), pnpm $(pnpm --version)" }
         mise run install
         if ($LASTEXITCODE -ne 0) { Problem "mise run install failed" } else { Ok "$(uv run python --version) in .venv" }
+    }
+
+    $hookPython = Test-PreCommitHook (Join-Path $commonDir "hooks")
+    if ($inWorktree -or $SkipInstall) {
+        if ($hookPython) { Ok "pre-commit hooks installed (run with $hookPython)" }
+        else { Problem "pre-commit hooks are missing or point at a removed .venv (run in $cloneRoot`: uv run pre-commit install)" }
+    } else {
         uv run pre-commit install | Out-Null
         if ($LASTEXITCODE -ne 0) { Problem "pre-commit install failed" } else { Ok "pre-commit hooks installed" }
     }
@@ -132,7 +153,7 @@ try {
     Step ".env"
     if (Test-Path .env) {
         Ok ".env exists (left untouched)"
-    } elseif ((git rev-parse --show-toplevel) -ne ($cloneRoot)) {
+    } elseif ($inWorktree) {
         Ok "worktree: no .env needed; load_dotenv finds the main checkout's"
     } else {
         Copy-Item .env.example .env
