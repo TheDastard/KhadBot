@@ -1,8 +1,9 @@
 """
 encounter/ingest/normalize.py
 
-Raw WCL report metadata and event pages -> typed ``Pull`` / ``Actor`` models and one
-polars events frame per pull (schema: ``store.EVENT_SCHEMA``).
+Raw WCL report metadata and event pages -> typed ``Pull`` / ``Actor`` models, one polars events
+frame per pull (schema: ``store.EVENT_SCHEMA``) and, in the same pass over the pages, the pull's
+position samples (schema: ``store.POSITION_SCHEMA``).
 
 Pages are turned into small frames and concatenated; no per-event Python objects are
 kept beyond a single page's JSON list.
@@ -17,7 +18,7 @@ import orjson
 import polars as pl
 
 from khadbot.encounter.models import Actor, Pull, WclPhase
-from khadbot.encounter.store import EVENT_SCHEMA, empty_events
+from khadbot.encounter.store import EVENT_SCHEMA, POSITION_ORDER, POSITION_SCHEMA, empty_events, empty_positions
 
 # ---------------------------------------------------------------------------
 # Ordering and field mapping
@@ -155,9 +156,21 @@ def _death_row(e: dict) -> dict:
     return fixed
 
 
-def _page_frame(events: list[dict], data_type: str, start_ms: int, friendly: set[int]) -> pl.DataFrame:
+def _page_frame(
+    events: list[dict],
+    data_type: str,
+    start_ms: int,
+    friendly: set[int],
+    positions: dict[str, list] | None = None,
+) -> pl.DataFrame:
+    """
+    One page's rows as an events frame. With ``positions``, also collect a sample into it from every row that
+    carries one, including the rows ``_keep`` drops (``_position_sample``).
+    """
     cols: dict[str, list] = {name: [] for name in EVENT_SCHEMA if name != "seq"}
     for e in events:
+        if positions is not None and "x" in e:
+            _position_sample(e, start_ms, positions)
         if not _keep(e, data_type, friendly):
             continue
         if data_type == "Deaths" and e.get("type") == "death":
@@ -183,6 +196,21 @@ def normalize_pull(pull: Pull, actors: list[Actor], pages_by_type: dict[str, Ite
     pages (dicts with a ``data`` list). Rows are stably sorted by (t_ms, data-type order, page order)
     and ``seq`` is assigned afterwards.
     """
+    return _normalize(pull, actors, pages_by_type, None)
+
+
+def normalize_pull_with_positions(
+    pull: Pull, actors: list[Actor], pages_by_type: dict[str, Iterable[dict]]
+) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """``normalize_pull`` plus the pull's position table, built in the same pass over the pages."""
+    samples: dict[str, list] = {name: [] for name in POSITION_SCHEMA}
+    df = _normalize(pull, actors, pages_by_type, samples)
+    return df, _positions_frame(samples)
+
+
+def _normalize(
+    pull: Pull, actors: list[Actor], pages_by_type: dict[str, Iterable[dict]], positions: dict[str, list] | None
+) -> pl.DataFrame:
     friendly = _friendly_ids(pull, actors)
     frames: list[pl.DataFrame] = []
     order: list[int] = []
@@ -195,7 +223,7 @@ def normalize_pull(pull: Pull, actors: list[Actor], pages_by_type: dict[str, Ite
         base = name.removesuffix(_ENEMIES_SUFFIX)
         rank = sort_key(name)[0]
         for page in pages_by_type[name]:
-            frame = _page_frame(page.get("data") or [], base, pull.start_ms, friendly)
+            frame = _page_frame(page.get("data") or [], base, pull.start_ms, friendly, positions)
             if frame.height:
                 frames.append(frame)
                 order.extend([rank] * frame.height)
@@ -207,6 +235,41 @@ def normalize_pull(pull: Pull, actors: list[Actor], pages_by_type: dict[str, Ite
     df = df.sort(["t_ms", "_rank"], maintain_order=True).drop("_rank")
     df = df.with_columns(pl.int_range(pl.len(), dtype=pl.UInt32).alias("seq"))
     return df.select(list(EVENT_SCHEMA))
+
+
+# ---------------------------------------------------------------------------
+# Positions
+# ---------------------------------------------------------------------------
+
+# WCL ``resourceActor``: the unit a row's resources and position belong to (raw ID and instance fields).
+_RESOURCE_ACTOR = {1: ("sourceID", "sourceInstance"), 2: ("targetID", "targetInstance")}
+
+# Two samples with the same key are one sample seen from two data types (or two page sets).
+_POSITION_KEY = ["t_ms", "actor_id", "instance", "x", "y"]
+
+
+def _position_sample(e: dict, start_ms: int, out: dict[str, list]) -> None:
+    """
+    Collect the position a raw row carries. It belongs to the unit ``resourceActor`` names: 1 is the source
+    (with ``sourceInstance``), 2 the target (with ``targetInstance``). A row naming neither is skipped.
+    """
+    fields = _RESOURCE_ACTOR.get(e.get("resourceActor", 0))
+    if fields is None or e.get(fields[0]) is None or e.get("y") is None:
+        return
+    out["t_ms"].append(int(e["timestamp"]) - start_ms)
+    out["actor_id"].append(e[fields[0]])
+    out["instance"].append(e.get(fields[1]))
+    out["x"].append(e["x"])
+    out["y"].append(e["y"])
+    out["map_id"].append(e.get("mapID"))
+
+
+def _positions_frame(samples: dict[str, list]) -> pl.DataFrame:
+    """Samples without duplicates, sorted by actor, instance and time (then position and map, for a stable order)."""
+    if not samples["t_ms"]:
+        return empty_positions()
+    df = pl.DataFrame(samples, schema=POSITION_SCHEMA)
+    return df.sort(POSITION_ORDER).unique(subset=_POSITION_KEY, keep="first", maintain_order=True)
 
 
 def events_hash(df: pl.DataFrame) -> str:

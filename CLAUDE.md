@@ -48,7 +48,7 @@ docs/decisions.md    # design decisions and their reasons
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
 ```
 
-Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events, annotations, and the findings and checkpoint SQLite databases.
+Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events and per-pull position tables, annotations, and the findings and checkpoint SQLite databases.
 
 ## Design reference
 
