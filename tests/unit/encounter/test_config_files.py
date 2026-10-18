@@ -531,9 +531,30 @@ class TestEncounterFile:
 
     def test_fetch_filter_inputs(self):
         enc = load_encounter_file(SYNTH_ENCOUNTER_FILE)
-        ids, enemy = fetch_filter_inputs(
-            load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE), {enc.encounter_id: enc}
+        inputs = fetch_filter_inputs(
+            load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE),
+            load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE),
+            {enc.encounter_id: enc},
         )
-        assert ids == [900301, 900311, 900302]
-        assert enemy == {SYNTH_ENCOUNTER_ID: [900101, 900201, 900401, 900501, 900601]}
-        assert fetch_filter_inputs(None, {}) == (None, {})
+        assert inputs == {
+            "defensive_spell_ids": [900301, 900311, 900302],
+            "offensive_spell_ids": [902001, 902011, 902002],
+            "enemy_cast_ids": {SYNTH_ENCOUNTER_ID: [900101, 900201, 900401, 900501, 900601]},
+        }
+        assert fetch_filter_inputs(None, None, {}) == {
+            "defensive_spell_ids": None,
+            "offensive_spell_ids": None,
+            "enemy_cast_ids": {},
+        }
+
+    def test_fetch_filter_inputs_reject_a_shared_id(self):
+        defensive = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+        offensive = parse_cooldowns(
+            {
+                "category": "offensive",
+                "cooldowns": [{"spell_id": 900311, "name": "X", "class": "Mage", "target": "raid"}],
+            },
+            "offensive",
+        )
+        with pytest.raises(ConfigurationError, match="900311 is in both"):
+            fetch_filter_inputs(defensive, offensive, {})

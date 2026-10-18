@@ -1,0 +1,85 @@
+{
+ "data": [
+  {
+   "timestamp": 303050,
+   "type": "applybuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 1
+  },
+  {
+   "timestamp": 303050,
+   "type": "applybuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 2
+  },
+  {
+   "timestamp": 303050,
+   "type": "applybuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 3
+  },
+  {
+   "timestamp": 303050,
+   "type": "applybuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 4
+  },
+  {
+   "timestamp": 303050,
+   "type": "applybuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 5
+  },
+  {
+   "timestamp": 343050,
+   "type": "removebuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 1
+  },
+  {
+   "timestamp": 343050,
+   "type": "removebuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 2
+  },
+  {
+   "timestamp": 343050,
+   "type": "removebuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 3
+  },
+  {
+   "timestamp": 343050,
+   "type": "removebuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 4
+  },
+  {
+   "timestamp": 343050,
+   "type": "removebuff",
+   "sourceID": 2,
+   "abilityGameID": 902011,
+   "fight": 0,
+   "targetID": 5
+  }
+ ],
+ "nextPageTimestamp": null
+}

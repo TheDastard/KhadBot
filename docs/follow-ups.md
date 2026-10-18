@@ -32,8 +32,8 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   (365199), Blessing of Dawn (210380), Shadow Mend (186439), Void Leech (451963) and Killing Spree (424564).
   Class each from a log or in game, or leave it out. Stagger, Roar of Sacrifice and Cauterize were added with
   proposed classes, unverified.
-- **WCL's limit on filter length.** The Buffs filter now holds 95 IDs (under 1 KB); WCL's limit on filter
-  length is not known.
+- **WCL's limit on filter length.** The defensive Buffs filter now holds 95 IDs (under 1 KB); offensive
+  cooldowns have their own Buffs request and filter. WCL's limit on filter length is not known.
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly

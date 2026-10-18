@@ -30,6 +30,7 @@ from helpers.encounter.synth import (
     SYNTH_DEFENSIVE_COOLDOWN_IDS,
     SYNTH_DEFENSIVE_COOLDOWNS_FILE,
     SYNTH_ENEMY_CAST_IDS,
+    SYNTH_OFFENSIVE_COOLDOWN_IDS,
     install_synth_encounter,
 )
 
@@ -52,7 +53,11 @@ def _ingest(code: str, store: ParquetEventStore) -> None:
     if not (FIXTURES / "wcl" / code).is_dir():
         pytest.fail(f"golden questions need report {code}, but tests/fixtures/encounter/wcl/{code} is not recorded")
     if code == "SYNTH01":
-        filters = {"registry_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS, "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS}
+        filters = {
+            "defensive_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS,
+            "offensive_spell_ids": SYNTH_OFFENSIVE_COOLDOWN_IDS,
+            "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS,
+        }
     else:
         from khadbot.encounter.commands import default_filter_kwargs
 

@@ -78,11 +78,19 @@ class FetchSpec(BaseModel):
     data_type: DataType
     hostility: Literal["Friendlies", "Enemies"] = "Friendlies"
     filter_expression: str | None = None
+    # Names a second request of the same data type with its own filter (offensive-cooldown Buffs). Its pages share
+    # the data type's cache directory, apart by filter hash.
+    part: str | None = None
 
     @property
     def dir_name(self) -> str:
         """Raw-cache directory name; enemy data gets a suffix so it never collides with friendly data."""
         return self.data_type if self.hostility == "Friendlies" else f"{self.data_type}-{self.hostility}"
+
+    @property
+    def key(self) -> str:
+        """Unique name of this request within a pull: ``dir_name``, plus ``:<part>`` for a second request."""
+        return f"{self.dir_name}:{self.part}" if self.part else self.dir_name
 
 
 class IngestResult(BaseModel):

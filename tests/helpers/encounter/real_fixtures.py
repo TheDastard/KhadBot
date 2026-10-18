@@ -61,5 +61,5 @@ async def ingest_fixture(code: str, store: EventStore, fights: list[int] | None 
         store=store,
         cache=RawPageCache(WCL_FIXTURES),
         offline=True,
-        registry_spell_ids=RECORDED_BUFF_IDS,
+        defensive_spell_ids=RECORDED_BUFF_IDS,
     )

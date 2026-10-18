@@ -10,7 +10,12 @@ from __future__ import annotations
 import shutil
 
 import pytest
-from helpers.encounter.synth import FIXTURES, SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS
+from helpers.encounter.synth import (
+    FIXTURES,
+    SYNTH_DEFENSIVE_COOLDOWN_IDS,
+    SYNTH_ENEMY_CAST_IDS,
+    SYNTH_OFFENSIVE_COOLDOWN_IDS,
+)
 
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
@@ -33,7 +38,8 @@ def synth_ingest_kwargs(synth_cache, synth_store) -> dict:
         "cache": synth_cache,
         "store": synth_store,
         "offline": True,
-        "registry_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS,
+        "defensive_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS,
+        "offensive_spell_ids": SYNTH_OFFENSIVE_COOLDOWN_IDS,
         "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS,
     }
 

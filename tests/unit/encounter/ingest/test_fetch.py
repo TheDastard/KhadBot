@@ -77,12 +77,12 @@ def ev(t: int) -> dict:
 
 
 class TestBuildFilter:
-    def test_buffs_use_registry_ids_sorted_and_deduped(self):
-        assert build_filter("Buffs", registry_spell_ids=[3, 1, 3, 2]) == "ability.id IN (1,2,3)"
+    def test_buffs_use_given_ids_sorted_and_deduped(self):
+        assert build_filter("Buffs", buff_spell_ids=[3, 1, 3, 2]) == "ability.id IN (1,2,3)"
 
-    def test_buffs_without_registry_unfiltered(self):
+    def test_buffs_without_ids_unfiltered(self):
         assert build_filter("Buffs") is None
-        assert build_filter("Buffs", registry_spell_ids=[]) is None
+        assert build_filter("Buffs", buff_spell_ids=[]) is None
 
     def test_enemy_casts_use_encounter_ids(self):
         assert build_filter("Casts", "Enemies", encounter_ability_ids=[20, 10]) == "ability.id IN (10,20)"
@@ -92,7 +92,7 @@ class TestBuildFilter:
 
     @pytest.mark.parametrize("dt", ["Deaths", "DamageTaken", "Debuffs", "Interrupts", "Dispels", "Healing"])
     def test_other_types_unfiltered(self, dt):
-        assert build_filter(dt, registry_spell_ids=[1], encounter_ability_ids=[2]) is None
+        assert build_filter(dt, buff_spell_ids=[1], encounter_ability_ids=[2]) is None
 
     def test_specs_for_applies_policy(self):
         specs = {s.dir_name: s.filter_expression for s in specs_for([5], [9])}
@@ -100,6 +100,31 @@ class TestBuildFilter:
         assert specs["Casts-Enemies"] == "ability.id IN (9)"
         assert specs["Casts"] is None
         assert len(specs) == len(DEFAULT_SPECS)
+
+    def test_offensive_ids_add_a_second_buffs_request(self):
+        specs = specs_for([5], [9], [7, 6])
+        assert len(specs) == len(DEFAULT_SPECS) + 1
+        by_key = {s.key: s for s in specs}
+        assert by_key["Buffs"].filter_expression == "ability.id IN (5)"
+        offensive = by_key["Buffs:offensive"]
+        assert (offensive.data_type, offensive.dir_name, offensive.filter_expression) == (
+            "Buffs",
+            "Buffs",
+            "ability.id IN (6,7)",
+        )
+
+    @pytest.mark.parametrize("ids", [None, []])
+    def test_no_offensive_ids_means_no_request(self, ids):
+        # An omitted filter would fetch every buff.
+        assert [s.key for s in specs_for([5], [9], ids)] == [s.key for s in specs_for([5], [9])]
+
+    def test_both_buffs_requests_cache_apart(self, tmp_path):
+        cache = RawPageCache(tmp_path)
+        defensive, offensive = (s for s in specs_for([5], None, [7]) if s.data_type == "Buffs")
+        cache.write_page(CODE, 1, defensive, 0, {"data": [1], "nextPageTimestamp": None})
+        cache.write_page(CODE, 1, offensive, 0, {"data": [2], "nextPageTimestamp": None})
+        assert [p["data"] for p in cache.pages(CODE, 1, defensive)] == [[1]]
+        assert [p["data"] for p in cache.pages(CODE, 1, offensive)] == [[2]]
 
 
 # ===========================================================================

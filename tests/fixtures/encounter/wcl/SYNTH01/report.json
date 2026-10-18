@@ -119,6 +119,21 @@
     "type": 1
    },
    {
+    "gameID": 902001,
+    "name": "Synth Battle Cry",
+    "type": 1
+   },
+   {
+    "gameID": 902011,
+    "name": "Synth Battle Cry",
+    "type": 1
+   },
+   {
+    "gameID": 902002,
+    "name": "Synth Fury",
+    "type": 1
+   },
+   {
     "gameID": 900701,
     "name": "Synth Kick",
     "type": 1

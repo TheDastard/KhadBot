@@ -192,9 +192,9 @@ def normalize_pull(pull: Pull, actors: list[Actor], pages_by_type: dict[str, Ite
     """
     Build the events frame for one pull.
 
-    ``pages_by_type`` maps a spec ``dir_name`` (``"Casts"``, ``"Casts-Enemies"``, ...) to its raw
-    pages (dicts with a ``data`` list). Rows are stably sorted by (t_ms, data-type order, page order)
-    and ``seq`` is assigned afterwards.
+    ``pages_by_type`` maps a spec ``key`` (``"Casts"``, ``"Casts-Enemies"``, ``"Buffs:offensive"``, ...) to its
+    raw pages (dicts with a ``data`` list). Rows are stably sorted by (t_ms, data-type order, spec key, page
+    order) and ``seq`` is assigned afterwards.
     """
     return _normalize(pull, actors, pages_by_type, None)
 
@@ -215,12 +215,16 @@ def _normalize(
     frames: list[pl.DataFrame] = []
     order: list[int] = []
 
+    def data_type(name: str) -> str:
+        """The data type behind a spec key: ``Casts-Enemies`` and ``Buffs:offensive`` are Casts and Buffs."""
+        return name.partition(":")[0].removesuffix(_ENEMIES_SUFFIX)
+
     def sort_key(name: str) -> tuple[int, str]:
-        base = name.removesuffix(_ENEMIES_SUFFIX)
+        base = data_type(name)
         return (DATA_TYPE_ORDER.index(base) if base in DATA_TYPE_ORDER else len(DATA_TYPE_ORDER), name)
 
     for name in sorted(pages_by_type, key=sort_key):
-        base = name.removesuffix(_ENEMIES_SUFFIX)
+        base = data_type(name)
         rank = sort_key(name)[0]
         for page in pages_by_type[name]:
             frame = _page_frame(page.get("data") or [], base, pull.start_ms, friendly, positions)

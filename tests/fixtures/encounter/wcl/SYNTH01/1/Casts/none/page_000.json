@@ -43,6 +43,13 @@
    "fight": 0
   },
   {
+   "timestamp": 103000,
+   "type": "cast",
+   "sourceID": 2,
+   "abilityGameID": 902001,
+   "fight": 0
+  },
+  {
    "timestamp": 104500,
    "type": "cast",
    "sourceID": 1,
@@ -75,6 +82,13 @@
    "type": "cast",
    "sourceID": 5,
    "abilityGameID": 900003,
+   "fight": 0
+  },
+  {
+   "timestamp": 105000,
+   "type": "cast",
+   "sourceID": 5,
+   "abilityGameID": 902002,
    "fight": 0
   },
   {
