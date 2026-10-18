@@ -1,0 +1,513 @@
+# Utility cooldowns.
+#
+# Player cooldowns that help allies move, cast or come back, or that control enemies: speed (Stampeding
+# Roar), mana (Evocation), root and snare immunity (Spirit Walk), moving an ally (Leap of Faith), and
+# stuns, incapacitates, knockbacks, grips, roots and slows (Capacitor Totem, Ring of Peace). Nothing in
+# encounter mode reads this file yet. Spell IDs, names, `target`, `role`, `cooldown_s` and `duration_s`
+# come from game client data (SimC tables for WoW build 12.1.5.70448) via the review file of
+# scripts/build_registries.py, with a 30 s cooldown floor. Cooldowns and durations are base values before
+# talents. Every entry is unverified until a person checks it in game.
+#
+# Three roles were set by hand because SimC's tables drop the effect that decides them: Blind's
+# disorient and Intimidating Shout's fear (the data shows only their slow and root), and Gorefiend's
+# Grasp, whose pull the data marks only with the knockback mechanic. Damage cooldowns that show up for a
+# side effect (The Hunt's stun, Frozen Orb's slow, Avenging Crusader's speed) are left out, and so is
+# every spell already in defensive_cooldowns.yaml or offensive_cooldowns.yaml (Innervate, Dispersion,
+# Avatar). Battle resurrections, Mana Tide Totem, Symbol of Hope, Wind Rush Totem and Time Spiral are
+# missing because the tables don't show what they do.
+#
+# target: personal (only the caster), external (one chosen ally), raid (an area or the whole raid),
+# enemy (one chosen enemy), enemies (an area or a cone of enemies).
+# role: movement, mana, resurrect, freedom (root and snare immunity), reposition (moves an ally), stun,
+# incapacitate, knockback, grip, root, slow.
+#
+# `aura_spell_ids` lists the spells a cooldown's aura is applied under when they differ from the cast. No
+# spell ID, cast or aura, may also be in defensive_cooldowns.yaml or offensive_cooldowns.yaml. An aura
+# names one entry, so Intimidation's stun (1258508) sits on the Beast Mastery and Survival cast (19577)
+# and not on the Marksmanship one (474421).
+#
+# Entries are sorted by class, then name.
+category: utility
+cooldowns:
+  - spell_id: 221562
+    name: Asphyxiate
+    class: Death Knight
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 207167
+    name: Blinding Sleet
+    class: Death Knight
+    target: enemies
+    role: incapacitate
+    cooldown_s: 60.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 48265
+    name: "Death's Advance"
+    class: Death Knight
+    target: personal
+    role: movement
+    cooldown_s: 45.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 108199
+    name: "Gorefiend's Grasp"
+    class: Death Knight
+    target: enemies
+    role: grip
+    cooldown_s: 90.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 212552
+    name: Wraith Walk
+    class: Death Knight
+    target: personal
+    role: freedom
+    cooldown_s: 60.0
+    duration_s: 4.0
+    aura_spell_ids: [212654]
+    verified: false
+  - spell_id: 179057
+    name: Chaos Nova
+    class: Demon Hunter
+    target: enemies
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 217832
+    name: Imprison
+    class: Demon Hunter
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 60.0
+    verified: false
+  - spell_id: 202138
+    name: Sigil of Chains
+    class: Demon Hunter
+    target: enemy
+    role: slow
+    cooldown_s: 60.0
+    duration_s: 2.0
+    aura_spell_ids: [204843]
+    verified: false
+  - spell_id: 207684
+    name: Sigil of Misery
+    class: Demon Hunter
+    target: enemies
+    role: root
+    cooldown_s: 120.0
+    duration_s: 2.0
+    aura_spell_ids: [207685]
+    verified: false
+  - spell_id: 1234195
+    name: Void Nova
+    class: Demon Hunter
+    target: enemies
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 2.0
+    verified: false
+  - spell_id: 1850
+    name: Dash
+    class: Druid
+    target: personal
+    role: movement
+    cooldown_s: 120.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 99
+    name: Incapacitating Roar
+    class: Druid
+    target: enemies
+    role: slow
+    cooldown_s: 30.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 102359
+    name: Mass Entanglement
+    class: Druid
+    target: enemies
+    role: root
+    cooldown_s: 30.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 5211
+    name: Mighty Bash
+    class: Druid
+    target: enemy
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 106898
+    name: Stampeding Roar
+    class: Druid
+    target: raid
+    role: movement
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 252216
+    name: Tiger Dash
+    class: Druid
+    target: personal
+    role: movement
+    cooldown_s: 45.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 132469
+    name: Typhoon
+    class: Druid
+    target: enemies
+    role: knockback
+    cooldown_s: 30.0
+    duration_s: 6.0
+    aura_spell_ids: [61391]
+    verified: false
+  - spell_id: 102793
+    name: "Ursol's Vortex"
+    class: Druid
+    target: enemies
+    role: slow
+    cooldown_s: 60.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 358267
+    name: Hover
+    class: Evoker
+    target: personal
+    role: movement
+    cooldown_s: 35.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 358385
+    name: Landslide
+    class: Evoker
+    target: enemies
+    role: root
+    cooldown_s: 90.0
+    duration_s: 15.0
+    aura_spell_ids: [355689, 414257]
+    verified: false
+  - spell_id: 368970
+    name: Tail Swipe
+    class: Evoker
+    target: enemies
+    role: knockback
+    cooldown_s: 180.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 186257
+    name: Aspect of the Cheetah
+    class: Hunter
+    target: personal
+    role: movement
+    cooldown_s: 180.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 109248
+    name: Binding Shot
+    class: Hunter
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 10.0
+    aura_spell_ids: [117526]
+    verified: false
+  - spell_id: 19577
+    name: Intimidation
+    class: Hunter
+    target: enemies
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 1.0
+    aura_spell_ids: [1258508]
+    verified: false
+  - spell_id: 474421
+    name: Intimidation
+    class: Hunter
+    target: enemies
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 1.0
+    verified: false
+  - spell_id: 187698
+    name: Tar Trap
+    class: Hunter
+    target: enemy
+    role: slow
+    cooldown_s: 30.0
+    duration_s: 39.0
+    aura_spell_ids: [135299]
+    verified: false
+  - spell_id: 31661
+    name: "Dragon's Breath"
+    class: Mage
+    target: enemies
+    role: incapacitate
+    cooldown_s: 45.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 12051
+    name: Evocation
+    class: Mage
+    target: personal
+    role: mana
+    cooldown_s: 45.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 122
+    name: Frost Nova
+    class: Mage
+    target: enemies
+    role: root
+    cooldown_s: 30.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 383121
+    name: Mass Polymorph
+    class: Mage
+    target: enemies
+    role: incapacitate
+    cooldown_s: 60.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 113724
+    name: Ring of Frost
+    class: Mage
+    target: enemies
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 10.0
+    aura_spell_ids: [82691]
+    verified: false
+  - spell_id: 157980
+    name: Supernova
+    class: Mage
+    target: enemies
+    role: knockback
+    cooldown_s: 45.0
+    duration_s: null
+    verified: false
+  - spell_id: 101545
+    name: Flying Serpent Kick
+    class: Monk
+    target: personal
+    role: movement
+    cooldown_s: 30.0
+    duration_s: 1.5
+    verified: false
+  - spell_id: 119381
+    name: Leg Sweep
+    class: Monk
+    target: enemies
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 115078
+    name: Paralysis
+    class: Monk
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 60.0
+    verified: false
+  - spell_id: 116844
+    name: Ring of Peace
+    class: Monk
+    target: enemies
+    role: knockback
+    cooldown_s: 45.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 198898
+    name: Song of Chi-Ji
+    class: Monk
+    target: enemy
+    role: stun
+    cooldown_s: 30.0
+    duration_s: 5.0
+    aura_spell_ids: [198909]
+    verified: false
+  - spell_id: 116841
+    name: "Tiger's Lust"
+    class: Monk
+    target: external
+    role: movement
+    cooldown_s: 30.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 190784
+    name: Divine Steed
+    class: Paladin
+    target: personal
+    role: movement
+    cooldown_s: 45.0
+    duration_s: 3.0
+    aura_spell_ids: [221883, 221885, 221886, 221887, 254471, 254472, 254473, 254474, 276111, 276112, 294133, 363608, 453804, 1253723, 1253874, 1253881, 1272854, 1289616, 1289617]
+    verified: false
+  - spell_id: 853
+    name: Hammer of Justice
+    class: Paladin
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 88625
+    name: "Holy Word: Chastise"
+    class: Priest
+    target: enemy
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 4.0
+    aura_spell_ids: [200196, 200200]
+    verified: false
+  - spell_id: 73325
+    name: Leap of Faith
+    class: Priest
+    target: external
+    role: reposition
+    cooldown_s: 90.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 8122
+    name: Psychic Scream
+    class: Priest
+    target: enemies
+    role: incapacitate
+    cooldown_s: 40.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 2094
+    name: Blind
+    class: Rogue
+    target: enemy
+    role: incapacitate
+    cooldown_s: 120.0
+    duration_s: 60.0
+    verified: false
+  - spell_id: 408
+    name: Kidney Shot
+    class: Rogue
+    target: enemy
+    role: stun
+    cooldown_s: 30.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 2983
+    name: Sprint
+    class: Rogue
+    target: personal
+    role: movement
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 192058
+    name: Capacitor Totem
+    class: Shaman
+    target: enemies
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 3.0
+    aura_spell_ids: [118905]
+    verified: false
+  - spell_id: 58875
+    name: Spirit Walk
+    class: Shaman
+    target: personal
+    role: freedom
+    cooldown_s: 60.0
+    duration_s: 8.0
+    aura_spell_ids: [58876]
+    verified: false
+  - spell_id: 51490
+    name: Thunderstorm
+    class: Shaman
+    target: enemies
+    role: knockback
+    cooldown_s: 30.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 5484
+    name: Howl of Terror
+    class: Warlock
+    target: enemies
+    role: incapacitate
+    cooldown_s: 40.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 6789
+    name: Mortal Coil
+    class: Warlock
+    target: enemy
+    role: incapacitate
+    cooldown_s: 45.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 30283
+    name: Shadowfury
+    class: Warlock
+    target: enemies
+    role: stun
+    cooldown_s: 60.0
+    duration_s: 3.0
+    verified: false
+  - spell_id: 6544
+    name: Heroic Leap
+    class: Warrior
+    target: enemies
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 3.0
+    aura_spell_ids: [362043]
+    verified: false
+  - spell_id: 5246
+    name: Intimidating Shout
+    class: Warrior
+    target: enemies
+    role: incapacitate
+    cooldown_s: 90.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 12323
+    name: Piercing Howl
+    class: Warrior
+    target: enemies
+    role: slow
+    cooldown_s: 90.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 385952
+    name: Shield Charge
+    class: Warrior
+    target: enemy
+    role: stun
+    cooldown_s: 45.0
+    duration_s: 4.0
+    aura_spell_ids: [385954]
+    verified: false
+  - spell_id: 46968
+    name: Shockwave
+    class: Warrior
+    target: enemy
+    role: stun
+    cooldown_s: 40.0
+    duration_s: 2.0
+    aura_spell_ids: [132168]
+    verified: false
+  - spell_id: 107570
+    name: Storm Bolt
+    class: Warrior
+    target: enemy
+    role: stun
+    cooldown_s: 30.0
+    duration_s: 4.0
+    aura_spell_ids: [132169]
+    verified: false

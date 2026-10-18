@@ -49,17 +49,15 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.
-- **Utility cooldowns.** The generator proposes them (`utility_cooldowns.candidates.yaml`: 79 candidates at
-  30 s from build 12.1.5.70448), but no `utility_cooldowns.yaml` exists, so nothing tracks them. Innervate
-  stays in `defensive_cooldowns.yaml` until it does. Creating the file needs `utility` in `CooldownCategory`,
-  `enemy`/`enemies` in `CooldownTarget`, its hash in the cache keys and a digest section. The SimC data can't
-  supply these, so a person must add them: the battle resurrections (Rebirth, Intercession lost their
-  resurrect effect; Raise Ally shows only as a defensive support candidate and Soulstone as scripted), Mana
-  Tide Totem and Symbol of Hope (not in the tables), Wind Rush Totem's speed, Time Spiral, Rescue, and the
-  true role of Blind (disorient) and Intimidating Shout (fear), which the data lists as a slow and a root.
-  Gorefiend's Grasp is listed as a knockback because its dummy carries the knockback mechanic. Some damage cooldowns show up for a
-  side effect: Avatar, Avenging Wrath and Metamorphosis (marked with `in_other_registry`), and Avenging
-  Crusader, The Hunt, Deep Breath, Breath of Eons and Frostwyrm's Fury (not marked).
+- **Utility cooldowns aren't tracked yet.** `utility_cooldowns.yaml` holds 58 entries from build
+  12.1.5.70448, but nothing in encounter mode reads it. Wiring it in needs its IDs in the casts or Buffs and
+  Debuffs fetch, `cooldown_uses` and a digest section, and `utility_cooldowns_hash` in `produced_from` and the
+  findings cache key. Decide then whether Innervate moves from `defensive_cooldowns.yaml` to the utility
+  file (it changes the defensive hash).
+- **Utility cooldowns the SimC data can't find.** A person must add these to `utility_cooldowns.yaml`: the
+  battle resurrections (Rebirth and Intercession lost their resurrect effect; Raise Ally shows only as a
+  defensive support candidate and Soulstone as scripted), Mana Tide Totem and Symbol of Hope (not in the
+  tables), Wind Rush Totem (its speed aura is missing), Time Spiral and Rescue.
 - **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive and 100
   offensive cooldowns. The digest shows 30 and 15, and its defensive list stops near 190 s.
   `cooldown_timeline` returns at most 25 rows (4,000 characters) a call and filters by `phase` only, so most

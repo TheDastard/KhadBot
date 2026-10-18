@@ -59,6 +59,76 @@ def reg_data() -> dict:
 # ===========================================================================
 
 
+def _cooldown_file(category: str, **entry: object) -> dict[str, object]:
+    return {
+        "category": category,
+        "cooldowns": [{"spell_id": 900401, "name": "X", "class": "Mage", "target": "raid", **entry}],
+    }
+
+
+class TestUtilityRegistry:
+    def test_default_file_loads(self):
+        reg = load_cooldowns("utility")
+        assert reg.category == "utility"
+        assert len(reg.cooldowns) == 58
+        assert all(c.role is not None for c in reg.cooldowns)
+        assert not any(c.verified for c in reg.cooldowns)
+        keys = [(c.class_name, c.name, c.spell_id) for c in reg.cooldowns]
+        assert keys == sorted(keys)
+
+    def test_default_file_covers_both_sides(self):
+        reg = load_cooldowns("utility")
+        assert reg.get(106898).target == "raid"  # Stampeding Roar
+        assert reg.get(192058).role == "stun"  # Capacitor Totem
+        assert set(reg.spell_ids(["enemy", "enemies"])) & set(reg.spell_ids(["raid", "external", "personal"])) == set()
+        assert {c.role for c in reg.cooldowns} >= {"movement", "mana", "freedom", "reposition", "stun", "grip", "slow"}
+
+    def test_hand_set_roles(self):
+        """SimC drops the effect that decides these; the file names the role a person set."""
+        reg = load_cooldowns("utility")
+        assert {s: reg.get(s).role for s in (2094, 5246, 108199)} == {
+            2094: "incapacitate",
+            5246: "incapacitate",
+            108199: "grip",
+        }
+
+    def test_enemy_target_and_role(self):
+        reg = parse_cooldowns(_cooldown_file("utility", target="enemies", role="knockback"), "utility")
+        assert (reg.cooldowns[0].target, reg.cooldowns[0].role) == ("enemies", "knockback")
+
+    def test_utility_entry_needs_a_role(self):
+        with pytest.raises(ConfigurationError, match="utility cooldown 900401 has no role"):
+            parse_cooldowns(_cooldown_file("utility"), "utility")
+
+    def test_unknown_role_is_rejected(self):
+        with pytest.raises(ConfigurationError, match="role"):
+            parse_cooldowns(_cooldown_file("utility", role="taunt"), "utility")
+
+    @pytest.mark.parametrize("category", ["defensive", "offensive"])
+    def test_role_only_on_utility_entries(self, category):
+        with pytest.raises(ConfigurationError, match="has a role; only utility ones do"):
+            parse_cooldowns(_cooldown_file(category, role="stun"), category)
+
+    @pytest.mark.parametrize("category", ["defensive", "offensive"])
+    def test_enemy_targets_only_on_utility_entries(self, category):
+        with pytest.raises(ConfigurationError, match="targets enemies; only utility ones can"):
+            parse_cooldowns(_cooldown_file(category, target="enemy"), category)
+
+    def test_unset_role_stays_out_of_the_dump(self):
+        """The content hash dumps the model, so an unset role must not appear in it: the defensive and offensive
+        files keep the hashes the digest goldens record."""
+        plain = parse_cooldowns(_cooldown_file("defensive"), "defensive")
+        assert "role" not in plain.model_dump()["cooldowns"][0]
+        with_role = parse_cooldowns(_cooldown_file("utility", role="stun"), "utility")
+        assert with_role.model_dump()["cooldowns"][0]["role"] == "stun"
+
+    def test_id_in_utility_and_another_file_is_rejected(self):
+        defensive = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+        utility = parse_cooldowns(_cooldown_file("utility", spell_id=900301, role="stun"), "utility")
+        with pytest.raises(ConfigurationError, match="spell 900301 is in both the defensive and the utility"):
+            check_cooldown_ids(defensive, utility)
+
+
 class TestOffensiveRegistry:
     def test_default_file_loads(self):
         assert load_cooldowns("offensive").category == "offensive"
@@ -87,7 +157,7 @@ class TestOffensiveRegistry:
             load_cooldowns("offensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
 
     def test_default_files_share_no_ids(self):
-        check_cooldown_ids(load_cooldowns("defensive"), load_cooldowns("offensive"))
+        check_cooldown_ids(load_cooldowns("defensive"), load_cooldowns("offensive"), load_cooldowns("utility"))
 
     @pytest.mark.parametrize("spell", [900301, 900311])
     def test_id_in_both_files_is_rejected(self, spell):
