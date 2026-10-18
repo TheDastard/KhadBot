@@ -107,12 +107,6 @@ human task table in `docs/decisions.md`).
   applications over 209 Coils), every player hit takes the same amount, and the share debuffed per Coils ranges
   from 0 to 95% (`docs/decisions.md`, "Stack and aura failure rules"). It needs another signal, such as positions
   at the impact, or a soak assignment from a raid plan.
-- **Blightscale Viper hatches** are counted as damage but charged to no one. Once the `aura_removed_by` rule
-  above exists, give `malignant_shell` `failure: {rule: aura_removed_by, ability_ids: [1292403], on_death: true}`.
-  Over the 47 pulls that charges 29 shells broken by Caustic Waves and counts 125 carrier deaths. Each of the 29
-  was followed by a Viper, and 101 of the deaths were. 29 of the 153 Vipers have no shell removal in the 8 s
-  before them and stay uncharged: they come in groups at 198 to 262 s and 395 to 468 s, and nothing fetched
-  shows their cause.
 - **Rage of the Shackled's cast is not in the file.** The channel's cast (1286860) and the Venomous Heart's
   cast (1299526) aren't listed, so the filtered enemy Casts page misses both; the unfiltered page has all 55 of
   each. Decide at the file review whether `rage_of_the_shackled` should list the cast. Check first how a damage

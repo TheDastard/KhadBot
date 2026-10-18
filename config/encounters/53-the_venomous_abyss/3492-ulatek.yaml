@@ -13,7 +13,7 @@
 encounter_id: 3492
 name: Ula'tek
 zone: {id: 53, name: The Venomous Abyss}
-file_version: 4
+file_version: 5
 
 # WarcraftLogs reports phase transitions for this encounter (phase IDs 1-4).
 phases:
@@ -79,9 +79,19 @@ mechanics:
   - id: malignant_shell
     name: Malignant Shell
     # Eggs stick to the players who pick them up and tick while attached: the cost of carrying eggs.
+    # A shell (1295360) broken by a Caustic Waves hit (1292403) or a step into the venom pools (Deadly
+    # Venom, 1297338) hatches a Blightscale Viper, whose Putrid Membrane (1301268) then lands on the raid.
+    # Each such break is charged to the carrier. A shell lost at the carrier's death that hatches a Viper
+    # is a failure too, charged to no one: the death is already charged to what killed them, but the Viper
+    # adds to its cost.
     difficulties: [heroic]
     ability_ids: [1297213, 1295360]
     kind: unavoidable
+    failure:
+      rule: aura_removed_by
+      ability_ids: [1292403, 1297338]
+      followed_by_ids: [1301268]
+      on_death: true
     severity: low
 
   - id: enrage
