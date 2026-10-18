@@ -161,6 +161,8 @@ def test_check_registry_statuses(data: ClientData) -> None:
 LUST, WRATH, INFUSION, LEAP, LEAP_IMMUNE, WINGS, WEAKEN, QUICK, WAR_CRY, WAR_CRY_AURA = range(900031, 900041)
 CLOAK, CLOAK_IMMUNE = 900041, 900042
 BESTIAL_WRATH = 19574  # skipped by name: the real spell's pet aura carries both effects
+RECKLESS, BLADES, FRENZY, SWIFT, FLAT_GENERIC, ZERO_MOD = range(900043, 900049)
+P_CAST_TIME = 10  # property_type_t: not a damage property
 
 
 @pytest.fixture
@@ -179,6 +181,12 @@ def offensive_data() -> ClientData:
         spell_row("Cloak", CLOAK, cooldown=120000, duration=5000),
         spell_row("Cloak Cleanse", CLOAK_IMMUNE, duration=1000),
         spell_row("Bestial Wrath", BESTIAL_WRATH, cooldown=90000, duration=15000),
+        spell_row("Reckless", RECKLESS, cooldown=90000, duration=12000),
+        spell_row("Blades", BLADES, cooldown=90000, duration=16000),
+        spell_row("Frenzy", FRENZY, cooldown=180000, duration=15000),
+        spell_row("Swift", SWIFT, cooldown=60000, duration=15000),
+        spell_row("Flat Generic", FLAT_GENERIC, cooldown=60000, duration=10000),
+        spell_row("Zero Mod", ZERO_MOD, cooldown=60000, duration=10000),
     ]
     effects = [
         effect_row(1, LUST, 0, c.E_APPLY_AREA_AURA_RAID, c.A_HASTE_ALL, base=30, target_1=CASTER),
@@ -198,6 +206,14 @@ def offensive_data() -> ClientData:
         effect_row(15, CLOAK_IMMUNE, 0, c.E_APPLY_AURA, c.A_SCHOOL_IMMUNITY, target_1=CASTER),
         effect_row(16, BESTIAL_WRATH, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=25, target_1=CASTER),
         effect_row(17, BESTIAL_WRATH, 1, c.E_APPLY_AURA, c.A_SCHOOL_ABSORB, target_1=CASTER),
+        effect_row(18, RECKLESS, 0, c.E_APPLY_AURA, c.A_ADD_FLAT_MODIFIER, base=20, misc=c.P_CRIT, target_1=CASTER),
+        effect_row(19, BLADES, 0, c.E_APPLY_AURA, c.A_ADD_PCT_MODIFIER, base=100, misc=c.P_EFFECT_2, target_1=CASTER),
+        effect_row(20, FRENZY, 0, c.E_APPLY_AURA, c.A_MOD_RANGED_AND_MELEE_AUTO_ATTACK_SPEED, base=20, target_1=CASTER),
+        effect_row(21, SWIFT, 0, c.E_APPLY_AURA, c.A_ADD_PCT_MODIFIER, base=-100, misc=P_CAST_TIME, target_1=CASTER),
+        effect_row(
+            22, FLAT_GENERIC, 0, c.E_APPLY_AURA, c.A_ADD_FLAT_MODIFIER, base=5, misc=c.P_GENERIC, target_1=CASTER
+        ),
+        effect_row(23, ZERO_MOD, 0, c.E_APPLY_AURA, c.A_ADD_PCT_MODIFIER, misc=c.P_GENERIC, target_1=CASTER),
     ]
     spells_by_id, effects_by_spell = parse_spells(spell_data(spells, effects))
     players = parse_player_spells(
@@ -211,6 +227,12 @@ def offensive_data() -> ClientData:
                 (1, 0, WAR_CRY),
                 (4, 0, CLOAK),
                 (3, 0, BESTIAL_WRATH),
+                (1, 0, RECKLESS),
+                (4, 0, BLADES),
+                (4, 0, FRENZY),
+                (7, 0, SWIFT),
+                (7, 0, FLAT_GENERIC),
+                (7, 0, ZERO_MOD),
             ]
         ),
         spec_spells([(1, 71, WEAKEN), (8, 63, QUICK)]),
@@ -266,7 +288,26 @@ def test_own_defensive_effect_keeps_a_spell_in_both_lists(offensive_data: Client
     assert classify_offensive(offensive_data, WINGS) is not None
 
 
-@pytest.mark.parametrize("spell_id", [WEAKEN, QUICK])
+@pytest.mark.parametrize(
+    ("spell_id", "evidence"),
+    [
+        (RECKLESS, f"{RECKLESS}#0 A_ADD_FLAT_MODIFIER P_CRIT T_UNIT_CASTER"),
+        (BLADES, f"{BLADES}#0 A_ADD_PCT_MODIFIER P_EFFECT_2 T_UNIT_CASTER"),
+        (FRENZY, f"{FRENZY}#0 A_MOD_RANGED_AND_MELEE_AUTO_ATTACK_SPEED T_UNIT_CASTER"),
+    ],
+)
+def test_spell_modifiers_and_auto_attack_auras_are_offensive(
+    offensive_data: ClientData, spell_id: int, evidence: str
+) -> None:
+    # Most damage cooldowns (Recklessness, Shadow Blades, Adrenaline Rush) raise damage this way.
+    cand = classify_offensive(offensive_data, spell_id)
+    assert cand is not None
+    assert (cand.target, cand.role, cand.evidence) == ("personal", "offensive", [evidence])
+    assert classify_defensive(offensive_data, spell_id) is None
+
+
+# A modifier on cast time, a flat bonus to damage and a modifier with no value don't raise damage.
+@pytest.mark.parametrize("spell_id", [WEAKEN, QUICK, SWIFT, FLAT_GENERIC, ZERO_MOD])
 def test_not_offensive_candidates(offensive_data: ClientData, spell_id: int) -> None:
     assert classify_offensive(offensive_data, spell_id) is None
 
@@ -274,7 +315,18 @@ def test_not_offensive_candidates(offensive_data: ClientData, spell_id: int) -> 
 def test_offensive_candidates_sorted_and_complete(offensive_data: ClientData) -> None:
     found = offensive_candidates(offensive_data)
     assert [(x.class_name, x.name) for x in found] == sorted((x.class_name, x.name) for x in found)
-    assert {x.spell_id for x in found} == {LUST, WRATH, INFUSION, LEAP, WINGS, WAR_CRY, BESTIAL_WRATH}
+    assert {x.spell_id for x in found} == {
+        LUST,
+        WRATH,
+        INFUSION,
+        LEAP,
+        WINGS,
+        WAR_CRY,
+        BESTIAL_WRATH,
+        RECKLESS,
+        BLADES,
+        FRENZY,
+    }
 
 
 def test_offensive_same_name_aura(offensive_data: ClientData) -> None:
