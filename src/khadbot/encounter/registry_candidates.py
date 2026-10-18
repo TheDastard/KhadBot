@@ -5,17 +5,22 @@ Propose cooldown-registry and friendly-damage-registry entries from SimC client 
 and check the registries' entries against that data.
 
 A cooldown candidate is a player spell with a cooldown of at least ``min_cooldown_s`` whose own effects, or
-the effects of a spell it triggers, do one of three things:
+the effects of a spell it triggers, do one of these things:
 
 - defensive: apply less damage taken, an absorb, an immunity, more maximum health, split damage, more
   healing taken or a cheat-death absorb;
 - healing: heal an area, or heal one target for a share of its maximum health;
-- support: put any other aura on one chosen ally (Innervate, Power Infusion).
+- support: put any other aura on one chosen ally (Innervate);
+- offensive: raise damage done, haste, critical strike, mastery, versatility or a primary stat (Bloodlust,
+  Avenging Wrath, Power Infusion).
 
-Its ``target`` comes from who the effect lands on: only the caster is ``personal``, one chosen ally is
-``external``, an area or the raid is ``raid``. Casts that work through an area trigger, a totem or a
-scripted effect fall back to same-name spells for their aura. All of this is a heuristic; every
-candidate is unverified until a human checks it.
+The first three make a defensive-cooldown candidate (``defensive_candidates``), the last an offensive one
+(``offensive_candidates``). A spell whose own effects are offensive and whose only defensive effects come
+from a spell it triggers (a leap's brief immunity, a pet's shield) is offensive only. Its ``target`` comes
+from who the effect lands on: only the caster is ``personal``, one chosen ally is ``external``, an area or
+the raid is ``raid``. Casts that work through an area trigger, a totem or a scripted effect fall back to
+same-name spells for their aura. All of this is a heuristic; every candidate is unverified until a human
+checks it.
 
 A friendly-damage candidate (for ``config/registries/friendly_damage.yaml``) is any spell with a class
 mask, player spell or not, with a damage effect or damage aura that lands only on the caster or allies:
@@ -56,6 +61,23 @@ DEFENSIVE_AURAS = frozenset(
 )
 _NEGATIVE_ONLY = {c.A_MOD_DAMAGE_PERCENT_TAKEN, c.A_MOD_AOE_DAMAGE_AVOIDANCE}
 _POSITIVE_ONLY = {c.A_MOD_HEALING_RECEIVED_PCT}
+# Auras that make a player deal more damage; each counts only with a positive value.
+OFFENSIVE_AURAS = frozenset(
+    {
+        c.A_MOD_DAMAGE_PERCENT_DONE,
+        c.A_HASTE_ALL,
+        c.A_MOD_MELEE_RANGED_HASTE,
+        c.A_MOD_MELEE_HASTE,
+        c.A_MOD_RANGED_HASTE,
+        c.A_MOD_CASTING_SPEED_NOT_STACK,
+        c.A_MOD_ALL_CRIT_CHANCE,
+        c.A_MOD_CRIT_PERCENT,
+        c.A_MOD_MASTERY_PCT,
+        c.A_MOD_VERSATILITY_PCT,
+        c.A_MOD_TOTAL_STAT_PERCENTAGE,
+        c.A_MOD_PERCENT_STAT,
+    }
+)
 HEALING_AURAS = frozenset({c.A_PERIODIC_HEAL, c.A_PERIODIC_HEAL_PCT})
 HEAL_EFFECTS = frozenset({c.E_HEAL, c.E_HEAL_MAX_HEALTH, c.E_HEAL_PCT})
 # Heals that count on a single target too; a plain E_HEAL counts only when it lands on an area.
@@ -69,8 +91,8 @@ _DUMMY_AURAS = {c.A_DUMMY, c.A_PERIODIC_DUMMY}
 DAMAGE_EFFECTS = frozenset({c.E_SCHOOL_DAMAGE, c.E_HEALTH_LEECH})
 DAMAGE_AURAS = frozenset({c.A_PERIODIC_DAMAGE, c.A_PERIODIC_LEECH, c.A_PERIODIC_DAMAGE_PERCENT})
 
-# Single-target labels that can only be a friendly player; any aura cast on one counts as support
-# (Innervate, Power Infusion). T_UNIT_TARGET_ANY can be an enemy, so it is left out.
+# Single-target labels that can only be a friendly player; any other aura cast on one counts as support
+# (Innervate). T_UNIT_TARGET_ANY can be an enemy, so it is left out.
 _SUPPORT_TARGETS = {"T_UNIT_TARGET_ALLY", "T_UNIT_CASTER_TARGET_RAID", "T_UNIT_TARGET_ALLY_OR_RAID"}
 # Targets that can only be the caster or a friendly player.
 _FRIENDLY_TARGETS = set(c.TARGETS) - {c.T_UNIT_TARGET_ANY}
@@ -94,8 +116,8 @@ class Candidate:
     name: str
     class_name: str
     target: str
-    #: defensive (damage reduction, absorbs, immunities, cheat death), healing, or support (any other aura
-    #: cast on one ally)
+    #: defensive (damage reduction, absorbs, immunities, cheat death), healing or support (any other aura
+    #: cast on one ally) for a defensive-cooldown candidate; offensive for an offensive one
     role: str
     cooldown_s: float
     duration_s: float | None
@@ -136,7 +158,7 @@ def _effect_target(effect: Effect) -> tuple[str, str] | None:
 
 
 def _effect_hit(effect: Effect) -> _Hit | None:
-    """How one effect helps the raid survive, or None."""
+    """How one effect helps the raid survive or deal damage, or None."""
     found = _effect_target(effect)
     if found is None:
         return None
@@ -150,6 +172,11 @@ def _effect_hit(effect: Effect) -> _Hit | None:
             return _Hit(effect, "defensive", target, c.AURA_TYPES[effect.subtype], label)
         if effect.subtype in HEALING_AURAS and target == "raid":
             return _Hit(effect, "healing", target, c.AURA_TYPES[effect.subtype], label)
+        if effect.subtype in OFFENSIVE_AURAS:
+            # Checked before support, so Power Infusion on an ally is offensive, not support.
+            if effect.base_value <= 0:
+                return None
+            return _Hit(effect, "offensive", target, c.AURA_TYPES[effect.subtype], label)
         if target == "external" and label in _SUPPORT_TARGETS:
             return _Hit(effect, "support", target, f"aura {effect.subtype}", label)
         return None
@@ -172,7 +199,7 @@ def _hits(data: ClientData, spell_id: int, depth: int = 0) -> Iterator[_Hit]:
 
 
 def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
-    """Defensive or healing hits on other spells that share the cast's name.
+    """Defensive, healing or offensive hits on other spells that share the cast's name.
 
     Area triggers, totems and scripted dummy effects apply their aura from a separate spell the data does not
     link to the cast (Power Word: Barrier, Anti-Magic Zone, Rallying Cry). That spell usually has the cast's
@@ -195,16 +222,45 @@ def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
     return out
 
 
+_DEFENSIVE_ROLES = frozenset({"defensive", "healing", "support"})
+
+
+def _offensive_only(spell_id: int, hits: list[_Hit]) -> bool:
+    """
+    True when the cast's own effects are offensive and every defensive or healing effect comes from a spell it
+    triggers: Metamorphosis's leap is briefly immune and Bestial Wrath shields the pet, but neither is a
+    defensive cooldown.
+    """
+    own_offensive = any(h.role == "offensive" and h.effect.spell_id == spell_id for h in hits)
+    triggered_only = all(h.effect.spell_id != spell_id for h in hits if h.role in ("defensive", "healing"))
+    return own_offensive and triggered_only
+
+
 def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
-    """A registry candidate for ``spell_id``, or None if it is not a player cooldown that helps the raid live."""
+    """A defensive-cooldown candidate for ``spell_id``, or None if it is not a player cooldown that helps the raid
+    live."""
+    return _classify(data, spell_id, offensive=False, min_cooldown_s=min_cooldown_s)
+
+
+def classify_offensive(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
+    """An offensive-cooldown candidate for ``spell_id``, or None if it is not a player cooldown that raises damage
+    done."""
+    return _classify(data, spell_id, offensive=True, min_cooldown_s=min_cooldown_s)
+
+
+def _classify(data: ClientData, spell_id: int, *, offensive: bool, min_cooldown_s: float) -> Candidate | None:
     spell = data.spells.get(spell_id)
     owner = data.player_spells.get(spell_id)
     if spell is None or owner is None or spell.effective_cooldown_ms < min_cooldown_s * 1000:
         return None
-    hits = list(_hits(data, spell_id))
+    every = list(_hits(data, spell_id))
+    if not offensive and _offensive_only(spell_id, every):
+        return None
+    roles = {"offensive"} if offensive else _DEFENSIVE_ROLES
+    hits = [h for h in every if h.role in roles]
     same_name = False
     if not any(h.role != "support" for h in hits):
-        fallback = _same_name_hits(data, spell)
+        fallback = [h for h in _same_name_hits(data, spell) if h.role in roles]
         if fallback:
             hits, same_name = fallback, True
     if not hits:
@@ -245,8 +301,18 @@ def defensive_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> l
     return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
 
 
+def offensive_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[Candidate]:
+    """Every player cooldown in the client data that raises damage done, by class then name.
+
+    A spell can be a candidate in both lists (an aura that adds damage and cuts damage taken); a person decides
+    which file it belongs in, since no spell may be in both.
+    """
+    found = (classify_offensive(data, s, min_cooldown_s=min_cooldown_s) for s in data.player_spells)
+    return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
+
+
 def scripted_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[tuple[int, str, str]]:
-    """(spell ID, name, class) of long-cooldown player spells whose effects are scripted, not candidates.
+    """(spell ID, name, class) of long-cooldown player spells whose effects are scripted, in neither candidate list.
 
     The game implements some cooldowns in server scripts behind dummy effects (Survival Instincts, Healing
     Tide Totem, Vampiric Embrace), so the data can't say what they do. Spells that also deal damage are left
@@ -263,7 +329,10 @@ def scripted_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[t
         )
         if not scripted or any(e.type == c.E_SCHOOL_DAMAGE for e in own):
             continue
-        if classify(data, spell_id, min_cooldown_s=min_cooldown_s) is None:
+        candidate = classify(data, spell_id, min_cooldown_s=min_cooldown_s) or classify_offensive(
+            data, spell_id, min_cooldown_s=min_cooldown_s
+        )
+        if candidate is None:
             out.append((spell_id, spell.name, CLASS_NAMES[class_id]))
     return sorted(out, key=lambda r: (r[2], r[1], r[0]))
 

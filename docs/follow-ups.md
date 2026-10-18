@@ -18,14 +18,19 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
   `scripted` list (100 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
   Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.
-- **Offensive cooldowns.** Left out of the registry for now. They need a new `kind` that window coverage and
-  death-window defensives skip. The data recognizes only 11 (Bloodlust, Heroism, Time Warp, Fury of the
-  Aspects, Harrier's Cry, Avenging Wrath, Trueshot, Celestial Alignment, Incarnation: Chosen of Elune, Lunar
-  Beam, Malevolence); most others (Recklessness, Combustion, Pillar of Frost, Dragonrage) are scripted and
-  would be picked by hand from the `scripted` list. The cooldown heuristic also misreads three offensive
-  cooldowns as defensive through a side effect (Bestial Wrath through a pet's absorb, Avatar through a talent's
-  AoE damage avoidance, Havoc's Metamorphosis 191427 through its 1 s immunity on the leap); they are left out of
-  the registry, and the generator should learn to skip them.
+- **Offensive cooldowns: data still to fill.** `offensive_cooldowns.yaml` exists, is fetched, digested and
+  proposed by the generator, but holds no entries yet. Run `scripts/build_registries.py` against the client
+  data, then: copy in the candidates (expected to include Bloodlust, Heroism, Time Warp, Fury of the Aspects,
+  Harrier's Cry, Avenging Wrath, Trueshot, Celestial Alignment, Incarnation: Chosen of Elune, Lunar Beam and
+  Malevolence) and move Power Infusion over from `defensive_cooldowns.yaml`; pick scripted ones (Recklessness,
+  Combustion, Pillar of Frost, Dragonrage) by hand from the `scripted` list; and check that the triggered-only
+  rule leaves Bestial Wrath, Avatar and Havoc's Metamorphosis (191427) out of the defensive candidates. If it
+  doesn't, say why in the generator.
+- **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
+  against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
+  casts wasted during intermissions.
+- **Utility cooldowns.** Innervate stays in `defensive_cooldowns.yaml` until a `utility_cooldowns.yaml`
+  exists.
 - **Friendly damage the data found but nobody has classed.** The friendly-damage review file lists seven class
   abilities with damage on the caster or allies whose class (redistribution, delayed boss, self-inflicted,
   involuntary) isn't clear from the data: Price of Progress (1233429), Guardian's Hide (1272097), Fiery Rush
