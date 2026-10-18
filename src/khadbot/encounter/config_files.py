@@ -169,12 +169,17 @@ class Blame(_Strict):
     ``cast_target``: the friendly target of the latest enemy cast of ``ability_id`` in the ``ms`` before.
     ``aggro_holder``: the player holding the NPC with ``npc_game_id`` (game ID, since a boss can have two
     actors with one name): the latest melee swing or taunt on it in the ``ms`` before, from the Threat data.
+
+    ``reach_yd`` is the NPC's swing reach in yards: the caster of the cast for ``cast_target``, the NPC with
+    ``npc_game_id`` for ``aggro_holder``. With it, annotation judges a living blamed player as in or beyond
+    reach at the hit; without it, only as alive.
     """
 
     by: BlameBy
     ability_id: int | None = None
     npc_game_id: int | None = None
     ms: int = Field(10_000, gt=0)
+    reach_yd: float | None = Field(None, gt=0)
 
     @model_validator(mode="after")
     def _required_param(self) -> Blame:

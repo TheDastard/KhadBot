@@ -736,7 +736,7 @@
   "outcome": "wipe",
   "phase_reached": "p1",
   "produced_from": {
-    "encfile_hash": "84163c7ea074",
+    "encfile_hash": "6aeb6f290ac9",
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
     "registry_hash": "7e9178662e3f"
   },

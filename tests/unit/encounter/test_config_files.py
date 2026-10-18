@@ -211,6 +211,18 @@ class TestEncounterFile:
                 lambda d: d["mechanics"][0].update(failure={"rule": "per_cluster", "blame": {"by": "tank"}}),
                 "by",
             ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 1, "reach_yd": 0}}
+                ),
+                "greater than 0",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 1, "reach_yd": -3}}
+                ),
+                "greater than 0",
+            ),
             (lambda d: d["mechanics"][0].update(failure={"rule": "hit_amount_gt"}), "requires 'value'"),
             (lambda d: d["mechanics"][0].update(failure={"rule": "hits_on_non_tank"}), "requires 'ms'"),
             (lambda d: d["phases"][0].pop("difficulties"), "difficulties"),
@@ -225,6 +237,13 @@ class TestEncounterFile:
         mutate(enc_data)
         with pytest.raises(ConfigurationError, match=match):
             parse_encounter(enc_data)
+
+    def test_blame_reach_is_optional_on_both_blame_kinds(self, enc_data):
+        enc_data["mechanics"][0]["failure"] = {"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 1}}
+        assert parse_encounter(enc_data).mechanics[0].failure.blame.reach_yd is None
+        for blame in ({"by": "cast_target", "ability_id": 1}, {"by": "aggro_holder", "npc_game_id": 1}):
+            enc_data["mechanics"][0]["failure"] = {"rule": "per_cluster", "blame": {**blame, "reach_yd": 17.5}}
+            assert parse_encounter(enc_data).mechanics[0].failure.blame.reach_yd == 17.5
 
     def test_same_id_on_disjoint_difficulties(self, enc_data):
         enc_data["phases"] += [{**p, "difficulties": ["heroic"]} for p in enc_data["phases"]]
