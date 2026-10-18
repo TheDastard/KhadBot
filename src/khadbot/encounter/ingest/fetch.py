@@ -74,40 +74,49 @@ def build_filter(
     data_type: str,
     hostility: str = "Friendlies",
     *,
-    registry_spell_ids: Sequence[int] | None = None,
+    buff_spell_ids: Sequence[int] | None = None,
     encounter_ability_ids: Sequence[int] | None = None,
 ) -> str | None:
     """
     Default filter policy per data type (to be tuned against measured WCL costs).
 
-    Buffs: only cooldown-registry spell IDs. Enemy Casts: only the encounter file's ability IDs.
+    Buffs: only the given cooldown spell IDs. Enemy Casts: only the encounter file's ability IDs.
     Everything else is unfiltered. With no IDs available a filter is omitted, not emptied.
     """
     if data_type == "Buffs" and hostility == "Friendlies":
-        return _ids_filter(registry_spell_ids or [])
+        return _ids_filter(buff_spell_ids or [])
     if data_type == "Casts" and hostility == "Enemies":
         return _ids_filter(encounter_ability_ids or [])
     return None
 
 
 def specs_for(
-    registry_spell_ids: Sequence[int] | None = None,
+    defensive_spell_ids: Sequence[int] | None = None,
     encounter_ability_ids: Sequence[int] | None = None,
+    offensive_spell_ids: Sequence[int] | None = None,
 ) -> list[FetchSpec]:
-    """DEFAULT_SPECS with the filter policy applied."""
-    return [
+    """
+    DEFAULT_SPECS with the filter policy applied, plus a second Buffs request for offensive cooldowns.
+
+    Each cooldown file gets its own Buffs filter, so editing one refetches only its own pages. The offensive
+    request is left out when it has no IDs: an omitted filter would fetch every buff.
+    """
+    specs = [
         spec.model_copy(
             update={
                 "filter_expression": build_filter(
                     spec.data_type,
                     spec.hostility,
-                    registry_spell_ids=registry_spell_ids,
+                    buff_spell_ids=defensive_spell_ids,
                     encounter_ability_ids=encounter_ability_ids,
                 )
             }
         )
         for spec in DEFAULT_SPECS
     ]
+    if offensive := build_filter("Buffs", buff_spell_ids=offensive_spell_ids):
+        specs.append(FetchSpec(data_type="Buffs", filter_expression=offensive, part="offensive"))
+    return specs
 
 
 def filter_hash(expression: str | None) -> str:
@@ -209,9 +218,7 @@ async def _request_page(
             if attempt >= max_retries:
                 raise
             delay = exc.retry_after_s if exc.retry_after_s is not None else float(2**attempt)
-            logger.warning(
-                "WCL rate limited (%s); retry %d/%d in %.1fs", spec.dir_name, attempt + 1, max_retries, delay
-            )
+            logger.warning("WCL rate limited (%s); retry %d/%d in %.1fs", spec.key, attempt + 1, max_retries, delay)
             attempt += 1
             await asyncio.sleep(delay)
     report = (data.get("reportData") or {}).get("report")
@@ -242,9 +249,7 @@ async def _fetch_spec(
         return False
 
     if offline or client is None:
-        raise MissingFixtureError(
-            f"{pull.pull_key} {spec.dir_name} [{spec.filter_expression}] is not in the raw cache."
-        )
+        raise MissingFixtureError(f"{pull.pull_key} {spec.key} [{spec.filter_expression}] is not in the raw cache.")
 
     index = len(cached)
     start = int(cached[-1]["nextPageTimestamp"]) if cached else pull.start_ms
@@ -258,7 +263,7 @@ async def _fetch_spec(
             break
         if int(nxt) <= start:  # no forward progress; stop rather than loop forever
             truncated = True
-            logger.warning("%s %s: nextPageTimestamp did not advance; marking truncated", pull.pull_key, spec.dir_name)
+            logger.warning("%s %s: nextPageTimestamp did not advance; marking truncated", pull.pull_key, spec.key)
             break
         start = int(nxt)
     cache.mark_complete(code, pull.fight_id, spec)
@@ -279,7 +284,7 @@ async def fetch_pull(
     """
     Fetch every spec for one pull into the raw cache.
 
-    Returns ``{dir_name: truncated}``. All specs are attempted even if one fails (so cached progress is
+    Returns ``{spec.key: truncated}``. All specs are attempted even if one fails (so cached progress is
     kept); the first failure is re-raised afterwards.
     """
     cfg = EncounterConfig()
@@ -291,11 +296,11 @@ async def fetch_pull(
         result = await _fetch_spec(client, cache, code, pull, spec, offline=offline, cfg=cfg, max_retries=retries)
         done += 1
         if progress:
-            progress(pull.pull_key, f"fetched {spec.dir_name}", done / len(specs))
+            progress(pull.pull_key, f"fetched {spec.key}", done / len(specs))
         return result
 
     outcomes = await asyncio.gather(*(one(s) for s in specs), return_exceptions=True)
     for outcome in outcomes:
         if isinstance(outcome, BaseException):
             raise outcome
-    return {spec.dir_name: bool(o) for spec, o in zip(specs, outcomes, strict=True)}
+    return {spec.key: bool(o) for spec, o in zip(specs, outcomes, strict=True)}

@@ -11,7 +11,12 @@ from __future__ import annotations
 import orjson
 import polars as pl
 import pytest
-from helpers.encounter.synth import GOLDEN, SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS
+from helpers.encounter.synth import (
+    GOLDEN,
+    SYNTH_DEFENSIVE_COOLDOWN_IDS,
+    SYNTH_ENEMY_CAST_IDS,
+    SYNTH_OFFENSIVE_COOLDOWN_IDS,
+)
 
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
@@ -48,8 +53,8 @@ class MetaOnlyClient:
 def frame_for(synth_cache, meta, fight: int) -> pl.DataFrame:
     pulls, actors = meta
     pull = pulls[fight]
-    specs = specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001])
-    pages = {s.dir_name: synth_cache.pages(CODE, fight, s) for s in specs}
+    specs = specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001], SYNTH_OFFENSIVE_COOLDOWN_IDS)
+    pages = {s.key: synth_cache.pages(CODE, fight, s) for s in specs}
     return normalize_pull(pull, actors, pages)
 
 
@@ -176,6 +181,13 @@ class TestNormalize:
         assert enemy.height > 0
         assert set(enemy["data_type"].cast(pl.Utf8)) == {"Casts"}
         assert not enemy["source_friendly"].any()
+
+    def test_offensive_buffs_join_the_buffs_data_type(self, synth_cache, meta):
+        df = frame_for(synth_cache, meta, 1)
+        buffs = df.filter(pl.col("data_type") == "Buffs")
+        assert {900311, 902011, 902002} <= set(buffs["ability_id"].to_list())  # both Buffs requests
+        battle_cry = buffs.filter(pl.col("ability_id") == 902011)
+        assert battle_cry.height == 10  # apply and remove on each of the 5 players
 
     def test_hp_pct_from_resources(self, synth_cache, meta):
         df = frame_for(synth_cache, meta, 1)
@@ -337,6 +349,12 @@ class TestIngest:
         assert len(store.pulls(CODE)) == 2
         assert store.events("SYNTH01:2").height > 0
         assert len(store.actors(CODE)) == 8
+
+    async def test_without_offensive_ids_their_buffs_are_left_out(self, synth_ingest_kwargs):
+        await ingest_report(CODE, **{**synth_ingest_kwargs, "offensive_spell_ids": None})
+        buffs = synth_ingest_kwargs["store"].events("SYNTH01:1").filter(pl.col("data_type") == "Buffs")
+        assert 900311 in buffs["ability_id"].to_list()
+        assert not {902011, 902002} & set(buffs["ability_id"].to_list())
 
     async def test_second_run_is_a_noop(self, synth_ingest_kwargs):
         await ingest_report(CODE, **synth_ingest_kwargs)

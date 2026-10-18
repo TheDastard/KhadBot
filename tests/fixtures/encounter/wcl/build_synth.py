@@ -40,6 +40,8 @@ ACTORS = [
 SWIRL, FIREPOOL, CATACLYSM, SHADOWBOLT, PHASE_SHIFT, CURSE = 900101, 900102, 900201, 900401, 900501, 900601
 LINK_TOTEM, EXTERNAL = 900301, 900302
 LINK_TOTEM_AURA = 900311  # the aura has its own ID, like Spirit Link Totem's
+BATTLE_CRY, FURY = 902001, 902002  # offensive cooldowns: raid and personal
+BATTLE_CRY_AURA = 902011
 KICK, PURGE = 900701, 900702
 FILLERS = [900001, 900002, 900003]
 BOSS_MELEE = 900010
@@ -47,6 +49,7 @@ TAUNT = 900703
 
 ENEMY_CAST_FILTER_IDS = [SWIRL, CATACLYSM, SHADOWBOLT, PHASE_SHIFT, CURSE]
 BUFF_FILTER_IDS = [LINK_TOTEM, EXTERNAL, LINK_TOTEM_AURA]
+OFFENSIVE_BUFF_FILTER_IDS = [BATTLE_CRY, FURY, BATTLE_CRY_AURA]
 
 ABILITIES = [
     {"gameID": i, "name": n, "type": 1}
@@ -60,6 +63,9 @@ ABILITIES = [
         (LINK_TOTEM, "Synth Link Totem"),
         (LINK_TOTEM_AURA, "Synth Link Totem"),
         (EXTERNAL, "Synth Guardian"),
+        (BATTLE_CRY, "Synth Battle Cry"),
+        (BATTLE_CRY_AURA, "Synth Battle Cry"),
+        (FURY, "Synth Fury"),
         (KICK, "Synth Kick"),
         (PURGE, "Synth Purge"),
         (BOSS_MELEE, "Synth Melee"),
@@ -187,7 +193,7 @@ class Sim:
 
 
 def build_fight(fight: dict) -> dict[str, list[dict]]:
-    """Return {dir_name: events} for one fight. Everything is scripted; no randomness."""
+    """Return {spec key: events} for one fight. Everything is scripted; no randomness."""
     s = fight["start"]
     sim = Sim(s)
     kill = fight["kill"]
@@ -195,6 +201,7 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
     casts: list[dict] = []
     enemy_casts: list[dict] = []
     buffs: list[dict] = []
+    offensive_buffs: list[dict] = []
     debuffs: list[dict] = []
     interrupts: list[dict] = []
     dispels: list[dict] = []
@@ -306,6 +313,17 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         dispels.append(ev(18_900, "dispel", HEALER, TANK, PURGE, extraAbilityGameID=CURSE))
         sim.hit(55_000, BOSS, DPS3, FIREPOOL, 150_000)  # one death in the kill
 
+    # Offensive cooldowns: Battle Cry buffs the raid for 40 s from 3 s, through the first Cataclysm and the
+    # first death, which must still count no defensive. In the wipe, the Mage also uses Fury at 5 s.
+    casts.append(ev(3_000, "cast", HEALER, None, BATTLE_CRY))
+    for p in PLAYERS:
+        offensive_buffs.append(ev(3_050, "applybuff", HEALER, p, BATTLE_CRY_AURA))
+        offensive_buffs.append(ev(43_050, "removebuff", HEALER, p, BATTLE_CRY_AURA))
+    if not kill:
+        casts.append(ev(5_000, "cast", DPS3, None, FURY))
+        offensive_buffs.append(ev(5_050, "applybuff", DPS3, DPS3, FURY))
+        offensive_buffs.append(ev(25_050, "removebuff", DPS3, DPS3, FURY))
+
     sim.run()
 
     # Friendly filler casts so the Casts type has volume.
@@ -320,6 +338,7 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         "Casts": sorted(casts, key=_sort_key),
         "Casts-Enemies": sorted(enemy_casts, key=_sort_key),
         "Buffs": sorted(buffs, key=_sort_key),
+        "Buffs:offensive": sorted(offensive_buffs, key=_sort_key),
         "Debuffs": sorted(debuffs, key=_sort_key),
         "Interrupts": sorted(interrupts, key=_sort_key),
         "Dispels": sorted(dispels, key=_sort_key),
@@ -328,7 +347,11 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
     }
 
 
-FILTERS = {"Buffs": ids_filter(BUFF_FILTER_IDS), "Casts-Enemies": ids_filter(ENEMY_CAST_FILTER_IDS)}
+FILTERS = {
+    "Buffs": ids_filter(BUFF_FILTER_IDS),
+    "Buffs:offensive": ids_filter(OFFENSIVE_BUFF_FILTER_IDS),
+    "Casts-Enemies": ids_filter(ENEMY_CAST_FILTER_IDS),
+}
 
 
 def write_pages(directory: Path, events: list[dict], *, split: bool) -> None:
@@ -389,10 +412,11 @@ def main() -> None:
     (OUT / "report.json").write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
 
     for f in FIGHTS:
-        for dirname, events in build_fight(f).items():
-            filt = FILTERS.get(dirname)
-            split = dirname == "DamageTaken" and f["id"] == 1  # the two-page data type
-            write_pages(OUT / str(f["id"]) / dirname / fhash(filt), events, split=split)
+        for key, events in build_fight(f).items():
+            filt = FILTERS.get(key)
+            split = key == "DamageTaken" and f["id"] == 1  # the two-page data type
+            # "Buffs:offensive" is a second Buffs request: same directory, its own filter hash.
+            write_pages(OUT / str(f["id"]) / key.partition(":")[0] / fhash(filt), events, split=split)
 
 
 if __name__ == "__main__":

@@ -16,8 +16,9 @@ Raw page cache layout, rooted here instead of `$KHADBOT_DATA_DIR/raw`:
     SYNTH01/<fight>/<DataType>[-Enemies]/<filter_hash>/_complete
 
 `Enemies` hostility gets a `-Enemies` directory suffix so friendly and enemy `Casts` never
-share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302,900311)`; enemy
-`Casts` uses `ability.id IN (900101,900201,900401,900501,900601)`; everything else is `none`.
+share a directory. Filter hashes: `Buffs` has two page sets, one per cooldown file:
+`ability.id IN (900301,900302,900311)` (defensive) and `ability.id IN (902001,902002,902011)` (offensive);
+enemy `Casts` uses `ability.id IN (900101,900201,900401,900501,900601)`; everything else is `none`.
 
 ## Pulls
 
@@ -41,6 +42,9 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302,900
 - **Damage window**: Cataclysm (900201) at 20 s is covered by Link Totem (900301, cast at
   18 s, buff 18-26 s under its own aura ID 900311, as Spirit Link Totem's is); the one at 40 s is not.
 - **Cooldown casts**: Link Totem and Guardian (900302) in fight 1; Link Totem x2 in fight 2.
+- **Offensive cooldowns**: Battle Cry (902001) at 3 s in both fights buffs every player for 40 s under its own
+  aura ID (902011), over the first Cataclysm and the first death, which must still show no defensive. Fight 1
+  also has Fury (902002), the Mage's own buff, at 5 s.
 - **Phase trigger**: Boss cast of Phase Shift (900501) at 35 s (fight 1) and 30 s (fight 2).
 - **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event). The generator
   queues damage and heals and applies them in time order, so HP follows the fight's timeline.

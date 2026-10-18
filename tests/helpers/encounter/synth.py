@@ -12,6 +12,7 @@ FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "encounter"  # enc
 GOLDEN = Path(__file__).resolve().parents[2] / "golden"
 
 SYNTH_DEFENSIVE_COOLDOWN_IDS = [900301, 900311, 900302]  # Link Totem's cast and aura, Guardian
+SYNTH_OFFENSIVE_COOLDOWN_IDS = [902001, 902011, 902002]  # Battle Cry's cast and aura, Fury
 SYNTH_ENEMY_CAST_IDS = {90001: [900101, 900201, 900401, 900501, 900601]}
 SYNTH_ENCOUNTER_FILE = FIXTURES / "encounters" / "synth.yaml"
 SYNTH_DEFENSIVE_COOLDOWNS_FILE = FIXTURES / "registries" / "synth_defensive_cooldowns.yaml"

@@ -566,3 +566,22 @@ cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, defensiv
 `EncounterData` keys its per-pull records on (pull_key, events_hash, positions_hash, encfile_hash,
 defensive_cooldowns_hash, offensive_cooldowns_hash, friendly_damage_hash). A cast or aura ID may appear in one
 cooldown file only; loading both with a shared ID raises `ConfigurationError`.
+
+### Refactor plan 6.1 (Ingest models: FetchSpec)
+
+Replace `FetchSpec` with:
+
+```
+class FetchSpec(BaseModel):
+    data_type: DataType
+    hostility: Literal["Friendlies", "Enemies"] = "Friendlies"
+    filter_expression: str | None = None
+    part: str | None = None             # a second request of the same data type ("offensive" Buffs)
+
+    dir_name -> data_type, or "<data_type>-Enemies"      # raw cache directory
+    key -> dir_name, or "<dir_name>:<part>"              # unique per pull: pages, truncation flags
+```
+
+Friendly Buffs are fetched once per cooldown file, each filtered to that file's cast and aura IDs. The offensive
+request is made only when the offensive file has IDs. Both requests' pages live under `Buffs/<filter_hash>/` and
+normalize to `data_type = "Buffs"`. `ingest_report` takes `defensive_spell_ids` and `offensive_spell_ids`.
