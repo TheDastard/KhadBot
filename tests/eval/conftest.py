@@ -27,14 +27,14 @@ import pytest
 from helpers.encounter.golden import GoldenOutcome, GoldenQuestion, load_questions, pass_rate
 from helpers.encounter.synth import (
     FIXTURES,
+    SYNTH_DEFENSIVE_COOLDOWN_IDS,
+    SYNTH_DEFENSIVE_COOLDOWNS_FILE,
     SYNTH_ENEMY_CAST_IDS,
-    SYNTH_REGISTRY_FILE,
-    SYNTH_REGISTRY_IDS,
     install_synth_encounter,
 )
 
 from khadbot.config import EncounterConfig
-from khadbot.encounter.config_files import load_registry
+from khadbot.encounter.config_files import load_cooldowns
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import RawPageCache
@@ -52,7 +52,7 @@ def _ingest(code: str, store: ParquetEventStore) -> None:
     if not (FIXTURES / "wcl" / code).is_dir():
         pytest.fail(f"golden questions need report {code}, but tests/fixtures/encounter/wcl/{code} is not recorded")
     if code == "SYNTH01":
-        filters = {"registry_spell_ids": SYNTH_REGISTRY_IDS, "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS}
+        filters = {"registry_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS, "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS}
     else:
         from khadbot.encounter.commands import default_filter_kwargs
 
@@ -76,7 +76,9 @@ def eval_data(golden_questions, tmp_path_factory) -> dict[str, EncounterData]:
         if code == "SYNTH01":  # synthetic report: its own encounter file and registry
             enc_root = root / "synth_encounters"
             install_synth_encounter(enc_root)
-            data[code] = EncounterData(store, enc_root=enc_root, registry=load_registry(SYNTH_REGISTRY_FILE))
+            data[code] = EncounterData(
+                store, enc_root=enc_root, defensive=load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+            )
         else:
             data[code] = EncounterData(store)
     return data

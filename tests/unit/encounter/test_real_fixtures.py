@@ -22,7 +22,7 @@ import pytest
 from helpers.encounter.real_fixtures import REAL_PULLS, REAL_REPORTS, WCL_FIXTURES, ingest_fixture
 from helpers.encounter.synth import GOLDEN
 
-from khadbot.encounter.config_files import load_registry
+from khadbot.encounter.config_files import load_cooldowns
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
 from khadbot.encounter.store import ParquetEventStore
 
@@ -44,7 +44,7 @@ def real_store(tmp_path_factory) -> ParquetEventStore:
 
 @pytest.fixture(scope="module")
 def registry():
-    return load_registry()
+    return load_cooldowns("defensive")
 
 
 def _golden_path(kind: str, pull_key: str) -> Path:
@@ -71,7 +71,7 @@ def test_normalized_golden_first_rows(real_store, pull_key, update_goldens):
 
 @pytest.mark.parametrize("pull_key", REAL_PULLS)
 def test_digest_golden(real_store, registry, pull_key, update_goldens):
-    digest = build_digest(pull_key, real_store, registry=registry)
+    digest = build_digest(pull_key, real_store, defensive=registry)
     _check(_golden_path("digests", pull_key), orjson.loads(digest.model_dump_json()), update_goldens)
 
 
@@ -82,7 +82,7 @@ def test_digest_golden(real_store, registry, pull_key, update_goldens):
 
 @pytest.mark.parametrize("pull_key", REAL_PULLS)
 def test_rendered_digest_fits_token_ceiling(real_store, registry, pull_key):
-    text = render_digest(build_digest(pull_key, real_store, registry=registry))
+    text = render_digest(build_digest(pull_key, real_store, defensive=registry))
     assert estimate_tokens(text) <= MAX_DIGEST_TOKENS
 
 
@@ -103,7 +103,7 @@ def test_death_rows_carry_the_killing_blow(real_store, pull_key):
 
 @pytest.mark.parametrize("pull_key", REAL_PULLS)
 def test_no_death_names_the_placeholder_ability(real_store, registry, pull_key):
-    digest = build_digest(pull_key, real_store, registry=registry)
+    digest = build_digest(pull_key, real_store, defensive=registry)
     assert digest.deaths
     assert all(d.killing_ability_id not in (None, 0) for d in digest.deaths)
     assert "Unknown Ability (0)" not in render_digest(digest)
@@ -113,7 +113,7 @@ def test_no_death_names_the_placeholder_ability(real_store, registry, pull_key):
 def test_no_player_ability_is_unregistered_or_unclassified(real_store, registry, pull_key):
     # Every friendly-source ability on the recorded pulls is in the friendly-damage registry, so none is left in
     # the unregistered list and none is unclassified.
-    digest = build_digest(pull_key, real_store, registry=registry, unregistered_cap=100)
+    digest = build_digest(pull_key, real_store, defensive=registry, unregistered_cap=100)
     events = real_store.events(pull_key, types=["damage"])
     player_ids = set(events.filter(pl.col("source_friendly") & pl.col("target_friendly"))["ability_id"].to_list())
     assert player_ids

@@ -14,7 +14,7 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Data and ingest
 
-- **Scripted cooldowns the data can't classify.** The cooldown registry now holds 61 of the 64 defensive and
+- **Scripted cooldowns the data can't classify.** `defensive_cooldowns.yaml` now holds 61 of the 64 defensive and
   healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
   `scripted` list (100 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
   Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.

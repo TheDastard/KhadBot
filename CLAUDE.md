@@ -9,7 +9,7 @@ KhadBot has two modes. The user picks one explicitly with `/mode`; there is no L
 - **coach**: a conversational performance coach built with `langchain.agents.create_agent`. Its base prompt, tool subset and personas are declared in `config/agents/coach.yaml`.
 - **encounter**: encounter review over structured WCL data. The pipeline:
   1. **Ingest** fetches paginated WCL events into a raw page cache, then normalizes them into one parquet file per pull.
-  2. **Annotate** tags events using an encounter file (phases, mechanics, failure rules, damage windows) and the cooldown registry.
+  2. **Annotate** tags events using an encounter file (phases, mechanics, failure rules, damage windows) and the defensive cooldown registry.
   3. **Digest** builds a deterministic summary per pull.
   4. **Analyst**, a LangGraph subgraph, investigates through read-only query tools and submits findings with evidence refs. A verify step rejects any finding whose refs don't resolve or whose numbers don't match the records.
   5. **Findings** are cached per pull, keyed by data, config and prompt hashes.
@@ -42,8 +42,8 @@ config/
   personas/          # khadgar, thrall, xalatath
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
-  registries/        # cooldowns.yaml, friendly_damage.yaml
-scripts/             # setup, WCL fixture recorder, cooldown registry generator, clean and distclean
+  registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
+scripts/             # setup, WCL fixture recorder, registry generator (build_registries.py), clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
@@ -110,7 +110,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 
 ## Game data
 
-Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, the user, or (for player spells) game client data via `scripts/build_cooldown_registry.py`. If a value is unknown, use `null` with `verified: false`, or ask.
+Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, the user, or (for player spells) game client data via `scripts/build_registries.py`. If a value is unknown, use `null` with `verified: false`, or ask.
 
 ## Git
 

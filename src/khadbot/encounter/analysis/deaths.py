@@ -33,7 +33,7 @@ DEATH_STRIP_MS = 100
 def death_records(
     a: Annotated,
     actors: list[Actor],
-    registry: CooldownRegistry | None = None,
+    defensive: CooldownRegistry | None = None,
     abilities: Mapping[int, str] | None = None,
     *,
     friendly: FriendlyDamageRegistry | None = None,
@@ -49,7 +49,7 @@ def death_records(
     self_ids = friendly.ability_ids(["self_inflicted"]) if friendly else []
     frame = a.frame
     has_healing = (frame["data_type"].cast(pl.Utf8) == "Healing").any()
-    intervals = aura_intervals(frame, registry.aura_ids() if registry else {}, pull.duration_ms)
+    intervals = aura_intervals(frame, defensive.aura_ids() if defensive else {}, pull.duration_ms)
 
     deaths = (
         frame.filter(type_is("death") & pl.col("target_id").is_in(pull.friendly_player_ids))
@@ -107,7 +107,7 @@ def death_records(
                 window_self_damage=int(damage.filter(pl.col("ability_id").is_in(self_ids))["amount"].sum() or 0),
                 top_hits=top_hits,
                 mechanic_ids=sorted(damage["mechanic_id"].drop_nulls().unique().to_list()),
-                active_defensives=_defensives_at_death(intervals, actor_id, t, registry),
+                active_defensives=_defensives_at_death(intervals, actor_id, t, defensive),
                 after_cutoff=a.cutoff_ms is not None and t > a.cutoff_ms,
             )
         )
@@ -115,7 +115,7 @@ def death_records(
 
 
 def _defensives_at_death(
-    intervals: list[AuraInterval], actor_id: int, t: int, registry: CooldownRegistry | None
+    intervals: list[AuraInterval], actor_id: int, t: int, defensive: CooldownRegistry | None
 ) -> list[int]:
     """Registry spells active on ``actor_id`` at ``t``, counting an aura stripped by the death (module docstring)."""
     out = set()
@@ -125,7 +125,7 @@ def _defensives_at_death(
         if i.active_at(t):
             out.add(i.spell_id)
         elif 0 < t - i.end_ms <= DEATH_STRIP_MS:
-            entry = registry.get(i.spell_id) if registry else None
+            entry = defensive.get(i.spell_id) if defensive else None
             still_running = (
                 entry is not None and entry.duration_s is not None and i.start_ms + entry.duration_s * 1000 > t
             ) or any(o.spell_id == i.spell_id and o.target_id != actor_id and o.active_at(t) for o in intervals)

@@ -91,7 +91,7 @@ def cooldown_uses(a: Annotated, registry: CooldownRegistry, actors: list[Actor])
     return out
 
 
-def window_coverage(a: Annotated, enc: EncounterFile | None, registry: CooldownRegistry) -> list[WindowCoverage]:
+def window_coverage(a: Annotated, enc: EncounterFile | None, defensive: CooldownRegistry) -> list[WindowCoverage]:
     """
     One row per damage-window occurrence: which raid cooldowns were active at its first hit.
 
@@ -103,7 +103,7 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, registry: CooldownR
     """
     if enc is None or not enc.damage_windows:
         return []
-    intervals = aura_intervals(a.frame, registry.aura_ids(["raid"]), a.pull.duration_ms)
+    intervals = aura_intervals(a.frame, defensive.aura_ids(["raid"]), a.pull.duration_ms)
     spans = (
         a.frame.filter(is_hit() & pl.col("window_id").is_not_null())
         .group_by("window_id", "window_occurrence")

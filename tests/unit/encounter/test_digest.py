@@ -23,12 +23,12 @@ from helpers.encounter.synth import (
 
 from khadbot.encounter import digest as digest_mod
 from khadbot.encounter.config_files import (
+    cooldowns_hash,
     encfile_hash,
     friendly_damage_hash,
     load_encounter_file,
     load_friendly_damage,
     parse_friendly_damage,
-    registry_hash,
 )
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
@@ -43,9 +43,9 @@ def enc_root(tmp_path):
 
 
 @pytest.fixture
-def digest_of(synth_ingested, enc_root, synth_registry):
+def digest_of(synth_ingested, enc_root, synth_defensive):
     def build(fight, root=None, **kw):
-        return build_digest(f"SYNTH01:{fight}", synth_ingested, root or enc_root, synth_registry, **kw)
+        return build_digest(f"SYNTH01:{fight}", synth_ingested, root or enc_root, synth_defensive, **kw)
 
     return build
 
@@ -85,7 +85,7 @@ def test_golden(digest_of, update_goldens, fight):
 # ===========================================================================
 
 
-def test_wipe_summary(digest_of, synth_ingested, synth_registry):
+def test_wipe_summary(digest_of, synth_ingested, synth_defensive):
     d = digest_of(1)
     assert (d.outcome, d.duration_ms, d.phase_reached, d.boss_pct, d.boss_hp_pct, d.cutoff_ms) == (
         "wipe",
@@ -102,7 +102,7 @@ def test_wipe_summary(digest_of, synth_ingested, synth_registry):
         "events_hash": synth_ingested.events_hash("SYNTH01:1"),
         "positions_hash": synth_ingested.positions_hash("SYNTH01:1"),
         "encfile_hash": encfile_hash(load_encounter_file(SYNTH_ENCOUNTER_FILE)),
-        "registry_hash": registry_hash(synth_registry),
+        "defensive_cooldowns_hash": cooldowns_hash(synth_defensive),
         "friendly_damage_hash": friendly_damage_hash(load_friendly_damage()),
     }
 

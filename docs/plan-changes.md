@@ -517,3 +517,50 @@ In the **Clusters** paragraph's list of failures that are not hits, add "the rem
 
 In the **Blame** paragraph, replace "`ANNOTATION_VERSION` (5)" with "`ANNOTATION_VERSION` (7)". This supersedes
 the "`ANNOTATION_VERSION` is 6" in the `encounter/positions` entry's blame context text: the version is 7.
+
+## encounter/offensive-cooldowns
+
+### Refactor plan 6.2 (Configuration files: cooldown registries)
+
+Replace the cooldown registry subsection with:
+
+#### Cooldown registries (`config/registries/<category>_cooldowns.yaml`)
+
+```yaml
+category: defensive
+cooldowns:
+  - {spell_id: 102342, name: Ironbark, class: Druid, target: external, cooldown_s: 90.0, duration_s: 12.0, verified: false}
+  - {spell_id: 97462, name: Rallying Cry, class: Warrior, target: raid, cooldown_s: 180.0, duration_s: 10.0,
+     aura_spell_ids: [97463], verified: false}
+```
+
+Player cooldowns live in one file per category: `defensive_cooldowns.yaml` (damage reduction, absorbs,
+immunities and healing cooldowns), with `offensive_cooldowns.yaml` and later `utility_cooldowns.yaml` beside it.
+Every file has the same schema and names its own `category`, which the loader checks against the file it was
+asked for. `target` is who the effect lands on: `personal` (only the caster), `external` (one chosen ally) or
+`raid` (an area or the whole raid). `aura_spell_ids` lists the spells the aura is applied under when they differ
+from the cast. Validation: `category` required and matching, unique `spell_id`, an aura ID owned by one entry
+only, `target` from the enum, unknown keys rejected. Each file's content hash (first 12 hex of SHA-256 over the
+canonical JSON) is `<category>_cooldowns_hash`. Damage-window coverage and death-window `active_defensives` read
+only the defensive file.
+
+### Refactor plan 6.4 (Digest)
+
+Replace the `produced_from` comment with:
+
+```
+    produced_from: dict[str, str]       # events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
+                                        # friendly_damage_hash
+```
+
+### Refactor plan 6.8 (Findings cache)
+
+Replace the `cache_key` line with:
+
+```
+cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
+                   friendly_damage_hash, prompt_version, graph_version, model_id, depth)[:16]
+```
+
+`EncounterData` keys its per-pull records on (pull_key, events_hash, positions_hash, encfile_hash,
+defensive_cooldowns_hash, friendly_damage_hash).

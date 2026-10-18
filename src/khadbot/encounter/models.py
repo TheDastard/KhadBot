@@ -305,7 +305,7 @@ class PullDigest(BaseModel):
     aggro: list[AggroSummary] = []  # one per boss NPC that swung at a player
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
-    # events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash
+    # events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash, friendly_damage_hash
     produced_from: dict[str, str]
 
 

@@ -3,7 +3,7 @@ encounter/config_files.py
 
 Authored configuration for encounter review:
 
-    config/registries/cooldowns.yaml                                          → CooldownRegistry
+    config/registries/defensive_cooldowns.yaml                                → CooldownRegistry
     config/registries/friendly_damage.yaml                                    → FriendlyDamageRegistry
     config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml → EncounterFile
 
@@ -32,7 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from khadbot.agent.agent_config import ConfigurationError
 
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
-DEFAULT_REGISTRY_PATH = _CONFIG_ROOT / "registries" / "cooldowns.yaml"
+DEFAULT_DEFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "defensive_cooldowns.yaml"
 DEFAULT_FRIENDLY_DAMAGE_PATH = _CONFIG_ROOT / "registries" / "friendly_damage.yaml"
 DEFAULT_ENCOUNTER_ROOT = _CONFIG_ROOT / "encounters"
 
@@ -44,10 +44,14 @@ class _Strict(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Cooldown registry
+# Cooldown registries
 # ---------------------------------------------------------------------------
 
-CooldownKind = Literal["raid", "external", "personal"]
+# Which registry file a cooldown lives in. Defensive cooldowns keep players alive: damage reduction, absorbs,
+# immunities and healing cooldowns.
+CooldownCategory = Literal["defensive"]
+# Who a cooldown's effect lands on: only the caster, one chosen ally, or an area or the whole raid.
+CooldownTarget = Literal["raid", "external", "personal"]
 
 
 class CooldownEntry(_Strict):
@@ -56,7 +60,7 @@ class CooldownEntry(_Strict):
     spell_id: int
     name: str
     class_name: str = Field(alias="class")
-    kind: CooldownKind
+    target: CooldownTarget
     cooldown_s: float | None = None
     duration_s: float | None = None
     verified: bool = False
@@ -66,6 +70,9 @@ class CooldownEntry(_Strict):
 
 
 class CooldownRegistry(_Strict):
+    """One category's cooldown file. Every category shares this schema; the file names its own ``category``."""
+
+    category: CooldownCategory
     cooldowns: list[CooldownEntry]
 
     @model_validator(mode="after")
@@ -73,7 +80,7 @@ class CooldownRegistry(_Strict):
         seen: set[int] = set()
         for entry in self.cooldowns:
             if entry.spell_id in seen:
-                raise ValueError(f"duplicate spell_id {entry.spell_id} in cooldown registry")
+                raise ValueError(f"duplicate spell_id {entry.spell_id} in {self.category} cooldowns")
             seen.add(entry.spell_id)
         # An aura ID must name one entry, so an aura interval maps back to a single cooldown.
         owner = {entry.spell_id: entry.spell_id for entry in self.cooldowns}
@@ -89,16 +96,16 @@ class CooldownRegistry(_Strict):
     def get(self, spell_id: int) -> CooldownEntry | None:
         return next((c for c in self.cooldowns if c.spell_id == spell_id), None)
 
-    def spell_ids(self, kinds: Sequence[CooldownKind] | None = None) -> list[int]:
-        """Cast spell IDs of the entries of ``kinds`` (all entries when None)."""
-        return [c.spell_id for c in self.cooldowns if kinds is None or c.kind in kinds]
+    def spell_ids(self, targets: Sequence[CooldownTarget] | None = None) -> list[int]:
+        """Cast spell IDs of the entries with these ``targets`` (all entries when None)."""
+        return [c.spell_id for c in self.cooldowns if targets is None or c.target in targets]
 
-    def aura_ids(self, kinds: Sequence[CooldownKind] | None = None) -> dict[int, int]:
+    def aura_ids(self, targets: Sequence[CooldownTarget] | None = None) -> dict[int, int]:
         """Every spell ID a Buffs row of these entries can carry (cast and ``aura_spell_ids``) -> its entry's spell_id."""
         return {
             aura: c.spell_id
             for c in self.cooldowns
-            if kinds is None or c.kind in kinds
+            if targets is None or c.target in targets
             for aura in (c.spell_id, *c.aura_spell_ids)
         }
 
@@ -427,11 +434,16 @@ def _read_yaml(path: Path) -> object:
         raise ConfigurationError(f"YAML parse error in {path}:\n{e}") from e
 
 
-def parse_registry(data: object, label: str = "cooldown registry") -> CooldownRegistry:
+def parse_cooldowns(data: object, category: CooldownCategory, label: str | None = None) -> CooldownRegistry:
+    """Validate one cooldown file; its ``category`` must be the one the caller asked for."""
+    label = label or f"{category} cooldowns"
     try:
-        return CooldownRegistry.model_validate(data)
+        registry = CooldownRegistry.model_validate(data)
     except ValidationError as e:
         raise ConfigurationError(f"Schema validation failed for {label}:\n{e}") from e
+    if registry.category != category:
+        raise ConfigurationError(f"{label} is a {registry.category} cooldown file, expected {category}")
+    return registry
 
 
 def parse_friendly_damage(data: object, label: str = "friendly-damage registry") -> FriendlyDamageRegistry:
@@ -448,9 +460,10 @@ def parse_encounter(data: object, label: str = "encounter file") -> EncounterFil
         raise ConfigurationError(f"Schema validation failed for {label}:\n{e}") from e
 
 
-def load_registry(path: Path | None = None) -> CooldownRegistry:
-    path = Path(path) if path else DEFAULT_REGISTRY_PATH
-    return parse_registry(_read_yaml(path), str(path))
+def load_cooldowns(category: CooldownCategory, path: Path | None = None) -> CooldownRegistry:
+    """One category's cooldown file: ``config/registries/<category>_cooldowns.yaml`` unless ``path`` is given."""
+    path = Path(path) if path else {"defensive": DEFAULT_DEFENSIVE_COOLDOWNS_PATH}[category]
+    return parse_cooldowns(_read_yaml(path), category, str(path))
 
 
 def load_friendly_damage(path: Path | None = None) -> FriendlyDamageRegistry:
@@ -521,7 +534,7 @@ def encfile_hash(enc: EncounterFile | None) -> str:
     return _content_hash(enc) if enc is not None else "none"
 
 
-def registry_hash(registry: CooldownRegistry) -> str:
+def cooldowns_hash(registry: CooldownRegistry) -> str:
     return _content_hash(registry)
 
 

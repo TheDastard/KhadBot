@@ -19,7 +19,7 @@
 #
 # Entries are grouped by class, then by origin within each class. Ability IDs come from the damage rows of the
 # recorded Heroic nights (H7z1fqDXjRTFnbtg, QkVa6GHRK8yfrTbw, trMgApZCVYkv3jdq), or from game client data (the
-# friendly-damage review file of scripts/build_cooldown_registry.py) for abilities those nights don't show; their
+# friendly-damage review file of scripts/build_registries.py) for abilities those nights don't show; their
 # class is a proposal from what the ability does. verified: false marks an entry nobody has confirmed yet. `/digest <fight> --unregistered` lists friendly-source abilities still missing
 # from this file.
 abilities:

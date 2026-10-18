@@ -54,7 +54,7 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
   `filterExpression`, `includeResources`, `limit`.
 - Paged: follow `nextPageTimestamp` until it is null. A long pull needs up to 9 pages for Buffs or Healing.
 - Filter syntax confirmed: `ability.id IN (633,1022,...)` (comma-separated, no spaces). Used for friendly Buffs
-  (cooldown registry IDs) and enemy Casts (encounter-file ability IDs).
+  (defensive cooldown registry IDs) and enemy Casts (encounter-file ability IDs).
 
 - **Deaths rows name no ability or source.** Every recorded `death` row has `abilityGameID: 0` and `sourceID: -1`;
   the killing blow is in `killingAbilityGameID` and the killer in `killerID`, for example

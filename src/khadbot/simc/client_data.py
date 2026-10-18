@@ -41,7 +41,7 @@ SIMC_FILES = (
     "client_data_version.inc",
 )
 
-#: Class IDs as SimC's ``scaling_class`` maps them; names match ``config/registries/cooldowns.yaml``.
+#: Class IDs as SimC's ``scaling_class`` maps them; names match ``config/registries/defensive_cooldowns.yaml``.
 CLASS_NAMES: dict[int, str] = {
     1: "Warrior",
     2: "Paladin",

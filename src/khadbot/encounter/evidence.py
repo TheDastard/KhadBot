@@ -35,12 +35,12 @@ from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     FriendlyDamageRegistry,
+    cooldowns_hash,
     encfile_hash,
     friendly_damage_hash,
+    load_cooldowns,
     load_encounter_view,
     load_friendly_damage,
-    load_registry,
-    registry_hash,
 )
 from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
@@ -212,9 +212,9 @@ class EncounterData:
     """
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
-    The cache key is (pull_key, events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash),
-    so re-ingesting a pull or editing its encounter file or a registry rebuilds the records on next use. Registries
-    not passed in are reread from ``config/`` on every lookup, like encounter files.
+    The cache key is (pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
+    friendly_damage_hash), so re-ingesting a pull or editing its encounter file or a registry rebuilds the records
+    on next use. Registries not passed in are reread from ``config/`` on every lookup, like encounter files.
     """
 
     def __init__(
@@ -222,7 +222,7 @@ class EncounterData:
         store: EventStore,
         *,
         enc_root: Path | None = None,
-        registry: CooldownRegistry | None = None,
+        defensive: CooldownRegistry | None = None,
         friendly: FriendlyDamageRegistry | None = None,
         cache: AnnotationCache | None = None,
         cutoff_fraction: float | None = None,
@@ -230,7 +230,7 @@ class EncounterData:
     ) -> None:
         self.store = store
         self.enc_root = enc_root
-        self._registry = registry
+        self._defensive = defensive
         self._friendly = friendly
         self.cache = cache
         self.cutoff_fraction = cutoff_fraction
@@ -256,14 +256,14 @@ class EncounterData:
         if pull is None:
             raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
         pull_key = pull.pull_key
-        registry = self._registry or load_registry()
+        defensive = self._defensive or load_cooldowns("defensive")
         friendly = self._friendly or load_friendly_damage()
         key = (
             pull_key,
             self.store.events_hash(pull_key) or "",
             self.store.positions_hash(pull_key) or "",
             encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
-            registry_hash(registry),
+            cooldowns_hash(defensive),
             friendly_damage_hash(friendly),
         )
         if (hit := self._records.get(key)) is not None:
@@ -273,7 +273,7 @@ class EncounterData:
             pull_key,
             self.store,
             self.enc_root,
-            registry,
+            defensive,
             friendly=friendly,
             cache=self.cache,
             cutoff_fraction=self.cutoff_fraction,

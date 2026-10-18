@@ -10,7 +10,7 @@ from __future__ import annotations
 import shutil
 
 import pytest
-from helpers.encounter.synth import FIXTURES, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
+from helpers.encounter.synth import FIXTURES, SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS
 
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
@@ -33,7 +33,7 @@ def synth_ingest_kwargs(synth_cache, synth_store) -> dict:
         "cache": synth_cache,
         "store": synth_store,
         "offline": True,
-        "registry_spell_ids": SYNTH_REGISTRY_IDS,
+        "registry_spell_ids": SYNTH_DEFENSIVE_COOLDOWN_IDS,
         "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS,
     }
 
@@ -58,12 +58,12 @@ def synth_enc():
 
 
 @pytest.fixture
-def synth_registry():
-    from helpers.encounter.synth import SYNTH_REGISTRY_FILE
+def synth_defensive():
+    from helpers.encounter.synth import SYNTH_DEFENSIVE_COOLDOWNS_FILE
 
-    from khadbot.encounter.config_files import load_registry
+    from khadbot.encounter.config_files import load_cooldowns
 
-    return load_registry(SYNTH_REGISTRY_FILE)
+    return load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
 
 
 @pytest.fixture
@@ -77,8 +77,8 @@ def synth_enc_root(tmp_path):
 
 
 @pytest.fixture
-def synth_data(synth_ingested, synth_enc_root, synth_registry):
+def synth_data(synth_ingested, synth_enc_root, synth_defensive):
     """EncounterData over ingested SYNTH01 with the synthetic encounter file and registry."""
     from khadbot.encounter.evidence import EncounterData
 
-    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry)
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive)

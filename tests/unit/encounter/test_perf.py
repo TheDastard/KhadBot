@@ -24,7 +24,7 @@ from helpers.encounter.real_fixtures import REAL_REPORTS, ingest_fixture
 from khadbot.encounter.analyst import query_tools as qt
 from khadbot.encounter.analyst.query_tools import AnalystScope
 from khadbot.encounter.annotate import annotate_pull
-from khadbot.encounter.config_files import load_encounter_view, load_registry
+from khadbot.encounter.config_files import load_cooldowns, load_encounter_view
 from khadbot.encounter.digest import build_digest
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.store import ParquetEventStore
@@ -55,10 +55,10 @@ async def _ingested(code, tmp_path) -> ParquetEventStore:
 @pytest.mark.parametrize("code", REAL_REPORTS)
 async def test_digest_budget_per_pull(code, tmp_path):
     store = await _ingested(code, tmp_path)
-    registry = load_registry()
+    registry = load_cooldowns("defensive")
     for pull in store.pulls(code):
         t0 = time.perf_counter()
-        build_digest(pull.pull_key, store, registry=registry)
+        build_digest(pull.pull_key, store, defensive=registry)
         elapsed = time.perf_counter() - t0
         assert elapsed < 2, f"{pull.pull_key} annotate + digest took {elapsed:.2f}s"
 
