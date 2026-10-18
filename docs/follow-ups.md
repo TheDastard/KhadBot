@@ -21,21 +21,18 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   Pain, Seriously Sharp Seashell); exclude friendly-source damage from the unregistered share; report
   self-inflicted damage per player; flag it in death windows; list unclassified friendly-source abilities the
   way unregistered boss abilities are listed.
-- **Store positions and use them for aggro-holder blame.** Decided in `docs/decisions.md` ("Positions: keep
-  them, as a per-pull table"); measurements in `docs/wcl-api.md` ("Position data").
-  - **Schema:** normalize writes a per-pull position table next to the events file, one row per sample
-    (`t_ms`, `actor_id`, `instance`, `x`, `y`). The sample is the unit named by `resourceActor` (1 source, 2
-    target), taken from every data type that carries one. The events schema and `events_hash` stay as they
-    are. The table needs its own hash, or a place in `events_hash`, so cached annotations and findings that
-    use it invalidate. Old ingests have no table and re-normalize offline from the raw pages.
-  - **Helper:** an as-of lookup of an actor's position at `t`, returning the sample's age, and the distance
-    between two actors at `t`. NPCs are looked up by instance.
-  - **First use:** for `per_cluster` failures blamed `by: aggro_holder` (Unchecked Rage, Rattler Slam), record
-    the holder's distance from the NPC at the cast and whether they were alive. The analyst can then tell a
-    tank out of position (alive and beyond the NPC's swing range: Ula'tek p95 2,043 units, Gore Rattle 1,714)
-    from a tank who died and from no holder at all. Over the 47 pulls that is 15 out of position, 11 dead and
-    5 with no holder.
-- **Formation checks from positions.** Once positions are stored, they can judge where the raid stood as a
+- **Re-ingest local nights to add positions.** Nights ingested before the position table have none, so their
+  blame context reads `no_position`. Re-ingest each one offline from the raw page cache:
+  `python main.py ingest <code> --offline` for `H7z1fqDXjRTFnbtg`, `QkVa6GHRK8yfrTbw` and `trMgApZCVYkv3jdq`.
+  It rewrites all 62 pulls with `events_hash` unchanged (43 s on a copy of the data directory).
+- **Other uses of positions.** The position table and lookup helper exist (`analysis/positions.py`); only
+  per_cluster blame uses them so far. Not built yet:
+  - who stood in whose Volatile Purge eruption (about 5 yards);
+  - who stood in a Serpent's Bite soak (about 7 yards of a bitten player) or at a Spectral Coil (about 30
+    yards); the debuffs already mark these players, so positions would only show where they stood;
+  - an analyst query tool for positions, which changes the prompt version;
+  - positions in the dashboard.
+- **Formation checks from positions.** Positions are stored, so they can judge where the raid stood as a
   whole, not just single mechanics:
   - Who wasn't stacked when a mechanic was baited: each player's distance from the group's centre, or from the
     stack point, at the moment the mechanic is aimed. This needs no raid plan.
@@ -116,7 +113,12 @@ human task table in `docs/decisions.md`).
   3,500 units (35 yards) of Gore Rattle: 59 on the tail's own tank and 15 on other players over 13 casts.
   Nothing in the logs confirms the radius or whether the sweep is a circle or a cone, so a reviewer must
   confirm both first. Then the rule is a hit within that distance of the caster, sparing its aggro holder.
-  It needs the stored positions above.
+  Positions are stored now, so only the review is missing.
+- **Mother's Wrath (no tank in melee)** has no `reach_yd`. Of its 13 failures over the 47 pulls, 2 targets
+  were dead and 11 alive at 18.0 to 75.1 yards from Ula'tek's latest position sample. One living target was
+  inside her 21-yard swing reach and three more inside her longest swing (30.3 yards), so distance doesn't
+  split them cleanly. A reviewer should judge whether the target's distance from Ula'tek is the right test
+  for this punishment, and if so, which reach to use.
 - **Ingested Venom** (1313529) is tagged as the Serpent's Bite soak debuff on the raid's belief; confirm.
 - **Normal and Mythic** are not covered: every entry lists `heroic` only. Check each entry against logs from
   those difficulties before adding them.

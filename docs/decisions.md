@@ -259,6 +259,50 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   longer raises the anomaly by itself: a kill whose transitions match the detected phases is consistent.
   `/pulls` shows "Phase reached" (the WCL name) in place of "Last phase". Re-ingested offline, none of the 47
   recorded Heroic Ula'tek pulls (the ones with an encounter file) raises the anomaly.
+- **Positions stored and used for blame (2026-10-17)**: implements "Positions: keep them, as a per-pull table".
+  Contract text is in `docs/plan-changes.md` under `encounter/positions`.
+  - **Table and hash.** Normalize collects samples in the same pass as the events
+    (`normalize_pull_with_positions`; `normalize_pull` is unchanged), so `events_hash` and the normalized goldens
+    stay as they were. The store writes `events/<report>/positions/<fight>.parquet` and records `positions_hash`
+    in `pulls.json`; the hash function lives in `store.py` next to `POSITION_SCHEMA`, and the store hashes what
+    it writes. A missing `positions_hash` makes ingest rewrite the pull, which is how stored nights get their
+    tables. Measured on a copy of the three local nights, offline: all 62 stored pulls rewritten with
+    `events_hash` unchanged, a second run skips all 62; the 47 Heroic Ula'tek tables hold 2,022,724 samples,
+    11.4 MB against 38.7 MB of events (+30%), all on map 2610; normalize goes from 3.3 to 4.0 s, 5.0 to 6.6 s
+    and 4.2 to 5.6 s per night (+0.8 to +1.6 s).
+  - **Lookup helper.** `analysis/positions.py`: `position_at` (latest sample at or before `t`, with its age;
+    callers pass `max_age_ms`, None for no limit) and `distance_yd` (None across maps). Blame needs a handful of
+    lookups per pull, so it filters the table directly rather than using `join_asof`.
+  - **State rules.** `no_holder` first, then `dead` (a Deaths row at or before the first hit and no cast,
+    begincast or resurrect by or on the player since; a later death counts again), then positions. Distance
+    and age are recorded only for living players with a position: a dead holder's last sample says where they
+    died, not where they were at the hit. A missing NPC sample, or samples on two maps, is `no_position`.
+  - **Age limit 1,500 ms for the player, none for the NPC.** The investigation saw living holders' samples up
+    to 475 ms old; at the first hit (rather than the cast) the oldest was 484 ms for Rattler Slam, 100 ms for
+    Unchecked Rage and 520 ms for Mother's Wrath targets. Bosses stand on fixed spots and are only sampled on
+    their own swings and casts, so their latest sample is used however old.
+  - **Reach values.** `reach_yd` is the p95 of each NPC's own swing distances rounded up, measured over the 47
+    Heroic pulls from the swing row's NPC sample to the target's latest sample at most 1 s old: Ula'tek n=932,
+    p95 20.4 yd, max 30.3 yd, so 21; Gore Rattle n=399, p95 17.1 yd, max 30.7 yd, so 18. 330 Ula'tek and 122
+    Gore Rattle swing rows carry no NPC sample and were left out. These match the investigation.
+  - **Every Unchecked Rage cast is a failure.** Ula'tek recasts it every 2.4 s while she stays untanked, so its
+    `cluster_window_ms` went from 3,000 to 1,000, which keeps each cast its own cluster. One cast's hits land
+    within 60 ms of each other, and the next cast's hits come 2,416 ms or more later. Each Rage hurts the raid
+    again, so each counts. Over the 47 pulls that gives 21 failures (was 11): 9 `beyond_reach` (30.9 to 54.9
+    yd, judged at each cast's first hit; 55.5 yd when judged at the cast itself), 10 `dead`, 2 `no_holder`,
+    the investigation's split. Rattler Slam: 10 failures, 6 `beyond_reach` (21.1 to 51.9 yd), 1 `dead`, 3
+    `no_holder`, as in the investigation. No living holder was in reach.
+  - **Mother's Wrath has no `reach_yd`.** Its 13 failures: 2 targets dead, 11 alive at 18.0 to 75.1 yd from
+    Ula'tek's latest sample. One living target was within her 21-yard reach (18.0 yd) and three more within her
+    longest swing of 30.3 yd (22.6, 25.1 and 29.6 yd), so the split is not clean; its failures show `alive` with
+    the distance.
+  - **Cache keys.** The annotation cache sidecar stores `positions_hash` and misses when it differs;
+    `ANNOTATION_VERSION` is 4. `PullDigest.produced_from` carries `positions_hash`; `findings.cache_key` takes it
+    (via `review_graph.pull_cache_key`), and `EncounterData` keys its per-pull records on it, so cached
+    annotations, records and reviews rebuild when positions change.
+  - **Dumps.** The new `MechanicStat` and `MechanicCluster` fields are left out of dumps when empty or null
+    (pydantic `exclude_if`), so mechanics without blame context serialize as before, and stored digests and
+    findings load with the defaults.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
 
@@ -392,7 +436,7 @@ Outcome: **keep polars + parquet (D7 unchanged).** Measured on the dev machine o
 |----|------|--------|
 | H1 | Choose boss + three public reports | done 2026-10-11: Heroic Ula'tek (encounter 3492). Wipe-heavy night `trMgApZCVYkv3jdq`; clean kill `H7z1fqDXjRTFnbtg` fight 20, with the rest of that report as the messy night; second messy / early-learning night `QkVa6GHRK8yfrTbw`. See `docs/wcl-api.md`. |
 | H2 / S1 | Record real fixtures, run cost spike | done 2026-10-11: all 62 boss pulls ingested into `KHADBOT_DATA_DIR` (936 points); seven representative pulls copied to `tests/fixtures/encounter/wcl/` and stored in Git LFS (see its README); measurements in `docs/wcl-api.md`. |
-| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.1% (all player self-damage such as Spirit Link and Burning Rush), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 11, 10, 19, 12 and 28 failures; 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. Open items for this file are under Ula'tek in `docs/follow-ups.md`. |
+| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.1% (all player self-damage such as Spirit Link and Burning Rush), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 21, 10, 19, 12 and 28 failures (Unchecked Rage counts each cast since 2026-10-17); 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. Open items for this file are under Ula'tek in `docs/follow-ups.md`. |
 | H4 | Fill cooldown durations in `cooldowns.yaml` | open |
 | H5 / S4 | Write golden questions | open |
 | H6 | Set eval thresholds | open |
