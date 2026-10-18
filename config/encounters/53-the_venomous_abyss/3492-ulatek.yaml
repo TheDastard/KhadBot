@@ -13,7 +13,7 @@
 encounter_id: 3492
 name: Ula'tek
 zone: {id: 53, name: The Venomous Abyss}
-file_version: 2
+file_version: 3
 
 # WarcraftLogs reports phase transitions for this encounter (phase IDs 1-4).
 phases:
@@ -46,9 +46,10 @@ mechanics:
 
   - id: spectral_coils
     name: Spectral Coils
-    # Damage, the Spectral Coil and Gore Rattle casts, and the Soul Constrictor debuff (stops a player
-    # reducing the next Coils). Every player takes the damage, reduced by the number of players at the
-    # impact, so soak_count_lt never fires.
+    # Damage (1287265), the Spectral Coil and Gore Rattle casts, and the Soul Constrictor debuff (1300685;
+    # stops a player reducing the next Coils). Every player takes the damage, reduced by the number of
+    # players at the impact, so soak_count_lt never fires. A debuffed player who soaks again can't be told
+    # apart: the debuff is never reapplied while active and every player hit takes the same amount.
     difficulties: [heroic]
     ability_ids: [1287265, 1299010, 1308927, 1300685]
     kind: soak
@@ -294,10 +295,12 @@ mechanics:
 
   - id: acidic_expulsion
     name: Acidic Expulsion
-    # Blightscale Shrieker raid-wide stacking DoT; kill Shriekers before they stack it past 2.
+    # Blightscale Shrieker raid-wide stacking DoT; kill Shriekers before they stack it past 2. Each spread
+    # of stacks past 2 is one failure, charged to no one.
     difficulties: [heroic]
     ability_ids: [1313531]
     kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 2}
     severity: medium
 
   - id: vicious_echoes
