@@ -1,0 +1,43 @@
+# Friendly-damage registry.
+#
+# Abilities on the player's side whose damage lands on players. Digests leave this damage out of the
+# unregistered share, count it by class, and report self-inflicted damage per player and in death windows.
+# Entries are matched by ability ID whatever the damage row's source.
+#
+# class: what the damage is
+#   redistribution  damage shared out from other players (charged to no one)
+#   delayed_boss    boss damage taken later instead of at once, such as a share of a hit taken as a DoT
+#                   (charged to no one)
+#   self_inflicted  a cost the player chose to pay (reported per player)
+#   involuntary     self-damage the player can't control, such as a trinket proc (charged to no one)
+#
+# origin: where the ability comes from
+#   class           a class spell or talent; the comment after the entry names the class
+#   borrowed_power  an expansion-wide system power
+#   item            a trinket, embellishment or other gear effect; players may keep one past its season
+#   null            not known
+#
+# Entries are grouped by class, then by origin within each class. Ability IDs come from the damage rows of the
+# recorded Heroic nights (H7z1fqDXjRTFnbtg, QkVa6GHRK8yfrTbw, trMgApZCVYkv3jdq). verified: false marks an entry
+# nobody has confirmed yet. `/digest <fight> --unregistered` lists friendly-source abilities still missing
+# from this file.
+abilities:
+  # Redistribution
+  - {ability_id: 98021, name: Spirit Link, class: redistribution, origin: class, verified: true}  # Shaman
+  - {ability_id: 469704, name: Tempered in Battle, class: redistribution, origin: class, verified: true}  # Paladin
+  - {ability_id: 6940, name: Blessing of Sacrifice, class: redistribution, origin: class, verified: true}  # Paladin
+
+  # Delayed boss damage
+  - {ability_id: 361029, name: Time Dilation, class: delayed_boss, origin: class, verified: true}  # Evoker
+  - {ability_id: 413924, name: Stretch Time, class: delayed_boss, origin: class, verified: true}  # Evoker
+  - {ability_id: 387846, name: Fel Armor, class: delayed_boss, origin: class, verified: true}  # Warlock
+  - {ability_id: 453286, name: Set Fire to the Pain, class: delayed_boss, origin: class, verified: true}  # Demon Hunter
+  - {ability_id: 1309786, name: Refraction, class: delayed_boss, origin: class, verified: true}  # Mage
+  - {ability_id: 1287955, name: Rune of Void-Tainted Shell, class: delayed_boss, origin: borrowed_power, verified: true} # Omnium Folio
+
+  # Self-inflicted
+  - {ability_id: 111400, name: Burning Rush, class: self_inflicted, origin: class, verified: true}  # Warlock
+  - {ability_id: 32409, name: "Shadow Word: Death", class: self_inflicted, origin: class, verified: true}  # Priest
+
+  # Involuntary
+  - {ability_id: 1292299, name: Seriously Sharp Seashell, class: involuntary, origin: item, verified: true} # Gebbo's Bottomless Bag
