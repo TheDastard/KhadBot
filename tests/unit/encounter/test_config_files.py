@@ -360,6 +360,39 @@ class TestEncounterFile:
                 lambda d: d["mechanics"][0].update(failure={"rule": "any_hit", "aura_ids": [1]}),
                 "'aura_ids' is required",
             ),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "aura_removed_by"}), "requires 'ability_ids'"),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "aura_removed_by", "ability_ids": []}),
+                "ability_ids",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "any_hit", "ability_ids": [1]}),
+                "'ability_ids' is required",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "aura_removed_by", "ability_ids": [1], "followed_by_ids": []}
+                ),
+                "followed_by_ids",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "any_hit", "followed_by_ids": [1]}),
+                "'followed_by_ids' and 'on_death' are allowed",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "any_hit", "on_death": True}),
+                "'followed_by_ids' and 'on_death' are allowed",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={
+                        "rule": "aura_removed_by",
+                        "ability_ids": [1],
+                        "blame": {"by": "cast_target", "ability_id": 1},
+                    }
+                ),
+                "'blame' is required",
+            ),
             (
                 lambda d: d["mechanics"][0].update(
                     failure={"rule": "debuff_stacks_gt", "value": 2, "blame": {"by": "cast_target", "ability_id": 1}}

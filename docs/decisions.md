@@ -589,7 +589,8 @@ Measurements:
   The counts aren't one-to-one: several removals often land together and each one sees every add that appears
   after it. A shell broken by Spectral Coils hatches Rawlings; one broken by Caustic Waves always hatched a
   Viper; the carrier's death usually did (17 of the 23 deaths to Spectral Coils itself were followed by a
-  Viper). No shell came off at a hit from the other Caustic Waves IDs or from Deadly Venom.
+  Viper). No shell came off at a hit from the other Caustic Waves IDs or at a Deadly Venom damage tick; the
+  venom pools break shells through their debuff landing instead (see "Viper hatches" below).
 - **153 Vipers (by instance) on 30 of the 47 pulls.** 122 have a removal at a Caustic Waves hit or a death in
   the 8 s before, 2 only other removals, and 29 have no shell removal at all in that time. Those 29 come in
   groups at 198 to 262 s and 395 to 468 s (for example `QkVa6GHRK8yfrTbw:20` at 395.6 to 399.3 s and
@@ -598,17 +599,43 @@ Measurements:
 - **Positions don't sharpen the link.** The carrier's last known position and the Viper's first one are a median
   of 660 to 760 units apart, depending on the cause (Ula'tek's melee swings land at 1,336 to 2,026).
 
-Proposed: a failure rule `aura_removed_by {ability_ids, on_death}` on the `malignant_shell` mechanic. Each
-removal of the mechanic's aura from a player within 200 ms before a hit from one of `ability_ids` on them is a
-failure charged to that player. With `on_death: true`, a removal within 200 ms before the player's death is
-also a failure, charged to no one. Why this shape:
+This led to the `aura_removed_by` rule; the next entry has the measurements it was built on.
+
+### Viper hatches: a shell break confirmed by Putrid Membrane, charged to the carrier unless they died
+
+Measurements, on the same 47 pulls:
+
+- **Putrid Membrane marks every hatch.** Each new Viper puts Putrid Membrane (1301268, source Ula'tek, since
+  the egg is no actor) on the raid: an `applydebuff` on about 20 players for the first Viper, then a stack or
+  refresh for each one after (968 applies, 1,606 stacks, 1,084 refreshes). Its rows come 0 to 82 ms after the
+  shell removal that hatched the Viper, about 3 s before the Viper's own first event.
+- **Two things break a shell on a living carrier.** A Caustic Waves hit (1292403) lands 0 to 53 ms after the
+  removal (33 removals), and the Deadly Venom debuff (1297338, the venom pools) lands 0 to 98 ms before it (13).
+  All 46 were followed by Putrid Membrane. Deadly Venom first ticks about 1 s after its debuff lands, and 4 of
+  the 13 carriers stepped out before any tick, so the debuff landing is the signal, not the tick.
+- **Deaths hatch Vipers too.** 113 removals at the carrier's death (within 200 ms) were followed by Putrid
+  Membrane. The killing blows: Mother's Wrath 41, Spectral Coils 16, Putrid Membrane 13, Malignant Shell 12,
+  melee 9, Rattler Slam 8, Necrotic Vapors 7, others 7. Putrid Membrane and the shell's own tick killing a
+  carrier is a chain: one Viper's dot kills a carrier, whose egg hatches the next.
+
+Decision: a failure rule `aura_removed_by {ability_ids, followed_by_ids, on_death}`, on `malignant_shell` as
+`{ability_ids: [1292403, 1297338], followed_by_ids: [1301268], on_death: true}`. A removal of the mechanic's
+aura from a player is a failure when one of `ability_ids` hits that player or an aura from it lands on them
+within 200 ms either side, charged to that player. With `on_death`, a removal within 200 ms of the player's death
+is also a failure, charged to no one; a break by `ability_ids` wins over a death. With `followed_by_ids`, either
+kind counts only when one of those auras opens on any player within 200 ms after the removal. That gives 46
+charged failures and 113 uncharged ones on 33 of the 47 pulls. Why this shape:
 
 - **A rule on the shell, not a blame spec on the Viper.** A blame spec only charges `per_cluster` occurrences,
-  and a Viper's damage forms many clusters over its life, not one per hatch. Nothing marks the hatch on the
-  Viper's side. The removal row is one event that names the carrier and the moment.
-- **A death counts but isn't charged.** The death is already charged by the mechanic that killed the carrier,
-  so charging the egg too would count one mistake twice.
-- **29 of the 153 Vipers stay uncharged**, because nothing fetched shows their cause.
+  and a Viper's damage forms many clusters over its life, not one per hatch. The removal row is one event that
+  names the carrier and the moment. Putrid Membrane only confirms that the break hatched something.
+- **A death hatch counts but isn't charged.** The death is already charged by the mechanic that killed the
+  carrier, so charging the egg too would count one mistake twice. It still counts, because the Viper turns one
+  death into a threat to the raid, and the uncharged failure shows that in the mechanic's failure count.
+- **One rule with an option, not an `aura_removed_by_death` rule.** A mechanic has one failure rule, so a
+  second rule couldn't sit on the shell beside the first.
+- **Vipers with no shell removal before them stay uncharged** (29 of the 153 in the entry above), because
+  nothing fetched shows their cause.
 
 ### Wrong-target damage: fetch DamageDone for amounts, and don't fetch the Enemies side of Threat
 

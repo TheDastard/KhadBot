@@ -5,7 +5,8 @@ Failure rules: which rows of a mechanic are failures, and who is charged with ea
 
 Most rules charge the player hit. ``not_interrupted``, ``soak_count_lt`` and ``debuff_stacks_gt`` charge no
 one. ``per_cluster`` charges the player its ``blame`` spec points at, and ``hits_on_non_tank`` judges each
-player against the aggro holder of the NPC instance that hit them. Who an NPC is attacking comes from the Threat data
+player against the aggro holder of the NPC instance that hit them. ``aura_removed_by`` charges the player who lost the
+aura, such as the carrier of an egg that a hit broke. Who an NPC is attacking comes from the Threat data
 (``frame.aggro_events``): its melee swings name its target, and a taunt debuff landing on it hands it to the
 taunting player. ``per_cluster`` blame and ``hits_on_non_tank`` read the NPC's latest such event.
 
@@ -27,6 +28,11 @@ from khadbot.encounter.models import BlameState
 # Interrupt matching tolerance for not_interrupted: an interrupt 0-100 ms before the cast counts.
 INTERRUPT_TOLERANCE_MS = 100
 
+# aura_removed_by matching window, either side of the removal. On the 47 Heroic Ula'tek pulls a Caustic Waves hit
+# lands 0-53 ms after the egg's shell comes off, the Deadly Venom debuff 0-98 ms before it, and the hatched
+# Viper's Putrid Membrane on the raid 0-82 ms after it.
+AURA_REMOVED_BY_MS = 200
+
 # Oldest player sample blame_context accepts. A raid-wide hit carries the hit player's own position (age 0);
 # a living aggro holder's latest sample was at most 475 ms old on the 47 Heroic Ula'tek pulls.
 BLAME_POSITION_MAX_AGE_MS = 1_500
@@ -45,6 +51,19 @@ def _victims(rows: pl.DataFrame) -> dict[int, int | None]:
         seq: (target if friendly else None)
         for seq, target, friendly in rows.select("seq", "target_id", "target_friendly").rows()
     }
+
+
+def _is_death() -> pl.Expr:
+    """A player's death, from the Deaths data."""
+    return (pl.col("data_type").cast(pl.Utf8) == "Deaths") & type_is("death")
+
+
+def _times_by_target(rows: pl.DataFrame) -> dict[int, list[int]]:
+    """Target -> the ``t_ms`` of each of its rows."""
+    out: dict[int, list[int]] = {}
+    for target, t in rows.select("target_id", "t_ms").rows():
+        out.setdefault(target, []).append(t)
+    return out
 
 
 def _aggro_holder(events: pl.DataFrame, npc_ids: set[int], t_ms: int, ms: int) -> int | None:
@@ -188,6 +207,37 @@ def mechanic_failures(
             if any(start <= t <= end for start, end in spans.get(target, ()))
         }
 
+    if rule.rule == "aura_removed_by":
+        # A removal of the mechanic's aura from a player counts when one of `ability_ids` hit or landed on that
+        # player within AURA_REMOVED_BY_MS of it (charged to them), or, with `on_death`, the player died within
+        # AURA_REMOVED_BY_MS of it (charged to no one; a break by `ability_ids` wins). With `followed_by_ids`,
+        # one of those auras must also open on any player within AURA_REMOVED_BY_MS after the removal. The
+        # remove row is the failure; it is in no cluster.
+        assert rule.ability_ids is not None  # enforced by FailureRule
+        w = AURA_REMOVED_BY_MS
+        removals = rows.filter(type_is(*_AURA_CLOSE) & pl.col("target_friendly"))
+        broken_at = _times_by_target(
+            frame.filter(
+                type_is("damage", *_AURA_OPEN)
+                & pl.col("target_friendly")
+                & pl.col("ability_id").is_in(rule.ability_ids)
+            )
+        )
+        died_at = _times_by_target(frame.filter(_is_death() & pl.col("target_friendly"))) if rule.on_death else {}
+        confirms: list[int] | None = None
+        if rule.followed_by_ids is not None:
+            opens = type_is(*_AURA_OPEN) & pl.col("target_friendly") & pl.col("ability_id").is_in(rule.followed_by_ids)
+            confirms = frame.filter(opens)["t_ms"].to_list()
+        failures = {}
+        for seq, t, target in removals.select("seq", "t_ms", "target_id").rows():
+            if confirms is not None and not any(t <= c <= t + w for c in confirms):
+                continue
+            if any(t - w <= b <= t + w for b in broken_at.get(target, ())):
+                failures[seq] = target
+            elif any(t - w <= d <= t + w for d in died_at.get(target, ())):
+                failures[seq] = None
+        return failures
+
     if rule.rule == "hits_on_non_tank":
         # Each player is judged once per cluster, at their first hit, against the aggro holder of the NPC
         # instance that hit them: the latest swing or taunt on it within `ms` before. Later ticks don't
@@ -244,12 +294,7 @@ class BlameContext:
 
 def _dead_at(frame: pl.DataFrame, player: int, t0: int) -> bool:
     """True if ``player`` has a Deaths row at or before ``t0`` and no cast or resurrect since."""
-    deaths = frame.filter(
-        (pl.col("data_type").cast(pl.Utf8) == "Deaths")
-        & type_is("death")
-        & (pl.col("target_id") == player)
-        & (pl.col("t_ms") <= t0)
-    )
+    deaths = frame.filter(_is_death() & (pl.col("target_id") == player) & (pl.col("t_ms") <= t0))
     if deaths.is_empty():
         return False
     died = deaths["t_ms"].max()

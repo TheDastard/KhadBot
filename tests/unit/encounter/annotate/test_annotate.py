@@ -308,6 +308,111 @@ def test_hit_while_aura_judges_only_damage_rows():
     assert blamed(run(rows, enc_with([mech(rule, kind="soak")]))) == [(1, 1)]
 
 
+SHELL, BREAKER, POOL, HATCH = 100, 200, 300, 400
+
+
+def _row(t, typ, target, ability):
+    data = "DamageTaken" if typ == "damage" else "Debuffs"
+    return {"t_ms": t, "type": typ, "source_id": BOSS, "target_id": target, "ability_id": ability, "data_type": data}
+
+
+def removed_by(rows, followed_by=None, on_death=False):
+    rule = {"rule": "aura_removed_by", "ability_ids": [BREAKER, POOL], "on_death": on_death}
+    if followed_by is not None:
+        rule["followed_by_ids"] = followed_by
+    return run(rows, enc_with([mech(rule, ability=SHELL, kind="unavoidable")]))
+
+
+def _death(t, target):
+    return {"t_ms": t, "type": "death", "source_id": BOSS, "target_id": target, "ability_id": 1, "data_type": "Deaths"}
+
+
+def test_aura_removed_by_on_death_counts_but_charges_no_one():
+    rows = [
+        _death(1_000, 1),
+        _row(1_005, "removedebuff", 1, SHELL),  # lost at the carrier's death
+        _row(5_000, "removedebuff", 2, SHELL),
+        _row(5_010, "damage", 2, BREAKER),  # broken by a hit, then died: still charged to them
+        _death(5_050, 2),
+        _row(9_000, "removedebuff", 3, SHELL),
+        _death(9_201, 3),  # 201 ms after: not at the removal
+    ]
+    assert blamed(removed_by(rows, on_death=True)) == [(1, None), (2, 2)]
+    # Without on_death, the death removal is no failure.
+    assert blamed(removed_by(rows)) == [(2, 2)]
+
+
+def test_aura_removed_by_on_death_needs_the_follow_up_aura_too():
+    rows = [
+        _death(1_000, 1),
+        _row(1_000, "removedebuff", 1, SHELL),
+        _row(1_050, "applydebuff", 5, HATCH),  # confirmed
+        _death(5_000, 2),
+        _row(5_000, "removedebuff", 2, SHELL),  # nothing hatched
+    ]
+    assert blamed(removed_by(rows, followed_by=[HATCH], on_death=True)) == [(1, None)]
+
+
+def test_aura_removed_by_charges_the_player_who_lost_the_aura():
+    rows = [
+        _row(0, "applydebuff", 1, SHELL),
+        _row(0, "applydebuff", 2, SHELL),
+        _row(0, "applydebuff", 3, SHELL),
+        _row(1_000, "damage", 1, SHELL),  # the shell's own tick is not judged
+        _row(5_000, "removedebuff", 1, SHELL),  # broken by a hit just after: failure
+        _row(5_030, "damage", 1, BREAKER),
+        _row(8_000, "applydebuff", 2, POOL),  # an aura landing just before counts too
+        _row(8_050, "removedebuff", 2, SHELL),  # failure
+        _row(9_000, "removedebuff", 3, SHELL),  # lost with nothing on the carrier: fine
+        _row(9_010, "damage", 1, BREAKER),  # the hit was on someone else
+    ]
+    a = removed_by(rows)
+    assert blamed(a) == [(4, 1), (7, 2)]
+    # The remove rows are not hits, so the failures belong to no cluster.
+    assert a.frame.filter(pl.col("is_failure"))["cluster_id"].to_list() == [None, None]
+
+
+def test_aura_removed_by_window_edges():
+    rows = [
+        _row(1_000, "removedebuff", 1, SHELL),
+        _row(1_200, "damage", 1, BREAKER),  # 200 ms after: counts
+        _row(5_000, "damage", 2, BREAKER),  # 200 ms before: counts
+        _row(5_200, "removedebuff", 2, SHELL),
+        _row(9_000, "removedebuff", 3, SHELL),
+        _row(9_201, "damage", 3, BREAKER),  # 201 ms after: too late
+        _row(12_000, "damage", 4, BREAKER),  # 201 ms before: too early
+        _row(12_201, "removedebuff", 4, SHELL),
+    ]
+    assert blamed(removed_by(rows)) == [(0, 1), (3, 2)]
+
+
+def test_aura_removed_by_followed_by_needs_the_aura_after_the_removal():
+    rows = [
+        _row(1_000, "removedebuff", 1, SHELL),
+        _row(1_010, "damage", 1, BREAKER),
+        _row(1_200, "applydebuff", 5, HATCH),  # on any player, 200 ms after: confirmed
+        _row(4_900, "applydebuffstack", 5, HATCH),  # before the removal: does not confirm it
+        _row(5_000, "removedebuff", 2, SHELL),
+        _row(5_010, "damage", 2, BREAKER),
+        _row(9_000, "removedebuff", 3, SHELL),
+        _row(9_010, "damage", 3, BREAKER),
+        _row(9_201, "refreshdebuff", 5, HATCH),  # 201 ms after: too late
+    ]
+    assert blamed(removed_by(rows, followed_by=[HATCH])) == [(0, 1)]
+
+
+def test_aura_removed_by_ignores_other_auras_and_non_players():
+    rows = [
+        _row(1_000, "removedebuff", 1, 999),  # not the mechanic's aura
+        _row(1_000, "damage", 1, BREAKER),
+        _row(2_000, "removedebuff", BOSS, SHELL),  # not a player
+        _row(2_000, "damage", BOSS, BREAKER),
+        _row(3_000, "removebuff", 2, SHELL),  # a buff removal counts like a debuff's
+        _row(3_000, "damage", 2, BREAKER),
+    ]
+    assert blamed(removed_by(rows)) == [(4, 2)]
+
+
 def _swing(t, target, src=11, inst=None):
     """An NPC melee swing from the Threat data."""
     return {
