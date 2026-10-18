@@ -18,12 +18,12 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
   `scripted` list (100 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
   Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.
-- **Offensive cooldowns: data still to fill.** `offensive_cooldowns.yaml` exists, is fetched, digested and
-  proposed by the generator, but holds no entries yet. Run `scripts/build_registries.py` against the client
-  data, then: copy in the candidates (expected to include Bloodlust, Heroism, Time Warp, Fury of the Aspects,
-  Harrier's Cry, Avenging Wrath, Trueshot, Celestial Alignment, Incarnation: Chosen of Elune, Lunar Beam and
-  Malevolence) and move Power Infusion over from `defensive_cooldowns.yaml`; pick scripted ones (Recklessness,
-  Combustion, Pillar of Frost, Dragonrage) by hand from the `scripted` list.
+- **Scripted offensive cooldowns.** `offensive_cooldowns.yaml` holds the 16 offensive candidates from build
+  12.1.5.70448 plus Avatar. The review file's `scripted` list (92 spells) still needs a person for the
+  offensive ones the data can't classify, such as Recklessness, Combustion, Pillar of Frost and Dragonrage.
+  Two candidates were left out on purpose: Touch of Death (an execute whose damage buff is a talent side
+  effect) and Sentinel (it also cuts damage taken and stays in the defensive file). Bestial Wrath's
+  `target` is set to personal, not the data's external, because the ally its auras name is the pet.
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.

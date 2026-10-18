@@ -3,10 +3,12 @@
 # Player cooldowns that raise damage done, which the encounter digest tracks next to the defensive
 # ones: haste, damage and stat buffs on the caster, one ally or the raid (Bloodlust, Avenging Wrath,
 # Power Infusion). Damage-window coverage and death-window defensives never read this file. Spell IDs,
-# names, `target`, `cooldown_s` and `duration_s` come from game client data via the review file of
-# scripts/build_registries.py, or from a person for cooldowns the data can't classify. Cooldowns and
-# durations are base values before talents. Every entry is unverified until a person checks it in game;
-# analysis lists used, unverified cooldowns as digest anomalies.
+# names, `target`, `cooldown_s` and `duration_s` come from game client data (SimC tables for WoW build
+# 12.1.5.70448) via the review file of scripts/build_registries.py. Avatar, whose damage bonus the
+# heuristic doesn't read, takes its values from its own spell data; Bestial Wrath's target is personal
+# because the ally its auras name is the hunter's pet. Cooldowns and durations are base values before
+# talents. Every entry is unverified until a person checks it in game; analysis lists used, unverified
+# cooldowns as digest anomalies.
 #
 # target: personal (only the caster), external (one chosen ally), raid (an area or the whole raid).
 #
@@ -15,4 +17,127 @@
 #
 # Entries are sorted by class, then name.
 category: offensive
-cooldowns: []
+cooldowns:
+  - spell_id: 42650
+    name: Army of the Dead
+    class: Death Knight
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 30.0
+    aura_spell_ids: [418189]
+    verified: false
+  - spell_id: 191427
+    name: Metamorphosis
+    class: Demon Hunter
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 20.0
+    aura_spell_ids: [162264]
+    verified: false
+  - spell_id: 194223
+    name: Celestial Alignment
+    class: Druid
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 102560
+    name: "Incarnation: Chosen of Elune"
+    class: Druid
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 204066
+    name: Lunar Beam
+    class: Druid
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 8.5
+    verified: false
+  - spell_id: 390386
+    name: Fury of the Aspects
+    class: Evoker
+    target: raid
+    cooldown_s: 300.0
+    duration_s: 40.0
+    verified: false
+  - spell_id: 19574
+    name: Bestial Wrath
+    class: Hunter
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 15.0
+    aura_spell_ids: [186254, 207033, 1235388, 1285912]
+    verified: false
+  - spell_id: 466904
+    name: Harrier's Cry
+    class: Hunter
+    target: raid
+    cooldown_s: 360.0
+    duration_s: 40.0
+    verified: false
+  - spell_id: 288613
+    name: Trueshot
+    class: Hunter
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 80353
+    name: Time Warp
+    class: Mage
+    target: raid
+    cooldown_s: 300.0
+    duration_s: 40.0
+    verified: false
+  - spell_id: 31884
+    name: Avenging Wrath
+    class: Paladin
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 10060
+    name: Power Infusion
+    class: Priest
+    target: external
+    cooldown_s: 120.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 228260
+    name: Voidform
+    class: Priest
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 15.0
+    aura_spell_ids: [250844, 284508]
+    verified: false
+  - spell_id: 2825
+    name: Bloodlust
+    class: Shaman
+    target: raid
+    cooldown_s: 300.0
+    duration_s: 40.0
+    verified: false
+  - spell_id: 32182
+    name: Heroism
+    class: Shaman
+    target: raid
+    cooldown_s: 300.0
+    duration_s: 40.0
+    verified: false
+  - spell_id: 442726
+    name: Malevolence
+    class: Warlock
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 107574
+    name: Avatar
+    class: Warrior
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 20.0
+    verified: false

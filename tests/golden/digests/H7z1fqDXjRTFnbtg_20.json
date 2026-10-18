@@ -43,11 +43,15 @@
   "anomalies": [
     "cooldown_unverified:642",
     "cooldown_unverified:871",
+    "cooldown_unverified:2825",
     "cooldown_unverified:10060",
     "cooldown_unverified:19236",
+    "cooldown_unverified:19574",
     "cooldown_unverified:22812",
     "cooldown_unverified:29166",
     "cooldown_unverified:31224",
+    "cooldown_unverified:31884",
+    "cooldown_unverified:42650",
     "cooldown_unverified:47585",
     "cooldown_unverified:47788",
     "cooldown_unverified:48707",
@@ -57,7 +61,9 @@
     "cooldown_unverified:64843",
     "cooldown_unverified:97462",
     "cooldown_unverified:98008",
+    "cooldown_unverified:102560",
     "cooldown_unverified:104773",
+    "cooldown_unverified:107574",
     "cooldown_unverified:108271",
     "cooldown_unverified:108416",
     "cooldown_unverified:109304",
@@ -66,6 +72,8 @@
     "cooldown_unverified:122470",
     "cooldown_unverified:196718",
     "cooldown_unverified:198589",
+    "cooldown_unverified:204066",
+    "cooldown_unverified:228260",
     "cooldown_unverified:264735",
     "cooldown_unverified:357170",
     "cooldown_unverified:363534",
@@ -77,60 +85,6 @@
   "boss_hp_pct": 0.01,
   "boss_pct": 0.0,
   "cooldowns": [
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:1",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 714
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:2",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 723
-    },
-    {
-      "caster": "Kindrella",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:3",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 871
-    },
-    {
-      "caster": "Kindrella",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:4",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 878
-    },
-    {
-      "caster": "Discô",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:5",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 7295
-    },
-    {
-      "caster": "Discô",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:6",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 7319
-    },
     {
       "caster": "Mekerakesh",
       "category": "defensive",
@@ -285,60 +239,6 @@
       "t_ms": 121988
     },
     {
-      "caster": "Kindrella",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:7",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 131790
-    },
-    {
-      "caster": "Kindrella",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:8",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 131807
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:9",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 133158
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:10",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 133175
-    },
-    {
-      "caster": "Discô",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:11",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 137203
-    },
-    {
-      "caster": "Discô",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:12",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 137215
-    },
-    {
       "caster": "Moombly",
       "category": "defensive",
       "phase_id": "p1",
@@ -346,6 +246,114 @@
       "spell_id": 108416,
       "spell_name": "Dark Pact",
       "t_ms": 141971
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:357170:1",
+      "spell_id": 357170,
+      "spell_name": "Time Dilation",
+      "t_ms": 167303
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:3",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 181568
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:363916:2",
+      "spell_id": 363916,
+      "spell_name": "Obsidian Scales",
+      "t_ms": 192152
+    },
+    {
+      "caster": "Wilmer",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:264735:1",
+      "spell_id": 264735,
+      "spell_name": "Survival of the Fittest",
+      "t_ms": 192947
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:2",
+      "spell_id": 108271,
+      "spell_name": "Astral Shift",
+      "t_ms": 193082
+    },
+    {
+      "caster": "Mainmoon",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:122470:1",
+      "spell_id": 122470,
+      "spell_name": "Touch of Karma",
+      "t_ms": 193369
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:97462:1",
+      "spell_id": 97462,
+      "spell_name": "Rallying Cry",
+      "t_ms": 193849
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:114052:1",
+      "spell_id": 114052,
+      "spell_name": "Ascendance",
+      "t_ms": 193933
+    },
+    {
+      "caster": "Aluriel",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:104773:1",
+      "spell_id": 104773,
+      "spell_name": "Unending Resolve",
+      "t_ms": 194085
+    },
+    {
+      "caster": "Moombly",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108416:2",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 194085
+    },
+    {
+      "caster": "Dastard",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:3",
+      "spell_id": 108271,
+      "spell_name": "Astral Shift",
+      "t_ms": 194265
+    },
+    {
+      "caster": "Shinrael",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:4",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 194681
     }
   ],
   "coverage": "full",
@@ -1162,15 +1170,151 @@
       "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:necrotic_vapors"
     }
   ],
-  "offensive_cooldowns": [],
+  "offensive_cooldowns": [
+    {
+      "caster": "Novic",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:1",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 714
+    },
+    {
+      "caster": "Kouw",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:31884:1",
+      "spell_id": 31884,
+      "spell_name": "Avenging Wrath",
+      "t_ms": 714
+    },
+    {
+      "caster": "Novic",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:10060:2",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 723
+    },
+    {
+      "caster": "Widowmaker",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:42650:1",
+      "spell_id": 42650,
+      "spell_name": "Army of the Dead",
+      "t_ms": 950
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:107574:1",
+      "spell_id": 107574,
+      "spell_name": "Avatar",
+      "t_ms": 2965
+    },
+    {
+      "caster": "Wilmer",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19574:1",
+      "spell_id": 19574,
+      "spell_name": "Bestial Wrath",
+      "t_ms": 3006
+    },
+    {
+      "caster": "Discô",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:228260:1",
+      "spell_id": 228260,
+      "spell_name": "Voidform",
+      "t_ms": 7295
+    },
+    {
+      "caster": "Lesnichii",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:102560:1",
+      "spell_id": 102560,
+      "spell_name": "Incarnation: Chosen of Elune",
+      "t_ms": 7391
+    },
+    {
+      "caster": "Shinrael",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:204066:1",
+      "spell_id": 204066,
+      "spell_name": "Lunar Beam",
+      "t_ms": 11671
+    },
+    {
+      "caster": "Wilmer",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19574:2",
+      "spell_id": 19574,
+      "spell_name": "Bestial Wrath",
+      "t_ms": 33772
+    },
+    {
+      "caster": "Shinrael",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:204066:2",
+      "spell_id": 204066,
+      "spell_name": "Lunar Beam",
+      "t_ms": 55792
+    },
+    {
+      "caster": "Kouw",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:31884:2",
+      "spell_id": 31884,
+      "spell_name": "Avenging Wrath",
+      "t_ms": 61335
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:107574:2",
+      "spell_id": 107574,
+      "spell_name": "Avatar",
+      "t_ms": 69225
+    },
+    {
+      "caster": "Dastard",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:2825:1",
+      "spell_id": 2825,
+      "spell_name": "Bloodlust",
+      "t_ms": 122606
+    },
+    {
+      "caster": "Widowmaker",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:42650:2",
+      "spell_id": 42650,
+      "spell_name": "Army of the Dead",
+      "t_ms": 134105
+    }
+  ],
   "outcome": "kill",
   "phase_reached": "p3",
   "produced_from": {
-    "defensive_cooldowns_hash": "8f4466287d33",
+    "defensive_cooldowns_hash": "b77b9414d96a",
     "encfile_hash": "e17e87581ace",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
     "friendly_damage_hash": "9937b022415a",
-    "offensive_cooldowns_hash": "de3c9fae1653",
+    "offensive_cooldowns_hash": "1e4aefa4043d",
     "positions_hash": "b94f0d59330c5501aba7e880d6a0ae91ee7c3f488105eb72dde775c0e1c6a933"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:20",

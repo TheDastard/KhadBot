@@ -63,6 +63,17 @@ class TestOffensiveRegistry:
     def test_default_file_loads(self):
         assert load_cooldowns("offensive").category == "offensive"
 
+    def test_default_values_come_from_game_data(self):
+        reg = load_cooldowns("offensive")
+        assert len(reg.cooldowns) == 17
+        lust = {2825, 32182, 80353, 390386, 466904}  # Bloodlust, Heroism, Time Warp, Fury of the Aspects, Harrier's Cry
+        assert set(reg.spell_ids(["raid"])) == lust
+        assert reg.spell_ids(["external"]) == [10060]  # Power Infusion
+        assert all(c.cooldown_s is not None and c.duration_s is not None for c in reg.cooldowns)
+        assert not any(c.verified for c in reg.cooldowns)
+        keys = [(c.class_name, c.name, c.spell_id) for c in reg.cooldowns]
+        assert keys == sorted(keys)
+
     def test_synth_file(self):
         reg = load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE)
         assert reg.aura_ids() == {902001: 902001, 902011: 902001, 902002: 902002}
@@ -103,9 +114,9 @@ class TestRegistry:
 
     def test_default_registry_values_come_from_game_data(self):
         reg = load_cooldowns("defensive")
-        assert len(reg.cooldowns) == 64
-        # Offensive cooldowns the SimC heuristic misread as defensive stay out.
-        assert not {19574, 107574, 191427} & set(reg.spell_ids())  # Bestial Wrath, Avatar, Havoc Metamorphosis
+        assert len(reg.cooldowns) == 63
+        # Offensive cooldowns stay out: Power Infusion, and the three the SimC heuristic once misread.
+        assert not {10060, 19574, 107574, 191427} & set(reg.spell_ids())
         assert all(c.cooldown_s is not None and c.cooldown_s >= 60 for c in reg.cooldowns)
         assert not any(c.verified for c in reg.cooldowns)
         # Instant heals have no duration; everything else lasts.
