@@ -21,12 +21,16 @@ from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.aggro import aggro_summaries
 from khadbot.encounter.analysis.cooldowns import cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
+from khadbot.encounter.analysis.friendly_damage import UNCLASSIFIED, classified_hits, friendly_damage
 from khadbot.encounter.analysis.mechanics import mechanic_stats
 from khadbot.encounter.annotate import Annotated, AnnotationCache, annotate_pull, unmatched_phases
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
+    FriendlyDamageRegistry,
+    friendly_damage_hash,
     load_encounter_view,
+    load_friendly_damage,
     load_registry,
     registry_hash,
 )
@@ -35,6 +39,7 @@ from khadbot.encounter.models import (
     BlameState,
     CooldownUse,
     DeathRecord,
+    FriendlyDamage,
     MechanicStat,
     Pull,
     PullDigest,
@@ -64,21 +69,24 @@ def default_annotation_cache() -> AnnotationCache:
 
 
 def unregistered_damage(
-    a: Annotated, enc: EncounterFile | None, abilities: Mapping[int, str]
+    a: Annotated, enc: EncounterFile | None, abilities: Mapping[int, str], friendly: FriendlyDamageRegistry
 ) -> tuple[list[UnregisteredAbility], float]:
     """
-    Friendly damage taken from abilities the encounter file does not mention, by damage desc.
+    Damage players took from abilities the encounter file does not mention, by damage desc. Friendly damage
+    (registry abilities, and anything a friendly player or pet dealt) is never unregistered.
 
     Returns every unregistered ability and their combined share (0-100) of friendly damage taken.
-    Without an encounter file all damage is unregistered.
+    Without an encounter file all non-friendly damage is unregistered.
     """
-    hits = a.hits.with_columns(pl.col("amount").fill_null(0))
+    hits = classified_hits(a, enc, friendly)
     total = int(hits["amount"].sum() or 0)
     if not total:
         return [], 0.0
     known = sorted(enc.registered_ability_ids()) if enc else []
     rows = (
-        hits.filter(~pl.col("ability_id").is_in(known) & pl.col("ability_id").is_not_null())
+        hits.filter(
+            pl.col("friendly_class").is_null() & ~pl.col("ability_id").is_in(known) & pl.col("ability_id").is_not_null()
+        )
         .group_by("ability_id")
         .agg(pl.col("amount").sum().alias("damage"))
         .sort(["damage", "ability_id"], descending=[True, False])
@@ -94,6 +102,28 @@ def unregistered_damage(
         for ability_id, damage in rows
     ]
     return out, round(sum(d for _, d in rows) / total * 100, 1)
+
+
+def _friendly_anomalies(
+    a: Annotated, enc: EncounterFile | None, friendly: FriendlyDamageRegistry, fd: FriendlyDamage
+) -> list[str]:
+    """
+    ``friendly_damage_unverified:<id>`` per unverified registry ability that hit a player, and
+    ``unclassified_friendly_damage:<pct>`` when friendly-source damage the registry doesn't class reaches the
+    coverage threshold (with an encounter file), since that damage no longer lowers coverage.
+    """
+    hits = a.hits
+    hit_ids = set(hits["ability_id"].drop_nulls().to_list())
+    out = [
+        f"friendly_damage_unverified:{e.ability_id}"
+        for e in friendly.abilities
+        if not e.verified and e.ability_id in hit_ids
+    ]
+    total = int(hits["amount"].fill_null(0).sum() or 0)
+    unclassified = fd.by_class.get(UNCLASSIFIED, 0)
+    if enc is not None and total and (pct := round(unclassified / total * 100, 1)) >= FULL_COVERAGE_MAX_PCT:
+        out.append(f"unclassified_friendly_damage:{pct:.1f}")
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +153,7 @@ def build_pull_records(
     enc_root: Path | None = None,
     registry: CooldownRegistry | None = None,
     *,
+    friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
     unregistered_cap: int = UNREGISTERED_CAP,
@@ -131,24 +162,27 @@ def build_pull_records(
     Analysis records and digest for one ingested pull. The encounter file is looked up by the pull's
     ``encounter_id``. Evidence refs resolve against these uncapped records.
 
-    ``unregistered_cap`` widens the unregistered list for encounter-file authoring (``--unregistered``).
+    ``unregistered_cap`` widens the unregistered and unclassified friendly-damage lists for authoring
+    the encounter file and the friendly-damage registry (``--unregistered``).
     """
     code, fight = split_pull_key(pull_key)
     pull = next((p for p in store.pulls(code) if p.fight_id == fight), None)
     if pull is None:
         raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
     registry = registry or load_registry()
+    friendly = friendly or load_friendly_damage()
     enc = load_encounter_view(pull.encounter_id, pull.difficulty, enc_root)
     fraction = EncounterConfig().cutoff_fraction if cutoff_fraction is None else cutoff_fraction
     a = annotate_pull(pull_key, store, enc, cache=cache, cutoff_fraction=fraction)
     actors = store.actors(code)
     abilities = store.abilities(code)
 
-    deaths = death_records(a, actors, registry, abilities)
+    deaths = death_records(a, actors, registry, abilities, friendly=friendly)
     mechanics = mechanic_stats(a, enc, actors, deaths)
     cooldowns = cooldown_uses(a, registry, actors)
     windows = window_coverage(a, enc, registry)
-    unregistered, unregistered_pct = unregistered_damage(a, enc, abilities)
+    unregistered, unregistered_pct = unregistered_damage(a, enc, abilities, friendly)
+    friendly_dmg = friendly_damage(a, enc, friendly, actors, abilities, unclassified_cap=unregistered_cap)
 
     if enc is None:
         coverage = "none"
@@ -167,6 +201,7 @@ def build_pull_records(
     anomalies += [f"cooldown_unverified:{s}" for s in unverified]
     if enc is not None and unregistered_pct >= FULL_COVERAGE_MAX_PCT:
         anomalies.append(f"unregistered_damage:{unregistered_pct:.1f}")
+    anomalies += _friendly_anomalies(a, enc, friendly, friendly_dmg)
 
     active_mechanics = [m for m in mechanics if m.hits or m.failures]
     active_mechanics.sort(key=lambda m: (-m.failures, -m.damage_taken))
@@ -186,6 +221,7 @@ def build_pull_records(
         cooldowns=cooldowns[:COOLDOWN_CAP],
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
+        friendly_damage=friendly_dmg,
         aggro=aggro_summaries(a, actors),
         coverage=coverage,
         anomalies=anomalies,
@@ -194,6 +230,7 @@ def build_pull_records(
             "positions_hash": store.positions_hash(pull_key) or "",
             "encfile_hash": a.encfile_hash,
             "registry_hash": registry_hash(registry),
+            "friendly_damage_hash": friendly_damage_hash(friendly),
         },
     )
     return PullRecords(
@@ -216,6 +253,7 @@ def build_digest(
     enc_root: Path | None = None,
     registry: CooldownRegistry | None = None,
     *,
+    friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
     unregistered_cap: int = UNREGISTERED_CAP,
@@ -223,13 +261,14 @@ def build_digest(
     """
     Digest for one ingested pull. The encounter file is looked up by the pull's ``encounter_id``.
 
-    ``unregistered_cap`` widens the unregistered list for encounter-file authoring (``--unregistered``).
+    ``unregistered_cap`` widens the unregistered and unclassified friendly-damage lists (``--unregistered``).
     """
     return build_pull_records(
         pull_key,
         store,
         enc_root,
         registry,
+        friendly=friendly,
         cache=cache,
         cutoff_fraction=cutoff_fraction,
         unregistered_cap=unregistered_cap,
@@ -274,6 +313,19 @@ def _blame_clause(m: MechanicStat) -> str:
     return "blamed: " + ", ".join(parts)
 
 
+def _render_friendly(d: PullDigest) -> list[str]:
+    """The SELF DAMAGE section: friendly damage by class, then self-inflicted damage per player."""
+    fd = d.friendly_damage
+    if not fd.damage:
+        return []
+    classes = ", ".join(f"{c.replace('_', ' ')} {_n(v)}" for c, v in fd.by_class.items())
+    lines = [f"SELF DAMAGE [{make_ref(d.pull_key, 'pull')}] friendly {_n(fd.damage)} ({fd.share_pct:.1f}%): {classes}"]
+    for p in fd.self_inflicted:
+        hits = ", ".join(f"{x.name or x.ability_id} {_n(x.damage)}" for x in p.abilities)
+        lines.append(f"- {p.name} {_n(p.damage)}: {hits}")
+    return lines
+
+
 def render_digest(d: PullDigest) -> str:
     """Compact text rendering for the LLM; every record line carries its evidence ref."""
     head = [
@@ -300,7 +352,8 @@ def render_digest(d: PullDigest) -> str:
         parts.append(f"killed by {killer}, overkill {_n(x.overkill)}")
         parts.append(f"ttd {_s(x.time_to_die_ms)}")
         healed = f", healed {_n(x.window_healing)}" if x.window_healing is not None else ""
-        parts.append(f"last {x.window_ms // 1000}s: taken {_n(x.window_damage)}{healed}")
+        own = f", self-inflicted {_n(x.window_self_damage)}" if x.window_self_damage else ""
+        parts.append(f"last {x.window_ms // 1000}s: taken {_n(x.window_damage)}{healed}{own}")
         if x.mechanic_ids:
             parts.append("mechanics " + ",".join(x.mechanic_ids))
         if x.active_defensives:
@@ -342,9 +395,16 @@ def render_digest(d: PullDigest) -> str:
         taunts = ", ".join(f"{name} {n}" for name, n in g.taunts.items()) or "none"
         lines.append(f"- {g.npc}: {g.swings} swings; {targets}; taunts: {taunts}")
 
+    lines += _render_friendly(d)
+
     if d.unregistered:
         lines.append("UNREGISTERED DAMAGE")
     for u in d.unregistered:
+        lines.append(f"- {u.ability_id} {u.name or 'unknown'}: {_n(u.damage)} ({u.share_pct:.1f}%)")
+
+    if d.friendly_damage.unclassified:
+        lines.append("UNCLASSIFIED FRIENDLY DAMAGE")
+    for u in d.friendly_damage.unclassified:
         lines.append(f"- {u.ability_id} {u.name or 'unknown'}: {_n(u.damage)} ({u.share_pct:.1f}%)")
 
     if d.anomalies:

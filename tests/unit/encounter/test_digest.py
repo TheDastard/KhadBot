@@ -1,8 +1,8 @@
 """
 tests/unit/encounter/test_digest.py
 
-Pull digest: golden JSON per SYNTH01 pull, caps and ordering, coverage levels, every anomaly
-code, rendering and its size estimate. Regenerate goldens with
+Pull digest: golden JSON per SYNTH01 pull, caps and ordering, coverage levels, friendly damage, every
+anomaly code, rendering and its size estimate. Regenerate goldens with
 ``uv run pytest tests/unit/encounter/test_digest.py --update-goldens`` after an intentional change.
 """
 
@@ -12,10 +12,24 @@ import orjson
 import polars as pl
 import pytest
 import yaml
-from helpers.encounter.synth import GOLDEN, SYNTH_ENCOUNTER_FILE, install_synth_encounter
+from helpers.encounter.synth import (
+    GOLDEN,
+    SYNTH_ENCOUNTER_FILE,
+    SYNTH_FRIENDLY_DAMAGE,
+    SYNTH_UNCLASSIFIED_ID,
+    add_friendly_damage,
+    install_synth_encounter,
+)
 
 from khadbot.encounter import digest as digest_mod
-from khadbot.encounter.config_files import encfile_hash, load_encounter_file, registry_hash
+from khadbot.encounter.config_files import (
+    encfile_hash,
+    friendly_damage_hash,
+    load_encounter_file,
+    load_friendly_damage,
+    parse_friendly_damage,
+    registry_hash,
+)
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
 
@@ -88,6 +102,7 @@ def test_wipe_summary(digest_of, synth_ingested, synth_registry):
         "positions_hash": synth_ingested.positions_hash("SYNTH01:1"),
         "encfile_hash": encfile_hash(load_encounter_file(SYNTH_ENCOUNTER_FILE)),
         "registry_hash": registry_hash(synth_registry),
+        "friendly_damage_hash": friendly_damage_hash(load_friendly_damage()),
     }
 
 
@@ -142,6 +157,81 @@ def test_coverage_partial(digest_of, tmp_path):
     assert d.coverage == "partial"
     assert d.unregistered[0].ability_id == 900010
     assert "unregistered_damage:41.0" in d.anomalies
+
+
+# ===========================================================================
+# Friendly damage
+# ===========================================================================
+
+SYNTH_FRIENDLY = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
+
+
+@pytest.fixture
+def friendly_of(synth_ingested, digest_of):
+    """Digest of SYNTH01 fight 1 with the friendly damage rows added, under the synthetic friendly registry."""
+    add_friendly_damage(synth_ingested)
+
+    def build(**kw):
+        return digest_of(1, friendly=SYNTH_FRIENDLY, **kw)
+
+    return build
+
+
+def test_friendly_damage_is_not_unregistered(friendly_of):
+    d = friendly_of()
+    assert [u.ability_id for u in d.unregistered] == [900102]  # Fire Pool only; no friendly ability
+    assert d.unregistered[0].share_pct == 9.8  # 90,000 of 923,000 damage taken (909,000 before)
+    assert d.coverage == "full"
+
+
+def test_friendly_damage_section(friendly_of):
+    fd = friendly_of().friendly_damage
+    assert (fd.damage, fd.share_pct) == (14_000, 1.5)
+    assert fd.by_class == {"redistribution": 5_000, "self_inflicted": 5_000, "unclassified": 4_000}
+    assert [(p.name, p.damage, [(x.ability_id, x.damage) for x in p.abilities]) for p in fd.self_inflicted] == [
+        ("Betadps", 3_000, [(901001, 3_000)]),
+        ("Alphadps", 2_000, [(901001, 2_000)]),
+    ]
+    assert [(u.ability_id, u.damage, u.share_pct) for u in fd.unclassified] == [(SYNTH_UNCLASSIFIED_ID, 4_000, 0.4)]
+
+
+def test_death_window_self_damage(friendly_of):
+    deaths = friendly_of().deaths
+    assert [x.window_self_damage for x in deaths] == [2_000, 0, 0, 0]
+    assert deaths[0].window_damage == 116_000  # the 114,000 before plus the 2,000 Self Burn
+
+
+def test_friendly_damage_alone_never_lowers_coverage(synth_ingested, digest_of):
+    add_friendly_damage(synth_ingested, rows=[(16_000, 5, 1, SYNTH_UNCLASSIFIED_ID, 900_000)])
+    d = digest_of(1, friendly=SYNTH_FRIENDLY)
+    assert d.coverage == "full"
+    assert d.friendly_damage.by_class == {"unclassified": 900_000}
+    assert "unclassified_friendly_damage:49.8" in d.anomalies  # 900,000 of 1,809,000
+    assert not any(a.startswith("unregistered_damage") for a in d.anomalies)
+
+
+def test_unclassified_anomaly_needs_an_encounter_file(synth_ingested, digest_of, tmp_path):
+    add_friendly_damage(synth_ingested, rows=[(16_000, 5, 1, SYNTH_UNCLASSIFIED_ID, 900_000)])
+    d = digest_of(1, root=tmp_path / "empty", friendly=SYNTH_FRIENDLY)
+    assert not any(a.startswith("unclassified_friendly") for a in d.anomalies)
+
+
+def test_friendly_damage_unverified(friendly_of, digest_of):
+    # Synth Link (901002) is unverified and dealt damage; Self Burn is verified.
+    assert friendly_of().anomalies == ["cooldown_unverified:900302", "friendly_damage_unverified:901002"]
+    assert digest_of(2, friendly=SYNTH_FRIENDLY).anomalies == []  # fight 2 has no friendly damage
+
+
+def test_unregistered_cap_widens_the_unclassified_list(synth_ingested, digest_of):
+    add_friendly_damage(synth_ingested, rows=[(16_000 + i, 5, 1, 901_010 + i, 1_000 + i) for i in range(7)])
+    assert len(digest_of(1, friendly=SYNTH_FRIENDLY).friendly_damage.unclassified) == 5
+    assert len(digest_of(1, friendly=SYNTH_FRIENDLY, unregistered_cap=20).friendly_damage.unclassified) == 7
+
+
+def test_produced_from_tracks_the_friendly_registry(digest_of):
+    d = digest_of(1, friendly=SYNTH_FRIENDLY)
+    assert d.produced_from["friendly_damage_hash"] == friendly_damage_hash(SYNTH_FRIENDLY)
+    assert d.produced_from["friendly_damage_hash"] != digest_of(1).produced_from["friendly_damage_hash"]
 
 
 # ===========================================================================
@@ -231,6 +321,23 @@ def test_render(digest_of):
     # Every record line carries a ref.
     records = [ln for ln in lines if ln.startswith("- [")]
     assert all("[ev:SYNTH01:1:" in ln for ln in records)
+
+
+def test_render_friendly_damage(friendly_of):
+    text = render_digest(friendly_of())
+    assert (
+        "SELF DAMAGE [ev:SYNTH01:1:pull] friendly 14,000 (1.5%): redistribution 5,000, self inflicted 5,000,"
+        " unclassified 4,000" in text
+    )
+    assert "- Betadps 3,000: 901001 3,000\n- Alphadps 2,000: 901001 2,000" in text
+    assert "last 10s: taken 116,000, healed 14,000, self-inflicted 2,000;" in text
+    assert "UNCLASSIFIED FRIENDLY DAMAGE\n- 901003 unknown: 4,000 (0.4%)" in text
+    assert text.index("SELF DAMAGE") < text.index("UNREGISTERED DAMAGE") < text.index("UNCLASSIFIED FRIENDLY")
+
+
+def test_render_without_friendly_damage(digest_of):
+    text = render_digest(digest_of(2))
+    assert "SELF DAMAGE" not in text and "UNCLASSIFIED FRIENDLY" not in text and "self-inflicted" not in text
 
 
 def test_render_size_estimate(digest_of):

@@ -109,6 +109,21 @@ def test_no_death_names_the_placeholder_ability(real_store, registry, pull_key):
     assert "Unknown Ability (0)" not in render_digest(digest)
 
 
+@pytest.mark.parametrize("pull_key", REAL_PULLS)
+def test_no_player_ability_is_unregistered_or_unclassified(real_store, registry, pull_key):
+    # Every friendly-source ability on the recorded pulls is in the friendly-damage registry, so none is left in
+    # the unregistered list and none is unclassified.
+    digest = build_digest(pull_key, real_store, registry=registry, unregistered_cap=100)
+    events = real_store.events(pull_key, types=["damage"])
+    player_ids = set(events.filter(pl.col("source_friendly") & pl.col("target_friendly"))["ability_id"].to_list())
+    assert player_ids
+    assert not player_ids & {u.ability_id for u in digest.unregistered}
+    assert digest.friendly_damage.unclassified == []
+    assert digest.friendly_damage.damage > 0
+    if digest.encounter_name == "Ula'tek":
+        assert digest.unregistered == [] and digest.coverage == "full"
+
+
 def test_every_fixture_pull_has_both_progress_figures(real_store):
     for code in REAL_REPORTS:
         for pull in real_store.pulls(code):

@@ -11,7 +11,10 @@ import re
 
 import polars as pl
 import pytest
+import yaml
+from helpers.encounter.synth import SYNTH_FRIENDLY_DAMAGE, add_friendly_damage
 
+from khadbot.encounter.config_files import parse_friendly_damage
 from khadbot.encounter.digest import render_digest
 from khadbot.encounter.evidence import (
     EncounterData,
@@ -166,6 +169,41 @@ def test_every_digest_ref_resolves_to_its_record(synth_data, fight):
         assert {k: resolved[k] for k in stat.model_dump()} == stat.model_dump(mode="json")
 
 
+@pytest.fixture
+def friendly_data(synth_ingested, synth_enc_root, synth_registry):
+    """EncounterData over SYNTH01 with friendly damage added to fight 1 and the synthetic friendly registry."""
+    add_friendly_damage(synth_ingested)
+    friendly = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry, friendly=friendly)
+
+
+def test_pull_ref_resolves_friendly_and_unregistered_damage(friendly_data):
+    digest = friendly_data.digest("SYNTH01:1")
+    pull = friendly_data.resolve("ev:SYNTH01:1:pull")
+    assert pull["friendly_damage"] == digest.friendly_damage.model_dump(mode="json")
+    assert pull["unregistered"] == [u.model_dump(mode="json") for u in digest.unregistered]
+
+
+def test_every_friendly_damage_number_resolves_through_the_pull_ref(friendly_data):
+    text = render_digest(friendly_data.digest("SYNTH01:1"))
+    lines = text.splitlines()
+    # SELF DAMAGE, UNREGISTERED DAMAGE and UNCLASSIFIED FRIENDLY DAMAGE run from the SELF DAMAGE line to ANOMALIES.
+    start = next(i for i, ln in enumerate(lines) if ln.startswith("SELF DAMAGE"))
+    end = next(i for i, ln in enumerate(lines) if ln.startswith("ANOMALIES"))
+    section = lines[start:end]
+    assert section[-2:] == ["UNCLASSIFIED FRIENDLY DAMAGE", "- 901003 unknown: 4,000 (0.4%)"]
+    values = numeric_values(friendly_data.resolve("ev:SYNTH01:1:pull"))
+    numbers = [n for ln in section for n in claim_numbers(ln)]
+    assert len(numbers) >= 15
+    assert [n.text for n in numbers if not number_supported(n, values)] == []
+
+
+def test_death_ref_resolves_window_self_damage(friendly_data):
+    death = friendly_data.resolve("ev:SYNTH01:1:death:1")
+    assert death["window_self_damage"] == 2_000
+    assert "self-inflicted 2,000" in render_digest(friendly_data.digest("SYNTH01:1"))
+
+
 def test_refs_beyond_digest_caps_still_resolve(synth_ingested, synth_enc_root, synth_registry, monkeypatch):
     from khadbot.encounter import digest as digest_mod
 
@@ -219,6 +257,24 @@ def test_records_are_cached_until_events_change(synth_data, synth_ingested):
     assert rebuilt is not first
     with pytest.raises(UnresolvableRef):
         synth_data.resolve("ev:SYNTH01:1:death:3")  # the 41 s death is gone
+
+
+def test_records_rebuild_when_a_registry_on_disk_changes(synth_ingested, synth_enc_root, tmp_path, monkeypatch):
+    # Registries not passed in are reread from disk on every lookup, so an edit rebuilds the records.
+    from khadbot.encounter import config_files
+
+    path = tmp_path / "friendly_damage.yaml"
+    path.write_text(yaml.safe_dump(SYNTH_FRIENDLY_DAMAGE), encoding="utf-8")
+    monkeypatch.setattr(config_files, "DEFAULT_FRIENDLY_DAMAGE_PATH", path)
+    data = EncounterData(synth_ingested, enc_root=synth_enc_root)
+    first = data.records("SYNTH01:1")
+    assert data.records("SYNTH01:1") is first
+
+    edited = {"abilities": [{**SYNTH_FRIENDLY_DAMAGE["abilities"][0], "verified": False}]}
+    path.write_text(yaml.safe_dump(edited), encoding="utf-8")
+    rebuilt = data.records("SYNTH01:1")
+    assert rebuilt is not first
+    assert rebuilt.digest.produced_from["friendly_damage_hash"] != first.digest.produced_from["friendly_damage_hash"]
 
 
 def test_records_cache_is_bounded(synth_ingested, synth_enc_root, synth_registry):

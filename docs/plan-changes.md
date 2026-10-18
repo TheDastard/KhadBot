@@ -375,3 +375,134 @@ rows of `debuff_stacks_gt`) belong to no cluster, so they count in `MechanicStat
 
 In the **Blame** paragraph, replace "`ANNOTATION_VERSION` (3)" with "`ANNOTATION_VERSION` (5)". This supersedes
 the "`ANNOTATION_VERSION` is 4" in the `encounter/positions` entry's blame context text: the version is 5.
+
+## encounter/friendly-damage
+
+### Refactor plan 6.2 (Configuration files: friendly-damage registry)
+
+Add a subsection after the cooldown registry:
+
+#### Friendly-damage registry (`config/registries/friendly_damage.yaml`)
+
+```yaml
+abilities:
+  - {ability_id: 98021, name: Spirit Link, class: redistribution, origin: class, verified: true}
+  - {ability_id: 111400, name: Burning Rush, class: self_inflicted, origin: class, verified: true}
+  - {ability_id: 32409, name: "Shadow Word: Death", class: self_inflicted, origin: class, verified: true}
+  - {ability_id: 361029, name: Time Dilation, class: delayed_boss, origin: class, verified: true}
+  - {ability_id: 1287955, name: Rune of Void-Tainted Shell, class: delayed_boss, origin: borrowed_power, verified: true}
+  - {ability_id: 1292299, name: Seriously Sharp Seashell, class: involuntary, origin: item, verified: true}
+```
+
+Abilities on the player's side (class spells, trinkets, borrowed powers) whose damage lands on players. `class` is
+`redistribution` (damage shared out from other players), `delayed_boss` (boss damage taken later instead of at
+once, such as a share of each hit taken as a DoT), `self_inflicted` (a cost the player chose to pay) or
+`involuntary` (self-damage the player can't control, such as a trinket proc). `origin` is where the ability comes
+from: `class` (a class spell or talent), `borrowed_power` (an expansion-wide system power) or `item` (a trinket,
+embellishment or other gear effect, which players may keep past its season); null, the default, when unknown. Origin is a label for authoring and review; digests don't use it.
+An entry matches a damage row by ability ID whatever its source: Shadow Word: Death's backlash is recorded with
+the Environment (-1) as source. `verified` defaults to false. Validation: unique `ability_id`, `class` from the
+enum, unknown keys rejected. Its content hash is `friendly_damage_hash` (first 12 hex of SHA-256 over the canonical
+JSON, like `registry_hash`). Player self-damage is no longer listed in encounter files' `ignored_abilities`; the
+registry is the one place that classifies it.
+
+### Refactor plan 6.3 (Analysis records)
+
+Add to `DeathRecord`, after `window_healing`:
+
+```
+    window_self_damage: int = 0         # of window_damage, from self_inflicted registry abilities
+```
+
+Add a **Friendly damage** paragraph:
+
+A hit on a player is friendly damage when its ability is in the friendly-damage registry (classed by the entry),
+or when a friendly player or pet dealt it and neither the registry nor the encounter file names the ability
+(`unclassified`). The registry is checked first, then the encounter file. Redistribution, delayed boss and
+involuntary damage are counted, not charged to anyone; self-inflicted damage is reported per player, charged to
+the player it hit, and is the only class counted in `window_self_damage`.
+
+```
+class AbilityDamage(BaseModel):
+    ability_id: int
+    name: str | None
+    damage: int
+
+class PlayerSelfDamage(BaseModel):
+    name: str
+    damage: int                         # self_inflicted damage the player took
+    abilities: list[AbilityDamage]      # top 3 by damage
+
+class FriendlyDamage(BaseModel):
+    damage: int = 0
+    share_pct: float = 0.0              # of all friendly damage taken in the pull
+    by_class: dict[str, int] = {}       # redistribution / delayed_boss / self_inflicted / involuntary /
+                                        # unclassified; no zeros
+    self_inflicted: list[PlayerSelfDamage] = []    # cap 5, by damage desc
+    unclassified: list[UnregisteredAbility] = []   # cap 5 (widened by --unregistered)
+```
+
+### Refactor plan 6.4 (Digest)
+
+Add to `PullDigest`, after `unregistered`:
+
+```
+    friendly_damage: FriendlyDamage
+```
+
+Replace the `unregistered` and `produced_from` comments with:
+
+```
+    unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
+    produced_from: dict[str, str]       # events_hash, positions_hash, encfile_hash, registry_hash,
+                                        # friendly_damage_hash
+```
+
+Replace the coverage rule's definition of the unregistered share with: the share of all damage players took that
+comes from abilities the encounter file doesn't name, leaving out friendly damage (6.3). The denominator is still
+all damage players took.
+
+Add two anomalies:
+
+- `friendly_damage_unverified:<ability_id>`: an unverified registry ability dealt damage in the pull.
+- `unclassified_friendly_damage:<pct>`: with an encounter file, unclassified friendly damage reached the 10%
+  coverage threshold. It no longer lowers coverage, so this keeps it visible.
+
+Add to the rendering, after AGGRO and before UNREGISTERED DAMAGE, and after UNREGISTERED DAMAGE respectively:
+
+```
+SELF DAMAGE [ev:<report>:<fight>:pull] friendly 25,400,720 (3.2%): redistribution 9,078,519, delayed boss 8,508,900, self inflicted 7,021,824, involuntary 791,477
+- Moombly 6,154,066: Burning Rush 6,154,066
+UNCLASSIFIED FRIENDLY DAMAGE
+- <ability_id> <name>: <damage> (<share>%)
+```
+
+Each section appears only when it has content. A death line's window clause gains `, self-inflicted <n>` when
+`window_self_damage` is above zero: `last 10s: taken <n>, healed <n>, self-inflicted <n>`. On the 62
+recorded pulls rendered digests are 439 to 2,225 tokens.
+
+### Refactor plan 6.5 (Evidence refs)
+
+Replace the `pull` row with:
+
+| `pull` | Outcome, duration, progress, phase reached, cutoff, death counts, coverage, anomalies, aggro, `friendly_damage` (the digest's `FriendlyDamage`) and `unregistered` (the digest's list), so every number in the AGGRO, SELF DAMAGE, UNREGISTERED DAMAGE and UNCLASSIFIED FRIENDLY DAMAGE sections resolves |
+
+The `death:<n>` record carries `window_self_damage`.
+
+### Refactor plan 6.8 (Findings cache)
+
+Replace the `cache_key` line with:
+
+```
+cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash,
+                   prompt_version, graph_version, model_id, depth)[:16]
+```
+
+`friendly_damage_hash` comes from the digest's `produced_from`. `EncounterData` keys its per-pull records on
+(pull_key, events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash), and rereads registries
+it wasn't given from `config/` on each lookup, like encounter files, so an edit rebuilds the records.
+
+### Refactor plan: the `/digest` command (wherever the plan describes it)
+
+`/digest <fight> --unregistered` (and `main.py digest --unregistered`) prints a second table, unclassified
+friendly damage, after the unregistered one: the authoring list for the friendly-damage registry.

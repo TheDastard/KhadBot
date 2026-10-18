@@ -90,7 +90,7 @@ def _run_digest(code: str, fight: int, as_json: bool, unregistered: bool) -> Non
     except KeyError as exc:
         sys.exit(str(exc.args[0]))
     if unregistered:
-        Console().print(Markdown(format_unregistered(pull_key, d.unregistered)))
+        Console().print(Markdown(format_unregistered(pull_key, d.unregistered, d.friendly_damage.unclassified)))
     elif as_json:
         print(d.model_dump_json(indent=2))
     else:
@@ -120,7 +120,9 @@ def build_parser() -> argparse.ArgumentParser:
     digest.add_argument("fight", type=int, help="Fight ID")
     digest.add_argument("--json", action="store_true", help="Print the PullDigest as JSON")
     digest.add_argument(
-        "--unregistered", action="store_true", help="List the top unregistered abilities (encounter-file authoring)"
+        "--unregistered",
+        action="store_true",
+        help="List the top unregistered and unclassified friendly abilities (authoring)",
     )
     return parser
 

@@ -99,7 +99,8 @@
       ],
       "window_damage": 114000,
       "window_healing": 14000,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [
@@ -157,7 +158,8 @@
       ],
       "window_damage": 115000,
       "window_healing": 15000,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -199,7 +201,8 @@
       ],
       "window_damage": 100000,
       "window_healing": 19000,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -253,11 +256,19 @@
       ],
       "window_damage": 225000,
       "window_healing": 48000,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     }
   ],
   "duration_ms": 60000,
   "encounter_name": "Synthetic Boss",
+  "friendly_damage": {
+    "by_class": {},
+    "damage": 0,
+    "self_inflicted": [],
+    "share_pct": 0.0,
+    "unclassified": []
+  },
   "mechanics": [
     {
       "clusters": 8,
@@ -302,6 +313,7 @@
   "produced_from": {
     "encfile_hash": "00e656de2399",
     "events_hash": "f01890255e220f8603115f60408c670ccbba026c54d53c8598eeb5fec1071877",
+    "friendly_damage_hash": "ddbf5baada0a",
     "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
     "registry_hash": "c0b89b4ecf2c"
   },

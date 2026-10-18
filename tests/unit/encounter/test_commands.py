@@ -10,6 +10,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from helpers.encounter.synth import add_friendly_damage
 
 from khadbot.encounter import commands
 from khadbot.encounter.annotate import AnnotationCache
@@ -164,6 +165,17 @@ class TestDigestCommand:
         assert "### Unregistered damage `SYNTH01:1`" in out
         assert "| 900201 | Synth Cataclysm |" in out
         assert out.count("\n| 9") == 5  # every damaging ability, up to the 20-row limit
+        assert "### Unclassified friendly damage `SYNTH01:1`\n\nNo unclassified friendly damage." in out
+
+    async def test_unregistered_lists_unclassified_friendly_damage(self, local_store):
+        # The fake friendly abilities are not in config/'s registry, so friendly-sourced ones are unclassified.
+        add_friendly_damage(local_store)
+        out = await digest_command("1 --unregistered")
+        unregistered, unclassified = out.split("### Unclassified friendly damage `SYNTH01:1`")
+        assert "| 901003 | ? | 4,000 | 0.4% |" in unclassified
+        assert "| 901002 | ? | 5,000 | 0.5% |" in unclassified  # Fido, a pet, counts as friendly
+        assert "| 901001 | ? | 2,000 | 0.2% |" in unclassified  # Alphadps on herself
+        assert "| 901001 | ? | 3,000 | 0.3% |" in unregistered  # the Environment-sourced row is not friendly
 
     async def test_unknown_pull(self, local_store):
         assert "not in the event store" in await digest_command("9")

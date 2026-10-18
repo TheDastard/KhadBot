@@ -86,7 +86,8 @@
       ],
       "window_damage": 1559635,
       "window_healing": 795766,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -140,7 +141,8 @@
       ],
       "window_damage": 1906310,
       "window_healing": 957324,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -194,7 +196,8 @@
       ],
       "window_damage": 968025,
       "window_healing": 74229,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -248,7 +251,8 @@
       ],
       "window_damage": 890748,
       "window_healing": 58208,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -302,7 +306,8 @@
       ],
       "window_damage": 994513,
       "window_healing": 167433,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -356,7 +361,8 @@
       ],
       "window_damage": 1047159,
       "window_healing": 122319,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -410,7 +416,8 @@
       ],
       "window_damage": 1062177,
       "window_healing": 165717,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -464,7 +471,8 @@
       ],
       "window_damage": 970608,
       "window_healing": 120108,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -518,7 +526,8 @@
       ],
       "window_damage": 1069856,
       "window_healing": 206716,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -572,17 +581,29 @@
       ],
       "window_damage": 988476,
       "window_healing": 144056,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     }
   ],
   "duration_ms": 123903,
   "encounter_name": "Nymrissa Wavecaller",
+  "friendly_damage": {
+    "by_class": {
+      "delayed_boss": 1025659,
+      "involuntary": 117939
+    },
+    "damage": 1143598,
+    "self_inflicted": [],
+    "share_pct": 0.9,
+    "unclassified": []
+  },
   "mechanics": [],
   "outcome": "wipe",
   "phase_reached": null,
   "produced_from": {
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
+    "friendly_damage_hash": "ddbf5baada0a",
     "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d",
     "registry_hash": "7e9178662e3f"
   },

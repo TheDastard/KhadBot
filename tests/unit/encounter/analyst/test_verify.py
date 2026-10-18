@@ -2,15 +2,18 @@
 tests/unit/encounter/analyst/test_verify.py
 
 Verify rules on SYNTH01: hallucinated, malformed and out-of-scope refs; numbers absent from the
-cited records; rounding tolerance; seconds versus milliseconds; counts of cited refs. Graph
+cited records; rounding tolerance; seconds versus milliseconds; counts of cited refs; friendly-damage claims. Graph
 scenarios with a scripted model live in test_analyst_scenarios.py.
 """
 
 from __future__ import annotations
 
 import pytest
+from helpers.encounter.synth import SYNTH_FRIENDLY_DAMAGE, add_friendly_damage
 
 from khadbot.encounter.analyst.verify import check_finding, verify_report
+from khadbot.encounter.config_files import parse_friendly_damage
+from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.models import AnalysisReport, Finding, ProducedBy
 
 PRODUCED_BY = ProducedBy(
@@ -121,3 +124,33 @@ def test_verify_report_keeps_earlier_rejections(synth_data):
     r = report(finding("Alphadps died at 9.0s.", D1)).model_copy(update={"rejected": ["earlier"]})
     verified, reasons = verify_report(r, synth_data)
     assert verified.rejected == ["earlier", *reasons] and len(reasons) == 1
+
+
+@pytest.fixture
+def friendly_data(synth_ingested, synth_enc_root, synth_registry):
+    """SYNTH01 with friendly damage in fight 1: Betadps 3,000 and Alphadps 2,000 self-inflicted, 14,000 friendly."""
+    add_friendly_damage(synth_ingested)
+    friendly = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry, friendly=friendly)
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "Betadps took 3,000 self-inflicted damage, the most in the raid.",
+        "Players dealt 14,000 damage to their own side (1.5% of damage taken), 5,000 of it self-inflicted.",
+        "Ability 901003 from a friendly player did 4,000 damage and is missing from the registry.",
+    ],
+)
+def test_self_inflicted_claims_citing_the_pull_ref_pass(friendly_data, claim):
+    assert check_finding(finding(claim, "ev:SYNTH01:1:pull"), friendly_data) is None
+
+
+def test_self_inflicted_claims_with_wrong_numbers_fail(friendly_data):
+    f = finding("Betadps took 3,500 self-inflicted damage.", "ev:SYNTH01:1:pull")
+    assert check_finding(f, friendly_data) == "unsupported number 3,500"
+
+
+def test_death_window_self_damage_verifies_against_the_death_ref(friendly_data):
+    claim = "Alphadps took 2,000 self-inflicted damage in the 10s before dying."
+    assert check_finding(finding(claim, D1), friendly_data) is None

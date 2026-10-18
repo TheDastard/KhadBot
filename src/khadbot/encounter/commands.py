@@ -162,12 +162,21 @@ def resolve_pull_key(target: list[str], last_report: str | None) -> str:
     return f"{code}:{fight}"
 
 
-def format_unregistered(pull_key: str, rows: list[UnregisteredAbility]) -> str:
-    lines = [f"### Unregistered damage `{pull_key}`", ""]
+def _ability_table(rows: list[UnregisteredAbility], empty: str) -> list[str]:
     if not rows:
-        return "\n".join(lines + ["No unregistered damage."])
-    lines += ["| Ability | Name | Damage | Share |", "|---|---|---|---|"]
-    lines += [f"| {u.ability_id} | {u.name or '?'} | {u.damage:,} | {u.share_pct:.1f}% |" for u in rows]
+        return [empty]
+    lines = ["| Ability | Name | Damage | Share |", "|---|---|---|---|"]
+    return lines + [f"| {u.ability_id} | {u.name or '?'} | {u.damage:,} | {u.share_pct:.1f}% |" for u in rows]
+
+
+def format_unregistered(
+    pull_key: str, rows: list[UnregisteredAbility], unclassified: list[UnregisteredAbility] | None = None
+) -> str:
+    """Abilities missing from the encounter file, then friendly-source abilities missing from the friendly-damage
+    registry: the authoring lists for both files."""
+    lines = [f"### Unregistered damage `{pull_key}`", "", *_ability_table(rows, "No unregistered damage.")]
+    lines += ["", f"### Unclassified friendly damage `{pull_key}`", ""]
+    lines += _ability_table(unclassified or [], "No unclassified friendly damage.")
     return "\n".join(lines)
 
 
@@ -184,7 +193,7 @@ def run_digest(
     cap = UNREGISTERED_LIMIT if unregistered else UNREGISTERED_CAP
     d = build_digest(pull_key, store or default_store(), cache=default_annotation_cache(), unregistered_cap=cap)
     if unregistered:
-        return format_unregistered(pull_key, d.unregistered)
+        return format_unregistered(pull_key, d.unregistered, d.friendly_damage.unclassified)
     return format_digest(d, as_json=as_json)
 
 

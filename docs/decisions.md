@@ -19,6 +19,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 | D11 | Analyst output | Analyst ends by calling a `submit_report` tool whose schema is `AnalysisReport` | Works across Groq, Ollama, Anthropic and fakes | 2026-10-10 |
 | D12 | Tooling | One owner per job. uv owns the Python version (`.python-version`), `.venv` and Python packages, and stays a standalone install with `[tool.uv] required-version` as its floor. pnpm owns `web/node_modules`. mise pins Node and pnpm in `mise.toml` and runs every task (`mise run check` and so on), locally and in CI. The Makefile and Chocolatey `make` are gone. mise never manages Python or the venv: no `python` in `[tools]`, no `_.python.venv`; tasks reach `.venv` only through `uv run`. Tasks are single plain commands with env vars in `env`. Variants of one task share a `group:` prefix (`install:cli`, `test:unit`, `gen:contracts`, `clean:all`); bare `install` is the full dev install. | The Makefile forced `cmd.exe`, so CI and Git Bash couldn't run it, and Node and pnpm had no pin. mise over `just`: `just` is a fine task runner but can't pin Node and pnpm, which would stay a manual install. uv stays outside mise because two tools creating the venv is the failure to avoid, and `uv run` already syncs `.venv` against `uv.lock`. Plain commands behave the same in cmd, PowerShell and Git Bash. | 2026-10-17 |
 | D13 | CI | One GitHub Actions workflow (`.github/workflows/check.yml`): the `check` job runs `mise run check` on Ubuntu and Windows on every push and pull request, with Git LFS skipped and placeholder WCL credentials; a `real-fixtures` job with the LFS fixtures runs only when started by hand | The real fixtures are about 200 MB against a 1 GB monthly LFS bandwidth allowance; tests that need them skip on pointer files. Config requires the WCL credentials, which locally come from `.env`, and unit tests never call WCL | 2026-10-17 |
+| D14 | Friendly damage | `config/registries/friendly_damage.yaml` classes abilities on the player's side (class spells, trinkets, borrowed powers) that hurt players as `redistribution`, `delayed_boss`, `self_inflicted` (a cost the player chose) or `involuntary` (self-damage the player can't control, such as a trinket proc), matched by ability ID whatever the row's source. Each entry also carries an `origin` (`class`, `borrowed_power`, `item`, or null when unknown); items aren't called seasonal because players can keep them past their season. The file is grouped by class, then by origin within each class, and a `class`-origin entry names its player class in a trailing comment. Friendly damage (registry abilities, plus any other friendly-source damage the encounter file doesn't name, as `unclassified`) never counts toward the unregistered share. Its hash, `friendly_damage_hash`, joins `produced_from`, the findings `cache_key` and the `EncounterData` records key, next to `registry_hash`. Player self-damage leaves encounter files' `ignored_abilities` for the registry (Shadow Word: Death, the only one) | It was all of Ula'tek's unregistered share, which hid nothing about the boss but kept the share above zero. The registry changes digest numbers the analyst cites, so an edit must miss the findings cache like a cooldown-registry edit does. One file classifies all player damage; Shadow Word: Death's backlash is recorded with the Environment (-1) as source, so the registry can't rely on `source_friendly` alone | 2026-10-18 |
 
 ## Implementation notes (deviations from the plan text)
 
@@ -466,7 +467,7 @@ Outcome: **keep polars + parquet (D7 unchanged).** Measured on the dev machine o
 |----|------|--------|
 | H1 | Choose boss + three public reports | done 2026-10-11: Heroic Ula'tek (encounter 3492). Wipe-heavy night `trMgApZCVYkv3jdq`; clean kill `H7z1fqDXjRTFnbtg` fight 20, with the rest of that report as the messy night; second messy / early-learning night `QkVa6GHRK8yfrTbw`. See `docs/wcl-api.md`. |
 | H2 / S1 | Record real fixtures, run cost spike | done 2026-10-11: all 62 boss pulls ingested into `KHADBOT_DATA_DIR` (936 points); seven representative pulls copied to `tests/fixtures/encounter/wcl/` and stored in Git LFS (see its README); measurements in `docs/wcl-api.md`. |
-| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.1% (all player self-damage such as Spirit Link and Burning Rush), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 21, 10, 19, 12 and 28 failures (Unchecked Rage counts each cast since 2026-10-17); 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Acidic Expulsion fails past 2 stacks (`debuff_stacks_gt`), once across the 47 pulls (2026-10-17); Soul Constrictor has no rule, since the logs don't show who soaked while debuffed. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. Open items for this file are under Ula'tek in `docs/follow-ups.md`. |
+| H3 / S3 | Author the encounter file for the H1 boss | first pass 2026-10-11, awaiting human review: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Mechanics from the in-game encounter journal (Wowhead NPC page) and the Method, Wowhead and MythicTrap Heroic guides (Wipefest's Guide tab embeds MythicTrap's guide; Wipefest's own mechanic tagging is not used); every ability ID taken from the recorded pulls. Phases use `wcl_phase` triggers. Across all 47 recorded Ula'tek pulls: coverage `full`, unregistered damage at most 3.3%, all of it player damage such as Spirit Link and Burning Rush, and none since the friendly-damage registry (2026-10-18), no `phase_trigger_unmatched`, re-annotating every pull takes about 17 s. Deadly Venom (venom pools), Toxin Cloud (early step onto the stage-two platforms) and Ingested Venom (Serpent's Bite soak debuff, believed) identified by the raid. Raid punishments now use the blame rules: Mother's Wrath (raid) is charged to the cast's target, Unchecked Rage and Rattler Slam to Ula'tek's or Gore Rattle's aggro holder (latest swing or taunt), Calcified Corpse to the bitten player, Circling Prey to hits over 1M before mitigation, and Desperate Thrash to anyone other than the casting add's aggro holder. Across the 47 pulls that gives 13, 21, 10, 19, 12 and 28 failures (Unchecked Rage counts each cast since 2026-10-17); 2 Unchecked Rages and 3 Rattler Slams have no aggro holder in the 30 s before and are charged to no one. Acidic Expulsion fails past 2 stacks (`debuff_stacks_gt`), once across the 47 pulls (2026-10-17); Soul Constrictor has no rule, since the logs don't show who soaked while debuffed. Mephitic Thrash still has no rule: the logs treat players inside and outside it the same. Open items for this file are under Ula'tek in `docs/follow-ups.md`. |
 | H4 | Fill cooldown durations in `cooldowns.yaml` | open |
 | H5 / S4 | Write golden questions | open |
 | H6 | Set eval thresholds | open |
@@ -615,6 +616,42 @@ also need its own query and storage format. The proposal (a `kill_targets` block
 `off_target_share_gt` rule and a `KILL TARGETS` digest section) is in `docs/plan-changes.md`. Before it's
 built, someone with WCL credentials has to check DamageDone on the live schema: its fields, page count and size
 on one long pull, recorded in `docs/wcl-api.md`.
+
+## Friendly damage on the recorded nights (2026-10-18)
+
+Measured on all 62 recorded pulls, read from `KHADBOT_DATA_DIR` without writing to it.
+
+- **Ula'tek's unregistered share was all player damage.** Before the registry it was 0.3% to 3.3% per pull (mean
+  1.7%) on the 47 Heroic pulls; after it, 0.0% on every pull, with coverage `full` throughout. Friendly damage
+  is now 0.4% to 3.2% of damage taken. The three encounters without a file stay at coverage `none`; their
+  unregistered share drops by the same friendly share (Nymrissa 98.8% mean, The Coiled Altar 97.9%, Nek'zali
+  99.0%).
+- **Twelve abilities, all from the damage rows.** On Ula'tek, by damage over the 47 pulls: Refraction (1309786,
+  117M), Spirit Link (98021, 59M, dealt by the totem, a pet), Time Dilation (361029, 44M), Burning Rush (111400,
+  28M), Seriously Sharp Seashell (1292299, 13M), Tempered in Battle (469704, 12M), Fel Armor (387846, 10M), Set
+  Fire to the Pain (453286, 7M), Rune of Void-Tainted Shell (1287955, 3M), Stretch Time (413924, 75k). Blessing
+  of Sacrifice (6940) appears on Nek'zali and The Coiled Altar. The classes of Spirit Link, Tempered in Battle,
+  Time Dilation, Stretch Time and Burning Rush come from the follow-up that proposed the registry. The maintainer
+  corrected the rest and confirmed every entry (2026-10-18): Time Dilation (an Evoker ability), Refraction and Set
+  Fire to the Pain take a share of damage as a DoT, so they are delayed boss damage; Seriously Sharp Seashell is a
+  trinket proc the player can't control, so it gets its own `involuntary` class and stays out of the per-player
+  self-damage list and death windows; Rune of Void-Tainted Shell is a borrowed power, an automatic shield that
+  leaves a DoT when the player takes damage, so it is delayed boss damage too. All twelve entries are
+  `verified: true`; a future unverified entry that deals damage is flagged `friendly_damage_unverified:<id>`. Across
+  the 47 Ula'tek pulls friendly damage splits into 181M delayed boss, 71M redistribution, 29M self-inflicted
+  and 13M involuntary.
+- **Shadow Word: Death has no friendly source.** Its 32409 backlash (1.6M on Ula'tek) is recorded with source
+  -1 (Environment), so `source_friendly` never catches it. The registry matches entries by ability ID whatever
+  the source, and the entry moved there from the Ula'tek file's `ignored_abilities` (`file_version` 4).
+- **The Coiled Altar has player-on-player damage that isn't self-damage.** Over its 7 pulls, 29M of ordinary
+  class spells and pet attacks (Frost Fever, Felseeker, Moonfire, Wicked Cleave and others) hit other players,
+  which looks like a mind-control mechanic. They stay out of the registry and are listed as unclassified
+  friendly damage. Coverage
+  there is `none` anyway; once that encounter has a file, its mechanic should name them, since an
+  encounter-file ability is never unclassified. With an encounter file, unclassified friendly damage at or above
+  the 10% coverage threshold raises `unclassified_friendly_damage:<pct>`, because it no longer lowers coverage.
+- **Digest size.** Rendered digests across the 62 pulls are 439 to 2,225 tokens with the new SELF DAMAGE
+  section, inside the 3k ceiling.
 
 ## Open follow-ups
 

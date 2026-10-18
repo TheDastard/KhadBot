@@ -253,7 +253,8 @@
       ],
       "window_damage": 1254937,
       "window_healing": 535811,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -313,7 +314,8 @@
       ],
       "window_damage": 1645829,
       "window_healing": 1142577,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -371,7 +373,8 @@
       ],
       "window_damage": 990271,
       "window_healing": 466432,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -430,7 +433,8 @@
       ],
       "window_damage": 1069633,
       "window_healing": 330620,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -489,7 +493,8 @@
       ],
       "window_damage": 1371642,
       "window_healing": 1038621,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -547,7 +552,8 @@
       ],
       "window_damage": 1372159,
       "window_healing": 571002,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -604,7 +610,8 @@
       ],
       "window_damage": 1121662,
       "window_healing": 240082,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -662,7 +669,8 @@
       ],
       "window_damage": 1476962,
       "window_healing": 571462,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -719,7 +727,8 @@
       ],
       "window_damage": 1248679,
       "window_healing": 470724,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -776,11 +785,58 @@
       ],
       "window_damage": 1142982,
       "window_healing": 317518,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     }
   ],
   "duration_ms": 579174,
   "encounter_name": "Ula'tek",
+  "friendly_damage": {
+    "by_class": {
+      "delayed_boss": 8508900,
+      "involuntary": 791477,
+      "redistribution": 9078519,
+      "self_inflicted": 7021824
+    },
+    "damage": 25400720,
+    "self_inflicted": [
+      {
+        "abilities": [
+          {
+            "ability_id": 111400,
+            "damage": 6154066,
+            "name": "Burning Rush"
+          }
+        ],
+        "damage": 6154066,
+        "name": "Moombly"
+      },
+      {
+        "abilities": [
+          {
+            "ability_id": 111400,
+            "damage": 693641,
+            "name": "Burning Rush"
+          }
+        ],
+        "damage": 693641,
+        "name": "Aluriel"
+      },
+      {
+        "abilities": [
+          {
+            "ability_id": 32409,
+            "damage": 174117,
+            "name": "Shadow Word: Death"
+          }
+        ],
+        "damage": 174117,
+        "name": "Discô"
+      }
+    ],
+    "share_pct": 3.2,
+    "unclassified": []
+  },
   "mechanics": [
     {
       "clusters": 5,
@@ -923,40 +979,10 @@
   "produced_from": {
     "encfile_hash": "17065e38c12b",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
+    "friendly_damage_hash": "ddbf5baada0a",
     "positions_hash": "b94f0d59330c5501aba7e880d6a0ae91ee7c3f488105eb72dde775c0e1c6a933",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:20",
-  "unregistered": [
-    {
-      "ability_id": 98021,
-      "damage": 9078519,
-      "name": "Spirit Link",
-      "share_pct": 1.1
-    },
-    {
-      "ability_id": 111400,
-      "damage": 6847707,
-      "name": "Burning Rush",
-      "share_pct": 0.9
-    },
-    {
-      "ability_id": 1309786,
-      "damage": 6235447,
-      "name": "Refraction",
-      "share_pct": 0.8
-    },
-    {
-      "ability_id": 361029,
-      "damage": 1259151,
-      "name": "Time Dilation",
-      "share_pct": 0.2
-    },
-    {
-      "ability_id": 1292299,
-      "damage": 791477,
-      "name": "Seriously Sharp Seashell",
-      "share_pct": 0.1
-    }
-  ]
+  "unregistered": []
 }

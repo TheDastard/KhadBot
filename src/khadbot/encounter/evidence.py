@@ -32,7 +32,16 @@ import polars as pl
 from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.mechanics import blame_reach_yd, mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
-from khadbot.encounter.config_files import CooldownRegistry, encfile_hash, load_encounter_view, load_registry
+from khadbot.encounter.config_files import (
+    CooldownRegistry,
+    FriendlyDamageRegistry,
+    encfile_hash,
+    friendly_damage_hash,
+    load_encounter_view,
+    load_friendly_damage,
+    load_registry,
+    registry_hash,
+)
 from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
@@ -162,7 +171,10 @@ def event_row(r: PullRecords, row: dict[str, Any]) -> dict[str, Any]:
 
 
 def pull_summary(r: PullRecords) -> dict[str, Any]:
-    """What a ``pull`` ref resolves to: outcome, length, progress, death counts and aggro."""
+    """
+    What a ``pull`` ref resolves to: outcome, length, progress, death counts, aggro, friendly damage (by class,
+    self-inflicted per player, unclassified abilities) and unregistered damage, as the digest shows them.
+    """
     d = r.digest
     return {
         "ref": make_ref(d.pull_key, "pull"),
@@ -179,6 +191,8 @@ def pull_summary(r: PullRecords) -> dict[str, Any]:
         "coverage": d.coverage,
         "anomalies": list(d.anomalies),
         "aggro": [g.model_dump(mode="json") for g in d.aggro],
+        "friendly_damage": d.friendly_damage.model_dump(mode="json"),
+        "unregistered": [u.model_dump(mode="json") for u in d.unregistered],
     }
 
 
@@ -198,8 +212,9 @@ class EncounterData:
     """
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
-    The cache key is (pull_key, events_hash, positions_hash, encfile_hash), so re-ingesting a pull or editing
-    its encounter file rebuilds the records on next use.
+    The cache key is (pull_key, events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash),
+    so re-ingesting a pull or editing its encounter file or a registry rebuilds the records on next use. Registries
+    not passed in are reread from ``config/`` on every lookup, like encounter files.
     """
 
     def __init__(
@@ -208,17 +223,19 @@ class EncounterData:
         *,
         enc_root: Path | None = None,
         registry: CooldownRegistry | None = None,
+        friendly: FriendlyDamageRegistry | None = None,
         cache: AnnotationCache | None = None,
         cutoff_fraction: float | None = None,
         max_cached: int = 32,
     ) -> None:
         self.store = store
         self.enc_root = enc_root
-        self.registry = registry or load_registry()
+        self._registry = registry
+        self._friendly = friendly
         self.cache = cache
         self.cutoff_fraction = cutoff_fraction
         self._max_cached = max_cached
-        self._records: OrderedDict[tuple[str, str, str, str], PullRecords] = OrderedDict()
+        self._records: OrderedDict[tuple[str, ...], PullRecords] = OrderedDict()
 
     @classmethod
     def from_config(cls) -> EncounterData:
@@ -239,17 +256,27 @@ class EncounterData:
         if pull is None:
             raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
         pull_key = pull.pull_key
+        registry = self._registry or load_registry()
+        friendly = self._friendly or load_friendly_damage()
         key = (
             pull_key,
             self.store.events_hash(pull_key) or "",
             self.store.positions_hash(pull_key) or "",
             encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
+            registry_hash(registry),
+            friendly_damage_hash(friendly),
         )
         if (hit := self._records.get(key)) is not None:
             self._records.move_to_end(key)
             return hit
         records = build_pull_records(
-            pull_key, self.store, self.enc_root, self.registry, cache=self.cache, cutoff_fraction=self.cutoff_fraction
+            pull_key,
+            self.store,
+            self.enc_root,
+            registry,
+            friendly=friendly,
+            cache=self.cache,
+            cutoff_fraction=self.cutoff_fraction,
         )
         self._records[key] = records
         while len(self._records) > self._max_cached:

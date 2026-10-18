@@ -14,13 +14,9 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Data and ingest
 
-- **Player self-damage registry.** Friendly-source damage (Spirit Link, Time Dilation, Burning Rush, trinkets)
-  counts as unregistered encounter damage today; it is all of the 3.1% left on Ula'tek. Proposed: a shared
-  `config/registries/friendly_damage.yaml` classing each ability as redistribution (Spirit Link, Tempered in
-  Battle), delayed boss damage (Time Dilation, Stretch Time) or self-inflicted (Burning Rush, Set Fire to the
-  Pain, Seriously Sharp Seashell); exclude friendly-source damage from the unregistered share; report
-  self-inflicted damage per player; flag it in death windows; list unclassified friendly-source abilities the
-  way unregistered boss abilities are listed.
+- **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
+  ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
+  damage, not registered. When that encounter gets a file, name the mechanic and decide how to tag its damage.
 - **Re-ingest local nights to add positions.** Nights ingested before the position table have none, so their
   blame context reads `no_position`. Re-ingest each one offline from the raw page cache:
   `python main.py ingest <code> --offline` for `H7z1fqDXjRTFnbtg`, `QkVa6GHRK8yfrTbw` and `trMgApZCVYkv3jdq`.

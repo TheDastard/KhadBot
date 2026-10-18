@@ -107,7 +107,8 @@
       ],
       "window_damage": 1428828,
       "window_healing": 585867,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -165,7 +166,8 @@
       ],
       "window_damage": 1356013,
       "window_healing": 479158,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -223,7 +225,8 @@
       ],
       "window_damage": 948366,
       "window_healing": 561348,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -282,7 +285,8 @@
       ],
       "window_damage": 1490043,
       "window_healing": 1000841,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -341,7 +345,8 @@
       ],
       "window_damage": 1533658,
       "window_healing": 1335776,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -400,7 +405,8 @@
       ],
       "window_damage": 1659433,
       "window_healing": 1169271,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -458,7 +464,8 @@
       ],
       "window_damage": 1165648,
       "window_healing": 672968,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -517,7 +524,8 @@
       ],
       "window_damage": 1943710,
       "window_healing": 1228775,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -576,7 +584,8 @@
       ],
       "window_damage": 1496911,
       "window_healing": 798132,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -635,11 +644,36 @@
       ],
       "window_damage": 1415594,
       "window_healing": 1209286,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     }
   ],
   "duration_ms": 106399,
   "encounter_name": "Ula'tek",
+  "friendly_damage": {
+    "by_class": {
+      "delayed_boss": 1043264,
+      "involuntary": 144985,
+      "redistribution": 958015,
+      "self_inflicted": 28411
+    },
+    "damage": 2174675,
+    "self_inflicted": [
+      {
+        "abilities": [
+          {
+            "ability_id": 111400,
+            "damage": 28411,
+            "name": "Burning Rush"
+          }
+        ],
+        "damage": 28411,
+        "name": "Moombly"
+      }
+    ],
+    "share_pct": 1.8,
+    "unclassified": []
+  },
   "mechanics": [
     {
       "clusters": 2,
@@ -747,40 +781,10 @@
   "produced_from": {
     "encfile_hash": "17065e38c12b",
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
+    "friendly_damage_hash": "ddbf5baada0a",
     "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",
-  "unregistered": [
-    {
-      "ability_id": 469704,
-      "damage": 958015,
-      "name": "Tempered in Battle",
-      "share_pct": 0.8
-    },
-    {
-      "ability_id": 1309786,
-      "damage": 809437,
-      "name": "Refraction",
-      "share_pct": 0.7
-    },
-    {
-      "ability_id": 1292299,
-      "damage": 144985,
-      "name": "Seriously Sharp Seashell",
-      "share_pct": 0.1
-    },
-    {
-      "ability_id": 387846,
-      "damage": 114449,
-      "name": "Fel Armor",
-      "share_pct": 0.1
-    },
-    {
-      "ability_id": 453286,
-      "damage": 78582,
-      "name": "Set Fire to the Pain",
-      "share_pct": 0.1
-    }
-  ]
+  "unregistered": []
 }

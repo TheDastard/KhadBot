@@ -1,7 +1,7 @@
 """
 tests/unit/encounter/test_analysis.py
 
-Analysis functions: death records, mechanic stats, cooldown uses and damage-window coverage,
+Analysis functions: death records, friendly damage, mechanic stats, cooldown uses and damage-window coverage,
 on SYNTH01 and on small hand-written frames for edge cases (battle res, no HP data, aura edges).
 """
 
@@ -14,9 +14,11 @@ from helpers.encounter.real_fixtures import REAL_REPORTS
 from khadbot.encounter.analysis.aggro import aggro_bands, aggro_holder, aggro_summaries
 from khadbot.encounter.analysis.cooldowns import aura_intervals, cooldown_uses, window_coverage
 from khadbot.encounter.analysis.deaths import death_records
+from khadbot.encounter.analysis.friendly_damage import friendly_damage
 from khadbot.encounter.analysis.mechanics import mechanic_clusters, mechanic_stats
 from khadbot.encounter.annotate import annotate, annotate_pull
-from khadbot.encounter.config_files import parse_encounter, parse_registry
+from khadbot.encounter.config_files import parse_encounter, parse_friendly_damage, parse_registry
+from khadbot.encounter.models import FriendlyDamage
 
 ACTORS = make_actors()
 
@@ -155,6 +157,148 @@ class TestDeathsEdgeCases:
         a = annotate(make_pull(), make_events([_death(1_000, 1, ability=0)]), None, ACTORS)
         (d,) = death_records(a, ACTORS, abilities={0: "Unknown Ability"})
         assert (d.killing_ability_id, d.killing_ability_name) == (None, None)
+
+    def test_window_self_damage_counts_self_inflicted_registry_abilities(self):
+        rows = [
+            _from(1_000, 3, 3, SELF_BURN, 2_000),
+            _from(2_000, -1, 3, SELF_BURN, 1_000),  # Environment-sourced, still matched by ability ID
+            _from(3_000, 2, 3, LINK, 5_000),  # redistribution, not self-inflicted
+            _from(3_500, 3, 3, PROC, 700),  # involuntary: self-damage, but not the player's choice
+            _hit(4_000, 3, 50_000),
+            _death(4_000, 3),
+        ]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS, friendly=FRIENDLY)
+        assert (d.window_damage, d.window_self_damage) == (58_700, 3_000)
+        (without,) = death_records(a, ACTORS)
+        assert without.window_self_damage == 0
+
+    def test_window_self_damage_respects_the_window(self):
+        rows = [_from(1_000, 3, 3, SELF_BURN, 2_000), _hit(15_000, 3, 50_000), _death(15_000, 3)]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS, friendly=FRIENDLY)
+        assert d.window_self_damage == 0
+
+
+# ===========================================================================
+# Friendly damage
+# ===========================================================================
+
+SELF_BURN, LINK, DELAY, PROC, STRAY = 701, 702, 703, 704, 799
+FRIENDLY = parse_friendly_damage(
+    {
+        "abilities": [
+            {"ability_id": SELF_BURN, "name": "Self Burn", "class": "self_inflicted"},
+            {"ability_id": LINK, "name": "Link", "class": "redistribution"},
+            {"ability_id": DELAY, "name": "Delay", "class": "delayed_boss"},
+            {"ability_id": PROC, "name": "Proc", "class": "involuntary"},
+        ]
+    }
+)
+NAMES = {SELF_BURN: "Self Burn", LINK: "Link", DELAY: "Delay", PROC: "Proc", STRAY: "Stray Bolt"}
+
+
+def _from(t, source, target, ability, amount):
+    return {
+        "t_ms": t,
+        "type": "damage",
+        "source_id": source,
+        "target_id": target,
+        "ability_id": ability,
+        "amount": amount,
+    }
+
+
+def _enc_naming(*ability_ids):
+    return parse_encounter(
+        {
+            "encounter_id": 1,
+            "name": "X",
+            "zone": {"id": 1, "name": "Z"},
+            "file_version": 1,
+            "phases": [{"id": "p1", "name": "P1", "difficulties": ["heroic"], "start": {"trigger": "pull"}}],
+            "ignored_abilities": [{"ability_id": i, "name": "n", "difficulties": ["heroic"]} for i in ability_ids],
+        }
+    )
+
+
+class TestFriendlyDamage:
+    def test_classes_players_and_unclassified(self):
+        rows = [
+            _hit(500, 1, 100_000),  # boss damage: not friendly
+            _from(1_000, 3, 3, SELF_BURN, 4_000),
+            _from(2_000, -1, 4, SELF_BURN, 6_000),  # Environment source, matched by ability ID
+            _from(3_000, 2, 1, LINK, 10_000),
+            _from(4_000, 4, 4, DELAY, 3_000),
+            _from(4_500, 5, 5, PROC, 1_000),  # involuntary: counted, never in the per-player list
+            _from(5_000, 5, 1, STRAY, 2_000),  # friendly source, no file names it
+            _from(6_000, -1, 1, 555, 9_000),  # Environment, unknown ability: encounter damage, not friendly
+        ]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        fd = friendly_damage(a, None, FRIENDLY, ACTORS, NAMES)
+        assert fd.damage == 26_000
+        assert fd.share_pct == round(26_000 / 135_000 * 100, 1)
+        assert fd.by_class == {
+            "redistribution": 10_000,
+            "delayed_boss": 3_000,
+            "self_inflicted": 10_000,
+            "involuntary": 1_000,
+            "unclassified": 2_000,
+        }
+        assert list(fd.by_class) == ["redistribution", "delayed_boss", "self_inflicted", "involuntary", "unclassified"]
+        assert [
+            (p.name, p.damage, [(x.ability_id, x.name, x.damage) for x in p.abilities]) for p in fd.self_inflicted
+        ] == [
+            ("Beta", 6_000, [(SELF_BURN, "Self Burn", 6_000)]),
+            ("Alpha", 4_000, [(SELF_BURN, "Self Burn", 4_000)]),
+        ]
+        assert [(u.ability_id, u.name, u.damage, u.share_pct) for u in fd.unclassified] == [
+            (STRAY, "Stray Bolt", 2_000, 1.5)
+        ]
+
+    def test_encounter_file_abilities_are_never_unclassified(self):
+        rows = [_from(1_000, 3, 4, STRAY, 2_000), _from(2_000, 3, 4, 800, 1_000)]
+        enc = _enc_naming(STRAY)
+        a = annotate(make_pull(difficulty=4), make_events(rows), enc, ACTORS)
+        fd = friendly_damage(a, enc, FRIENDLY, ACTORS, NAMES)
+        assert [u.ability_id for u in fd.unclassified] == [800]
+
+    def test_registry_wins_over_the_encounter_file(self):
+        enc = _enc_naming(SELF_BURN)
+        a = annotate(make_pull(difficulty=4), make_events([_from(1_000, 3, 3, SELF_BURN, 2_000)]), enc, ACTORS)
+        assert friendly_damage(a, enc, FRIENDLY, ACTORS, NAMES).by_class == {"self_inflicted": 2_000}
+
+    def test_caps_and_tie_order(self):
+        rows = [_from(1_000 + i, p, p, SELF_BURN, 1_000) for i, p in enumerate([5, 4, 3, 2, 1])]
+        rows += [_from(2_000, 3, 4, 800 + i, 100 * (i + 1)) for i in range(3)]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        fd = friendly_damage(a, None, FRIENDLY, ACTORS, NAMES, player_cap=2, unclassified_cap=2)
+        assert [p.name for p in fd.self_inflicted] == ["Tank", "Healer"]  # equal damage: actor ID order
+        assert [u.ability_id for u in fd.unclassified] == [802, 801]
+        assert fd.by_class["unclassified"] == 600  # totals are never capped
+
+    def test_top_three_abilities_per_player(self):
+        reg = parse_friendly_damage(
+            {"abilities": [{"ability_id": i, "name": str(i), "class": "self_inflicted"} for i in (1, 2, 3, 4)]}
+        )
+        rows = [_from(1_000, 3, 3, i, 1_000 * i) for i in (1, 2, 3, 4)]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (p,) = friendly_damage(a, None, reg, ACTORS, {}).self_inflicted
+        assert p.damage == 10_000
+        assert [(x.ability_id, x.name, x.damage) for x in p.abilities] == [
+            (4, None, 4_000),
+            (3, None, 3_000),
+            (2, None, 2_000),
+        ]
+
+    def test_none(self):
+        a = annotate(make_pull(), make_events([_hit(500, 1, 1_000)]), None, ACTORS)
+        assert friendly_damage(a, None, FRIENDLY, ACTORS, NAMES) == FriendlyDamage()
+        empty = parse_friendly_damage({"abilities": []})
+        fd = friendly_damage(
+            annotate(make_pull(), make_events([_from(500, 3, 4, STRAY, 1_000)]), None, ACTORS), None, empty, ACTORS, {}
+        )
+        assert fd.by_class == {"unclassified": 1_000} and fd.unclassified[0].name is None
 
 
 # ===========================================================================

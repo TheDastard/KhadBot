@@ -16,7 +16,7 @@ import polars as pl
 
 from khadbot.encounter.analysis.cooldowns import aura_intervals
 from khadbot.encounter.annotate import Annotated, type_is
-from khadbot.encounter.config_files import CooldownRegistry
+from khadbot.encounter.config_files import CooldownRegistry, FriendlyDamageRegistry
 from khadbot.encounter.models import Actor, DeathRecord, Hit, actor_label, make_ref
 
 DEATH_WINDOW_MS = 10_000
@@ -30,12 +30,17 @@ def death_records(
     registry: CooldownRegistry | None = None,
     abilities: Mapping[int, str] | None = None,
     *,
+    friendly: FriendlyDamageRegistry | None = None,
     window_ms: int = DEATH_WINDOW_MS,
 ) -> list[DeathRecord]:
-    """Every player death in time order; refs ``death:<n>`` are 1-based in that order."""
+    """
+    Every player death in time order; refs ``death:<n>`` are 1-based in that order. ``friendly`` names the
+    self-inflicted abilities counted in ``window_self_damage``.
+    """
     pull = a.pull
     names = {x.actor_id: x.name for x in actors}
     abilities = abilities or {}
+    self_ids = friendly.ability_ids(["self_inflicted"]) if friendly else []
     frame = a.frame
     has_healing = (frame["data_type"].cast(pl.Utf8) == "Healing").any()
     intervals = aura_intervals(frame, registry.spell_ids() if registry else [], pull.duration_ms)
@@ -93,6 +98,7 @@ def death_records(
                 window_ms=window_ms,
                 window_damage=int(damage["amount"].sum() or 0),
                 window_healing=int(heals["amount"].sum() or 0) if has_healing else None,
+                window_self_damage=int(damage.filter(pl.col("ability_id").is_in(self_ids))["amount"].sum() or 0),
                 top_hits=top_hits,
                 mechanic_ids=sorted(damage["mechanic_id"].drop_nulls().unique().to_list()),
                 active_defensives=sorted({i.spell_id for i in intervals if i.target_id == actor_id and i.active_at(t)}),
