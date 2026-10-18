@@ -6,6 +6,10 @@ which built a window only for a player's first death).
 
 A death's window is the ``window_ms`` before it, clipped to the actor's previous death so a second
 death after a battle res never reuses damage from the first life.
+
+The game strips a dying player's auras a few milliseconds before WCL's death row, so a defensive
+removed just before the death still counts as active when the cooldown was still running: its aura
+was still up on another player, or its registry duration had not run out.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ from collections.abc import Mapping
 
 import polars as pl
 
-from khadbot.encounter.analysis.cooldowns import aura_intervals
+from khadbot.encounter.analysis.cooldowns import AuraInterval, aura_intervals
 from khadbot.encounter.annotate import Annotated, type_is
 from khadbot.encounter.config_files import CooldownRegistry, FriendlyDamageRegistry
 from khadbot.encounter.models import Actor, DeathRecord, Hit, actor_label, make_ref
@@ -22,6 +26,8 @@ from khadbot.encounter.models import Actor, DeathRecord, Hit, actor_label, make_
 DEATH_WINDOW_MS = 10_000
 TOP_HITS = 5
 HEALTHY_PCT = 90.0
+# Auras removed this long before a death row are taken as stripped by the death (1-56 ms on the recorded nights).
+DEATH_STRIP_MS = 100
 
 
 def death_records(
@@ -101,11 +107,31 @@ def death_records(
                 window_self_damage=int(damage.filter(pl.col("ability_id").is_in(self_ids))["amount"].sum() or 0),
                 top_hits=top_hits,
                 mechanic_ids=sorted(damage["mechanic_id"].drop_nulls().unique().to_list()),
-                active_defensives=sorted({i.spell_id for i in intervals if i.target_id == actor_id and i.active_at(t)}),
+                active_defensives=_defensives_at_death(intervals, actor_id, t, registry),
                 after_cutoff=a.cutoff_ms is not None and t > a.cutoff_ms,
             )
         )
     return out
+
+
+def _defensives_at_death(
+    intervals: list[AuraInterval], actor_id: int, t: int, registry: CooldownRegistry | None
+) -> list[int]:
+    """Registry spells active on ``actor_id`` at ``t``, counting an aura stripped by the death (module docstring)."""
+    out = set()
+    for i in intervals:
+        if i.target_id != actor_id:
+            continue
+        if i.active_at(t):
+            out.add(i.spell_id)
+        elif 0 < t - i.end_ms <= DEATH_STRIP_MS:
+            entry = registry.get(i.spell_id) if registry else None
+            still_running = (
+                entry is not None and entry.duration_s is not None and i.start_ms + entry.duration_s * 1000 > t
+            ) or any(o.spell_id == i.spell_id and o.target_id != actor_id and o.active_at(t) for o in intervals)
+            if still_running:
+                out.add(i.spell_id)
+    return sorted(out)
 
 
 def _time_to_die(life: pl.DataFrame, death_t: int) -> int | None:

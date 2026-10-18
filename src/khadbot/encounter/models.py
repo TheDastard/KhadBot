@@ -6,7 +6,7 @@ fight-relative milliseconds unless a field says otherwise.
 
 Ingest models: WclPhase, Pull, Actor, FetchSpec, IngestResult.
 Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
-WindowCoverage, FriendlyDamage, PullDigest.
+LateCooldown, WindowCoverage, FriendlyDamage, PullDigest.
 Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisReport.
 """
 
@@ -207,6 +207,11 @@ class CooldownUse(BaseModel):
     phase_id: str | None
 
 
+class LateCooldown(BaseModel):
+    spell_id: int
+    late_ms: int  # first aura start minus the window occurrence's first hit
+
+
 class WindowCoverage(BaseModel):
     ref: Ref
     window_id: str
@@ -214,6 +219,8 @@ class WindowCoverage(BaseModel):
     t_ms: int
     cooldowns_active: list[int]  # raid cooldown spell IDs whose aura was active at t_ms
     covered: bool  # len(cooldowns_active) >= expected_cooldowns
+    # Raid cooldowns not active at t_ms whose aura started during the occurrence (see window_coverage).
+    cooldowns_late: list[LateCooldown] = Field(default_factory=list)
 
 
 class UnregisteredAbility(BaseModel):

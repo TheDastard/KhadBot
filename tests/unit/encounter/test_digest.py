@@ -32,6 +32,7 @@ from khadbot.encounter.config_files import (
 )
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
+from khadbot.encounter.models import LateCooldown
 
 
 @pytest.fixture
@@ -321,6 +322,17 @@ def test_render(digest_of):
     # Every record line carries a ref.
     records = [ln for ln in lines if ln.startswith("- [")]
     assert all("[ev:SYNTH01:1:" in ln for ln in records)
+
+
+def test_render_late_cooldowns(digest_of):
+    d = digest_of(1)
+    window = d.coverage_windows[1].model_copy(
+        update={
+            "cooldowns_late": [LateCooldown(spell_id=900301, late_ms=1_200), LateCooldown(spell_id=7, late_ms=3_000)]
+        }
+    )
+    text = render_digest(d.model_copy(update={"coverage_windows": [d.coverage_windows[0], window]}))
+    assert "cataclysm #2 at 40.0s: NOT covered (active: none; late: 900301 +1.2s, 7 +3.0s)" in text
 
 
 def test_render_friendly_damage(friendly_of):
