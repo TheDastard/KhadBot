@@ -13,8 +13,10 @@ from helpers.simc.tables import class_spells, effect_row, spec_spells, spell_dat
 from khadbot.encounter.registry_candidates import (
     check_registry,
     classify,
+    classify_offensive,
     defensive_candidates,
     friendly_damage_candidates,
+    offensive_candidates,
     scripted_spells,
 )
 from khadbot.simc import codes as c
@@ -150,6 +152,108 @@ def test_check_registry_statuses(data: ClientData) -> None:
     assert (got[TRIGGER_CAST].status, got[TRIGGER_CAST].game_name) == ("name_differs", "Rally Cast")
     assert (got[SCRIPTED].status, got[SCRIPTED].cooldown_s, got[SCRIPTED].duration_s) == ("not_a_candidate", 180.0, 6.0)
     assert got[900999].status == "not_in_game_data"
+
+
+# ---------------------------------------------------------------------------
+# Offensive cooldowns
+# ---------------------------------------------------------------------------
+
+LUST, WRATH, INFUSION, LEAP, LEAP_IMMUNE, WINGS, WEAKEN, QUICK, WAR_CRY, WAR_CRY_AURA = range(900031, 900041)
+
+
+@pytest.fixture
+def offensive_data() -> ClientData:
+    spells = [
+        spell_row("Lust", LUST, cooldown=300000, duration=40000),
+        spell_row("Wrath", WRATH, cooldown=120000, duration=20000),
+        spell_row("Infusion", INFUSION, cooldown=120000, duration=15000),
+        spell_row("Leap", LEAP, cooldown=120000, duration=24000),
+        spell_row("Leap Landing", LEAP_IMMUNE, duration=1000),
+        spell_row("Wings", WINGS, cooldown=120000, duration=20000),
+        spell_row("Weaken", WEAKEN, cooldown=120000, duration=10000),
+        spell_row("Quick", QUICK, cooldown=30000, duration=10000),
+        spell_row("War Cry", WAR_CRY, cooldown=180000),
+        spell_row("War Cry", WAR_CRY_AURA, duration=30000),
+    ]
+    effects = [
+        effect_row(1, LUST, 0, c.E_APPLY_AREA_AURA_RAID, c.A_HASTE_ALL, base=30, target_1=CASTER),
+        effect_row(2, WRATH, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=20, target_1=CASTER),
+        effect_row(3, INFUSION, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=20, target_1=ALLY),
+        effect_row(4, LEAP, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=20, target_1=CASTER),
+        effect_row(5, LEAP, 1, c.E_TRIGGER_SPELL, 0, trigger=LEAP_IMMUNE, target_1=CASTER),
+        effect_row(6, LEAP_IMMUNE, 0, c.E_APPLY_AURA, c.A_DAMAGE_IMMUNITY, target_1=CASTER),
+        effect_row(7, WINGS, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=20, target_1=CASTER),
+        effect_row(8, WINGS, 1, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_TAKEN, base=-20, target_1=CASTER),
+        effect_row(9, WEAKEN, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=-10, target_1=CASTER),
+        effect_row(10, QUICK, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=10, target_1=CASTER),
+        effect_row(11, WAR_CRY, 0, c.E_DUMMY, 0, target_1=AREA_RAID),
+        effect_row(12, WAR_CRY_AURA, 0, c.E_APPLY_AURA, c.A_MOD_PERCENT_STAT, base=10, target_1=CASTER),
+    ]
+    spells_by_id, effects_by_spell = parse_spells(spell_data(spells, effects))
+    players = parse_player_spells(
+        class_spells([(7, 0, LUST), (2, 0, WRATH), (5, 0, INFUSION), (12, 0, LEAP), (2, 0, WINGS), (1, 0, WAR_CRY)]),
+        spec_spells([(1, 71, WEAKEN), (8, 63, QUICK)]),
+        traits([]),
+    )
+    return ClientData(build="12.0.0.1", spells=spells_by_id, effects=effects_by_spell, player_spells=players)
+
+
+@pytest.mark.parametrize(
+    ("spell_id", "target"),
+    [(LUST, "raid"), (WRATH, "personal"), (INFUSION, "external"), (LEAP, "personal"), (WAR_CRY, "raid")],
+)
+def test_offensive_targets(offensive_data: ClientData, spell_id: int, target: str) -> None:
+    cand = classify_offensive(offensive_data, spell_id)
+    assert cand is not None
+    assert (cand.target, cand.role) == (target, "offensive")
+
+
+def test_offensive_candidate_fields(offensive_data: ClientData) -> None:
+    cand = classify_offensive(offensive_data, LUST)
+    assert cand is not None
+    assert (cand.name, cand.class_name, cand.cooldown_s, cand.duration_s) == ("Lust", "Shaman", 300.0, 40.0)
+    assert cand.evidence == [f"{LUST}#0 A_HASTE_ALL E_APPLY_AREA_AURA_RAID"]
+
+
+def test_offensive_aura_on_an_ally_is_not_support(offensive_data: ClientData) -> None:
+    # Power Infusion used to be a support candidate in the defensive list.
+    assert classify(offensive_data, INFUSION) is None
+
+
+def test_triggered_immunity_does_not_make_an_offensive_cooldown_defensive(offensive_data: ClientData) -> None:
+    assert classify(offensive_data, LEAP) is None
+    cand = classify_offensive(offensive_data, LEAP)
+    assert cand is not None
+    assert cand.aura_spell_ids == []  # the immunity is not the cooldown's aura
+
+
+def test_own_defensive_effect_keeps_a_spell_in_both_lists(offensive_data: ClientData) -> None:
+    # Damage done and damage taken on the cast itself: a person picks the file.
+    assert classify(offensive_data, WINGS) is not None
+    assert classify_offensive(offensive_data, WINGS) is not None
+
+
+@pytest.mark.parametrize("spell_id", [WEAKEN, QUICK])
+def test_not_offensive_candidates(offensive_data: ClientData, spell_id: int) -> None:
+    assert classify_offensive(offensive_data, spell_id) is None
+
+
+def test_offensive_candidates_sorted_and_complete(offensive_data: ClientData) -> None:
+    found = offensive_candidates(offensive_data)
+    assert [(x.class_name, x.name) for x in found] == sorted((x.class_name, x.name) for x in found)
+    assert {x.spell_id for x in found} == {LUST, WRATH, INFUSION, LEAP, WINGS, WAR_CRY}
+
+
+def test_offensive_same_name_aura(offensive_data: ClientData) -> None:
+    cand = classify_offensive(offensive_data, WAR_CRY)
+    assert cand is not None
+    assert cand.aura_spell_ids == [WAR_CRY_AURA]
+    assert "(same-name spell)" in cand.evidence[0]
+
+
+def test_scripted_list_leaves_out_offensive_candidates(offensive_data: ClientData) -> None:
+    # War Cry's cast is a dummy effect, but its same-name aura makes it an offensive candidate.
+    assert scripted_spells(offensive_data) == []
 
 
 # ---------------------------------------------------------------------------

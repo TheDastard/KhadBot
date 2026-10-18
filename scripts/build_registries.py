@@ -11,16 +11,20 @@ commit it resolves to, into $KHADBOT_DATA_DIR/simc/<commit>/ (once per commit). 
 copy that is already on disk.
 
 The script never edits a registry. It writes review files into --out-dir (default
-$KHADBOT_DATA_DIR/registry/). defensive_cooldowns.candidates.yaml, for
-config/registries/defensive_cooldowns.yaml, has three sections:
+$KHADBOT_DATA_DIR/registry/). defensive_cooldowns.candidates.yaml and offensive_cooldowns.candidates.yaml, for
+the cooldown files of the same names in config/registries/, have three sections each:
 
-    candidates      every player cooldown that helps the raid live, with target, role, cooldown,
-                    duration, the aura spells Buffs events will show, and the effects that put it there
+    candidates      every player cooldown that helps the raid live (defensive) or raises damage done
+                    (offensive), with target, role, cooldown, duration, the aura spells Buffs events will
+                    show, and the effects that put it there; in_other_registry names the other cooldown
+                    file when it already holds the spell
     registry_check  each registry entry against the game data: matched, name_differs, target_differs,
                     not_a_candidate or not_in_game_data, with the data's cooldown and duration
-    scripted        long-cooldown spells whose effects are scripted, which the heuristic can't classify
+    scripted        long-cooldown spells whose effects are scripted, which the heuristic can't classify;
+                    the same list in both files
 
-A person copies what they accept into the registry, still with verified: false until checked in game.
+A person copies what they accept into the registry, still with verified: false until checked in game. No
+spell may be in both cooldown files.
 
 friendly_damage.candidates.yaml, for config/registries/friendly_damage.yaml, has two:
 
@@ -48,6 +52,8 @@ from khadbot.config import get_config
 from khadbot.encounter.config_files import (
     DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
     DEFAULT_FRIENDLY_DAMAGE_PATH,
+    DEFAULT_OFFENSIVE_COOLDOWNS_PATH,
+    CooldownCategory,
     load_cooldowns,
     load_friendly_damage,
 )
@@ -56,6 +62,7 @@ from khadbot.encounter.registry_candidates import (
     check_registry,
     defensive_candidates,
     friendly_damage_candidates,
+    offensive_candidates,
     scripted_spells,
 )
 from khadbot.simc.client_data import ClientData, load_client_data
@@ -73,10 +80,23 @@ def _check_rows(checks: list[RegistryCheck], field: str) -> list[dict[str, Any]]
     ]
 
 
-def build_report(data: ClientData, registry_path: Path, commit: str | None, min_cooldown_s: float) -> dict[str, Any]:
-    registry = load_cooldowns("defensive", registry_path)
-    found = defensive_candidates(data, min_cooldown_s=min_cooldown_s)
+_FINDERS = {"defensive": defensive_candidates, "offensive": offensive_candidates}
+
+
+def build_report(
+    data: ClientData,
+    category: CooldownCategory,
+    paths: dict[CooldownCategory, Path],
+    commit: str | None,
+    min_cooldown_s: float,
+) -> dict[str, Any]:
+    """The review file for one cooldown category; ``paths`` names every category's registry file."""
+    registries = {cat: load_cooldowns(cat, path) for cat, path in paths.items()}
+    registry = registries[category]
+    found = _FINDERS[category](data, min_cooldown_s=min_cooldown_s)
     in_registry = {c.spell_id for c in registry.cooldowns}
+    # A spell may be a candidate for both files but may sit in only one; flag those the other file already has.
+    in_other = {c.spell_id: cat for cat, r in registries.items() if cat != category for c in r.cooldowns}
     checks = check_registry(data, [(c.spell_id, c.name, c.target) for c in registry.cooldowns], found, "target")
     return {
         "source": {**_source(data, commit), "min_cooldown_s": min_cooldown_s},
@@ -93,6 +113,7 @@ def build_report(data: ClientData, registry_path: Path, commit: str | None, min_
                 "spec_ids": c.spec_ids,
                 "aura_spell_ids": c.aura_spell_ids,
                 "in_registry": c.spell_id in in_registry,
+                **({"in_other_registry": in_other[c.spell_id]} if c.spell_id in in_other else {}),
                 "evidence": c.evidence,
             }
             for c in found
@@ -152,17 +173,18 @@ def _friendly_summary(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _summary(report: dict[str, Any]) -> str:
+def _summary(category: CooldownCategory, report: dict[str, Any]) -> str:
     cands = report["candidates"]
     lines = [
         f"WoW build {report['source']['wow_build']} (SimC {report['source']['simc_commit'] or 'local copy'})",
-        f"{len(cands)} defensive candidates: "
+        f"{len(cands)} {category} candidates: "
         + ", ".join(f"{n} {k}" for k, n in sorted(Counter(c["target"] for c in cands).items()))
         + "; "
         + ", ".join(f"{n} {r}" for r, n in sorted(Counter(c["role"] for c in cands).items())),
         f"{sum(not c['in_registry'] for c in cands)} not in the registry yet",
+        f"{sum('in_other_registry' in c for c in cands)} already in another cooldown file",
         f"{len(report['scripted'])} scripted spells to look at by hand",
-        "defensive registry check:",
+        f"{category} registry check:",
         *_check_lines(report["registry_check"], "target"),
     ]
     return "\n".join(lines)
@@ -179,6 +201,7 @@ def main() -> None:
     source.add_argument("--fetch", metavar="REF", help="SimC branch, tag or commit to download (e.g. midnight)")
     source.add_argument("--simc-dir", type=Path, help="Directory holding SimC's engine/dbc/generated files")
     parser.add_argument("--defensive", type=Path, default=DEFAULT_DEFENSIVE_COOLDOWNS_PATH)
+    parser.add_argument("--offensive", type=Path, default=DEFAULT_OFFENSIVE_COOLDOWNS_PATH)
     parser.add_argument("--friendly-damage", type=Path, default=DEFAULT_FRIENDLY_DAMAGE_PATH)
     parser.add_argument("--out-dir", type=Path, help="Where review files go (default: $KHADBOT_DATA_DIR/registry)")
     parser.add_argument("--min-cooldown", type=float, default=60.0, help="Shortest cooldown to include, seconds")
@@ -193,18 +216,22 @@ def main() -> None:
     else:
         simc_dir, commit = args.simc_dir, None
     data = load_client_data(simc_dir)
-    report = build_report(data, args.defensive, commit, args.min_cooldown)
+    paths: dict[CooldownCategory, Path] = {"defensive": args.defensive, "offensive": args.offensive}
     friendly = build_friendly_report(data, args.friendly_damage, commit)
 
     out_dir = args.out_dir or data_dir / "registry"
-    out = out_dir / "defensive_cooldowns.candidates.yaml"
-    _write(
-        out,
-        "# Defensive-cooldown candidates generated by scripts/build_registries.py from SimC client data.\n"
-        "# Review file only: nothing loads it. Copy accepted entries into config/registries/defensive_cooldowns.yaml\n"
-        "# with verified: false until checked in game.\n",
-        report,
-    )
+    for category in paths:
+        report = build_report(data, category, paths, commit, args.min_cooldown)
+        out = out_dir / f"{category}_cooldowns.candidates.yaml"
+        _write(
+            out,
+            f"# {category.capitalize()}-cooldown candidates generated by scripts/build_registries.py from SimC client\n"
+            f"# data. Review file only: nothing loads it. Copy accepted entries into\n"
+            f"# config/registries/{category}_cooldowns.yaml with verified: false until checked in game.\n",
+            report,
+        )
+        print(_summary(category, report))
+        print(f"wrote {out}")
     friendly_out = out_dir / "friendly_damage.candidates.yaml"
     _write(
         friendly_out,
@@ -215,8 +242,6 @@ def main() -> None:
         "# leaves out and item or borrowed-power effects, so the logs stay the main source.\n",
         friendly,
     )
-    print(_summary(report))
-    print(f"wrote {out}")
     print(_friendly_summary(friendly))
     print(f"wrote {friendly_out}")
 
