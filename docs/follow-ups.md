@@ -21,25 +21,28 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   Pain, Seriously Sharp Seashell); exclude friendly-source damage from the unregistered share; report
   self-inflicted damage per player; flag it in death windows; list unclassified friendly-source abilities the
   way unregistered boss abilities are listed.
-- **Investigate position data as a signal.** Events with `includeResources` carry `x`, `y`, `facing` and
-  `mapID` for one unit (`resourceActor`: 1 source, 2 target), on about 73% of rows. They are already in the raw
-  pages, so keeping them costs no API points: parquet grows by 39% and normalize by about 2 s per night
-  (`docs/wcl-api.md`). What to find out:
-  - **Which questions it answers.** Candidates: was the aggro holder in melee range when Unchecked Rage or
-    Rattler Slam fired (separates a tank out of position from a tank who never got aggro); who stood inside
-    Mephitic Thrash's 35 yards or Circling Prey's 13 yards; who failed to spread for Volatile Purge; who stood
-    in a soak.
-  - **Whether positions are fresh enough.** A unit's position only updates on events where it is the resource
-    actor. Measure how stale the latest position is at the moments that matter, per role (tanks, melee,
-    ranged, the boss).
-  - **The distance scale.** The units are not documented. Calibrate from known events instead of assuming a
-    scale: boss-to-target distance at Ula'tek's melee swings was 1,336 to 2,026 units (5th to 95th percentile)
-    on the recorded pulls; journal radii (13 and 35 yards) give two more anchors if hits inside and outside them
-    can be told apart.
-  - **The shape of it.** Columns on every event row, or a separate per-pull position table sampled per actor,
-    and a query helper such as "distance between two actors at `t`".
-  Decide from that whether to keep positions, for which questions, and in what form. A scratch spike script
-  measured the storage and timing; nothing is in the codebase yet.
+- **Store positions and use them for aggro-holder blame.** Decided in `docs/decisions.md` ("Positions: keep
+  them, as a per-pull table"); measurements in `docs/wcl-api.md` ("Position data").
+  - **Schema:** normalize writes a per-pull position table next to the events file, one row per sample
+    (`t_ms`, `actor_id`, `instance`, `x`, `y`). The sample is the unit named by `resourceActor` (1 source, 2
+    target), taken from every data type that carries one. The events schema and `events_hash` stay as they
+    are. The table needs its own hash, or a place in `events_hash`, so cached annotations and findings that
+    use it invalidate. Old ingests have no table and re-normalize offline from the raw pages.
+  - **Helper:** an as-of lookup of an actor's position at `t`, returning the sample's age, and the distance
+    between two actors at `t`. NPCs are looked up by instance.
+  - **First use:** for `per_cluster` failures blamed `by: aggro_holder` (Unchecked Rage, Rattler Slam), record
+    the holder's distance from the NPC at the cast and whether they were alive. The analyst can then tell a
+    tank out of position (alive and beyond the NPC's swing range: Ula'tek p95 2,043 units, Gore Rattle 1,714)
+    from a tank who died and from no holder at all. Over the 47 pulls that is 15 out of position, 11 dead and
+    5 with no holder.
+- **Formation checks from positions.** Once positions are stored, they can judge where the raid stood as a
+  whole, not just single mechanics:
+  - Who wasn't stacked when a mechanic was baited: each player's distance from the group's centre, or from the
+    stack point, at the moment the mechanic is aimed. This needs no raid plan.
+  - How the raid split, how many groups there were and who was in each.
+  - Who wasn't with their assigned subgroup. This needs raid-plan assignments (plan section 14).
+  Hit rows give exact positions; other samples are 0.1 s old at the median and 0.5 s at p95
+  (`docs/wcl-api.md`, "Position data").
 - **Wrong-target damage.** Show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
   Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/decisions.md`, "Log
   investigations"; proposed contract text in `docs/plan-changes.md` under `encounter/spike-logs`): fetch
@@ -107,8 +110,13 @@ human task table in `docs/decisions.md`).
 - **Hits with no enemy cast.** One Circling Prey (`H7z1fqDXjRTFnbtg:15` at 594.6 s) has no cast, the only one
   of 17, and neither Fury Unleashed ID is ever cast. Write rules that use Ula'tek's casts so a missing cast
   changes only who is charged, never whether the occurrence counts.
-- **Mephitic Thrash** has no rule: the logs give players inside and outside the sweep the same impact and DoT.
-  The position investigation above may make it detectable (distance from Gore Rattle at the impact).
+- **Mephitic Thrash** has no rule: the logs give players inside and outside the sweep the same impact and DoT
+  (unmitigated median 401,660 outside 35 yards, 416,240 inside). Positions are the only signal. Each hit row
+  carries the player's position, and Gore Rattle's cast row carries its own. Of 1,922 impacts, 74 were within
+  3,500 units (35 yards) of Gore Rattle: 59 on the tail's own tank and 15 on other players over 13 casts.
+  Nothing in the logs confirms the radius or whether the sweep is a circle or a cone, so a reviewer must
+  confirm both first. Then the rule is a hit within that distance of the caster, sparing its aggro holder.
+  It needs the stored positions above.
 - **Ingested Venom** (1313529) is tagged as the Serpent's Bite soak debuff on the raid's belief; confirm.
 - **Normal and Mythic** are not covered: every entry lists `heroic` only. Check each entry against logs from
   those difficulties before adding them.

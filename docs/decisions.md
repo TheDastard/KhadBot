@@ -196,9 +196,34 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
      only: `cast_target` (the NPC's own cast names its target) or `aggro_holder` (the NPC's latest swing or
      taunt), and for `hits_on_non_tank` the aggro holder of the casting NPC instance. `melee_target`, which
      read damage hits and missed taunts, is gone.
-- **Positions not kept yet (2026-10-11)**: `x`/`y`/`facing` are already in the raw pages, and keeping them would
-  grow parquet by 39% and normalize time by about 2 s per night (measurements in `docs/wcl-api.md`). They would
-  answer "was the aggro holder in melee range" directly. Waiting on a decision before adding them.
+- **Positions: keep them, as a per-pull table (2026-10-16)**. Replaces "not kept yet" (2026-10-11). The
+  measurements are in `docs/wcl-api.md`, section "Position data". On the 47 Heroic Ula'tek pulls:
+  - **Exact where it matters.** A damage row carries the hit player's position, so a raid-wide hit gives
+    every player's position at that moment. Otherwise a player's latest sample is 0.1 s old at the median and
+    0.5 s at p95, the same for tanks, melee and ranged. NPCs are sampled only on their own swings and casts,
+    but they stand on fixed spots and their cast rows carry their position.
+  - **Scale: 1 yard = 100 units**, from the run-speed peak (700 to 750 units/s against 7 yards/s). Measured
+    radii fit it: Volatile Purge about 5 yards, the Serpent's Bite soak about 7, Spectral Coils about 30.
+  - **Kept for:**
+    - Aggro-holder blame (Unchecked Rage, Rattler Slam). The holder's distance and whether they were alive
+      separate "out of position" from "died" and "nobody had aggro". Every one of the 15 punishments with a
+      living holder had them beyond the NPC's swing range, and every holder in range had died.
+    - Who stood in a soak. Serpent's Bite: 291 of 300 Ingested Venom recipients stood within 7 yards of a
+      bitten player, against 2 of 45 non-recipients, which confirms the debuff marks soakers. Spectral Coils:
+      2,292 of 2,293 Soul Constrictor recipients stood within 30 yards of their coil, so that debuff marks the
+      players at the impact. The debuff rules (`aura_applied`, the planned stack and aura rules) remain the
+      way to charge these; positions back them up and show who stood where.
+    - Mephitic Thrash, once a human confirms the radius: positions are the only signal there.
+  - **Not needed for:** Circling Prey and Volatile Purge. Their damage rules already find the same players,
+    though Volatile Purge positions also show whose eruption a player stood in.
+  - **Form:** a separate table per pull next to the events file. Columns: `t_ms`, `actor_id`, `instance`, `x`,
+    `y`, one row per sample. That is +30% storage (+11.5 MB on 38.7 MB) against +39% for columns on every
+    event row, and it keeps the events schema and `events_hash` as they are. `facing` is left out until a
+    cone rule needs it. A hit's own position is the target's sample at the hit's `t_ms`.
+  - **Query helper:** "position of actor A at t" as an as-of lookup that returns the sample's age, and "distance
+    between A and B at t" built on it (1.5 to 3.3 ms for 1,000 probes per pull). NPCs are looked up by
+    instance, with their latest swing or cast as the sample. Callers decide which age is too old. At a run
+    speed of 7 yards/s, 0.5 s is 3.5 yards, enough to matter against a 5-yard radius.
 - **Legacy comparison (M2.6, 2026-10-11)**: `docs/legacy-comparison.md`, run with the legacy tool live against the
   seven fixture pulls. Deaths agree exactly (136 of 136); every other difference is a legacy defect. It found four
   defects not in the plan's list (no cooldown is ever matched, pre-death windows hold only self-damage, killing
