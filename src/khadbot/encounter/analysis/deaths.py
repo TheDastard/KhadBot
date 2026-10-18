@@ -43,7 +43,7 @@ def death_records(
     self_ids = friendly.ability_ids(["self_inflicted"]) if friendly else []
     frame = a.frame
     has_healing = (frame["data_type"].cast(pl.Utf8) == "Healing").any()
-    intervals = aura_intervals(frame, registry.spell_ids() if registry else [], pull.duration_ms)
+    intervals = aura_intervals(frame, registry.aura_ids() if registry else {}, pull.duration_ms)
 
     deaths = (
         frame.filter(type_is("death") & pl.col("target_id").is_in(pull.friendly_player_ids))

@@ -11,7 +11,7 @@ from pathlib import Path
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "encounter"  # encounter fixtures only
 GOLDEN = Path(__file__).resolve().parents[2] / "golden"
 
-SYNTH_REGISTRY_IDS = [900301, 900302]
+SYNTH_REGISTRY_IDS = [900301, 900311, 900302]  # Link Totem's cast and aura, Guardian
 SYNTH_ENEMY_CAST_IDS = {90001: [900101, 900201, 900401, 900501, 900601]}
 SYNTH_ENCOUNTER_FILE = FIXTURES / "encounters" / "synth.yaml"
 SYNTH_REGISTRY_FILE = FIXTURES / "registries" / "synth_cooldowns.yaml"

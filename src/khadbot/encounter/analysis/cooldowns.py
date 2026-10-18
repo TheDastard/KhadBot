@@ -5,11 +5,12 @@ Cooldown casts and damage-window coverage, plus the aura intervals both (and dea
 
 Aura activity comes from Buffs ``applybuff`` / ``removebuff`` pairs per (target, spell). An aura with
 no remove event lasts until the pull ends; a remove with no apply (aura up before the pull) starts at 0.
+A cooldown whose aura has its own spell ID (registry ``aura_spell_ids``) gets intervals under its cast ID.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import NamedTuple
 
 import polars as pl
@@ -29,13 +30,20 @@ class AuraInterval(NamedTuple):
         return self.start_ms <= t_ms <= self.end_ms
 
 
-def aura_intervals(frame: pl.DataFrame, spell_ids: Iterable[int], end_ms: int) -> list[AuraInterval]:
-    """Buff intervals for ``spell_ids`` on any target, in start order."""
-    ids = list(spell_ids)
-    if not ids:
+def aura_intervals(
+    frame: pl.DataFrame, spell_ids: Mapping[int, int] | Iterable[int], end_ms: int
+) -> list[AuraInterval]:
+    """
+    Buff intervals for ``spell_ids`` on any target, in start order.
+
+    ``spell_ids`` is a list of aura IDs, or a mapping from aura ID to the spell ID the interval is reported
+    under (``CooldownRegistry.aura_ids``). Applies and removes still pair by the aura ID on the row.
+    """
+    report_as = dict(spell_ids) if isinstance(spell_ids, Mapping) else {i: i for i in spell_ids}
+    if not report_as:
         return []
     rows = (
-        frame.filter(type_is("applybuff", "removebuff") & pl.col("ability_id").is_in(ids))
+        frame.filter(type_is("applybuff", "removebuff") & pl.col("ability_id").is_in(list(report_as)))
         .sort("seq")
         .select("t_ms", pl.col("type").cast(pl.Utf8), "target_id", "ability_id")
         .rows()
@@ -47,8 +55,8 @@ def aura_intervals(frame: pl.DataFrame, spell_ids: Iterable[int], end_ms: int) -
         if typ == "applybuff":
             open_at.setdefault(key, t)
         else:
-            out.append(AuraInterval(target, spell, open_at.pop(key, 0), t))
-    out += [AuraInterval(target, spell, start, end_ms) for (target, spell), start in open_at.items()]
+            out.append(AuraInterval(target, report_as[spell], open_at.pop(key, 0), t))
+    out += [AuraInterval(target, report_as[spell], start, end_ms) for (target, spell), start in open_at.items()]
     return sorted(out, key=lambda i: (i.start_ms, i.target_id, i.spell_id))
 
 
@@ -88,8 +96,7 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, registry: CooldownR
     """
     if enc is None or not enc.damage_windows:
         return []
-    raid_ids = registry.spell_ids(["raid"])
-    intervals = aura_intervals(a.frame, raid_ids, a.pull.duration_ms)
+    intervals = aura_intervals(a.frame, registry.aura_ids(["raid"]), a.pull.duration_ms)
     starts = (
         a.frame.filter(is_hit() & pl.col("window_id").is_not_null())
         .group_by("window_id", "window_occurrence")

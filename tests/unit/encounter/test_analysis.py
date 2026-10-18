@@ -405,6 +405,25 @@ class TestAuraIntervals:
         assert got[1].active_at(9_000) and not got[1].active_at(9_001)
         assert aura_intervals(frame, [], end_ms=60_000) == []
 
+    def test_aura_ids_map_to_their_cooldown(self):
+        def aura(t, typ, target, spell):
+            return {"t_ms": t, "type": typ, "source_id": 2, "target_id": target, "ability_id": spell}
+
+        rows = [
+            aura(1_000, "applybuff", 1, 11),  # aura ID of cooldown 10
+            aura(2_000, "applybuff", 1, 10),  # the cast ID as an aura pairs on its own
+            aura(3_000, "removebuff", 1, 11),
+            aura(4_000, "removebuff", 1, 10),
+            aura(5_000, "applybuff", 3, 11),  # never removed
+        ]
+        frame = make_events(rows)
+        got = aura_intervals(frame, {10: 10, 11: 10}, end_ms=60_000)
+        assert [(i.target_id, i.spell_id, i.start_ms, i.end_ms) for i in got] == [
+            (1, 10, 1_000, 3_000),
+            (1, 10, 2_000, 4_000),
+            (3, 10, 5_000, 60_000),
+        ]
+
     def test_registry_kinds_filter(self, synth_registry):
         assert synth_registry.spell_ids(["raid"]) == [900301]
         reg = parse_registry({"cooldowns": []})
@@ -572,25 +591,15 @@ def test_aggro_bands_match_wcl_threat_table(code, fight, wcl_bands, differing):
     import tempfile
     from pathlib import Path
 
+    from helpers.encounter.real_fixtures import ingest_fixture
     from helpers.encounter.synth import FIXTURES
 
-    from khadbot.encounter.commands import default_filter_kwargs
-    from khadbot.encounter.ingest import ingest_report
-    from khadbot.encounter.ingest.fetch import RawPageCache
     from khadbot.encounter.store import ParquetEventStore
 
     with tempfile.TemporaryDirectory() as tmp:
         store = ParquetEventStore(Path(tmp))
-        result = asyncio.run(
-            ingest_report(
-                code,
-                [fight],
-                store=store,
-                cache=RawPageCache(FIXTURES / "wcl"),
-                offline=True,
-                **default_filter_kwargs(),
-            )
-        )
+        # The recorded filters, not the live registry's: a registry edit must not leave the fixture without Buffs.
+        result = asyncio.run(ingest_fixture(code, store, [fight]))
         assert not result.failed
         a = annotate_pull(f"{code}:{fight}", store, None)
         bosses = {x.actor_id for x in store.actors(code) if x.kind == "boss"}

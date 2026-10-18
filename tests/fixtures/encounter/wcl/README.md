@@ -16,7 +16,7 @@ Raw page cache layout, rooted here instead of `$KHADBOT_DATA_DIR/raw`:
     SYNTH01/<fight>/<DataType>[-Enemies]/<filter_hash>/_complete
 
 `Enemies` hostility gets a `-Enemies` directory suffix so friendly and enemy `Casts` never
-share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; enemy
+share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302,900311)`; enemy
 `Casts` uses `ability.id IN (900101,900201,900401,900501,900601)`; everything else is `none`.
 
 ## Pulls
@@ -39,7 +39,7 @@ share a directory. Filter hashes: `Buffs` uses `ability.id IN (900301,900302)`; 
 - **Interrupt mechanic**: Shadow Bolt (900401) is interrupted at ~12 s in fight 1 and lands
   at 32 s (missed interrupt). Fight 2 interrupts all three casts.
 - **Damage window**: Cataclysm (900201) at 20 s is covered by Link Totem (900301, cast at
-  18 s, buff 18-26 s); the one at 40 s is not.
+  18 s, buff 18-26 s under its own aura ID 900311, as Spirit Link Totem's is); the one at 40 s is not.
 - **Cooldown casts**: Link Totem and Guardian (900302) in fight 1; Link Totem x2 in fight 2.
 - **Phase trigger**: Boss cast of Phase Shift (900501) at 35 s (fight 1) and 30 s (fight 2).
 - **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event). The generator
