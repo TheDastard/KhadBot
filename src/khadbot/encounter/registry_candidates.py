@@ -11,8 +11,9 @@ the effects of a spell it triggers, do one of these things:
   healing taken or a cheat-death absorb;
 - healing: heal an area, or heal one target for a share of its maximum health;
 - support: put any other aura on one chosen ally (Innervate);
-- offensive: raise damage done, haste, critical strike, mastery, versatility or a primary stat (Bloodlust,
-  Avenging Wrath, Power Infusion).
+- offensive: raise damage done, haste, critical strike, mastery, versatility, a primary stat or auto-attacks
+  (Bloodlust, Avenging Wrath, Power Infusion), or add to other spells' damage or critical strikes through a
+  spell modifier (Recklessness, Combustion, Shadow Blades).
 
 The first three make a defensive-cooldown candidate (``defensive_candidates``), the last an offensive one
 (``offensive_candidates``). On a spell with an offensive effect, a defensive aura shorter than 2 s from a
@@ -78,8 +79,19 @@ OFFENSIVE_AURAS = frozenset(
         c.A_MOD_VERSATILITY_PCT,
         c.A_MOD_TOTAL_STAT_PERCENTAGE,
         c.A_MOD_PERCENT_STAT,
+        c.A_MOD_RANGED_AND_MELEE_AUTO_ATTACK_SPEED,
+        c.A_MOD_AUTO_ATTACK_PCT,
     }
 )
+# Spell-modifier properties that make a player deal more damage, each only with a positive value: a percentage
+# on damage (P_GENERIC, an effect's value, periodic damage) or critical damage, and a flat bonus to critical
+# strike chance. Most damage cooldowns work this way rather than through a damage-done aura (Recklessness,
+# Combustion, Shadow Blades, Pillar of Frost). The data doesn't say whether the spells they change deal damage
+# or heal, so a healer's cooldown can show up too.
+OFFENSIVE_PCT_PROPERTIES = frozenset(
+    {c.P_GENERIC, c.P_EFFECT_1, c.P_EFFECT_2, c.P_EFFECT_3, c.P_EFFECT_4, c.P_EFFECT_5, c.P_TICK_DAMAGE, c.P_CRIT_BONUS}
+)
+OFFENSIVE_FLAT_PROPERTIES = frozenset({c.P_CRIT})
 HEALING_AURAS = frozenset({c.A_PERIODIC_HEAL, c.A_PERIODIC_HEAL_PCT})
 HEAL_EFFECTS = frozenset({c.E_HEAL, c.E_HEAL_MAX_HEALTH, c.E_HEAL_PCT})
 # Heals that count on a single target too; a plain E_HEAL counts only when it lands on an area.
@@ -159,6 +171,14 @@ def _effect_target(effect: Effect) -> tuple[str, str] | None:
     return None
 
 
+def _offensive_modifier(effect: Effect) -> bool:
+    """A spell-modifier aura that raises damage or critical strikes (``OFFENSIVE_PCT_PROPERTIES``)."""
+    if effect.subtype not in c.SPELL_MODIFIER_AURAS or effect.base_value <= 0:
+        return False
+    flat = effect.subtype in c.FLAT_MODIFIER_AURAS
+    return effect.misc_value in (OFFENSIVE_FLAT_PROPERTIES if flat else OFFENSIVE_PCT_PROPERTIES)
+
+
 def _effect_hit(effect: Effect) -> _Hit | None:
     """How one effect helps the raid survive or deal damage, or None."""
     found = _effect_target(effect)
@@ -174,11 +194,14 @@ def _effect_hit(effect: Effect) -> _Hit | None:
             return _Hit(effect, "defensive", target, c.AURA_TYPES[effect.subtype], label)
         if effect.subtype in HEALING_AURAS and target == "raid":
             return _Hit(effect, "healing", target, c.AURA_TYPES[effect.subtype], label)
+        # Checked before support, so Power Infusion on an ally is offensive, not support.
         if effect.subtype in OFFENSIVE_AURAS:
-            # Checked before support, so Power Infusion on an ally is offensive, not support.
             if effect.base_value <= 0:
                 return None
             return _Hit(effect, "offensive", target, c.AURA_TYPES[effect.subtype], label)
+        if _offensive_modifier(effect):
+            what = f"{c.AURA_TYPES[effect.subtype]} {c.PROPERTY_TYPES[effect.misc_value]}"
+            return _Hit(effect, "offensive", target, what, label)
         if target == "external" and label in _SUPPORT_TARGETS:
             return _Hit(effect, "support", target, f"aura {effect.subtype}", label)
         return None

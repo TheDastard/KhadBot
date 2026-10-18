@@ -50,13 +50,15 @@ def effect_row(
     subtype: int,
     *,
     base: float = 0.0,
+    misc: int = 0,
     trigger: int = 0,
     target_1: int = 0,
     target_2: int = 0,
 ) -> str:
     f = ["0"] * 34
     f[0], f[1], f[2], f[3], f[4] = str(effect_id), str(spell_id), str(index), str(type_), str(subtype)
-    f[15], f[22], f[28], f[29] = f"{base:.4f}", str(trigger), str(target_1), str(target_2)
+    f[15], f[16], f[22] = f"{base:.4f}", str(misc), str(trigger)
+    f[28], f[29] = str(target_1), str(target_2)
     return "  { " + ", ".join(f[:18]) + ", { " + ", ".join(f[18:22]) + " }, " + ", ".join(f[22:]) + " },"
 
 

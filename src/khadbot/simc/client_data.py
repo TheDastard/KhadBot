@@ -85,6 +85,8 @@ class Effect:
     type: int
     subtype: int
     base_value: float
+    #: What the effect acts on; for a spell-modifier aura, the property it changes (``P_*`` in ``simc.codes``).
+    misc_value: int
     trigger_spell_id: int
     target_1: int
     target_2: int
@@ -188,6 +190,7 @@ def parse_spells(text: str) -> tuple[dict[int, Spell], dict[int, list[Effect]]]:
             type=_int(t[3]),
             subtype=_int(t[4]),
             base_value=_num(t[15]),
+            misc_value=_int(t[16]),
             trigger_spell_id=_int(t[22]),
             target_1=_int(t[28]),
             target_2=_int(t[29]),
