@@ -34,6 +34,7 @@ src/khadbot/
     annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
     analysis/        # deaths, mechanics, cooldowns, aggro
     analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
+  simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL
   tools/             # LangChain @tools and the shared WarcraftLogs client
 config/
