@@ -190,3 +190,148 @@ data gets the anomaly `missing_data_type:DamageDone` and no section.
 
 6.5: new ref kind `kill:<kill_target_id>`, which resolves to the `KillTargetStat` plus
 `span_rows: list[{n, t_ms, end_ms, on_target_pct, failed_players}]`, so every number in the line verifies.
+
+## encounter/positions
+
+### Refactor plan 5.2 (Data directory)
+
+Add under `events/<report>/<fight>.parquet`:
+
+```
+  events/<report>/positions/<fight>.parquet             # position samples per pull (6.1)
+```
+
+### Refactor plan 6.1 (Ingest models)
+
+Add after the normalized event schema table, before the `events_hash` paragraph:
+
+#### Position table (polars, one parquet per pull)
+
+`events/<report>/positions/<fight>.parquet`, written atomically next to the events file. One row per sample:
+
+| Column | Type | Source / rule |
+|---|---|---|
+| `t_ms` | Int32 | `timestamp - pull.start_ms` |
+| `actor_id` | Int32 | the unit `resourceActor` names: 1 is `sourceID`, 2 is `targetID` |
+| `instance` | Int32 (nullable) | `sourceInstance` or `targetInstance` to match; null for unique actors and players |
+| `x`, `y` | Int32 | WCL map units, 1/100 yard (players run 700 to 750 units/s at 7 yards/s); stored raw |
+| `map_id` | Int32 (nullable) | `mapID` |
+
+Normalize takes a sample from every raw row that carries `x`, in the same pass that builds the events, from
+every data type, including the Threat rows it drops from the events. A row with no `resourceActor` is skipped.
+Duplicate samples on (`t_ms`, `actor_id`, `instance`, `x`, `y`) are dropped, and rows are sorted by `actor_id`,
+`instance`, `t_ms` (then `x`, `y`, `map_id`). `facing` is not kept. The events frame and `events_hash` do not
+change. On the 47 Heroic Ula'tek pulls the tables hold 2.02 M samples, 11.4 MB against 38.7 MB of events (+30%).
+
+Replace the `events_hash` paragraph with:
+
+`events_hash` = SHA-256 of the parquet's sorted rows serialized with `orjson` (column order fixed by the schema).
+`positions_hash` is the same over the position table's rows in its sort order. Both are stored in `pulls.json`
+next to each pull: `{"pull": Pull, "events_hash": str, "positions_hash": str | null, "truncated": [dir_name]}`.
+A record written before positions were kept has no `positions_hash` and reads as an empty position table. Ingest
+skips a pull only when `events_hash`, `positions_hash` and the pull metadata all match, so an offline re-ingest
+adds the table to pulls stored without one.
+
+`EventStore` gains `positions(pull_key) -> DataFrame` (an empty frame when the pull has no table) and
+`positions_hash(pull_key) -> str | None`; `write_pull(pull, df, events_hash, truncated=None, positions=None)`
+writes the table and its hash when `positions` is given, and removes a stale table when it is not.
+
+### Refactor plan 6.2 (Configuration files)
+
+In the blame spec list, replace the two bullets with:
+
+- `{by: cast_target, ability_id, ms, reach_yd?}`: the friendly target of the latest enemy `cast` of
+  `ability_id` in the `ms` before the occurrence. The boss's own cast names its target; use it when the boss has
+  such a cast (Mother's Wrath).
+- `{by: aggro_holder, npc_game_id, ms, reach_yd?}`: the aggro holder of the NPC with that game ID (matched by game
+  ID because a boss can have two actors with one name): the player behind its latest melee swing or taunt in the
+  Threat data in the `ms` before; nobody after the NPC's death. Use it when the punishment fires because nobody is
+  in melee (an untanked boss or tail), since the NPC has stopped swinging by then.
+
+Add after them:
+
+`reach_yd` (optional, a positive number) is the NPC's swing reach in yards: the caster of the cast for
+`cast_target`, the NPC with `npc_game_id` for `aggro_holder`. With it, annotation judges a living blamed player as
+in or beyond reach (6.3); without it, only as alive. Validation rejects zero and negative values. Set it from the
+NPC's own melee swings: the p95 of the distance from the NPC to the swing's target (target sample at most 1 s
+old), rounded up to a whole yard. Heroic Ula'tek: `unchecked_rage` 21 (Ula'tek, n=932, p95 20.4, max 30.3) and
+`rattler_slam` 18 (Gore Rattle, n=399, p95 17.1, max 30.7). `mothers_wrath_raid` has none.
+
+In the encounter file example, change the `no_tank_in_melee` blame line to:
+
+```
+      blame: {by: aggro_holder, npc_game_id: 555555, ms: 30000, reach_yd: 21}
+```
+
+### Refactor plan 6.3 (Analysis records)
+
+In `MechanicStat`, add after `deaths_in_window`:
+
+```
+    blame_states: dict[str, int] = {}    # per_cluster mechanics: failures per blame_state; left out of dumps when empty
+    blame_dist_yd: dict[str, tuple[float, float]] = {}   # per_cluster mechanics: (min, max) distance in yards of
+                                         # the blamed players per state that has distances; left out when empty
+```
+
+In `MechanicCluster`, add after `failed_players` (each left out of dumps when null):
+
+```
+    blamed: str | None = None            # per_cluster: the player charged with the cluster's failure
+    blame_state: str | None = None       # per_cluster: where they were at the first hit (states below)
+    blame_dist_yd: float | None = None   # their distance from the NPC in yards, 0.1
+    blame_reach_yd: float | None = None  # the blame spec's reach_yd, when one is set
+```
+
+Add after the **Blame** paragraph:
+
+**Blame context:** for `per_cluster` failures (blame `aggro_holder` or `cast_target`) annotation records where the
+blamed player was when the occurrence's first hit landed, in three more columns set on those failure rows only
+and null elsewhere: `blame_state` (Utf8), `blame_dist_yd` (Float32, yards rounded to 0.1) and `blame_pos_age_ms`
+(Int32, the age of the player's sample). States, in order of precedence:
+
+- `no_holder`: `blamed_id` is null.
+- `dead`: the player has a Deaths row at or before the hit and no cast or resurrect since.
+- `no_position`: no player sample at or before the hit within 1,500 ms, no NPC sample, or the two on different
+  maps.
+- `alive`: alive with a position, and the blame sets no `reach_yd`.
+- `beyond_reach` / `in_reach`: alive and farther than / within `reach_yd` of the NPC.
+
+The player's position is their latest sample at or before the first hit, at most 1,500 ms old (a raid-wide hit
+carries the hit player's own position). The NPC's is its latest sample among the blame's NPC actors (the cast's
+caster for `cast_target`), with no age limit: the bosses stand on fixed spots and are sampled on their own swings
+and casts. Distance and age are null for `dead`, `no_position` and `no_holder`. `annotate()` takes the pull's
+position table (`positions=`), `annotate_pull` reads it from the store, and the annotation cache also keys on
+`positions_hash`. `ANNOTATION_VERSION` is 4.
+
+### Refactor plan 6.4 (Digest)
+
+Replace the `produced_from` comment in `PullDigest` with:
+
+```
+    produced_from: dict[str, str]       # events_hash, positions_hash, encfile_hash, registry_hash
+```
+
+Add a bullet:
+
+- A mechanic with blame context ends its MECHANICS line with a clause per state, in the order beyond reach, in
+  reach, alive, dead, no position, none, with the distance range in whole yards where the state has distances,
+  for example `blamed: 2 beyond reach (31–55 yd), 1 dead, 1 none`. On the 47 Heroic Ula'tek pulls it adds at most
+  22 tokens to a rendered digest (1,403 to 2,192 tokens).
+
+### Refactor plan 6.5 (Evidence refs)
+
+Replace the `mech:<id>` row with:
+
+| `mech:<id>` | The `MechanicStat` (with `blame_states` and `blame_dist_yd` for `per_cluster` mechanics) plus `cluster_rows: list[MechanicCluster]`, whose rows on `per_cluster` mechanics carry `blamed`, `blame_state`, `blame_dist_yd` and `blame_reach_yd`, so every number the MECHANICS line prints resolves |
+
+### Refactor plan 6.8 (Findings cache)
+
+Replace the `cache_key` line with:
+
+```
+cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, registry_hash,
+                   prompt_version, graph_version, model_id, depth)[:16]
+```
+
+`positions_hash` comes from the digest's `produced_from` (empty for a pull stored without a position table).
+`EncounterData` also keys its per-pull records on it.
