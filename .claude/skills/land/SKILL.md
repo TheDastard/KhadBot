@@ -1,6 +1,6 @@
 ---
 name: land
-description: Land a finished task branch on main. Syncs with main, runs the checks, pushes the branch, waits for CI on that commit, fast-forwards main, pushes it, then deletes the branch locally and on GitHub and removes its worktree. Use when the user asks to land, ship, merge or finish a branch.
+description: Land a finished task branch on main. Syncs with main, runs the checks, pushes the branch, waits for CI on that commit (skipped for doc- and comment-only changes), fast-forwards main, pushes it, then deletes the branch locally and on GitHub and removes its worktree. Use when the user asks to land, ship, merge or finish a branch.
 ---
 
 # Land a branch
@@ -35,6 +35,13 @@ has goldens or generated files, regenerate them rather than hand-merging (`uv ru
 `mise run check` must be green. Stop and fix it here; never push a red branch to see what CI says.
 
 ## 4. Push the branch and wait for CI
+
+First decide whether CI is needed. Read `git diff refs/remotes/origin/main...HEAD`. CI is **skipped** only when every
+change is documentation (`*.md`, `docs/`, `.claude/` rules and skills prose) or a comment or docstring in code that
+alters no executable line. A docstring on a `@tool` counts as code, since it is a prompt change (see CLAUDE.md).
+Config, dependency, test, fixture, workflow and generated-file changes always need CI, and so does anything you are
+unsure about. When skipping, push the branch without running `wait_for_ci.py` here or in step 5, and tell the user
+in the report that CI was skipped and why.
 
 ```bash
 git push -u origin <branch>                    # first push
@@ -78,7 +85,8 @@ git push origin refs/heads/main:refs/heads/main
 uv run --no-project python -I <worktree>/.claude/skills/land/wait_for_ci.py "$(git rev-parse refs/heads/main)" --branch main
 ```
 
-Pushing `main` starts CI again on the same commit; `wait_for_ci.py` reports every run on it. Always pass
+If step 4 skipped CI, push `main` and omit the `wait_for_ci.py` call. Otherwise: pushing `main` starts CI again on
+the same commit; `wait_for_ci.py` reports every run on it. Always pass
 `--branch main`: the branch run on that commit has already finished, and without it the script can return as soon as
 it sees that old run, before GitHub has registered `main`'s. Tell the user if it isn't green.
 
