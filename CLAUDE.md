@@ -70,11 +70,11 @@ A new machine or clone runs `scripts/setup.ps1` once (tools, PATH, LFS, dependen
 | Task | mise | uv |
 |---|---|---|
 | Install everything | `mise run install` | `uv sync --extra dev` |
-| Lint + typecheck + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests && uv run mypy src && uv run pytest tests/unit` |
+| Lint + typecheck + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run pytest tests/unit` |
 | Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
 | Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
-| Format | `mise run format` | `uv run ruff format src tests && uv run ruff check --fix src tests` |
+| Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
 | Remove caches and build output | `mise run clean` | `scripts/clean.ps1` |
 | Same, then delete `.venv` | `mise run clean:all` | `scripts/clean.ps1`, then `scripts/distclean.ps1` |
