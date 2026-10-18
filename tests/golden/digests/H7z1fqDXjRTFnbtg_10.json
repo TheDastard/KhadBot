@@ -623,6 +623,18 @@
   "encounter_name": "Ula'tek",
   "mechanics": [
     {
+      "clusters": 8,
+      "damage_taken": 336904,
+      "deaths_in_window": 1,
+      "failures": 8,
+      "failures_by_player": {
+        "Mekerakesh": 8
+      },
+      "hits": 8,
+      "mechanic_id": "unchecked_rage",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:unchecked_rage"
+    },
+    {
       "clusters": 2,
       "damage_taken": 9294740,
       "deaths_in_window": 18,
@@ -656,18 +668,6 @@
       "hits": 60,
       "mechanic_id": "mothers_wrath_raid",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:mothers_wrath_raid"
-    },
-    {
-      "clusters": 1,
-      "damage_taken": 336904,
-      "deaths_in_window": 1,
-      "failures": 1,
-      "failures_by_player": {
-        "Mekerakesh": 1
-      },
-      "hits": 8,
-      "mechanic_id": "unchecked_rage",
-      "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:unchecked_rage"
     },
     {
       "clusters": 16,
@@ -713,7 +713,7 @@
   "outcome": "wipe",
   "phase_reached": "p1",
   "produced_from": {
-    "encfile_hash": "6aeb6f290ac9",
+    "encfile_hash": "e777c8f48ddd",
     "events_hash": "3fe207f447b2e72fefd1f2bf20710b325d7b78fcc4db36d53841bfca6c7902e6",
     "registry_hash": "7e9178662e3f"
   },

@@ -103,7 +103,8 @@ mechanics:
   - id: mothers_wrath_raid
     name: Mother's Wrath (no tank in melee)
     # Hits the whole raid when Ula'tek's target is out of her reach. Charged to the target of the
-    # Mother's Wrath cast just before it.
+    # Mother's Wrath cast just before it. No reach_yd: the targets' distances from Ula'tek don't split
+    # cleanly at her swing reach (docs/follow-ups.md).
     difficulties: [heroic]
     ability_ids: [1301122]
     kind: avoidable
@@ -117,25 +118,31 @@ mechanics:
     name: Unchecked Rage
     # Raid-wide physical damage when Ula'tek has no melee target and is not casting. Charged to Ula'tek's
     # (NPC 257758) aggro holder: a tank who taunted it but never reached melee is the one at fault.
+    # reach_yd: Ula'tek's swing reach, the p95 of her melee swings' distance to the target rounded up
+    # (47 Heroic pulls, target sample at most 1 s old: n=932, p95 20.4 yd, max 30.3 yd).
+    # Each cast is its own failure: one cast's hits land within 60 ms, and Ula'tek recasts it 2.4 s or more
+    # later while nobody is in melee (21 casts over the 47 pulls).
     difficulties: [heroic]
     ability_ids: [1301007]
     kind: avoidable
     failure:
       rule: per_cluster
-      blame: {by: aggro_holder, npc_game_id: 257758, ms: 30000}
-    cluster_window_ms: 3000
+      blame: {by: aggro_holder, npc_game_id: 257758, ms: 30000, reach_yd: 21}
+    cluster_window_ms: 1000
     severity: high
 
   - id: rattler_slam
     name: Rattler Slam
     # Raid-wide tail slam when nobody is in melee range of Gore Rattle. Charged to Gore Rattle's (NPC
     # 259555) aggro holder, the tail tank; a slam before anyone picked up the tail is charged to no one.
+    # reach_yd: Gore Rattle's swing reach, the p95 of its melee swings' distance to the target rounded up
+    # (47 Heroic pulls, target sample at most 1 s old: n=399, p95 17.1 yd, max 30.7 yd).
     difficulties: [heroic]
     ability_ids: [1299206]
     kind: avoidable
     failure:
       rule: per_cluster
-      blame: {by: aggro_holder, npc_game_id: 259555, ms: 30000}
+      blame: {by: aggro_holder, npc_game_id: 259555, ms: 30000, reach_yd: 18}
     cluster_window_ms: 3000
     severity: high
 
