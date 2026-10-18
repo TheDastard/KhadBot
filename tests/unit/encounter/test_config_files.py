@@ -58,14 +58,30 @@ def reg_data() -> dict:
 
 
 class TestRegistry:
-    def test_default_registry_ports_legacy_ids(self):
+    def test_default_registry_keeps_legacy_ids_still_in_game(self):
         from khadbot.tools.warcraftlogs.encounter import MAJOR_COOLDOWN_IDS
 
         reg = load_registry()
         assert DEFAULT_REGISTRY_PATH.exists()
-        assert {c.spell_id for c in reg.cooldowns} == set(MAJOR_COOLDOWN_IDS)
-        assert len(reg.cooldowns) == 17
-        assert all(c.cooldown_s is None and c.duration_s is None and not c.verified for c in reg.cooldowns)
+        # Ancestral Protection Totem is gone from the game data; Tiger's Lust is movement utility.
+        dropped = {207399, 116841}
+        assert set(MAJOR_COOLDOWN_IDS) - dropped <= set(reg.spell_ids())
+        assert not dropped & set(reg.spell_ids())
+        # Ported names corrected from the game data.
+        assert [reg.get(i).name for i in (357170, 374227, 97462)] == ["Time Dilation", "Zephyr", "Rallying Cry"]
+
+    def test_default_registry_values_come_from_game_data(self):
+        reg = load_registry()
+        assert len(reg.cooldowns) == 64
+        # Offensive cooldowns the SimC heuristic misread as defensive stay out.
+        assert not {19574, 107574, 191427} & set(reg.spell_ids())  # Bestial Wrath, Avatar, Havoc Metamorphosis
+        assert all(c.cooldown_s is not None and c.cooldown_s >= 60 for c in reg.cooldowns)
+        assert not any(c.verified for c in reg.cooldowns)
+        # Instant heals have no duration; everything else lasts.
+        no_duration = {c.name for c in reg.cooldowns if c.duration_s is None}
+        assert no_duration == {"Exhilaration", "Holy Word: Sanctify", "Lay on Hands", "Restoral", "Revival"}
+        keys = [(c.class_name, c.name, c.spell_id) for c in reg.cooldowns]
+        assert keys == sorted(keys)
 
     def test_synth_registry(self):
         reg = load_registry(SYNTH_REGISTRY_FILE)
@@ -136,7 +152,12 @@ class TestFriendlyDamageRegistry:
         assert reg.get(1292299).class_name == "involuntary"  # Seriously Sharp Seashell, a trinket proc
         assert reg.get(1309786).class_name == "delayed_boss"  # Refraction
         assert [reg.get(i).origin for i in (361029, 1287955, 1292299)] == ["class", "borrowed_power", "item"]
-        assert all(e.verified for e in reg.abilities)
+        # Entries from the recorded nights are verified; those proposed from game data are not yet.
+        from_data = {124255, 324393, 67481, 87023}  # Stagger x2, Roar of Sacrifice, Cauterize
+        assert {e.ability_id for e in reg.abilities if not e.verified} == from_data
+        assert [reg.get(i).class_name for i in sorted(from_data)] == [
+            "redistribution", "delayed_boss", "delayed_boss", "delayed_boss"
+        ]  # fmt: skip
         assert reg.get(1) is None
 
     def test_synth_registry(self):

@@ -41,18 +41,178 @@
     }
   ],
   "anomalies": [
+    "cooldown_unverified:642",
+    "cooldown_unverified:871",
+    "cooldown_unverified:10060",
+    "cooldown_unverified:19236",
+    "cooldown_unverified:22812",
     "cooldown_unverified:29166",
+    "cooldown_unverified:31224",
     "cooldown_unverified:47788",
+    "cooldown_unverified:48707",
+    "cooldown_unverified:48743",
+    "cooldown_unverified:48792",
     "cooldown_unverified:51052",
+    "cooldown_unverified:64843",
     "cooldown_unverified:97462",
     "cooldown_unverified:98008",
-    "cooldown_unverified:116841",
+    "cooldown_unverified:104773",
+    "cooldown_unverified:108271",
+    "cooldown_unverified:108416",
+    "cooldown_unverified:109304",
+    "cooldown_unverified:114052",
+    "cooldown_unverified:115203",
+    "cooldown_unverified:122470",
+    "cooldown_unverified:186265",
+    "cooldown_unverified:196718",
+    "cooldown_unverified:198589",
+    "cooldown_unverified:264735",
     "cooldown_unverified:357170",
-    "cooldown_unverified:374227"
+    "cooldown_unverified:363534",
+    "cooldown_unverified:363916",
+    "cooldown_unverified:374227",
+    "cooldown_unverified:403876",
+    "cooldown_unverified:414658"
   ],
   "boss_hp_pct": 7.82,
   "boss_pct": 5.57,
   "cooldowns": [
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:1",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 907
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:2",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 920
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:3",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 983
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:4",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 990
+    },
+    {
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:5",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 6432
+    },
+    {
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:6",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 6447
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:871:1",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 12555
+    },
+    {
+      "caster": "Kouw",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:403876:1",
+      "spell_id": 403876,
+      "spell_name": "Divine Protection",
+      "t_ms": 22706
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:19236:1",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 23755
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:64843:1",
+      "spell_id": 64843,
+      "spell_name": "Divine Hymn",
+      "t_ms": 25825
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:48707:1",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 36164
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:363916:1",
+      "spell_id": 363916,
+      "spell_name": "Obsidian Scales",
+      "t_ms": 55090
+    },
+    {
+      "caster": "Dean",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:198589:1",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 57773
+    },
+    {
+      "caster": "Moombly",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:108416:1",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 57849
+    },
+    {
+      "caster": "Moombly",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:104773:1",
+      "spell_id": 104773,
+      "spell_name": "Unending Resolve",
+      "t_ms": 58262
+    },
+    {
+      "caster": "Hugedonut",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:198589:2",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 60069
+    },
+    {
+      "caster": "Shinrael",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:22812:1",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 75084
+    },
     {
       "caster": "Shinrael",
       "phase_id": "p1",
@@ -62,12 +222,52 @@
       "t_ms": 76338
     },
     {
-      "caster": "Mainmoon",
+      "caster": "Mekerakesh",
       "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:116841:1",
-      "spell_id": 116841,
-      "spell_name": "Tiger's Lust",
-      "t_ms": 110449
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:871:2",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 80668
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:48707:2",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 92343
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:114052:1",
+      "spell_id": 114052,
+      "spell_name": "Ascendance",
+      "t_ms": 96656
+    },
+    {
+      "caster": "Wilmer",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:264735:1",
+      "spell_id": 264735,
+      "spell_name": "Survival of the Fittest",
+      "t_ms": 97860
+    },
+    {
+      "caster": "Shinrael",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:22812:2",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 110169
+    },
+    {
+      "caster": "Hugedonut",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:198589:3",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 121223
     },
     {
       "caster": "Verrydis",
@@ -78,177 +278,61 @@
       "t_ms": 122194
     },
     {
-      "caster": "Talyssah",
+      "caster": "Novic",
       "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:357170:1",
-      "spell_id": 357170,
-      "spell_name": "Rewind",
-      "t_ms": 163157
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:19236:2",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 122210
     },
     {
-      "caster": "Talyssah",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:374227:1",
-      "spell_id": 374227,
-      "spell_name": "Stasis",
-      "t_ms": 175696
+      "caster": "Kouw",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:403876:2",
+      "spell_id": 403876,
+      "spell_name": "Divine Protection",
+      "t_ms": 123800
     },
     {
-      "caster": "Mekerakesh",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:97462:1",
-      "spell_id": 97462,
-      "spell_name": "Rally",
-      "t_ms": 179350
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:7",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 134957
     },
     {
-      "caster": "Widowmaker",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:51052:1",
-      "spell_id": 51052,
-      "spell_name": "Anti-Magic Zone",
-      "t_ms": 194826
-    },
-    {
-      "caster": "Cocodiablo",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:51052:2",
-      "spell_id": 51052,
-      "spell_name": "Anti-Magic Zone",
-      "t_ms": 196024
-    },
-    {
-      "caster": "Dripington",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:51052:3",
-      "spell_id": 51052,
-      "spell_name": "Anti-Magic Zone",
-      "t_ms": 204908
-    },
-    {
-      "caster": "Talyssah",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:357170:2",
-      "spell_id": 357170,
-      "spell_name": "Rewind",
-      "t_ms": 224948
-    },
-    {
-      "caster": "Shinrael",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:29166:2",
-      "spell_id": 29166,
-      "spell_name": "Innervate",
-      "t_ms": 275790
-    },
-    {
-      "caster": "Talyssah",
-      "phase_id": "intermission",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:374227:2",
-      "spell_id": 374227,
-      "spell_name": "Stasis",
-      "t_ms": 349842
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:8",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 134968
     },
     {
       "caster": "Kindrella",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:47788:1",
-      "spell_id": 47788,
-      "spell_name": "Guardian Spirit",
-      "t_ms": 376030
-    },
-    {
-      "caster": "Talyssah",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:357170:3",
-      "spell_id": 357170,
-      "spell_name": "Rewind",
-      "t_ms": 376316
-    },
-    {
-      "caster": "Verrydis",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:98008:2",
-      "spell_id": 98008,
-      "spell_name": "Spirit Link Totem",
-      "t_ms": 377653
-    },
-    {
-      "caster": "Shinrael",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:29166:3",
-      "spell_id": 29166,
-      "spell_name": "Innervate",
-      "t_ms": 457080
-    },
-    {
-      "caster": "Dripington",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:51052:4",
-      "spell_id": 51052,
-      "spell_name": "Anti-Magic Zone",
-      "t_ms": 464029
-    },
-    {
-      "caster": "Mainmoon",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:116841:2",
-      "spell_id": 116841,
-      "spell_name": "Tiger's Lust",
-      "t_ms": 479235
-    },
-    {
-      "caster": "Widowmaker",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:51052:5",
-      "spell_id": 51052,
-      "spell_name": "Anti-Magic Zone",
-      "t_ms": 489403
-    },
-    {
-      "caster": "Novic",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:47788:2",
-      "spell_id": 47788,
-      "spell_name": "Guardian Spirit",
-      "t_ms": 544960
-    },
-    {
-      "caster": "Verrydis",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:98008:3",
-      "spell_id": 98008,
-      "spell_name": "Spirit Link Totem",
-      "t_ms": 561305
-    },
-    {
-      "caster": "Mekerakesh",
-      "phase_id": "p3",
-      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:97462:2",
-      "spell_id": 97462,
-      "spell_name": "Rally",
-      "t_ms": 574417
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:15:cd:10060:9",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 134980
     }
   ],
   "coverage": "full",
   "coverage_windows": [
     {
-      "cooldowns_active": [
-        357170
-      ],
+      "cooldowns_active": [],
       "cooldowns_late": [],
-      "covered": true,
+      "covered": false,
       "occurrence": 1,
       "ref": "ev:H7z1fqDXjRTFnbtg:15:win:rage_of_the_shackled:1",
       "t_ms": 135529,
       "window_id": "rage_of_the_shackled"
     },
     {
-      "cooldowns_active": [
-        357170
-      ],
+      "cooldowns_active": [],
       "cooldowns_late": [],
-      "covered": true,
+      "covered": false,
       "occurrence": 2,
       "ref": "ev:H7z1fqDXjRTFnbtg:15:win:rage_of_the_shackled:2",
       "t_ms": 284542,
@@ -1054,9 +1138,9 @@
   "produced_from": {
     "encfile_hash": "836044af7708",
     "events_hash": "8da19d04be496f5e651a4a16e30a2d5d5b249de1859e9142f0d805d49fa6269f",
-    "friendly_damage_hash": "ddbf5baada0a",
+    "friendly_damage_hash": "9937b022415a",
     "positions_hash": "1921deb4f0e8f222e5360e825427dbd3fc0c82aa38b524856b5e737c66720131",
-    "registry_hash": "dcae98915440"
+    "registry_hash": "729fc8b3cf7d"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:15",
   "unregistered": []

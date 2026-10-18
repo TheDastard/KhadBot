@@ -1,134 +1,477 @@
 # Cooldown registry.
 #
-# Ported from MAJOR_COOLDOWN_IDS in tools/warcraftlogs/encounter.py. Durations are null and
-# every entry is unverified until a human fills them in. `kind` is a first-pass port
-# and is verified along with the durations. Analysis skips cooldown availability for null durations
-# and lists used, unverified cooldowns as digest anomalies.
+# Player cooldowns the encounter digest tracks: defensive and healing cooldowns, plus Innervate and
+# Power Infusion. Spell IDs, names, `kind`, `cooldown_s` and `duration_s` come from game client data
+# (SimC tables for WoW build 12.1.5.70448) via the review file of scripts/build_cooldown_registry.py;
+# Aura Mastery, which the data can't classify, was ported from the old MAJOR_COOLDOWN_IDS list.
+# Cooldowns and durations are base values before talents. Every entry is unverified until a person
+# checks it in game; analysis lists used, unverified cooldowns as digest anomalies.
+#
+# kind: personal (only the caster), external (one chosen ally), raid (an area or the whole raid).
 #
 # `aura_spell_ids` lists the spells a cooldown's aura is applied under when they differ from the
-# cast; the Buffs filter fetches them and their intervals count as the cooldown. The values come
-# from the review file of scripts/build_cooldown_registry.py (SimC client data), unverified in game.
+# cast; the Buffs filter fetches them and their intervals count as the cooldown.
+#
+# Entries are sorted by class, then name.
 cooldowns:
-  - spell_id: 633
-    name: Lay on Hands
-    class: Paladin
+  - spell_id: 48707
+    name: Anti-Magic Shell
+    class: Death Knight
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 5.0
+    verified: false
+  - spell_id: 51052
+    name: Anti-Magic Zone
+    class: Death Knight
+    kind: raid
+    cooldown_s: 240.0
+    duration_s: 6.0
+    aura_spell_ids: [50461, 145629, 332831, 396883, 397303, 397304, 397305]
+    verified: false
+  - spell_id: 48743
+    name: Death Pact
+    class: Death Knight
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 48792
+    name: Icebound Fortitude
+    class: Death Knight
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 55233
+    name: Vampiric Blood
+    class: Death Knight
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 198589
+    name: Blur
+    class: Demon Hunter
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 10.0
+    aura_spell_ids: [212800]
+    verified: false
+  - spell_id: 196718
+    name: Darkness
+    class: Demon Hunter
+    kind: raid
+    cooldown_s: 300.0
+    duration_s: 8.0
+    aura_spell_ids: [209426, 398130, 398131, 398132]
+    verified: false
+  - spell_id: 204021
+    name: Fiery Brand
+    class: Demon Hunter
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 12.0
+    aura_spell_ids: [207744, 207771]
+    verified: false
+  - spell_id: 187827
+    name: Metamorphosis
+    class: Demon Hunter
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 22812
+    name: Barkskin
+    class: Druid
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 29166
+    name: Innervate
+    class: Druid
     kind: external
-    cooldown_s: null
+    cooldown_s: 180.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 102342
+    name: Ironbark
+    class: Druid
+    kind: external
+    cooldown_s: 90.0
+    duration_s: 12.0
+    verified: false
+  - spell_id: 740
+    name: Tranquility
+    class: Druid
+    kind: raid
+    cooldown_s: 180.0
+    duration_s: 6.0
+    aura_spell_ids: [157982]
+    verified: false
+  - spell_id: 359816
+    name: Dream Flight
+    class: Evoker
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 363916
+    name: Obsidian Scales
+    class: Evoker
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 12.0
+    verified: false
+  - spell_id: 363534
+    name: Rewind
+    class: Evoker
+    kind: raid
+    cooldown_s: 240.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 357170
+    name: Time Dilation
+    class: Evoker
+    kind: external
+    cooldown_s: 60.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 374227
+    name: Zephyr
+    class: Evoker
+    kind: raid
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 186265
+    name: Aspect of the Turtle
+    class: Hunter
+    kind: personal
+    cooldown_s: 180.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 109304
+    name: Exhilaration
+    class: Hunter
+    kind: personal
+    cooldown_s: 120.0
     duration_s: null
     verified: false
-  - spell_id: 1022
-    name: Blessing of Protection
-    class: Paladin
+  - spell_id: 53480
+    name: Roar of Sacrifice
+    class: Hunter
     kind: external
-    cooldown_s: null
+    cooldown_s: 120.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 264735
+    name: Survival of the Fittest
+    class: Hunter
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 45438
+    name: Ice Block
+    class: Mage
+    kind: personal
+    cooldown_s: 240.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 414658
+    name: Ice Cold
+    class: Mage
+    kind: personal
+    cooldown_s: 240.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 322507
+    name: Celestial Brew
+    class: Monk
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 443028
+    name: Celestial Conduit
+    class: Monk
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 1241059
+    name: Celestial Infusion
+    class: Monk
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 16.0
+    verified: false
+  - spell_id: 115203
+    name: Fortifying Brew
+    class: Monk
+    kind: personal
+    cooldown_s: 360.0
+    duration_s: 15.0
+    aura_spell_ids: [120954]
+    verified: false
+  - spell_id: 325197
+    name: Invoke Chi-Ji, the Red Crane
+    class: Monk
+    kind: raid
+    cooldown_s: 120.0
+    duration_s: 25.0
+    aura_spell_ids: [343818]
+    verified: false
+  - spell_id: 132578
+    name: Invoke Niuzao, the Black Ox
+    class: Monk
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 25.0
+    verified: false
+  - spell_id: 116849
+    name: Life Cocoon
+    class: Monk
+    kind: external
+    cooldown_s: 120.0
+    duration_s: 12.0
+    verified: false
+  - spell_id: 388615
+    name: Restoral
+    class: Monk
+    kind: raid
+    cooldown_s: 180.0
     duration_s: null
     verified: false
-  - spell_id: 6940
-    name: Blessing of Sacrifice
-    class: Paladin
-    kind: external
-    cooldown_s: null
+  - spell_id: 115310
+    name: Revival
+    class: Monk
+    kind: raid
+    cooldown_s: 180.0
     duration_s: null
+    verified: false
+  - spell_id: 122470
+    name: Touch of Karma
+    class: Monk
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 31850
+    name: Ardent Defender
+    class: Paladin
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 12.0
     verified: false
   - spell_id: 31821
     name: Aura Mastery
     class: Paladin
     kind: raid
-    cooldown_s: null
+    cooldown_s: 180.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 1022
+    name: Blessing of Protection
+    class: Paladin
+    kind: external
+    cooldown_s: 300.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 6940
+    name: Blessing of Sacrifice
+    class: Paladin
+    kind: external
+    cooldown_s: 120.0
+    duration_s: 12.0
+    verified: false
+  - spell_id: 204018
+    name: Blessing of Spellwarding
+    class: Paladin
+    kind: external
+    cooldown_s: 300.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 498
+    name: Divine Protection
+    class: Paladin
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 403876
+    name: Divine Protection
+    class: Paladin
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 642
+    name: Divine Shield
+    class: Paladin
+    kind: personal
+    cooldown_s: 300.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 86659
+    name: Guardian of Ancient Kings
+    class: Paladin
+    kind: personal
+    cooldown_s: 180.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 633
+    name: Lay on Hands
+    class: Paladin
+    kind: external
+    cooldown_s: 600.0
+    duration_s: null
+    verified: false
+  - spell_id: 389539
+    name: Sentinel
+    class: Paladin
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 19236
+    name: Desperate Prayer
+    class: Priest
+    kind: personal
+    cooldown_s: 90.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 47585
+    name: Dispersion
+    class: Priest
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 6.0
+    verified: false
+  - spell_id: 64843
+    name: Divine Hymn
+    class: Priest
+    kind: raid
+    cooldown_s: 180.0
+    duration_s: 15.0
+    aura_spell_ids: [64844]
+    verified: false
+  - spell_id: 47788
+    name: Guardian Spirit
+    class: Priest
+    kind: external
+    cooldown_s: 180.0
+    duration_s: 10.0
+    verified: false
+  - spell_id: 34861
+    name: 'Holy Word: Sanctify'
+    class: Priest
+    kind: raid
+    cooldown_s: 60.0
     duration_s: null
     verified: false
   - spell_id: 33206
     name: Pain Suppression
     class: Priest
     kind: external
-    cooldown_s: null
-    duration_s: null
+    cooldown_s: 180.0
+    duration_s: 8.0
     verified: false
-  - spell_id: 47788
-    name: Guardian Spirit
+  - spell_id: 10060
+    name: Power Infusion
     class: Priest
     kind: external
-    cooldown_s: null
-    duration_s: null
+    cooldown_s: 120.0
+    duration_s: 15.0
     verified: false
   - spell_id: 62618
-    name: "Power Word: Barrier"
+    name: 'Power Word: Barrier'
     class: Priest
     kind: raid
-    cooldown_s: null
-    duration_s: null
+    cooldown_s: 180.0
+    duration_s: 10.0
     aura_spell_ids: [81782]
     verified: false
-  - spell_id: 29166
-    name: Innervate
-    class: Druid
-    kind: external
-    cooldown_s: null
-    duration_s: null
-    verified: false
-  - spell_id: 102342
-    name: Ironbark
-    class: Druid
-    kind: external
-    cooldown_s: null
-    duration_s: null
-    verified: false
-  - spell_id: 116849
-    name: Life Cocoon
-    class: Monk
-    kind: external
-    cooldown_s: null
-    duration_s: null
-    verified: false
-  - spell_id: 357170
-    name: Rewind
-    class: Evoker
-    kind: raid
-    cooldown_s: null
-    duration_s: null
-    verified: false
-  - spell_id: 374227
-    name: Stasis
-    class: Evoker
+  - spell_id: 421453
+    name: Ultimate Penitence
+    class: Priest
     kind: personal
-    cooldown_s: null
-    duration_s: null
+    cooldown_s: 240.0
+    duration_s: 6.5
     verified: false
-  - spell_id: 97462
-    name: Rally
-    class: Warrior
-    kind: raid
-    cooldown_s: null
-    duration_s: null
-    aura_spell_ids: [97463]
+  - spell_id: 31224
+    name: Cloak of Shadows
+    class: Rogue
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 1.0
+    aura_spell_ids: [35729]
     verified: false
-  - spell_id: 51052
-    name: Anti-Magic Zone
-    class: Death Knight
+  - spell_id: 114052
+    name: Ascendance
+    class: Shaman
     kind: raid
-    cooldown_s: null
-    duration_s: null
-    aura_spell_ids: [50461, 145629, 332831, 396883, 397303, 397304, 397305]
+    cooldown_s: 180.0
+    duration_s: 15.0
+    aura_spell_ids: [294020]
+    verified: false
+  - spell_id: 108271
+    name: Astral Shift
+    class: Shaman
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 12.0
     verified: false
   - spell_id: 98008
     name: Spirit Link Totem
     class: Shaman
     kind: raid
-    cooldown_s: null
-    duration_s: null
+    cooldown_s: 180.0
+    duration_s: 6.0
     aura_spell_ids: [98007, 325174]
     verified: false
-  - spell_id: 207399
-    name: Ancestral Protection Totem
-    class: Shaman
-    kind: raid
-    cooldown_s: null
-    duration_s: null
+  - spell_id: 108416
+    name: Dark Pact
+    class: Warlock
+    kind: personal
+    cooldown_s: 60.0
+    duration_s: 20.0
     verified: false
-  - spell_id: 116841
-    name: "Tiger's Lust"
-    class: Monk
-    kind: external
-    cooldown_s: null
-    duration_s: null
+  - spell_id: 104773
+    name: Unending Resolve
+    class: Warlock
+    kind: personal
+    cooldown_s: 180.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 118038
+    name: Die by the Sword
+    class: Warrior
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 184364
+    name: Enraged Regeneration
+    class: Warrior
+    kind: personal
+    cooldown_s: 120.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 97462
+    name: Rallying Cry
+    class: Warrior
+    kind: raid
+    cooldown_s: 180.0
+    duration_s: 10.0
+    aura_spell_ids: [97463]
+    verified: false
+  - spell_id: 871
+    name: Shield Wall
+    class: Warrior
+    kind: personal
+    cooldown_s: 180.0
+    duration_s: 8.0
     verified: false
