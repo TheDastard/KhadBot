@@ -15,6 +15,7 @@ SYNTH_DEFENSIVE_COOLDOWN_IDS = [900301, 900311, 900302]  # Link Totem's cast and
 SYNTH_ENEMY_CAST_IDS = {90001: [900101, 900201, 900401, 900501, 900601]}
 SYNTH_ENCOUNTER_FILE = FIXTURES / "encounters" / "synth.yaml"
 SYNTH_DEFENSIVE_COOLDOWNS_FILE = FIXTURES / "registries" / "synth_defensive_cooldowns.yaml"
+SYNTH_OFFENSIVE_COOLDOWNS_FILE = FIXTURES / "registries" / "synth_offensive_cooldowns.yaml"
 SYNTH_ENCOUNTER_ID = 90001
 SYNTH_ENCOUNTER_RELPATH = "9000-synthetic_citadel/90001-synthetic_boss.yaml"
 

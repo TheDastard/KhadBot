@@ -1,0 +1,19 @@
+# Offensive cooldowns matching the synthetic SYNTH01 report. All IDs and durations are fake.
+# Battle Cry buffs the raid under its own aura ID (902011); Fury is the caster's own and unverified.
+category: offensive
+cooldowns:
+  - spell_id: 902001
+    name: Synth Battle Cry
+    class: Shaman
+    target: raid
+    cooldown_s: 300
+    duration_s: 40
+    aura_spell_ids: [902011]
+    verified: true
+  - spell_id: 902002
+    name: Synth Fury
+    class: Mage
+    target: personal
+    cooldown_s: 120
+    duration_s: 20
+    verified: false
