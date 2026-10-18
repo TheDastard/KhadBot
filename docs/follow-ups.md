@@ -49,6 +49,12 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
     yards); the debuffs already mark these players, so positions would only show where they stood;
   - an analyst query tool for positions, which changes the prompt version;
   - positions in the dashboard.
+- **Positions on encounters that change maps.** Blame and `distance_yd` handle samples on several maps, but no
+  recorded pull has any. When an encounter that moves players to another floor or area is recorded, check that
+  its `mapID` changes at the move (rather than staying put while coordinates jump), and how often NPCs are
+  sampled after one. Anything built on positions over time (movement, formation, tracks) must split a unit's
+  samples where `map_id` changes. Blame also assumes an NPC stays where it was last sampled on its map, which
+  fails for a boss that relocates within one map between samples.
 - **Formation checks from positions.** Positions are stored, so they can judge where the raid stood as a
   whole, not just single mechanics:
   - Who wasn't stacked when a mechanic was baited: each player's distance from the group's centre, or from the
