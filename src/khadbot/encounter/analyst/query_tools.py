@@ -433,8 +433,9 @@ def cooldown_timeline(pull: str, phase: str | None = None, *, config: RunnableCo
     """Get raid cooldown casts and damage-window coverage for one pull, in time order.
 
     Cooldown rows say who cast which registry cooldown when. Damage-window rows say, for each
-    occurrence of a raid-wide damage event, which raid cooldowns were active and whether that met the
-    expected number.
+    occurrence of a raid-wide damage event, which raid cooldowns were active at its first hit and whether
+    that met the expected number. Their cooldowns_late lists raid cooldowns started after the first hit
+    (late_ms after it); used that much earlier, they would have covered it.
 
     Args:
         pull: Pull key in scope, for example "abc123:7".

@@ -386,7 +386,9 @@ def render_digest(d: PullDigest) -> str:
     for w in d.coverage_windows:
         active = ",".join(str(s) for s in w.cooldowns_active) or "none"
         status = "covered" if w.covered else "NOT covered"
-        lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active})")
+        late = ", ".join(f"{c.spell_id} +{_s(c.late_ms)}" for c in w.cooldowns_late)
+        late = f"; late: {late}" if late else ""
+        lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active}{late})")
 
     if d.aggro:
         lines.append(f"AGGRO (melee swings by target, taunts landed) [{make_ref(d.pull_key, 'pull')}]")

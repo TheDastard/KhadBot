@@ -17,7 +17,11 @@ import polars as pl
 
 from khadbot.encounter.annotate import Annotated, is_hit, type_is
 from khadbot.encounter.config_files import CooldownRegistry, EncounterFile
-from khadbot.encounter.models import Actor, CooldownUse, WindowCoverage, make_ref
+from khadbot.encounter.models import Actor, CooldownUse, LateCooldown, WindowCoverage, make_ref
+
+# A raid cooldown started this long after a window's first hit still counts as late, even when the window's hits
+# end sooner (a one-hit window).
+LATE_GRACE_MS = 5_000
 
 
 class AuraInterval(NamedTuple):
@@ -92,23 +96,31 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, registry: CooldownR
     One row per damage-window occurrence: which raid cooldowns were active at its first hit.
 
     Only ``kind: raid`` cooldowns count. A damage window is raid-wide damage, and an external on
-    one player does not cover it.
+    one player does not cover it. ``covered`` judges the first hit only. A raid cooldown whose aura
+    started after the first hit, up to the occurrence's last hit or ``LATE_GRACE_MS`` after the first
+    hit (whichever is later), is listed as late with how late it started: used earlier, it would have
+    covered the first hit.
     """
     if enc is None or not enc.damage_windows:
         return []
     intervals = aura_intervals(a.frame, registry.aura_ids(["raid"]), a.pull.duration_ms)
-    starts = (
+    spans = (
         a.frame.filter(is_hit() & pl.col("window_id").is_not_null())
         .group_by("window_id", "window_occurrence")
-        .agg(pl.col("t_ms").min())
+        .agg(pl.col("t_ms").min().alias("first"), pl.col("t_ms").max().alias("last"))
     )
-    first_hit = {(w, n): t for w, n, t in starts.rows()}
+    hits = {(w, n): (first, last) for w, n, first, last in spans.rows()}
     out = []
     for window in enc.damage_windows:
-        occurrences = sorted(n for (w, n) in first_hit if w == window.id)
+        occurrences = sorted(n for (w, n) in hits if w == window.id)
         for n in occurrences:
-            t = first_hit[(window.id, n)]
+            t, last = hits[(window.id, n)]
             active = sorted({i.spell_id for i in intervals if i.active_at(t)})
+            late_until = max(last, t + LATE_GRACE_MS)
+            late_start: dict[int, int] = {}
+            for i in intervals:
+                if t < i.start_ms <= late_until and i.spell_id not in active:
+                    late_start[i.spell_id] = min(late_start.get(i.spell_id, i.start_ms), i.start_ms)
             out.append(
                 WindowCoverage(
                     ref=make_ref(a.pull.pull_key, "win", window.id, n),
@@ -117,6 +129,10 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, registry: CooldownR
                     t_ms=t,
                     cooldowns_active=active,
                     covered=len(active) >= window.expected_cooldowns,
+                    cooldowns_late=[
+                        LateCooldown(spell_id=spell, late_ms=start - t)
+                        for spell, start in sorted(late_start.items(), key=lambda kv: (kv[1], kv[0]))
+                    ],
                 )
             )
     return out

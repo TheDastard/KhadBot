@@ -236,6 +236,7 @@
       "cooldowns_active": [
         357170
       ],
+      "cooldowns_late": [],
       "covered": true,
       "occurrence": 1,
       "ref": "ev:H7z1fqDXjRTFnbtg:15:win:rage_of_the_shackled:1",
@@ -246,6 +247,7 @@
       "cooldowns_active": [
         357170
       ],
+      "cooldowns_late": [],
       "covered": true,
       "occurrence": 2,
       "ref": "ev:H7z1fqDXjRTFnbtg:15:win:rage_of_the_shackled:2",
@@ -254,6 +256,7 @@
     },
     {
       "cooldowns_active": [],
+      "cooldowns_late": [],
       "covered": false,
       "occurrence": 3,
       "ref": "ev:H7z1fqDXjRTFnbtg:15:win:rage_of_the_shackled:3",

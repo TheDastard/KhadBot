@@ -47,6 +47,7 @@
       "cooldowns_active": [
         900301
       ],
+      "cooldowns_late": [],
       "covered": true,
       "occurrence": 1,
       "ref": "ev:SYNTH01:2:win:cataclysm:1",
@@ -57,6 +58,7 @@
       "cooldowns_active": [
         900301
       ],
+      "cooldowns_late": [],
       "covered": true,
       "occurrence": 2,
       "ref": "ev:SYNTH01:2:win:cataclysm:2",

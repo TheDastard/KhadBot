@@ -7,6 +7,9 @@ on SYNTH01 and on small hand-written frames for edge cases (battle res, no HP da
 
 from __future__ import annotations
 
+import dataclasses
+
+import polars as pl
 import pytest
 from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
 from helpers.encounter.real_fixtures import REAL_REPORTS
@@ -222,6 +225,61 @@ def _enc_naming(*ability_ids):
     )
 
 
+class TestDefensivesStrippedByDeath:
+    """The game strips a dying player's auras just before WCL's death row."""
+
+    REGISTRY = {
+        "cooldowns": [{"spell_id": 10, "name": "Rally", "class": "Warrior", "kind": "raid", "aura_spell_ids": [11]}]
+    }
+
+    @staticmethod
+    def _buff(t, typ, target, spell=11):
+        return {"t_ms": t, "type": typ, "source_id": 2, "target_id": target, "ability_id": spell}
+
+    def _defensives(self, rows, registry=None):
+        rows = sorted(rows, key=lambda r: r["t_ms"])  # stable: the remove stays before the death row
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS, parse_registry(registry or self.REGISTRY))
+        return d.active_defensives
+
+    def test_stripped_while_still_up_on_others(self):
+        rows = [
+            self._buff(1_000, "applybuff", 1),
+            self._buff(1_000, "applybuff", 2),
+            self._buff(7_990, "removebuff", 1),
+            _death(8_000, 1),
+            self._buff(11_000, "removebuff", 2),
+        ]
+        assert self._defensives(rows) == [10]
+
+    def test_expired_just_before_death_is_not_active(self):
+        # Rally falling off takes its extra health with it: it ran out everywhere, so it was not stripped.
+        rows = [
+            self._buff(1_000, "applybuff", 1),
+            self._buff(1_000, "applybuff", 2),
+            self._buff(7_950, "removebuff", 1),
+            self._buff(7_950, "removebuff", 2),
+            _death(8_000, 1),
+        ]
+        assert self._defensives(rows) == []
+
+    def test_stripped_within_registry_duration(self):
+        registry = {"cooldowns": [{**self.REGISTRY["cooldowns"][0], "duration_s": 10}]}
+        rows = [self._buff(1_000, "applybuff", 1), self._buff(7_990, "removebuff", 1), _death(8_000, 1)]
+        assert self._defensives(rows) == []  # no other player, no duration
+        assert self._defensives(rows, registry) == [10]
+
+    def test_removed_well_before_death_is_not_active(self):
+        rows = [
+            self._buff(1_000, "applybuff", 1),
+            self._buff(1_000, "applybuff", 2),
+            self._buff(6_000, "removebuff", 1),  # walked out of the zone
+            _death(8_000, 1),
+            self._buff(11_000, "removebuff", 2),
+        ]
+        assert self._defensives(rows) == []
+
+
 class TestFriendlyDamage:
     def test_classes_players_and_unclassified(self):
         rows = [
@@ -376,6 +434,23 @@ class TestCooldowns:
         second = window_coverage(a, synth_enc, synth_registry)[1]
         assert second.t_ms == 40_000
         assert second.cooldowns_active == []
+
+    def test_late_raid_cooldowns(self, synth, synth_registry, synth_enc):
+        # Copy fight 1's Link Totem aura to start 1 s after the uncovered 40 s Cataclysm, and again past the
+        # 5 s grace (the window is a single hit).
+        get, _ = synth
+        a, _ = get(1)
+        aura = a.frame.filter(pl.col("ability_id") == 900311)
+        shifted = [
+            aura.with_columns(pl.col("t_ms") + shift, pl.col("seq") + 1_000_000 * k)
+            for k, shift in [(1, 41_000 - 18_050), (2, 46_000 - 18_050)]
+        ]
+        late = dataclasses.replace(a, frame=pl.concat([a.frame, *shifted]))
+        first, second = window_coverage(late, synth_enc, synth_registry)
+        assert first.cooldowns_late == []  # Link Totem was already up
+        assert (second.covered, second.cooldowns_active) == (False, [])
+        assert [(c.spell_id, c.late_ms) for c in second.cooldowns_late] == [(900301, 1_000)]
+        assert all(w.cooldowns_late == [] for w in window_coverage(a, synth_enc, synth_registry))
 
     def test_no_windows_without_encounter_file(self, synth, synth_registry):
         get, _ = synth
