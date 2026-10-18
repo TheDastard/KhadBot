@@ -47,6 +47,7 @@ Rest of the app:
 | `agent-tools` | LangChain tools shared by the agent's modes (`tools/`, other than `tools/warcraftlogs/`) |
 | `wcl-client` | Shared WarcraftLogs client and coach WCL tools (`tools/warcraftlogs/`) |
 | `rag` | Retrieval and guide data |
+| `simc` | SimC generated client data: codes, parser and fetch (`simc/`) |
 
 Repo-wide:
 
