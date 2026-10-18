@@ -13,7 +13,7 @@
 encounter_id: 3492
 name: Ula'tek
 zone: {id: 53, name: The Venomous Abyss}
-file_version: 3
+file_version: 4
 
 # WarcraftLogs reports phase transitions for this encounter (phase IDs 1-4).
 phases:
@@ -366,4 +366,3 @@ damage_windows:
 ignored_abilities:
   - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks, and adds
   - {ability_id: 3, name: Falling, difficulties: [heroic]}               # intermission platform knock-up
-  - {ability_id: 32409, name: "Shadow Word: Death", difficulties: [heroic]}  # player self-damage
