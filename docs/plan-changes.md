@@ -594,15 +594,26 @@ Add to `CooldownUse`, after `spell_name`:
     category: Literal["defensive", "offensive"]  # the cooldown file the spell is in
 ```
 
-`cooldown_uses` reads every cooldown file. Window coverage (`cooldowns_active`, `cooldowns_late`, `covered`) and
-`DeathRecord.active_defensives` read only the defensive file.
+`cooldown_uses` reads every cooldown file. Window coverage and `DeathRecord.active_defensives` read only the
+defensive file. In `WindowCoverage`, replace `cooldowns_active` and `cooldowns_late` with:
+
+```
+    defensive_cooldowns_active: list[int]   # defensive raid cooldown spell IDs whose aura was active at t_ms
+    covered: bool                           # len(defensive_cooldowns_active) >= expected_defensive_cooldowns
+    defensive_cooldowns_late: list[LateCooldown] = []
+```
+
+### Refactor plan 6.2 (Configuration files: damage windows)
+
+Rename the damage-window key `expected_cooldowns` to `expected_defensive_cooldowns` (default 1): the defensive
+raid cooldowns an occurrence needs active at its first hit to count as covered. Offensive cooldowns never count.
 
 ### Refactor plan 6.4 (Digest: offensive cooldowns)
 
 Replace the `cooldowns` field with:
 
 ```
-    cooldowns: list[CooldownUse]            # cap 30; defensive cooldowns only
+    defensive_cooldowns: list[CooldownUse]         # cap 30
     offensive_cooldowns: list[CooldownUse] = []    # cap 15: raid casts first, then one per spell at a time
 ```
 

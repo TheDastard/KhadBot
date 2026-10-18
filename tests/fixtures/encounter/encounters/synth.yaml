@@ -41,6 +41,6 @@ damage_windows:
     difficulties: [mythic]
     ability_ids: [900201]
     cluster_window_ms: 2000
-    expected_cooldowns: 1
+    expected_defensive_cooldowns: 1
 ignored_abilities:
   - {ability_id: 900010, name: Synth Boss Melee, difficulties: [mythic]}

@@ -367,11 +367,11 @@ damage_windows:
   - id: rage_of_the_shackled
     name: Rage of the Shackled
     # Raid-wide pulses about 4 s apart for 20 s; a 5 s window keeps one channel as one occurrence.
-    # expected_cooldowns is a guess (see docs/follow-ups.md).
+    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
     difficulties: [heroic]
     ability_ids: [1307367]
     cluster_window_ms: 5000
-    expected_cooldowns: 1
+    expected_defensive_cooldowns: 1
 
 ignored_abilities:
   - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks, and adds

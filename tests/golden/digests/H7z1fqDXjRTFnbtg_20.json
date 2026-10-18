@@ -84,302 +84,30 @@
   ],
   "boss_hp_pct": 0.01,
   "boss_pct": 0.0,
-  "cooldowns": [
-    {
-      "caster": "Mekerakesh",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:1",
-      "spell_id": 871,
-      "spell_name": "Shield Wall",
-      "t_ms": 12742
-    },
-    {
-      "caster": "Kouw",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:403876:1",
-      "spell_id": 403876,
-      "spell_name": "Divine Protection",
-      "t_ms": 24836
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:1",
-      "spell_id": 19236,
-      "spell_name": "Desperate Prayer",
-      "t_ms": 29281
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:64843:1",
-      "spell_id": 64843,
-      "spell_name": "Divine Hymn",
-      "t_ms": 30203
-    },
-    {
-      "caster": "Shinrael",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:1",
-      "spell_id": 22812,
-      "spell_name": "Barkskin",
-      "t_ms": 36940
-    },
-    {
-      "caster": "Dripington",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:1",
-      "spell_id": 48707,
-      "spell_name": "Anti-Magic Shell",
-      "t_ms": 41230
-    },
-    {
-      "caster": "Talyssah",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:363916:1",
-      "spell_id": 363916,
-      "spell_name": "Obsidian Scales",
-      "t_ms": 53432
-    },
-    {
-      "caster": "Lesnichii",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:2",
-      "spell_id": 22812,
-      "spell_name": "Barkskin",
-      "t_ms": 62187
-    },
-    {
-      "caster": "Mekerakesh",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:2",
-      "spell_id": 871,
-      "spell_name": "Shield Wall",
-      "t_ms": 80115
-    },
-    {
-      "caster": "Widowmaker",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:2",
-      "spell_id": 48707,
-      "spell_name": "Anti-Magic Shell",
-      "t_ms": 82672
-    },
-    {
-      "caster": "Kindrella",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:2",
-      "spell_id": 19236,
-      "spell_name": "Desperate Prayer",
-      "t_ms": 93336
-    },
-    {
-      "caster": "Dripington",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:3",
-      "spell_id": 48707,
-      "spell_name": "Anti-Magic Shell",
-      "t_ms": 95458
-    },
-    {
-      "caster": "Verrydis",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:1",
-      "spell_id": 108271,
-      "spell_name": "Astral Shift",
-      "t_ms": 100950
-    },
-    {
-      "caster": "Shinrael",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:3",
-      "spell_id": 22812,
-      "spell_name": "Barkskin",
-      "t_ms": 118301
-    },
-    {
-      "caster": "Kouw",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:403876:2",
-      "spell_id": 403876,
-      "spell_name": "Divine Protection",
-      "t_ms": 120645
-    },
-    {
-      "caster": "Verrydis",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:98008:1",
-      "spell_id": 98008,
-      "spell_name": "Spirit Link Totem",
-      "t_ms": 121015
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:3",
-      "spell_id": 19236,
-      "spell_name": "Desperate Prayer",
-      "t_ms": 121988
-    },
-    {
-      "caster": "Moombly",
-      "category": "defensive",
-      "phase_id": "p1",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108416:1",
-      "spell_id": 108416,
-      "spell_name": "Dark Pact",
-      "t_ms": 141971
-    },
-    {
-      "caster": "Talyssah",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:357170:1",
-      "spell_id": 357170,
-      "spell_name": "Time Dilation",
-      "t_ms": 167303
-    },
-    {
-      "caster": "Mekerakesh",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:3",
-      "spell_id": 871,
-      "spell_name": "Shield Wall",
-      "t_ms": 181568
-    },
-    {
-      "caster": "Talyssah",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:363916:2",
-      "spell_id": 363916,
-      "spell_name": "Obsidian Scales",
-      "t_ms": 192152
-    },
-    {
-      "caster": "Wilmer",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:264735:1",
-      "spell_id": 264735,
-      "spell_name": "Survival of the Fittest",
-      "t_ms": 192947
-    },
-    {
-      "caster": "Verrydis",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:2",
-      "spell_id": 108271,
-      "spell_name": "Astral Shift",
-      "t_ms": 193082
-    },
-    {
-      "caster": "Mainmoon",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:122470:1",
-      "spell_id": 122470,
-      "spell_name": "Touch of Karma",
-      "t_ms": 193369
-    },
-    {
-      "caster": "Mekerakesh",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:97462:1",
-      "spell_id": 97462,
-      "spell_name": "Rallying Cry",
-      "t_ms": 193849
-    },
-    {
-      "caster": "Verrydis",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:114052:1",
-      "spell_id": 114052,
-      "spell_name": "Ascendance",
-      "t_ms": 193933
-    },
-    {
-      "caster": "Aluriel",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:104773:1",
-      "spell_id": 104773,
-      "spell_name": "Unending Resolve",
-      "t_ms": 194085
-    },
-    {
-      "caster": "Moombly",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108416:2",
-      "spell_id": 108416,
-      "spell_name": "Dark Pact",
-      "t_ms": 194085
-    },
-    {
-      "caster": "Dastard",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:3",
-      "spell_id": 108271,
-      "spell_name": "Astral Shift",
-      "t_ms": 194265
-    },
-    {
-      "caster": "Shinrael",
-      "category": "defensive",
-      "phase_id": "p2",
-      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:4",
-      "spell_id": 22812,
-      "spell_name": "Barkskin",
-      "t_ms": 194681
-    }
-  ],
   "coverage": "full",
   "coverage_windows": [
     {
-      "cooldowns_active": [],
-      "cooldowns_late": [],
       "covered": false,
+      "defensive_cooldowns_active": [],
+      "defensive_cooldowns_late": [],
       "occurrence": 1,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:1",
       "t_ms": 135500,
       "window_id": "rage_of_the_shackled"
     },
     {
-      "cooldowns_active": [],
-      "cooldowns_late": [],
       "covered": false,
+      "defensive_cooldowns_active": [],
+      "defensive_cooldowns_late": [],
       "occurrence": 2,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:2",
       "t_ms": 284528,
       "window_id": "rage_of_the_shackled"
     },
     {
-      "cooldowns_active": [],
-      "cooldowns_late": [],
       "covered": false,
+      "defensive_cooldowns_active": [],
+      "defensive_cooldowns_late": [],
       "occurrence": 3,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:3",
       "t_ms": 573727,
@@ -985,6 +713,278 @@
       "window_self_damage": 0
     }
   ],
+  "defensive_cooldowns": [
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:1",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 12742
+    },
+    {
+      "caster": "Kouw",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:403876:1",
+      "spell_id": 403876,
+      "spell_name": "Divine Protection",
+      "t_ms": 24836
+    },
+    {
+      "caster": "Novic",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:1",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 29281
+    },
+    {
+      "caster": "Novic",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:64843:1",
+      "spell_id": 64843,
+      "spell_name": "Divine Hymn",
+      "t_ms": 30203
+    },
+    {
+      "caster": "Shinrael",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:1",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 36940
+    },
+    {
+      "caster": "Dripington",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:1",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 41230
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:363916:1",
+      "spell_id": 363916,
+      "spell_name": "Obsidian Scales",
+      "t_ms": 53432
+    },
+    {
+      "caster": "Lesnichii",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:2",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 62187
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:2",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 80115
+    },
+    {
+      "caster": "Widowmaker",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:2",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 82672
+    },
+    {
+      "caster": "Kindrella",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:2",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 93336
+    },
+    {
+      "caster": "Dripington",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:48707:3",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 95458
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:1",
+      "spell_id": 108271,
+      "spell_name": "Astral Shift",
+      "t_ms": 100950
+    },
+    {
+      "caster": "Shinrael",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:3",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 118301
+    },
+    {
+      "caster": "Kouw",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:403876:2",
+      "spell_id": 403876,
+      "spell_name": "Divine Protection",
+      "t_ms": 120645
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:98008:1",
+      "spell_id": 98008,
+      "spell_name": "Spirit Link Totem",
+      "t_ms": 121015
+    },
+    {
+      "caster": "Novic",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:19236:3",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 121988
+    },
+    {
+      "caster": "Moombly",
+      "category": "defensive",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108416:1",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 141971
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:357170:1",
+      "spell_id": 357170,
+      "spell_name": "Time Dilation",
+      "t_ms": 167303
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:871:3",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 181568
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:363916:2",
+      "spell_id": 363916,
+      "spell_name": "Obsidian Scales",
+      "t_ms": 192152
+    },
+    {
+      "caster": "Wilmer",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:264735:1",
+      "spell_id": 264735,
+      "spell_name": "Survival of the Fittest",
+      "t_ms": 192947
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:2",
+      "spell_id": 108271,
+      "spell_name": "Astral Shift",
+      "t_ms": 193082
+    },
+    {
+      "caster": "Mainmoon",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:122470:1",
+      "spell_id": 122470,
+      "spell_name": "Touch of Karma",
+      "t_ms": 193369
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:97462:1",
+      "spell_id": 97462,
+      "spell_name": "Rallying Cry",
+      "t_ms": 193849
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:114052:1",
+      "spell_id": 114052,
+      "spell_name": "Ascendance",
+      "t_ms": 193933
+    },
+    {
+      "caster": "Aluriel",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:104773:1",
+      "spell_id": 104773,
+      "spell_name": "Unending Resolve",
+      "t_ms": 194085
+    },
+    {
+      "caster": "Moombly",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108416:2",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 194085
+    },
+    {
+      "caster": "Dastard",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:108271:3",
+      "spell_id": 108271,
+      "spell_name": "Astral Shift",
+      "t_ms": 194265
+    },
+    {
+      "caster": "Shinrael",
+      "category": "defensive",
+      "phase_id": "p2",
+      "ref": "ev:H7z1fqDXjRTFnbtg:20:cd:22812:4",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 194681
+    }
+  ],
   "duration_ms": 579174,
   "encounter_name": "Ula'tek",
   "friendly_damage": {
@@ -1311,7 +1311,7 @@
   "phase_reached": "p3",
   "produced_from": {
     "defensive_cooldowns_hash": "b77b9414d96a",
-    "encfile_hash": "e17e87581ace",
+    "encfile_hash": "1e5398dfceb0",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "1e4aefa4043d",

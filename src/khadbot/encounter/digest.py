@@ -52,7 +52,7 @@ from khadbot.encounter.store import EventStore, split_pull_key
 
 DEATH_CAP = 10
 MECHANIC_CAP = 8
-COOLDOWN_CAP = 30
+DEFENSIVE_COOLDOWN_CAP = 30
 # Long pulls cast 30+ offensive cooldowns; 15 keeps the recorded 10-minute pulls under the 3k-token digest ceiling.
 # Which casts survive the cap: see ``capped_offensive``.
 OFFENSIVE_COOLDOWN_CAP = 15
@@ -249,7 +249,7 @@ def build_pull_records(
         deaths=sorted(deaths, key=lambda d: (d.after_cutoff, d.t_ms))[:DEATH_CAP],
         mechanics=active_mechanics[:MECHANIC_CAP],
         # Each category has its own cap, so a raid's many offensive casts never push defensives out.
-        cooldowns=[c for c in cooldowns if c.category == "defensive"][:COOLDOWN_CAP],
+        defensive_cooldowns=[c for c in cooldowns if c.category == "defensive"][:DEFENSIVE_COOLDOWN_CAP],
         offensive_cooldowns=capped_offensive([c for c in cooldowns if c.category == "offensive"], offensive),
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
@@ -419,14 +419,14 @@ def render_digest(d: PullDigest) -> str:
             line += "; " + _blame_clause(m)
         lines.append(line)
 
-    lines += _render_cooldowns("DEFENSIVE COOLDOWNS", d.cooldowns)
+    lines += _render_cooldowns("DEFENSIVE COOLDOWNS", d.defensive_cooldowns)
 
     if d.coverage_windows:
         lines.append("DAMAGE WINDOWS")
     for w in d.coverage_windows:
-        active = ",".join(str(s) for s in w.cooldowns_active) or "none"
+        active = ",".join(str(s) for s in w.defensive_cooldowns_active) or "none"
         status = "covered" if w.covered else "NOT covered"
-        late = ", ".join(f"{c.spell_id} +{_s(c.late_ms)}" for c in w.cooldowns_late)
+        late = ", ".join(f"{c.spell_id} +{_s(c.late_ms)}" for c in w.defensive_cooldowns_late)
         late = f"; late: {late}" if late else ""
         lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active}{late})")
 

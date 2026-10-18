@@ -20,8 +20,8 @@ from khadbot.encounter.annotate import Annotated, is_hit, type_is
 from khadbot.encounter.config_files import CooldownRegistry, EncounterFile
 from khadbot.encounter.models import Actor, CooldownUse, LateCooldown, WindowCoverage, make_ref
 
-# A raid cooldown started this long after a window's first hit still counts as late, even when the window's hits
-# end sooner (a one-hit window).
+# A defensive raid cooldown started this long after a window's first hit still counts as late, even when the
+# window's hits end sooner (a one-hit window).
 LATE_GRACE_MS = 5_000
 
 
@@ -99,10 +99,11 @@ def cooldown_uses(a: Annotated, registries: Sequence[CooldownRegistry], actors: 
 
 def window_coverage(a: Annotated, enc: EncounterFile | None, defensive: CooldownRegistry) -> list[WindowCoverage]:
     """
-    One row per damage-window occurrence: which raid cooldowns were active at its first hit.
+    One row per damage-window occurrence: which defensive raid cooldowns were active at its first hit.
 
-    Only ``kind: raid`` cooldowns count. A damage window is raid-wide damage, and an external on
-    one player does not cover it. ``covered`` judges the first hit only. A raid cooldown whose aura
+    Only ``target: raid`` defensive cooldowns count. A damage window is raid-wide damage, and an external on
+    one player does not cover it; offensive cooldowns never do. ``covered`` judges the first hit only against
+    the window's ``expected_defensive_cooldowns``. A defensive raid cooldown whose aura
     started after the first hit, up to the occurrence's last hit or ``LATE_GRACE_MS`` after the first
     hit (whichever is later), is listed as late with how late it started: used earlier, it would have
     covered the first hit.
@@ -133,9 +134,9 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, defensive: Cooldown
                     window_id=window.id,
                     occurrence=n,
                     t_ms=t,
-                    cooldowns_active=active,
-                    covered=len(active) >= window.expected_cooldowns,
-                    cooldowns_late=[
+                    defensive_cooldowns_active=active,
+                    covered=len(active) >= window.expected_defensive_cooldowns,
+                    defensive_cooldowns_late=[
                         LateCooldown(spell_id=spell, late_ms=start - t)
                         for spell, start in sorted(late_start.items(), key=lambda kv: (kv[1], kv[0]))
                     ],

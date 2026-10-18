@@ -245,7 +245,7 @@ def _side_effect(data: ClientData, spell_id: int, hit: _Hit) -> bool:
     return aura is not None and 0 < aura.duration_ms < _MIN_TRIGGERED_DEFENSIVE_MS
 
 
-def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
+def classify_defensive(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
     """A defensive-cooldown candidate for ``spell_id``, or None if it is not a player cooldown that helps the raid
     live."""
     return _classify(data, spell_id, offensive=False, min_cooldown_s=min_cooldown_s)
@@ -315,7 +315,7 @@ def _classify(data: ClientData, spell_id: int, *, offensive: bool, min_cooldown_
 
 def defensive_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[Candidate]:
     """Every player cooldown in the client data that helps the raid live, by class then name."""
-    found = (classify(data, s, min_cooldown_s=min_cooldown_s) for s in data.player_spells)
+    found = (classify_defensive(data, s, min_cooldown_s=min_cooldown_s) for s in data.player_spells)
     return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
 
 
@@ -347,7 +347,7 @@ def scripted_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[t
         )
         if not scripted or any(e.type == c.E_SCHOOL_DAMAGE for e in own):
             continue
-        candidate = classify(data, spell_id, min_cooldown_s=min_cooldown_s) or classify_offensive(
+        candidate = classify_defensive(data, spell_id, min_cooldown_s=min_cooldown_s) or classify_offensive(
             data, spell_id, min_cooldown_s=min_cooldown_s
         )
         if candidate is None:

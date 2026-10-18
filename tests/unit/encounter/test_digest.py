@@ -118,17 +118,17 @@ def test_inactive_mechanics_are_dropped(digest_of):
 def test_caps(digest_of, monkeypatch):
     monkeypatch.setattr(digest_mod, "DEATH_CAP", 2)
     monkeypatch.setattr(digest_mod, "MECHANIC_CAP", 1)
-    monkeypatch.setattr(digest_mod, "COOLDOWN_CAP", 1)
+    monkeypatch.setattr(digest_mod, "DEFENSIVE_COOLDOWN_CAP", 1)
     d = digest_of(1, unregistered_cap=0)
     assert [x.t_ms for x in d.deaths] == [8_000, 23_000]
     assert [m.mechanic_id for m in d.mechanics] == ["swirl"]
-    assert len(d.cooldowns) == 1
+    assert len(d.defensive_cooldowns) == 1
     assert d.unregistered == []
 
 
 def test_cooldowns_are_split_by_category(digest_of):
     d = digest_of(1)
-    assert [(c.spell_name, c.category) for c in d.cooldowns] == [
+    assert [(c.spell_name, c.category) for c in d.defensive_cooldowns] == [
         ("Synth Link Totem", "defensive"),
         ("Synth Guardian", "defensive"),
     ]
@@ -139,11 +139,11 @@ def test_cooldowns_are_split_by_category(digest_of):
 
 
 def test_each_category_has_its_own_cap(digest_of, monkeypatch):
-    monkeypatch.setattr(digest_mod, "COOLDOWN_CAP", 1)
+    monkeypatch.setattr(digest_mod, "DEFENSIVE_COOLDOWN_CAP", 1)
     monkeypatch.setattr(digest_mod, "OFFENSIVE_COOLDOWN_CAP", 1)
     d = digest_of(1)
     # Battle Cry and Fury come first in time, but defensives keep their own slot.
-    assert [c.spell_name for c in d.cooldowns] == ["Synth Link Totem"]
+    assert [c.spell_name for c in d.defensive_cooldowns] == ["Synth Link Totem"]
     assert [c.spell_name for c in d.offensive_cooldowns] == ["Synth Battle Cry"]
 
 
@@ -179,7 +179,7 @@ def test_offensive_cooldowns_never_count_as_defensive(digest_of):
     # Battle Cry's aura covers every player from 3 s to 43 s: the first death and both Cataclysms.
     d = digest_of(1)
     assert d.deaths[0].active_defensives == []
-    assert [(w.cooldowns_active, w.covered) for w in d.coverage_windows] == [([900301], True), ([], False)]
+    assert [(w.defensive_cooldowns_active, w.covered) for w in d.coverage_windows] == [([900301], True), ([], False)]
 
 
 def test_deaths_before_cutoff_come_first(digest_of, monkeypatch):
@@ -415,7 +415,10 @@ def test_render_late_cooldowns(digest_of):
     d = digest_of(1)
     window = d.coverage_windows[1].model_copy(
         update={
-            "cooldowns_late": [LateCooldown(spell_id=900301, late_ms=1_200), LateCooldown(spell_id=7, late_ms=3_000)]
+            "defensive_cooldowns_late": [
+                LateCooldown(spell_id=900301, late_ms=1_200),
+                LateCooldown(spell_id=7, late_ms=3_000),
+            ]
         }
     )
     text = render_digest(d.model_copy(update={"coverage_windows": [d.coverage_windows[0], window]}))

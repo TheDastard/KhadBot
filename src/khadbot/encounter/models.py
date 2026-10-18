@@ -226,10 +226,10 @@ class WindowCoverage(BaseModel):
     window_id: str
     occurrence: int  # 1-based
     t_ms: int
-    cooldowns_active: list[int]  # raid cooldown spell IDs whose aura was active at t_ms
-    covered: bool  # len(cooldowns_active) >= expected_cooldowns
-    # Raid cooldowns not active at t_ms whose aura started during the occurrence (see window_coverage).
-    cooldowns_late: list[LateCooldown] = Field(default_factory=list)
+    defensive_cooldowns_active: list[int]  # defensive raid cooldown spell IDs whose aura was active at t_ms
+    covered: bool  # len(defensive_cooldowns_active) >= expected_defensive_cooldowns
+    # Defensive raid cooldowns not active at t_ms whose aura started during the occurrence (see window_coverage).
+    defensive_cooldowns_late: list[LateCooldown] = Field(default_factory=list)
 
 
 class UnregisteredAbility(BaseModel):
@@ -307,7 +307,7 @@ class PullDigest(BaseModel):
     cutoff_ms: int | None
     deaths: list[DeathRecord]  # cap 10; before-cutoff first
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
-    cooldowns: list[CooldownUse]  # cap 30; defensive cooldowns only
+    defensive_cooldowns: list[CooldownUse]  # cap 30
     offensive_cooldowns: list[CooldownUse] = []  # cap 15; raid, then external, then personal, kept in time order
     coverage_windows: list[WindowCoverage]
     unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
