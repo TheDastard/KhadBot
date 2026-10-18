@@ -166,6 +166,7 @@ RuleName = Literal[
     "per_cluster",
     "debuff_stacks_gt",
     "hit_while_aura",
+    "aura_removed_by",
 ]
 BlameBy = Literal["cast_target", "aggro_holder"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
@@ -196,6 +197,7 @@ _RULE_PARAM: dict[str, str | None] = {
     "per_cluster": None,
     "debuff_stacks_gt": "value",
     "hit_while_aura": "aura_ids",
+    "aura_removed_by": "ability_ids",
 }
 _BLAME_PARAM: dict[str, str] = {"cast_target": "ability_id", "aggro_holder": "npc_game_id"}
 
@@ -268,6 +270,11 @@ class FailureRule(_Strict):
     value: int | None = None
     ms: int | None = None
     aura_ids: list[int] | None = Field(None, min_length=1)
+    # aura_removed_by: what breaks the aura (may be other mechanics' IDs), auras that confirm the break, and
+    # whether a removal at the player's death counts (charged to no one)
+    ability_ids: list[int] | None = Field(None, min_length=1)
+    followed_by_ids: list[int] | None = Field(None, min_length=1)
+    on_death: bool = False
     blame: Blame | None = None
 
     @model_validator(mode="after")
@@ -279,6 +286,10 @@ class FailureRule(_Strict):
             raise ValueError("failure rule 'debuff_stacks_gt' requires 'value' >= 0")
         if (self.rule == "hit_while_aura") != (self.aura_ids is not None):
             raise ValueError("'aura_ids' is required by failure rule 'hit_while_aura' and allowed on no other rule")
+        if (self.rule == "aura_removed_by") != (self.ability_ids is not None):
+            raise ValueError("'ability_ids' is required by failure rule 'aura_removed_by' and allowed on no other rule")
+        if self.rule != "aura_removed_by" and (self.followed_by_ids is not None or self.on_death):
+            raise ValueError("'followed_by_ids' and 'on_death' are allowed on failure rule 'aura_removed_by' only")
         if (self.rule == "per_cluster") != (self.blame is not None):
             raise ValueError("'blame' is required by failure rule 'per_cluster' and allowed on no other rule")
         return self

@@ -94,40 +94,6 @@ beyond the phases detected. Never compared against `last_phase`).
 investigations", 2026-10-16). Apply them to the plan only once the code exists. Until then, the plan should only
 mention them as open work.
 
-### Refactor plan 6.2: `aura_removed_by` failure rule
-
-New row for the failure-rules table, in the "charged to the player" group:
-
-| Rule | Params | A failure is | Charged to |
-|---|---|---|---|
-| `aura_removed_by` | `ability_ids` (non-empty), `on_death` (default false) | Each removal of one of the mechanic's auras from a player that is followed within 200 ms by a hit on that player from one of `ability_ids`. With `on_death: true`, also each removal followed within 200 ms by that player's death. The remove row is the failure row; it belongs to no cluster. | The player who lost the aura; no one for a removal at a death |
-
-Add to the validation paragraph: "`aura_removed_by` requires a non-empty `ability_ids`; those IDs may belong to
-other mechanics, since they are a parameter, not the mechanic's own abilities."
-
-Add after the blame-spec list: "A hatch or spawn has no event of its own in the logs. When an add comes from an
-aura breaking on a player (an egg carried as a debuff), charge the break with `aura_removed_by` on the aura's
-mechanic, not a blame spec on the add's damage. The add's damage forms many clusters over its life, not one per
-spawn."
-
-Add to 6.3 **Clusters**: "...the aura rows of `aura_applied` and the remove rows of `aura_removed_by`) belong to
-no cluster".
-
-Ula'tek example, for the file once the rule exists:
-
-```yaml
-  - id: malignant_shell
-    name: Malignant Shell
-    # A shell broken by Caustic Waves hatches a Blightscale Viper (29 of 29 on the recorded pulls); one broken
-    # by Spectral Coils hatches a Rawling (746 of 747). The carrier's death counts but is charged to no one.
-    # kind and severity are unchanged here; the file review decides them.
-    difficulties: [heroic]
-    ability_ids: [1297213, 1295360]
-    kind: unavoidable
-    failure: {rule: aura_removed_by, ability_ids: [1292403], on_death: true}
-    severity: low
-```
-
 ### Refactor plan 6.1: DamageDone fetch
 
 Add `"DamageDone"` to `FetchSpec.data_type`. Add to the default fetch specs: "**DamageDone** (Friendlies):
@@ -507,3 +473,47 @@ it wasn't given from `config/` on each lookup, like encounter files, so an edit 
 
 `/digest <fight> --unregistered` (and `main.py digest --unregistered`) prints a second table, unclassified
 friendly damage, after the unregistered one: the authoring list for the friendly-damage registry.
+
+## encounter/aura-removed-by
+
+Replaces the `aura_removed_by` proposal that was under `encounter/spike-logs`. The evidence and reasons are in
+`docs/decisions.md` ("Viper hatches").
+
+### Refactor plan 6.2 (Configuration files: failure rules)
+
+Add a row to the failure-rules table, after `hit_while_aura`:
+
+| Rule | Params | A failure is | Charged to |
+|---|---|---|---|
+| `aura_removed_by` | `ability_ids` (non-empty), `followed_by_ids` (optional, non-empty), `on_death` (default false) | Each removal (`removebuff`, `removedebuff`) of one of the mechanic's abilities from a player when, within 200 ms either side of it, a hit from one of `ability_ids` lands on that player or an aura from one of them is applied, stacked or refreshed on them. With `on_death: true`, also each removal within 200 ms of the player's death (Deaths data). With `followed_by_ids`, either kind counts only when one of those auras is applied, stacked or refreshed on any player within 200 ms after the removal. The remove row is the failure row; it belongs to no cluster | The player who lost the aura; no one for a removal at a death. A break by `ability_ids` wins over a death |
+
+Add to the validation paragraph: "`ability_ids` required by `aura_removed_by` and rejected elsewhere;
+`followed_by_ids` and `on_death` allowed on `aura_removed_by` only. The IDs may belong to other mechanics, since
+they are parameters, not the mechanic's own abilities."
+
+Add after the blame-spec list: "A hatch or spawn has no event of its own in the logs. When an add comes from an
+aura breaking on a player (an egg carried as a debuff), charge the break with `aura_removed_by` on the aura's
+mechanic, not a blame spec on the add's damage, which forms many clusters over its life. An aura the add puts on
+the raid as it appears can confirm the hatch through `followed_by_ids`."
+
+In the example encounter file, add under `mechanics:`:
+
+```
+  - id: carried_egg
+    name: Malignant Shell
+    difficulties: [heroic, mythic]
+    ability_ids: [444444]
+    kind: unavoidable
+    failure:
+      rule: aura_removed_by
+      ability_ids: [555556, 555557]   # the wave and the pool that hatch the egg
+      followed_by_ids: [555558]       # the hatched add's raid-wide debuff
+      on_death: true                  # a hatch at the carrier's death counts, charged to no one
+```
+
+### Refactor plan 6.3 (Analysis records)
+
+In the **Clusters** paragraph's list of failures that are not hits, add "the remove rows of `aura_removed_by`".
+
+In the **Blame** paragraph, replace "`ANNOTATION_VERSION` (5)" with "`ANNOTATION_VERSION` (7)". This supersedes
+the "`ANNOTATION_VERSION` is 6" in the `encounter/positions` entry's blame context text: the version is 7.

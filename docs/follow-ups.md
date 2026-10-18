@@ -77,14 +77,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Failure rules
 
-- **Charging the cause of an add.** Damage from an add that should not have spawned (a hatched Blightscale
-  Viper) is counted, but nobody is charged for letting it spawn. Adds have no spawn event, but the hatch shows
-  as the egg's aura coming off its carrier (`docs/decisions.md`, "Log investigations"). Implement the proposed
-  `aura_removed_by {ability_ids, on_death}` rule (`docs/plan-changes.md` under `encounter/spike-logs`). Each
-  removal of the mechanic's aura from a player, followed within 200 ms by a hit from `ability_ids` on that
-  player, is a failure charged to them. With `on_death: true`, a removal followed within 200 ms by the
-  player's death is a failure charged to no one. The failure is on the remove row and belongs to no cluster.
-  Validation: `ability_ids` non-empty, `blame` rejected. Bump `ANNOTATION_VERSION`.
 - **Failures charged to no one.** Occurrences with no aggro holder (an untanked boss at a stage start, a tail
   never picked up) and soak failures can only be charged once the raid plan's assignments exist (plan section
   14).
