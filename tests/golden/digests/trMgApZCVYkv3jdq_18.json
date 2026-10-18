@@ -1131,11 +1131,11 @@
   "outcome": "wipe",
   "phase_reached": "p3",
   "produced_from": {
+    "defensive_cooldowns_hash": "8f4466287d33",
     "encfile_hash": "e17e87581ace",
     "events_hash": "beb4f5529aa7922491e4c218169c939ebbf10470efe0918cd0bb1015edfe9216",
     "friendly_damage_hash": "9937b022415a",
-    "positions_hash": "e2ba87617afb16bd6b2426fd15ea0cdd018c015847a2ea15d2b70273a8cc75d9",
-    "registry_hash": "729fc8b3cf7d"
+    "positions_hash": "e2ba87617afb16bd6b2426fd15ea0cdd018c015847a2ea15d2b70273a8cc75d9"
   },
   "pull_key": "trMgApZCVYkv3jdq:18",
   "unregistered": []

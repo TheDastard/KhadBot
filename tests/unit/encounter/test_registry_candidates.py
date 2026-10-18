@@ -11,9 +11,9 @@ import pytest
 from helpers.simc.tables import class_spells, effect_row, spec_spells, spell_data, spell_row, traits
 
 from khadbot.encounter.registry_candidates import (
-    candidates,
     check_registry,
     classify,
+    defensive_candidates,
     friendly_damage_candidates,
     scripted_spells,
 )
@@ -74,7 +74,7 @@ def data() -> ClientData:
 
 
 @pytest.mark.parametrize(
-    ("spell_id", "kind", "role"),
+    ("spell_id", "target", "role"),
     [
         (PERSONAL, "personal", "defensive"),
         (EXTERNAL, "external", "defensive"),
@@ -85,10 +85,10 @@ def data() -> ClientData:
         (HEALER, "raid", "healing"),
     ],
 )
-def test_kinds_and_roles(data: ClientData, spell_id: int, kind: str, role: str) -> None:
+def test_targets_and_roles(data: ClientData, spell_id: int, target: str, role: str) -> None:
     cand = classify(data, spell_id)
     assert cand is not None
-    assert (cand.kind, cand.role) == (kind, role)
+    assert (cand.target, cand.role) == (target, role)
 
 
 def test_candidate_fields(data: ClientData) -> None:
@@ -124,9 +124,9 @@ def test_min_cooldown_is_configurable(data: ClientData) -> None:
 
 
 def test_candidates_sorted_by_class_then_name(data: ClientData) -> None:
-    names = [(x.class_name, x.name) for x in candidates(data)]
+    names = [(x.class_name, x.name) for x in defensive_candidates(data)]
     assert names == sorted(names)
-    assert {x.spell_id for x in candidates(data)} == {
+    assert {x.spell_id for x in defensive_candidates(data)} == {
         PERSONAL, EXTERNAL, RAID_AURA, TRIGGER_CAST, BARRIER, SUPPORT, HEALER
     }  # fmt: skip
 
@@ -136,7 +136,7 @@ def test_scripted_spells_list_dummy_cooldowns_only(data: ClientData) -> None:
 
 
 def test_check_registry_statuses(data: ClientData) -> None:
-    found = candidates(data)
+    found = defensive_candidates(data)
     entries = [
         (PERSONAL, "Personal Wall", "personal"),
         (EXTERNAL, "Ally Shield", "raid"),
@@ -144,9 +144,9 @@ def test_check_registry_statuses(data: ClientData) -> None:
         (SCRIPTED, "Mystery Wall", "personal"),
         (900999, "Gone", "raid"),
     ]
-    got = {r.spell_id: r for r in check_registry(data, entries, found)}
+    got = {r.spell_id: r for r in check_registry(data, entries, found, "target")}
     assert got[PERSONAL].status == "matched"
-    assert (got[EXTERNAL].status, got[EXTERNAL].proposed_kind) == ("kind_differs", "external")
+    assert (got[EXTERNAL].status, got[EXTERNAL].proposed) == ("target_differs", "external")
     assert (got[TRIGGER_CAST].status, got[TRIGGER_CAST].game_name) == ("name_differs", "Rally Cast")
     assert (got[SCRIPTED].status, got[SCRIPTED].cooldown_s, got[SCRIPTED].duration_s) == ("not_a_candidate", 180.0, 6.0)
     assert got[900999].status == "not_in_game_data"
@@ -201,7 +201,7 @@ def test_friendly_damage_finds_damage_on_caster_or_allies(friendly_data: ClientD
     # The damage-taken aura is not damage; the leech effect and leech aura are.
     assert [e.split()[1] for e in got[SELF_LEECH].evidence] == ["E_HEALTH_LEECH", "A_PERIODIC_LEECH"]
     assert got[MULTI_CLASS].player_classes == ["Warrior", "Paladin"]
-    assert all(x.kind == "class" for x in got.values())
+    assert all(x.origin == "class" for x in got.values())
 
 
 @pytest.mark.parametrize("spell_id", [PROC, ENEMY_HIT, ANY_HIT])
@@ -223,9 +223,9 @@ def test_check_registry_compares_friendly_damage_origin(friendly_data: ClientDat
         (PROC, "Trinket Proc", "item"),
         (900999, "Gone", "class"),
     ]
-    got = {r.spell_id: r for r in check_registry(friendly_data, entries, found)}
+    got = {r.spell_id: r for r in check_registry(friendly_data, entries, found, "origin")}
     assert got[SELF_DOT].status == "matched"
-    assert (got[SHARED_HIT].status, got[SHARED_HIT].proposed_kind) == ("kind_differs", "class")
+    assert (got[SHARED_HIT].status, got[SHARED_HIT].proposed) == ("origin_differs", "class")
     assert (got[RAID_BURN].status, got[RAID_BURN].game_name) == ("name_differs", "Raid Burn")
     assert got[PROC].status == "not_a_candidate"
     assert got[900999].status == "not_in_game_data"

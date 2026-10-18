@@ -15,7 +15,7 @@ import polars as pl
 import pytest
 from helpers.encounter.events import make_pull
 from helpers.encounter.real_fixtures import REAL_REPORTS, WCL_FIXTURES, ingest_fixture
-from helpers.encounter.synth import SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
+from helpers.encounter.synth import SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS
 
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import specs_for
@@ -82,7 +82,7 @@ def test_samples_follow_resource_actor_and_drop_duplicates():
 
 def test_events_frame_and_hash_unchanged_on_synth(synth_cache):
     pulls, actors = parse_report_meta(CODE, synth_cache.report_meta(CODE))
-    specs = specs_for(SYNTH_REGISTRY_IDS, SYNTH_ENEMY_CAST_IDS[90001])
+    specs = specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001])
     for pull in pulls:
         pages = {s.dir_name: synth_cache.pages(CODE, pull.fight_id, s) for s in specs}
         df, pos = normalize_pull_with_positions(pull, actors, pages)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import orjson
 import polars as pl
 import pytest
-from helpers.encounter.synth import GOLDEN, SYNTH_ENEMY_CAST_IDS, SYNTH_REGISTRY_IDS
+from helpers.encounter.synth import GOLDEN, SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS
 
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import MissingFixtureError, specs_for
@@ -48,7 +48,7 @@ class MetaOnlyClient:
 def frame_for(synth_cache, meta, fight: int) -> pl.DataFrame:
     pulls, actors = meta
     pull = pulls[fight]
-    specs = specs_for(SYNTH_REGISTRY_IDS, SYNTH_ENEMY_CAST_IDS[90001])
+    specs = specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001])
     pages = {s.dir_name: synth_cache.pages(CODE, fight, s) for s in specs}
     return normalize_pull(pull, actors, pages)
 
@@ -366,7 +366,9 @@ class TestIngest:
     async def test_partial_failure_continues(self, synth_ingest_kwargs, synth_cache):
         import shutil
 
-        spec = next(s for s in specs_for(SYNTH_REGISTRY_IDS, SYNTH_ENEMY_CAST_IDS[90001]) if s.dir_name == "Healing")
+        spec = next(
+            s for s in specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001]) if s.dir_name == "Healing"
+        )
         shutil.rmtree(synth_cache._dir(CODE, 1, spec))  # fight 1 loses a data type
         result = await ingest_report(CODE, **synth_ingest_kwargs)
         assert result.pulls == ["SYNTH01:2"]

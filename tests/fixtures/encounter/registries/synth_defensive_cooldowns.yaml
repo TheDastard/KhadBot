@@ -1,12 +1,13 @@
-# Cooldown registry matching the synthetic SYNTH01 report. All IDs and durations are fake.
+# Defensive cooldowns matching the synthetic SYNTH01 report. All IDs and durations are fake.
 # Link Totem is "verified" so tests have one complete entry; Guardian is left unverified
 # so its use in fight 1 produces a cooldown_unverified anomaly. Link Totem's aura has its own
 # ID (900311), as Spirit Link Totem's does.
+category: defensive
 cooldowns:
   - spell_id: 900301
     name: Synth Link Totem
     class: Shaman
-    kind: raid
+    target: raid
     cooldown_s: 180
     duration_s: 8
     aura_spell_ids: [900311]
@@ -14,7 +15,7 @@ cooldowns:
   - spell_id: 900302
     name: Synth Guardian
     class: Priest
-    kind: external
+    target: external
     cooldown_s: null
     duration_s: null
     verified: false

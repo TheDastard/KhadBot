@@ -12,32 +12,32 @@ import copy
 import pytest
 import yaml
 from helpers.encounter.synth import (
+    SYNTH_DEFENSIVE_COOLDOWNS_FILE,
     SYNTH_ENCOUNTER_FILE,
     SYNTH_ENCOUNTER_ID,
     SYNTH_ENCOUNTER_RELPATH,
     SYNTH_FRIENDLY_DAMAGE,
-    SYNTH_REGISTRY_FILE,
     install_synth_encounter,
 )
 
 from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.config_files import (
+    DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
     DEFAULT_FRIENDLY_DAMAGE_PATH,
-    DEFAULT_REGISTRY_PATH,
+    cooldowns_hash,
     encfile_hash,
     encounter_relpath,
     fetch_filter_inputs,
     friendly_damage_hash,
     load_all_encounters,
+    load_cooldowns,
     load_encounter,
     load_encounter_file,
     load_encounter_view,
     load_friendly_damage,
-    load_registry,
+    parse_cooldowns,
     parse_encounter,
     parse_friendly_damage,
-    parse_registry,
-    registry_hash,
     slugify,
 )
 
@@ -49,7 +49,7 @@ def enc_data() -> dict:
 
 @pytest.fixture
 def reg_data() -> dict:
-    return yaml.safe_load(SYNTH_REGISTRY_FILE.read_text(encoding="utf-8"))
+    return yaml.safe_load(SYNTH_DEFENSIVE_COOLDOWNS_FILE.read_text(encoding="utf-8"))
 
 
 # ===========================================================================
@@ -61,8 +61,8 @@ class TestRegistry:
     def test_default_registry_keeps_legacy_ids_still_in_game(self):
         from khadbot.tools.warcraftlogs.encounter import MAJOR_COOLDOWN_IDS
 
-        reg = load_registry()
-        assert DEFAULT_REGISTRY_PATH.exists()
+        reg = load_cooldowns("defensive")
+        assert DEFAULT_DEFENSIVE_COOLDOWNS_PATH.exists()
         # Ancestral Protection Totem is gone from the game data; Tiger's Lust is movement utility.
         dropped = {207399, 116841}
         assert set(MAJOR_COOLDOWN_IDS) - dropped <= set(reg.spell_ids())
@@ -71,7 +71,7 @@ class TestRegistry:
         assert [reg.get(i).name for i in (357170, 374227, 97462)] == ["Time Dilation", "Zephyr", "Rallying Cry"]
 
     def test_default_registry_values_come_from_game_data(self):
-        reg = load_registry()
+        reg = load_cooldowns("defensive")
         assert len(reg.cooldowns) == 64
         # Offensive cooldowns the SimC heuristic misread as defensive stay out.
         assert not {19574, 107574, 191427} & set(reg.spell_ids())  # Bestial Wrath, Avatar, Havoc Metamorphosis
@@ -84,7 +84,7 @@ class TestRegistry:
         assert keys == sorted(keys)
 
     def test_synth_registry(self):
-        reg = load_registry(SYNTH_REGISTRY_FILE)
+        reg = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
         assert reg.spell_ids() == [900301, 900302]
         assert reg.spell_ids(["raid"]) == [900301]
         assert reg.aura_ids() == {900301: 900301, 900311: 900301, 900302: 900302}
@@ -93,7 +93,7 @@ class TestRegistry:
         assert reg.get(1) is None
 
     def test_default_registry_aura_ids(self):
-        auras = load_registry().aura_ids(["raid"])
+        auras = load_cooldowns("defensive").aura_ids(["raid"])
         assert auras[97463] == 97462  # Rallying Cry
         assert auras[145629] == 51052  # Anti-Magic Zone
         assert auras[98007] == 98008  # Spirit Link Totem
@@ -106,36 +106,49 @@ class TestRegistry:
         if aura == 900302:
             reg_data["cooldowns"][0]["aura_spell_ids"] = [aura]
         with pytest.raises(ConfigurationError, match=f"aura_spell_id {aura} .* already used"):
-            parse_registry(reg_data)
+            parse_cooldowns(reg_data, "defensive")
 
     def test_duplicate_spell_id(self, reg_data):
         reg_data["cooldowns"].append(copy.deepcopy(reg_data["cooldowns"][0]))
         with pytest.raises(ConfigurationError, match="duplicate spell_id 900301"):
-            parse_registry(reg_data)
+            parse_cooldowns(reg_data, "defensive")
 
-    def test_bad_kind(self, reg_data):
-        reg_data["cooldowns"][0]["kind"] = "tank"
+    def test_bad_target(self, reg_data):
+        reg_data["cooldowns"][0]["target"] = "tank"
         with pytest.raises(ConfigurationError):
-            parse_registry(reg_data)
+            parse_cooldowns(reg_data, "defensive")
+
+    def test_old_kind_key_is_rejected(self, reg_data):
+        entry = reg_data["cooldowns"][0]
+        entry["kind"] = entry.pop("target")
+        with pytest.raises(ConfigurationError, match="kind"):
+            parse_cooldowns(reg_data, "defensive")
+
+    def test_category_is_required(self, reg_data):
+        del reg_data["category"]
+        with pytest.raises(ConfigurationError, match="category"):
+            parse_cooldowns(reg_data, "defensive")
 
     def test_unknown_key(self, reg_data):
         reg_data["cooldowns"][0]["duration"] = 8
         with pytest.raises(ConfigurationError):
-            parse_registry(reg_data)
+            parse_cooldowns(reg_data, "defensive")
 
     def test_yaml_error(self, tmp_path):
         bad = tmp_path / "cooldowns.yaml"
         bad.write_text("cooldowns: [\n", encoding="utf-8")
         with pytest.raises(ConfigurationError, match="YAML parse error"):
-            load_registry(bad)
+            load_cooldowns("defensive", bad)
 
     def test_hash_changes_with_content(self, reg_data):
-        a = parse_registry(reg_data)
+        a = parse_cooldowns(reg_data, "defensive")
         reg_data["cooldowns"][1]["cooldown_s"] = 120
-        b = parse_registry(reg_data)
-        assert registry_hash(a) == registry_hash(parse_registry(yaml.safe_load(SYNTH_REGISTRY_FILE.read_text())))
-        assert registry_hash(a) != registry_hash(b)
-        assert len(registry_hash(a)) == 12
+        b = parse_cooldowns(reg_data, "defensive")
+        assert cooldowns_hash(a) == cooldowns_hash(
+            parse_cooldowns(yaml.safe_load(SYNTH_DEFENSIVE_COOLDOWNS_FILE.read_text()), "defensive")
+        )
+        assert cooldowns_hash(a) != cooldowns_hash(b)
+        assert len(cooldowns_hash(a)) == 12
 
 
 # ===========================================================================
@@ -487,7 +500,9 @@ class TestEncounterFile:
 
     def test_fetch_filter_inputs(self):
         enc = load_encounter_file(SYNTH_ENCOUNTER_FILE)
-        ids, enemy = fetch_filter_inputs(load_registry(SYNTH_REGISTRY_FILE), {enc.encounter_id: enc})
+        ids, enemy = fetch_filter_inputs(
+            load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE), {enc.encounter_id: enc}
+        )
         assert ids == [900301, 900311, 900302]
         assert enemy == {SYNTH_ENCOUNTER_ID: [900101, 900201, 900401, 900501, 900601]}
         assert fetch_filter_inputs(None, {}) == (None, {})

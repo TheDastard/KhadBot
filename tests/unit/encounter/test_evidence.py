@@ -170,11 +170,11 @@ def test_every_digest_ref_resolves_to_its_record(synth_data, fight):
 
 
 @pytest.fixture
-def friendly_data(synth_ingested, synth_enc_root, synth_registry):
+def friendly_data(synth_ingested, synth_enc_root, synth_defensive):
     """EncounterData over SYNTH01 with friendly damage added to fight 1 and the synthetic friendly registry."""
     add_friendly_damage(synth_ingested)
     friendly = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
-    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry, friendly=friendly)
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive, friendly=friendly)
 
 
 def test_pull_ref_resolves_friendly_and_unregistered_damage(friendly_data):
@@ -204,11 +204,11 @@ def test_death_ref_resolves_window_self_damage(friendly_data):
     assert "self-inflicted 2,000" in render_digest(friendly_data.digest("SYNTH01:1"))
 
 
-def test_refs_beyond_digest_caps_still_resolve(synth_ingested, synth_enc_root, synth_registry, monkeypatch):
+def test_refs_beyond_digest_caps_still_resolve(synth_ingested, synth_enc_root, synth_defensive, monkeypatch):
     from khadbot.encounter import digest as digest_mod
 
     monkeypatch.setattr(digest_mod, "DEATH_CAP", 1)
-    data = EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry)
+    data = EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive)
     assert len(data.digest("SYNTH01:1").deaths) == 1
     assert data.resolve("ev:SYNTH01:1:death:4")["name"] == "Tankyboi"
 
@@ -277,8 +277,8 @@ def test_records_rebuild_when_a_registry_on_disk_changes(synth_ingested, synth_e
     assert rebuilt.digest.produced_from["friendly_damage_hash"] != first.digest.produced_from["friendly_damage_hash"]
 
 
-def test_records_cache_is_bounded(synth_ingested, synth_enc_root, synth_registry):
-    data = EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry, max_cached=1)
+def test_records_cache_is_bounded(synth_ingested, synth_enc_root, synth_defensive):
+    data = EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive, max_cached=1)
     first = data.records("SYNTH01:1")
     data.records("SYNTH01:2")
     assert data.records("SYNTH01:1") is not first

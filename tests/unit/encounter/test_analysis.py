@@ -20,21 +20,21 @@ from khadbot.encounter.analysis.deaths import death_records
 from khadbot.encounter.analysis.friendly_damage import friendly_damage
 from khadbot.encounter.analysis.mechanics import mechanic_clusters, mechanic_stats
 from khadbot.encounter.annotate import annotate, annotate_pull
-from khadbot.encounter.config_files import parse_encounter, parse_friendly_damage, parse_registry
+from khadbot.encounter.config_files import parse_cooldowns, parse_encounter, parse_friendly_damage
 from khadbot.encounter.models import FriendlyDamage
 
 ACTORS = make_actors()
 
 
 @pytest.fixture
-def synth(synth_ingested, synth_enc, synth_registry):
+def synth(synth_ingested, synth_enc, synth_defensive):
     """Annotated SYNTH01 pulls plus everything the analysis functions take."""
     actors = synth_ingested.actors("SYNTH01")
     abilities = synth_ingested.abilities("SYNTH01")
 
     def get(fight):
         a = annotate_pull(f"SYNTH01:{fight}", synth_ingested, synth_enc)
-        deaths = death_records(a, actors, synth_registry, abilities)
+        deaths = death_records(a, actors, synth_defensive, abilities)
         return a, deaths
 
     return get, actors
@@ -228,18 +228,19 @@ def _enc_naming(*ability_ids):
 class TestDefensivesStrippedByDeath:
     """The game strips a dying player's auras just before WCL's death row."""
 
-    REGISTRY = {
-        "cooldowns": [{"spell_id": 10, "name": "Rally", "class": "Warrior", "kind": "raid", "aura_spell_ids": [11]}]
+    DEFENSIVE = {
+        "category": "defensive",
+        "cooldowns": [{"spell_id": 10, "name": "Rally", "class": "Warrior", "target": "raid", "aura_spell_ids": [11]}],
     }
 
     @staticmethod
     def _buff(t, typ, target, spell=11):
         return {"t_ms": t, "type": typ, "source_id": 2, "target_id": target, "ability_id": spell}
 
-    def _defensives(self, rows, registry=None):
+    def _defensives(self, rows, defensive=None):
         rows = sorted(rows, key=lambda r: r["t_ms"])  # stable: the remove stays before the death row
         a = annotate(make_pull(), make_events(rows), None, ACTORS)
-        (d,) = death_records(a, ACTORS, parse_registry(registry or self.REGISTRY))
+        (d,) = death_records(a, ACTORS, parse_cooldowns(defensive or self.DEFENSIVE, "defensive"))
         return d.active_defensives
 
     def test_stripped_while_still_up_on_others(self):
@@ -264,10 +265,10 @@ class TestDefensivesStrippedByDeath:
         assert self._defensives(rows) == []
 
     def test_stripped_within_registry_duration(self):
-        registry = {"cooldowns": [{**self.REGISTRY["cooldowns"][0], "duration_s": 10}]}
+        defensive = {**self.DEFENSIVE, "cooldowns": [{**self.DEFENSIVE["cooldowns"][0], "duration_s": 10}]}
         rows = [self._buff(1_000, "applybuff", 1), self._buff(7_990, "removebuff", 1), _death(8_000, 1)]
         assert self._defensives(rows) == []  # no other player, no duration
-        assert self._defensives(rows, registry) == [10]
+        assert self._defensives(rows, defensive) == [10]
 
     def test_removed_well_before_death_is_not_active(self):
         rows = [
@@ -398,44 +399,44 @@ class TestMechanics:
 
 
 class TestCooldowns:
-    def test_uses_including_unverified(self, synth, synth_registry):
+    def test_uses_including_unverified(self, synth, synth_defensive):
         get, actors = synth
         a, _ = get(1)
-        uses = cooldown_uses(a, synth_registry, actors)
+        uses = cooldown_uses(a, synth_defensive, actors)
         assert [(u.spell_name, u.caster, u.t_ms, u.phase_id) for u in uses] == [
             ("Synth Link Totem", "Healz", 18_000, "p1"),
             ("Synth Guardian", "Gammadps", 38_000, "p2"),
         ]
-        assert not synth_registry.get(900302).verified  # still listed; the digest flags it
+        assert not synth_defensive.get(900302).verified  # still listed; the digest flags it
         assert uses[1].ref == "ev:SYNTH01:1:cd:900302:1"
 
-    def test_refs_numbered_per_spell(self, synth, synth_registry):
+    def test_refs_numbered_per_spell(self, synth, synth_defensive):
         get, actors = synth
         a, _ = get(2)
-        assert [u.ref for u in cooldown_uses(a, synth_registry, actors)] == [
+        assert [u.ref for u in cooldown_uses(a, synth_defensive, actors)] == [
             "ev:SYNTH01:2:cd:900301:1",
             "ev:SYNTH01:2:cd:900301:2",
         ]
 
     @pytest.mark.parametrize(("fight", "covered"), [(1, [True, False]), (2, [True, True])])
-    def test_window_coverage(self, synth, synth_registry, fight, covered, synth_enc):
+    def test_window_coverage(self, synth, synth_defensive, fight, covered, synth_enc):
         get, _ = synth
         a, _ = get(fight)
-        rows = window_coverage(a, synth_enc, synth_registry)
+        rows = window_coverage(a, synth_enc, synth_defensive)
         assert [w.covered for w in rows] == covered
         assert [w.occurrence for w in rows] == [1, 2]
         assert rows[0].cooldowns_active == [900301]
         assert rows[1].ref == f"ev:SYNTH01:{fight}:win:cataclysm:2"
 
-    def test_externals_do_not_cover_raid_windows(self, synth, synth_registry, synth_enc):
+    def test_externals_do_not_cover_raid_windows(self, synth, synth_defensive, synth_enc):
         # Fight 1's second Cataclysm (40 s) lands while Guardian (external) is on the tank.
         get, _ = synth
         a, _ = get(1)
-        second = window_coverage(a, synth_enc, synth_registry)[1]
+        second = window_coverage(a, synth_enc, synth_defensive)[1]
         assert second.t_ms == 40_000
         assert second.cooldowns_active == []
 
-    def test_late_raid_cooldowns(self, synth, synth_registry, synth_enc):
+    def test_late_raid_cooldowns(self, synth, synth_defensive, synth_enc):
         # Copy fight 1's Link Totem aura to start 1 s after the uncovered 40 s Cataclysm, and again past the
         # 5 s grace (the window is a single hit).
         get, _ = synth
@@ -446,16 +447,16 @@ class TestCooldowns:
             for k, shift in [(1, 41_000 - 18_050), (2, 46_000 - 18_050)]
         ]
         late = dataclasses.replace(a, frame=pl.concat([a.frame, *shifted]))
-        first, second = window_coverage(late, synth_enc, synth_registry)
+        first, second = window_coverage(late, synth_enc, synth_defensive)
         assert first.cooldowns_late == []  # Link Totem was already up
         assert (second.covered, second.cooldowns_active) == (False, [])
         assert [(c.spell_id, c.late_ms) for c in second.cooldowns_late] == [(900301, 1_000)]
-        assert all(w.cooldowns_late == [] for w in window_coverage(a, synth_enc, synth_registry))
+        assert all(w.cooldowns_late == [] for w in window_coverage(a, synth_enc, synth_defensive))
 
-    def test_no_windows_without_encounter_file(self, synth, synth_registry):
+    def test_no_windows_without_encounter_file(self, synth, synth_defensive):
         get, _ = synth
         a, _ = get(1)
-        assert window_coverage(a, None, synth_registry) == []
+        assert window_coverage(a, None, synth_defensive) == []
 
 
 class TestAuraIntervals:
@@ -499,9 +500,9 @@ class TestAuraIntervals:
             (3, 10, 5_000, 60_000),
         ]
 
-    def test_registry_kinds_filter(self, synth_registry):
-        assert synth_registry.spell_ids(["raid"]) == [900301]
-        reg = parse_registry({"cooldowns": []})
+    def test_registry_targets_filter(self, synth_defensive):
+        assert synth_defensive.spell_ids(["raid"]) == [900301]
+        reg = parse_cooldowns({"category": "defensive", "cooldowns": []}, "defensive")
         assert reg.spell_ids() == []
 
 

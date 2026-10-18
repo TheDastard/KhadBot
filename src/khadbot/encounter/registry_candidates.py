@@ -12,7 +12,7 @@ the effects of a spell it triggers, do one of three things:
 - healing: heal an area, or heal one target for a share of its maximum health;
 - support: put any other aura on one chosen ally (Innervate, Power Infusion).
 
-Its ``kind`` comes from who the effect lands on: only the caster is ``personal``, one chosen ally is
+Its ``target`` comes from who the effect lands on: only the caster is ``personal``, one chosen ally is
 ``external``, an area or the raid is ``raid``. Casts that work through an area trigger, a totem or a
 scripted effect fall back to same-name spells for their aura. All of this is a heuristic; every
 candidate is unverified until a human checks it.
@@ -75,7 +75,7 @@ _SUPPORT_TARGETS = {"T_UNIT_TARGET_ALLY", "T_UNIT_CASTER_TARGET_RAID", "T_UNIT_T
 # Targets that can only be the caster or a friendly player.
 _FRIENDLY_TARGETS = set(c.TARGETS) - {c.T_UNIT_TARGET_ANY}
 
-_KIND_RANK = {"personal": 0, "external": 1, "raid": 2}
+_TARGET_RANK = {"personal": 0, "external": 1, "raid": 2}
 _TRIGGER_DEPTH = 2
 
 
@@ -93,7 +93,7 @@ class Candidate:
     spell_id: int
     name: str
     class_name: str
-    kind: str
+    target: str
     #: defensive (damage reduction, absorbs, immunities, cheat death), healing, or support (any other aura
     #: cast on one ally)
     role: str
@@ -110,17 +110,17 @@ class Candidate:
 class _Hit:
     effect: Effect
     role: str
-    kind: str
-    what: str
     target: str
+    what: str
+    label: str
 
     def describe(self, *, same_name: bool = False) -> str:
         note = " (same-name spell)" if same_name else ""
-        return f"{self.effect.spell_id}#{self.effect.index} {self.what} {self.target}{note}"
+        return f"{self.effect.spell_id}#{self.effect.index} {self.what} {self.label}{note}"
 
 
-def _target_kind(effect: Effect) -> tuple[str, str] | None:
-    """(kind, target label) from who an effect lands on, or None for enemies and anything unrecognised."""
+def _effect_target(effect: Effect) -> tuple[str, str] | None:
+    """(target, label) from who an effect lands on, or None for enemies and anything unrecognised."""
     if effect.type in c.AREA_AURA_EFFECTS:
         return "raid", c.EFFECT_TYPES[effect.type]
     targets = {effect.target_1, effect.target_2} - {0}
@@ -137,24 +137,24 @@ def _target_kind(effect: Effect) -> tuple[str, str] | None:
 
 def _effect_hit(effect: Effect) -> _Hit | None:
     """How one effect helps the raid survive, or None."""
-    target = _target_kind(effect)
-    if target is None:
+    found = _effect_target(effect)
+    if found is None:
         return None
-    kind, label = target
+    target, label = found
     if effect.type in c.AURA_EFFECTS:
         if effect.subtype in DEFENSIVE_AURAS:
             if effect.subtype in _NEGATIVE_ONLY and effect.base_value >= 0:
                 return None
             if effect.subtype in _POSITIVE_ONLY and effect.base_value <= 0:
                 return None
-            return _Hit(effect, "defensive", kind, c.AURA_TYPES[effect.subtype], label)
-        if effect.subtype in HEALING_AURAS and kind == "raid":
-            return _Hit(effect, "healing", kind, c.AURA_TYPES[effect.subtype], label)
-        if kind == "external" and label in _SUPPORT_TARGETS:
-            return _Hit(effect, "support", kind, f"aura {effect.subtype}", label)
+            return _Hit(effect, "defensive", target, c.AURA_TYPES[effect.subtype], label)
+        if effect.subtype in HEALING_AURAS and target == "raid":
+            return _Hit(effect, "healing", target, c.AURA_TYPES[effect.subtype], label)
+        if target == "external" and label in _SUPPORT_TARGETS:
+            return _Hit(effect, "support", target, f"aura {effect.subtype}", label)
         return None
-    if effect.type in HEAL_EFFECTS and (kind == "raid" or effect.type in _BIG_HEALS):
-        return _Hit(effect, "healing", kind, c.EFFECT_TYPES[effect.type], label)
+    if effect.type in HEAL_EFFECTS and (target == "raid" or effect.type in _BIG_HEALS):
+        return _Hit(effect, "healing", target, c.EFFECT_TYPES[effect.type], label)
     return None
 
 
@@ -183,7 +183,7 @@ def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
         return []
     # A cast that places something on the ground or targets an area helps everyone near it, whatever target the
     # linked aura itself names.
-    area = any(e.type in _AREA_PLACEMENT or (_target_kind(e) or ("",))[0] == "raid" for e in own)
+    area = any(e.type in _AREA_PLACEMENT or (_effect_target(e) or ("",))[0] == "raid" for e in own)
     out: list[_Hit] = []
     for other in data.by_name.get(spell.name, []):
         if other == spell.spell_id or other in data.player_spells:
@@ -191,7 +191,7 @@ def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
         for hit in _hits(data, other):
             if hit.role == "support":
                 continue
-            out.append(_Hit(hit.effect, hit.role, "raid" if area else hit.kind, hit.what, hit.target))
+            out.append(_Hit(hit.effect, hit.role, "raid" if area else hit.target, hit.what, hit.label))
     return out
 
 
@@ -209,10 +209,10 @@ def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -
             hits, same_name = fallback, True
     if not hits:
         return None
-    # Defensive and healing effects decide the kind; support auras count only when there is nothing else.
+    # Defensive and healing effects decide the target; support auras count only when there is nothing else.
     main = [h for h in hits if h.role != "support"] or hits
-    kind = max((h.kind for h in main), key=_KIND_RANK.__getitem__)
-    chosen = [h for h in main if h.kind == kind]
+    target = max((h.target for h in main), key=_TARGET_RANK.__getitem__)
+    chosen = [h for h in main if h.target == target]
     role = "defensive" if any(h.role == "defensive" for h in chosen) else chosen[0].role
     aura_ids = list(dict.fromkeys(h.effect.spell_id for h in chosen))
     durations = [data.spells[a].duration_ms for a in aura_ids if a in data.spells and data.spells[a].duration_ms > 0]
@@ -228,7 +228,7 @@ def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -
         spell_id=spell_id,
         name=spell.name,
         class_name=CLASS_NAMES[class_id],
-        kind=kind,
+        target=target,
         role=role,
         cooldown_s=spell.effective_cooldown_ms / 1000,
         duration_s=_seconds(duration_ms),
@@ -239,7 +239,7 @@ def classify(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -
     )
 
 
-def candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[Candidate]:
+def defensive_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[Candidate]:
     """Every player cooldown in the client data that helps the raid live, by class then name."""
     found = (classify(data, s, min_cooldown_s=min_cooldown_s) for s in data.player_spells)
     return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
@@ -284,7 +284,7 @@ class FriendlyDamageCandidate:
     #: Damage effects that land on the caster or allies.
     evidence: list[str] = field(default_factory=list)
     #: The registry's ``origin``: a class mask always means a class spell or talent.
-    kind: str = "class"
+    origin: str = "class"
 
 
 def _friendly_damage(effect: Effect) -> str | None:
@@ -338,7 +338,6 @@ def friendly_damage_candidates(data: ClientData) -> list[FriendlyDamageCandidate
 
 class _Proposal(Protocol):
     spell_id: int
-    kind: str
     cooldown_s: float | None
     duration_s: float | None
 
@@ -347,35 +346,38 @@ class _Proposal(Protocol):
 class RegistryCheck:
     spell_id: int
     registry_name: str
-    #: matched, name_differs, kind_differs, not_a_candidate or not_in_game_data
+    #: matched, name_differs, <field>_differs, not_a_candidate or not_in_game_data
     status: str
     game_name: str | None = None
-    proposed_kind: str | None = None
+    #: The candidate's value of the compared field (``target`` for cooldowns, ``origin`` for friendly damage).
+    proposed: str | None = None
     cooldown_s: float | None = None
     duration_s: float | None = None
 
 
 def check_registry(
-    data: ClientData, entries: Iterable[tuple[int, str, str | None]], found: Iterable[_Proposal]
+    data: ClientData, entries: Iterable[tuple[int, str, str | None]], found: Iterable[_Proposal], field: str
 ) -> list[RegistryCheck]:
-    """Compare registry entries, as (spell ID, name, kind), with the game data and the candidates.
+    """Compare registry entries, as (spell ID, name, value of ``field``), with the game data and the candidates.
 
-    For the friendly-damage registry, pass each entry's ``origin`` as its kind; a candidate's is ``class``.
+    ``field`` names the attribute both sides carry: ``target`` for cooldowns, ``origin`` for friendly damage
+    (a candidate's origin is always ``class``). A mismatch has status ``<field>_differs``.
     """
     by_id = {x.spell_id: x for x in found}
     out = []
-    for spell_id, name, kind in entries:
+    for spell_id, name, value in entries:
         spell = data.spells.get(spell_id)
         if spell is None:
             out.append(RegistryCheck(spell_id, name, "not_in_game_data"))
             continue
         cand = by_id.get(spell_id)
+        proposed = getattr(cand, field) if cand else None
         if spell.name != name:
             status = "name_differs"
         elif cand is None:
             status = "not_a_candidate"
-        elif cand.kind != kind:
-            status = "kind_differs"
+        elif proposed != value:
+            status = f"{field}_differs"
         else:
             status = "matched"
         out.append(
@@ -384,7 +386,7 @@ def check_registry(
                 name,
                 status,
                 game_name=spell.name,
-                proposed_kind=cand.kind if cand else None,
+                proposed=proposed,
                 cooldown_s=cand.cooldown_s if cand else _seconds(spell.effective_cooldown_ms),
                 duration_s=cand.duration_s if cand else _seconds(spell.duration_ms),
             )

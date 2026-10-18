@@ -28,11 +28,11 @@ from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
     FriendlyDamageRegistry,
+    cooldowns_hash,
     friendly_damage_hash,
+    load_cooldowns,
     load_encounter_view,
     load_friendly_damage,
-    load_registry,
-    registry_hash,
 )
 from khadbot.encounter.models import (
     Actor,
@@ -142,7 +142,7 @@ class PullRecords:
     abilities: dict[int, str]
     deaths: list[DeathRecord]  # every player death, time order (``death:<n>`` refs)
     mechanics: list[MechanicStat]  # every mechanic in the encounter file, file order
-    cooldowns: list[CooldownUse]  # every registry cooldown cast, time order
+    cooldowns: list[CooldownUse]  # every defensive cooldown cast, time order
     windows: list[WindowCoverage]
     digest: PullDigest
 
@@ -151,7 +151,7 @@ def build_pull_records(
     pull_key: str,
     store: EventStore,
     enc_root: Path | None = None,
-    registry: CooldownRegistry | None = None,
+    defensive: CooldownRegistry | None = None,
     *,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
@@ -169,7 +169,7 @@ def build_pull_records(
     pull = next((p for p in store.pulls(code) if p.fight_id == fight), None)
     if pull is None:
         raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
-    registry = registry or load_registry()
+    defensive = defensive or load_cooldowns("defensive")
     friendly = friendly or load_friendly_damage()
     enc = load_encounter_view(pull.encounter_id, pull.difficulty, enc_root)
     fraction = EncounterConfig().cutoff_fraction if cutoff_fraction is None else cutoff_fraction
@@ -177,10 +177,10 @@ def build_pull_records(
     actors = store.actors(code)
     abilities = store.abilities(code)
 
-    deaths = death_records(a, actors, registry, abilities, friendly=friendly)
+    deaths = death_records(a, actors, defensive, abilities, friendly=friendly)
     mechanics = mechanic_stats(a, enc, actors, deaths)
-    cooldowns = cooldown_uses(a, registry, actors)
-    windows = window_coverage(a, enc, registry)
+    cooldowns = cooldown_uses(a, defensive, actors)
+    windows = window_coverage(a, enc, defensive)
     unregistered, unregistered_pct = unregistered_damage(a, enc, abilities, friendly)
     friendly_dmg = friendly_damage(a, enc, friendly, actors, abilities, unclassified_cap=unregistered_cap)
 
@@ -197,7 +197,7 @@ def build_pull_records(
     # An early wipe legitimately never reaches later phases; only flag a phase WCL's transitions say it reached.
     if enc is not None:
         anomalies += [f"phase_trigger_unmatched:{p}" for p in unmatched_phases(pull, a.phases, enc)]
-    unverified = sorted({c.spell_id for c in cooldowns if not (e := registry.get(c.spell_id)) or not e.verified})
+    unverified = sorted({c.spell_id for c in cooldowns if not (e := defensive.get(c.spell_id)) or not e.verified})
     anomalies += [f"cooldown_unverified:{s}" for s in unverified]
     if enc is not None and unregistered_pct >= FULL_COVERAGE_MAX_PCT:
         anomalies.append(f"unregistered_damage:{unregistered_pct:.1f}")
@@ -229,7 +229,7 @@ def build_pull_records(
             "events_hash": store.events_hash(pull_key) or "",
             "positions_hash": store.positions_hash(pull_key) or "",
             "encfile_hash": a.encfile_hash,
-            "registry_hash": registry_hash(registry),
+            "defensive_cooldowns_hash": cooldowns_hash(defensive),
             "friendly_damage_hash": friendly_damage_hash(friendly),
         },
     )
@@ -251,7 +251,7 @@ def build_digest(
     pull_key: str,
     store: EventStore,
     enc_root: Path | None = None,
-    registry: CooldownRegistry | None = None,
+    defensive: CooldownRegistry | None = None,
     *,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
@@ -267,7 +267,7 @@ def build_digest(
         pull_key,
         store,
         enc_root,
-        registry,
+        defensive,
         friendly=friendly,
         cache=cache,
         cutoff_fraction=cutoff_fraction,

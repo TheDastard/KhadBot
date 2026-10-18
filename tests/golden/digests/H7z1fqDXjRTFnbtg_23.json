@@ -775,11 +775,11 @@
   "outcome": "wipe",
   "phase_reached": null,
   "produced_from": {
+    "defensive_cooldowns_hash": "8f4466287d33",
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
     "friendly_damage_hash": "9937b022415a",
-    "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d",
-    "registry_hash": "729fc8b3cf7d"
+    "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:23",
   "unregistered": [

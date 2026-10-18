@@ -127,11 +127,11 @@ def test_verify_report_keeps_earlier_rejections(synth_data):
 
 
 @pytest.fixture
-def friendly_data(synth_ingested, synth_enc_root, synth_registry):
+def friendly_data(synth_ingested, synth_enc_root, synth_defensive):
     """SYNTH01 with friendly damage in fight 1: Betadps 3,000 and Alphadps 2,000 self-inflicted, 14,000 friendly."""
     add_friendly_damage(synth_ingested)
     friendly = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
-    return EncounterData(synth_ingested, enc_root=synth_enc_root, registry=synth_registry, friendly=friendly)
+    return EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive, friendly=friendly)
 
 
 @pytest.mark.parametrize(
