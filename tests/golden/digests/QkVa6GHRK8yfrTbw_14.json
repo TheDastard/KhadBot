@@ -33,11 +33,161 @@
     }
   ],
   "anomalies": [
-    "cooldown_unverified:47788"
+    "cooldown_unverified:871",
+    "cooldown_unverified:10060",
+    "cooldown_unverified:19236",
+    "cooldown_unverified:22812",
+    "cooldown_unverified:47788",
+    "cooldown_unverified:48707",
+    "cooldown_unverified:64843",
+    "cooldown_unverified:108416",
+    "cooldown_unverified:109304",
+    "cooldown_unverified:122470",
+    "cooldown_unverified:198589",
+    "cooldown_unverified:264735",
+    "cooldown_unverified:363534",
+    "cooldown_unverified:389539",
+    "cooldown_unverified:403876"
   ],
   "boss_hp_pct": 79.93,
   "boss_pct": 85.7,
   "cooldowns": [
+    {
+      "caster": "Kindrella",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:10060:1",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 1078
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:10060:2",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 1135
+    },
+    {
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:10060:3",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 3242
+    },
+    {
+      "caster": "Discô",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:10060:4",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 3242
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:10060:5",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 8556
+    },
+    {
+      "caster": "Fatherchill",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:389539:1",
+      "spell_id": 389539,
+      "spell_name": "Sentinel",
+      "t_ms": 9884
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:871:1",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 12723
+    },
+    {
+      "caster": "Mainmoon",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:122470:1",
+      "spell_id": 122470,
+      "spell_name": "Touch of Karma",
+      "t_ms": 25798
+    },
+    {
+      "caster": "Wilmer",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:264735:1",
+      "spell_id": 264735,
+      "spell_name": "Survival of the Fittest",
+      "t_ms": 26867
+    },
+    {
+      "caster": "Shinrael",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:22812:1",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 28137
+    },
+    {
+      "caster": "Dean",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:198589:1",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 28499
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:19236:1",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 29457
+    },
+    {
+      "caster": "Novic",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:64843:1",
+      "spell_id": 64843,
+      "spell_name": "Divine Hymn",
+      "t_ms": 31779
+    },
+    {
+      "caster": "Dripington",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:48707:1",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 37113
+    },
+    {
+      "caster": "Moombly",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:108416:1",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 58578
+    },
+    {
+      "caster": "Fatherchill",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:389539:2",
+      "spell_id": 389539,
+      "spell_name": "Sentinel",
+      "t_ms": 74146
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:871:2",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 80820
+    },
     {
       "caster": "Novic",
       "phase_id": "p1",
@@ -45,6 +195,38 @@
       "spell_id": 47788,
       "spell_name": "Guardian Spirit",
       "t_ms": 82612
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:363534:1",
+      "spell_id": 363534,
+      "spell_name": "Rewind",
+      "t_ms": 88767
+    },
+    {
+      "caster": "Wilmer",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:109304:1",
+      "spell_id": 109304,
+      "spell_name": "Exhilaration",
+      "t_ms": 89037
+    },
+    {
+      "caster": "Kouw",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:403876:1",
+      "spell_id": 403876,
+      "spell_name": "Divine Protection",
+      "t_ms": 90951
+    },
+    {
+      "caster": "Shinrael",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:22812:2",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 95313
     }
   ],
   "coverage": "full",
@@ -781,9 +963,9 @@
   "produced_from": {
     "encfile_hash": "836044af7708",
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
-    "friendly_damage_hash": "ddbf5baada0a",
+    "friendly_damage_hash": "9937b022415a",
     "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",
-    "registry_hash": "dcae98915440"
+    "registry_hash": "729fc8b3cf7d"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",
   "unregistered": []

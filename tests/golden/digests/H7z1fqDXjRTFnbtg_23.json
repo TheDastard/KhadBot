@@ -26,10 +26,184 @@
       }
     }
   ],
-  "anomalies": [],
+  "anomalies": [
+    "cooldown_unverified:871",
+    "cooldown_unverified:10060",
+    "cooldown_unverified:19236",
+    "cooldown_unverified:22812",
+    "cooldown_unverified:31224",
+    "cooldown_unverified:48707",
+    "cooldown_unverified:64843",
+    "cooldown_unverified:108416",
+    "cooldown_unverified:109304",
+    "cooldown_unverified:114052",
+    "cooldown_unverified:198589",
+    "cooldown_unverified:363534"
+  ],
   "boss_hp_pct": 78.33,
   "boss_pct": 78.33,
-  "cooldowns": [],
+  "cooldowns": [
+    {
+      "caster": "Kindrella",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:1",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 796
+    },
+    {
+      "caster": "Kindrella",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:2",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 810
+    },
+    {
+      "caster": "Novic",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:3",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 1716
+    },
+    {
+      "caster": "Novic",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:4",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 1738
+    },
+    {
+      "caster": "Discô",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:5",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 3668
+    },
+    {
+      "caster": "Discô",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:6",
+      "spell_id": 10060,
+      "spell_name": "Power Infusion",
+      "t_ms": 3689
+    },
+    {
+      "caster": "Moombly",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:108416:1",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 46600
+    },
+    {
+      "caster": "Widowmaker",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:1",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 46760
+    },
+    {
+      "caster": "Teppic",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:31224:1",
+      "spell_id": 31224,
+      "spell_name": "Cloak of Shadows",
+      "t_ms": 47376
+    },
+    {
+      "caster": "Novic",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:1",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 47575
+    },
+    {
+      "caster": "Talyssah",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:363534:1",
+      "spell_id": 363534,
+      "spell_name": "Rewind",
+      "t_ms": 47783
+    },
+    {
+      "caster": "Wilmer",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:109304:1",
+      "spell_id": 109304,
+      "spell_name": "Exhilaration",
+      "t_ms": 48316
+    },
+    {
+      "caster": "Discô",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:2",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 48424
+    },
+    {
+      "caster": "Hugedonut",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:1",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 48443
+    },
+    {
+      "caster": "Shinrael",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:22812:1",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 48955
+    },
+    {
+      "caster": "Dean",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:2",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 51254
+    },
+    {
+      "caster": "Verrydis",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:114052:1",
+      "spell_id": 114052,
+      "spell_name": "Ascendance",
+      "t_ms": 53499
+    },
+    {
+      "caster": "Novic",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:64843:1",
+      "spell_id": 64843,
+      "spell_name": "Divine Hymn",
+      "t_ms": 61152
+    },
+    {
+      "caster": "Mekerakesh",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:871:1",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 74683
+    },
+    {
+      "caster": "Cocodiablo",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:2",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 117166
+    }
+  ],
   "coverage": "none",
   "coverage_windows": [],
   "cutoff_ms": 91056,
@@ -603,9 +777,9 @@
   "produced_from": {
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
-    "friendly_damage_hash": "ddbf5baada0a",
+    "friendly_damage_hash": "9937b022415a",
     "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d",
-    "registry_hash": "dcae98915440"
+    "registry_hash": "729fc8b3cf7d"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:23",
   "unregistered": [

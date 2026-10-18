@@ -11,7 +11,6 @@ instead, so such a report counts as absent and the tests that need it skip.
 from __future__ import annotations
 
 from helpers.encounter.synth import FIXTURES
-from khadbot.encounter.config_files import load_registry
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import IngestResult
@@ -39,14 +38,22 @@ def fixture_fights(code: str) -> list[int]:
 
 REAL_PULLS: list[str] = [f"{code}:{fight}" for code in REAL_REPORTS for fight in fixture_fights(code)]
 
+# The Buffs filter the fixtures were recorded with: the cast IDs of the 17 cooldowns the registry held then (Buffs
+# filter hash 3c12a331a193). The registry has since grown and gained aura IDs, so these pulls have Buffs rows for
+# these spells only.
+RECORDED_BUFF_IDS: list[int] = [
+    633, 1022, 6940, 29166, 31821, 33206, 47788, 51052, 62618, 97462, 98008, 102342, 116841, 116849, 207399, 357170,
+    374227,
+]  # fmt: skip
+
 
 async def ingest_fixture(code: str, store: EventStore, fights: list[int] | None = None) -> IngestResult:
     """
     Ingest a report's recorded fights (or ``fights``) offline into ``store``.
 
-    Buffs use the cooldown-registry filter they were recorded with: cast IDs only, from before registry entries
-    had ``aura_spell_ids``, so these pulls have no Buffs rows for those auras. Enemy Casts are read unfiltered, which every
-    fixture pull has, so editing an encounter file's ability IDs never leaves the fixtures without that data type.
+    Buffs use the filter they were recorded with (``RECORDED_BUFF_IDS``), whatever the registry holds now. Enemy
+    Casts are read unfiltered, which every fixture pull has, so editing an encounter file's ability IDs never leaves
+    the fixtures without that data type.
     """
     return await ingest_report(
         code,
@@ -54,5 +61,5 @@ async def ingest_fixture(code: str, store: EventStore, fights: list[int] | None 
         store=store,
         cache=RawPageCache(WCL_FIXTURES),
         offline=True,
-        registry_spell_ids=load_registry().spell_ids(),
+        registry_spell_ids=RECORDED_BUFF_IDS,
     )

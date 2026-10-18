@@ -18,14 +18,16 @@
 #   null            not known
 #
 # Entries are grouped by class, then by origin within each class. Ability IDs come from the damage rows of the
-# recorded Heroic nights (H7z1fqDXjRTFnbtg, QkVa6GHRK8yfrTbw, trMgApZCVYkv3jdq). verified: false marks an entry
-# nobody has confirmed yet. `/digest <fight> --unregistered` lists friendly-source abilities still missing
+# recorded Heroic nights (H7z1fqDXjRTFnbtg, QkVa6GHRK8yfrTbw, trMgApZCVYkv3jdq), or from game client data (the
+# friendly-damage review file of scripts/build_cooldown_registry.py) for abilities those nights don't show; their
+# class is a proposal from what the ability does. verified: false marks an entry nobody has confirmed yet. `/digest <fight> --unregistered` lists friendly-source abilities still missing
 # from this file.
 abilities:
   # Redistribution
   - {ability_id: 98021, name: Spirit Link, class: redistribution, origin: class, verified: true}  # Shaman
   - {ability_id: 469704, name: Tempered in Battle, class: redistribution, origin: class, verified: true}  # Paladin
   - {ability_id: 6940, name: Blessing of Sacrifice, class: redistribution, origin: class, verified: true}  # Paladin
+  - {ability_id: 67481, name: Roar of Sacrifice, class: redistribution, origin: class, verified: false}  # Hunter
 
   # Delayed boss damage
   - {ability_id: 361029, name: Time Dilation, class: delayed_boss, origin: class, verified: true}  # Evoker
@@ -33,6 +35,9 @@ abilities:
   - {ability_id: 387846, name: Fel Armor, class: delayed_boss, origin: class, verified: true}  # Warlock
   - {ability_id: 453286, name: Set Fire to the Pain, class: delayed_boss, origin: class, verified: true}  # Demon Hunter
   - {ability_id: 1309786, name: Refraction, class: delayed_boss, origin: class, verified: true}  # Mage
+  - {ability_id: 87023, name: Cauterize, class: delayed_boss, origin: class, verified: false}  # Mage
+  - {ability_id: 124255, name: Stagger, class: delayed_boss, origin: class, verified: false}  # Monk
+  - {ability_id: 324393, name: Stagger, class: delayed_boss, origin: class, verified: false}  # Monk
   - {ability_id: 1287955, name: Rune of Void-Tainted Shell, class: delayed_boss, origin: borrowed_power, verified: true} # Omnium Folio
 
   # Self-inflicted
