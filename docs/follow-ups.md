@@ -16,14 +16,36 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 - **Scripted cooldowns the data can't classify.** `defensive_cooldowns.yaml` now holds 61 of the 64 defensive and
   healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
-  `scripted` list (100 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
+  `scripted` list (78 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
   Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.
-- **Scripted offensive cooldowns.** `offensive_cooldowns.yaml` holds the 16 offensive candidates from build
-  12.1.5.70448 plus Avatar. The review file's `scripted` list (92 spells) still needs a person for the
-  offensive ones the data can't classify, such as Recklessness, Combustion, Pillar of Frost and Dragonrage.
-  Two candidates were left out on purpose: Touch of Death (an execute whose damage buff is a talent side
-  effect) and Sentinel (it also cuts damage taken and stays in the defensive file). Bestial Wrath's
-  `target` is set to personal, not the data's external, because the ally its auras name is the pet.
+- **Offensive cooldowns still open.** `offensive_cooldowns.yaml` holds 40 entries for build 12.1.5.70448:
+  the 44 candidates, which now include spell-modifier auras, minus four already in the defensive file
+  (Vengeance's Metamorphosis, Invoke Chi-Ji, Invoke Niuzao, Aura Mastery) and those left out below, plus
+  Pillar of Frost, Dark Transformation, Breath of Sindragosa, Convoke the Spirits, Zenith and the three
+  warlock summons, entered by hand from their spell data. Still open:
+  - Damage abilities and enemy debuffs on long cooldowns, which the file doesn't cover (it holds buffs):
+    Frostwyrm's Fury, The Hunt, Fury of Elune, Execution Sentence, Divine Toll, Touch of the Magi, Reaper's
+    Mark, Touch of Death. Decide whether the file should take them.
+  - Candidates left out: Nature's Swiftness (132158), Invoke Yu'lon (322118), Avenging Crusader (216331) and
+    Apotheosis (200183) are healing cooldowns, so they belong in the defensive file if anywhere. Incarnation:
+    Guardian of Ursoc (102558) also raises maximum health 30% (`A_INCREASE_HEALTH_PCT`, which the defensive
+    heuristic doesn't read), so like Sentinel it may belong in the defensive file. Heart of the Wild (1261867)
+    is a scripted cast whose same-name auras are older 45 s variants on a 300 s cooldown, so its duration is
+    unknown. Sentinel stays defensive.
+  - Bladestorm: the logs show casts of 446035, which SimC doesn't list as a player spell; its player spell
+    227847 is not a candidate.
+  - Racials (Berserking 26297, Blood Fury 20572 and 33702, Ancestral Call 274738) and potions are cast every
+    pull, but the file is per class. Decide whether they belong in it, with which `class`.
+  - SimC's class, spec and talent tables for this build have no player spell for Icy Veins, Storm, Earth, and
+    Fire, Coordinated Assault, Spearhead, Call of the Wild, Apocalypse, Summon Gargoyle, Feral Spirit, Dark
+    Ascension, Void Eruption, Shadowfiend, Mindbender, Crusade, Fire and Storm Elemental, Cold Blood,
+    Grimoire: Felguard, Warbreaker or Thunderous Roar, and none was cast in the recorded nights. Several names
+    exist only as passive talents. Confirm in game that they are gone or passive in this expansion.
+  - Spell modifiers are read without knowing which spells they change, so the heuristic can't tell a damage
+    modifier from a healing one. Reading spell class flags and labels would separate them.
+- **Divine Protection's logged cast ID.** The recorded nights cast Divine Protection as 403876 (161 casts),
+  never as the defensive file's 498, so those uses aren't counted. Check which spec casts each and list the
+  logged ID, as `offensive_cooldowns.yaml` does for Metamorphosis (200166).
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.

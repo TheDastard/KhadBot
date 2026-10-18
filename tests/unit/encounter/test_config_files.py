@@ -65,11 +65,15 @@ class TestOffensiveRegistry:
 
     def test_default_values_come_from_game_data(self):
         reg = load_cooldowns("offensive")
-        assert len(reg.cooldowns) == 17
+        assert len(reg.cooldowns) == 40
         lust = {2825, 32182, 80353, 390386, 466904}  # Bloodlust, Heroism, Time Warp, Fury of the Aspects, Harrier's Cry
         assert set(reg.spell_ids(["raid"])) == lust
         assert reg.spell_ids(["external"]) == [10060]  # Power Infusion
-        assert all(c.cooldown_s is not None and c.duration_s is not None for c in reg.cooldowns)
+        assert all(c.cooldown_s is not None for c in reg.cooldowns)
+        # Summon Infernal's spell lasts only for the cast, so the data has no duration for the infernal.
+        assert [c.spell_id for c in reg.cooldowns if c.duration_s is None] == [1122]
+        # Recorded logs show Havoc's Metamorphosis cast as 200166, never its player spell 191427.
+        assert reg.get(200166) is not None and reg.get(191427) is None
         assert not any(c.verified for c in reg.cooldowns)
         keys = [(c.class_name, c.name, c.spell_id) for c in reg.cooldowns]
         assert keys == sorted(keys)

@@ -38,17 +38,28 @@
     "cooldown_unverified:32182",
     "cooldown_unverified:42650",
     "cooldown_unverified:48707",
+    "cooldown_unverified:51271",
     "cooldown_unverified:64843",
     "cooldown_unverified:102560",
     "cooldown_unverified:107574",
     "cooldown_unverified:108416",
     "cooldown_unverified:109304",
+    "cooldown_unverified:114050",
     "cooldown_unverified:114052",
+    "cooldown_unverified:121471",
+    "cooldown_unverified:191634",
     "cooldown_unverified:198589",
+    "cooldown_unverified:200166",
     "cooldown_unverified:204066",
+    "cooldown_unverified:205180",
     "cooldown_unverified:228260",
+    "cooldown_unverified:265187",
     "cooldown_unverified:363534",
-    "cooldown_unverified:390386"
+    "cooldown_unverified:365350",
+    "cooldown_unverified:390386",
+    "cooldown_unverified:1233448",
+    "cooldown_unverified:1249625",
+    "cooldown_unverified:1249658"
   ],
   "boss_hp_pct": 78.33,
   "boss_pct": 78.33,
@@ -768,15 +779,6 @@
       "t_ms": 796
     },
     {
-      "caster": "Kindrella",
-      "category": "offensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:2",
-      "spell_id": 10060,
-      "spell_name": "Power Infusion",
-      "t_ms": 810
-    },
-    {
       "caster": "Widowmaker",
       "category": "offensive",
       "phase_id": null,
@@ -784,6 +786,15 @@
       "spell_id": 42650,
       "spell_name": "Army of the Dead",
       "t_ms": 1044
+    },
+    {
+      "caster": "Widowmaker",
+      "category": "offensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:1233448:1",
+      "spell_id": 1233448,
+      "spell_name": "Dark Transformation",
+      "t_ms": 1672
     },
     {
       "caster": "Mekerakesh",
@@ -795,6 +806,24 @@
       "t_ms": 1715
     },
     {
+      "caster": "Cocodiablo",
+      "category": "offensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:1249658:1",
+      "spell_id": 1249658,
+      "spell_name": "Breath of Sindragosa",
+      "t_ms": 1738
+    },
+    {
+      "caster": "Cocodiablo",
+      "category": "offensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:51271:1",
+      "spell_id": 51271,
+      "spell_name": "Pillar of Frost",
+      "t_ms": 1738
+    },
+    {
       "caster": "Wilmer",
       "category": "offensive",
       "phase_id": null,
@@ -802,6 +831,15 @@
       "spell_id": 19574,
       "spell_name": "Bestial Wrath",
       "t_ms": 1782
+    },
+    {
+      "caster": "Snanth",
+      "category": "offensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:365350:1",
+      "spell_id": 365350,
+      "spell_name": "Arcane Surge",
+      "t_ms": 2086
     },
     {
       "caster": "Discô",
@@ -822,6 +860,15 @@
       "t_ms": 4145
     },
     {
+      "caster": "Mainmoon",
+      "category": "offensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:1249625:1",
+      "spell_id": 1249625,
+      "spell_name": "Zenith",
+      "t_ms": 5095
+    },
+    {
       "caster": "Verrydis",
       "category": "offensive",
       "phase_id": null,
@@ -829,15 +876,6 @@
       "spell_id": 32182,
       "spell_name": "Heroism",
       "t_ms": 6855
-    },
-    {
-      "caster": "Shinrael",
-      "category": "offensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:204066:1",
-      "spell_id": 204066,
-      "spell_name": "Lunar Beam",
-      "t_ms": 7047
     },
     {
       "caster": "Dastard",
@@ -856,33 +894,6 @@
       "spell_id": 390386,
       "spell_name": "Fury of the Aspects",
       "t_ms": 7608
-    },
-    {
-      "caster": "Wilmer",
-      "category": "offensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19574:2",
-      "spell_id": 19574,
-      "spell_name": "Bestial Wrath",
-      "t_ms": 47034
-    },
-    {
-      "caster": "Kouw",
-      "category": "offensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:31884:2",
-      "spell_id": 31884,
-      "spell_name": "Avenging Wrath",
-      "t_ms": 68385
-    },
-    {
-      "caster": "Shinrael",
-      "category": "offensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:204066:2",
-      "spell_id": 204066,
-      "spell_name": "Lunar Beam",
-      "t_ms": 72145
     }
   ],
   "outcome": "wipe",
@@ -892,7 +903,7 @@
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
     "friendly_damage_hash": "9937b022415a",
-    "offensive_cooldowns_hash": "1e4aefa4043d",
+    "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:23",
