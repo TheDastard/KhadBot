@@ -29,6 +29,15 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   casts wasted during intermissions.
 - **Utility cooldowns.** Innervate stays in `defensive_cooldowns.yaml` until a `utility_cooldowns.yaml`
   exists.
+- **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive and 100
+  offensive cooldowns. The digest shows 30 and 15, and its defensive list stops near 190 s.
+  `cooldown_timeline` returns at most 25 rows (4,000 characters) a call and filters by `phase` only, so most
+  casts are out of reach. Decide between (A) exposing the full stream (filters on category, spell, caster and
+  time, plus paging) and (B) filtering the noise (per-spell summary records with their own ref, casts near
+  deaths, damage windows and phase changes), or both. Keep agent context tight; the dashboard reads
+  `PullRecords.cooldowns`, which is uncapped, and should show as much or as little as the reader asks for.
+  Stream sizes, constraints and open questions:
+  https://claude.ai/code/artifact/5a2d02ed-c264-4e0a-8f2d-a79e0f86fff3
 - **Friendly damage the data found but nobody has classed.** The friendly-damage review file lists seven class
   abilities with damage on the caster or allies whose class (redistribution, delayed boss, self-inflicted,
   involuntary) isn't clear from the data: Price of Progress (1233429), Guardian's Hide (1272097), Fiery Rush
