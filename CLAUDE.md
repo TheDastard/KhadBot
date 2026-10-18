@@ -41,7 +41,7 @@ config/
   personas/          # khadgar, thrall, xalatath
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
-  registries/        # cooldowns.yaml
+  registries/        # cooldowns.yaml, friendly_damage.yaml
 scripts/             # setup, WCL fixture recorder, clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons

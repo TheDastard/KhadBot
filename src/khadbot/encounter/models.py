@@ -6,7 +6,7 @@ fight-relative milliseconds unless a field says otherwise.
 
 Ingest models: WclPhase, Pull, Actor, FetchSpec, IngestResult.
 Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
-WindowCoverage, PullDigest.
+WindowCoverage, FriendlyDamage, PullDigest.
 Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisReport.
 """
 
@@ -143,6 +143,7 @@ class DeathRecord(BaseModel):
     window_ms: int = 10_000
     window_damage: int  # friendly damage taken by the actor in the window
     window_healing: int | None  # None if Healing was not ingested
+    window_self_damage: int = 0  # of window_damage, from self_inflicted friendly-damage registry abilities
     top_hits: list[Hit]  # max 5, by amount desc
     mechanic_ids: list[str]  # mechanics that hit the actor in the window
     active_defensives: list[int]  # registry spell IDs whose aura was active on the actor at death
@@ -222,6 +223,32 @@ class UnregisteredAbility(BaseModel):
     share_pct: float  # of all friendly damage taken in the pull
 
 
+class AbilityDamage(BaseModel):
+    ability_id: int
+    name: str | None
+    damage: int
+
+
+class PlayerSelfDamage(BaseModel):
+    name: str
+    damage: int  # self_inflicted damage the player took
+    abilities: list[AbilityDamage]  # top 3 by damage
+
+
+class FriendlyDamage(BaseModel):
+    """
+    Damage players took from their own side: friendly-damage registry abilities (whatever the source) and any
+    other friendly-source damage the encounter file doesn't name. None of it counts toward the unregistered share.
+    """
+
+    damage: int = 0
+    share_pct: float = 0.0  # of all friendly damage taken in the pull
+    # redistribution / delayed_boss / self_inflicted / involuntary / unclassified -> damage; no zeros
+    by_class: dict[str, int] = {}
+    self_inflicted: list[PlayerSelfDamage] = []  # cap 5, by damage desc
+    unclassified: list[UnregisteredAbility] = []  # friendly-source abilities missing from the registry; cap 5
+
+
 # ---------------------------------------------------------------------------
 # Digest
 # ---------------------------------------------------------------------------
@@ -266,11 +293,13 @@ class PullDigest(BaseModel):
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
     cooldowns: list[CooldownUse]  # cap 30
     coverage_windows: list[WindowCoverage]
-    unregistered: list[UnregisteredAbility]  # cap 5
+    unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
+    friendly_damage: FriendlyDamage = Field(default_factory=FriendlyDamage)
     aggro: list[AggroSummary] = []  # one per boss NPC that swung at a player
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
-    produced_from: dict[str, str]  # events_hash, positions_hash, encfile_hash, registry_hash
+    # events_hash, positions_hash, encfile_hash, registry_hash, friendly_damage_hash
+    produced_from: dict[str, str]
 
 
 # ---------------------------------------------------------------------------

@@ -194,7 +194,8 @@
       ],
       "window_damage": 1575881,
       "window_healing": 883441,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -251,7 +252,8 @@
       ],
       "window_damage": 1220918,
       "window_healing": 481727,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -309,7 +311,8 @@
       ],
       "window_damage": 1989641,
       "window_healing": 1135191,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -367,7 +370,8 @@
       ],
       "window_damage": 1934286,
       "window_healing": 1113558,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -425,7 +429,8 @@
       ],
       "window_damage": 1595336,
       "window_healing": 901157,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -483,7 +488,8 @@
       ],
       "window_damage": 923002,
       "window_healing": 132944,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -541,7 +547,8 @@
       ],
       "window_damage": 672541,
       "window_healing": 371562,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 31530
     },
     {
       "active_defensives": [],
@@ -600,7 +607,8 @@
       ],
       "window_damage": 1073340,
       "window_healing": 531273,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -658,7 +666,8 @@
       ],
       "window_damage": 1010133,
       "window_healing": 124796,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     },
     {
       "active_defensives": [],
@@ -716,11 +725,58 @@
       ],
       "window_damage": 1295038,
       "window_healing": 717071,
-      "window_ms": 10000
+      "window_ms": 10000,
+      "window_self_damage": 0
     }
   ],
   "duration_ms": 244025,
   "encounter_name": "Ula'tek",
+  "friendly_damage": {
+    "by_class": {
+      "delayed_boss": 3962346,
+      "involuntary": 225644,
+      "redistribution": 1470690,
+      "self_inflicted": 617534
+    },
+    "damage": 6276214,
+    "self_inflicted": [
+      {
+        "abilities": [
+          {
+            "ability_id": 111400,
+            "damage": 480507,
+            "name": "Burning Rush"
+          }
+        ],
+        "damage": 480507,
+        "name": "Aluriel"
+      },
+      {
+        "abilities": [
+          {
+            "ability_id": 111400,
+            "damage": 89576,
+            "name": "Burning Rush"
+          }
+        ],
+        "damage": 89576,
+        "name": "Moombly"
+      },
+      {
+        "abilities": [
+          {
+            "ability_id": 32409,
+            "damage": 47451,
+            "name": "Shadow Word: Death"
+          }
+        ],
+        "damage": 47451,
+        "name": "Discô"
+      }
+    ],
+    "share_pct": 2.0,
+    "unclassified": []
+  },
   "mechanics": [
     {
       "clusters": 4,
@@ -831,40 +887,10 @@
   "produced_from": {
     "encfile_hash": "17065e38c12b",
     "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
+    "friendly_damage_hash": "ddbf5baada0a",
     "positions_hash": "9ce1e6be7cb77215bb75b1a30bd4386db9d8f3a6693b91f124ee5948371bf778",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "trMgApZCVYkv3jdq:11",
-  "unregistered": [
-    {
-      "ability_id": 1309786,
-      "damage": 2103426,
-      "name": "Refraction",
-      "share_pct": 0.7
-    },
-    {
-      "ability_id": 98021,
-      "damage": 1470690,
-      "name": "Spirit Link",
-      "share_pct": 0.5
-    },
-    {
-      "ability_id": 361029,
-      "damage": 1399215,
-      "name": "Time Dilation",
-      "share_pct": 0.4
-    },
-    {
-      "ability_id": 111400,
-      "damage": 570083,
-      "name": "Burning Rush",
-      "share_pct": 0.2
-    },
-    {
-      "ability_id": 1292299,
-      "damage": 225644,
-      "name": "Seriously Sharp Seashell",
-      "share_pct": 0.1
-    }
-  ]
+  "unregistered": []
 }
