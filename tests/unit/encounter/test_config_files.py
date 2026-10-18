@@ -1,7 +1,7 @@
 """
 tests/unit/encounter/test_config_files.py
 
-Cooldown registry and encounter file loading, validation and hashing.
+Cooldown registry, friendly-damage registry and encounter file loading, validation and hashing.
 Every validation rule has a failing case.
 """
 
@@ -15,22 +15,27 @@ from helpers.encounter.synth import (
     SYNTH_ENCOUNTER_FILE,
     SYNTH_ENCOUNTER_ID,
     SYNTH_ENCOUNTER_RELPATH,
+    SYNTH_FRIENDLY_DAMAGE,
     SYNTH_REGISTRY_FILE,
     install_synth_encounter,
 )
 
 from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.config_files import (
+    DEFAULT_FRIENDLY_DAMAGE_PATH,
     DEFAULT_REGISTRY_PATH,
     encfile_hash,
     encounter_relpath,
     fetch_filter_inputs,
+    friendly_damage_hash,
     load_all_encounters,
     load_encounter,
     load_encounter_file,
     load_encounter_view,
+    load_friendly_damage,
     load_registry,
     parse_encounter,
+    parse_friendly_damage,
     parse_registry,
     registry_hash,
     slugify,
@@ -97,6 +102,77 @@ class TestRegistry:
         assert registry_hash(a) == registry_hash(parse_registry(yaml.safe_load(SYNTH_REGISTRY_FILE.read_text())))
         assert registry_hash(a) != registry_hash(b)
         assert len(registry_hash(a)) == 12
+
+
+# ===========================================================================
+# Friendly-damage registry
+# ===========================================================================
+
+
+class TestFriendlyDamageRegistry:
+    def test_default_registry_loads(self):
+        reg = load_friendly_damage()
+        assert DEFAULT_FRIENDLY_DAMAGE_PATH.exists()
+        assert reg.get(98021).class_name == "redistribution"  # Spirit Link
+        assert reg.get(32409).class_name == "self_inflicted"  # Shadow Word: Death
+        assert reg.get(1292299).class_name == "involuntary"  # Seriously Sharp Seashell, a trinket proc
+        assert reg.get(1309786).class_name == "delayed_boss"  # Refraction
+        assert [reg.get(i).origin for i in (361029, 1287955, 1292299)] == ["class", "borrowed_power", "item"]
+        assert all(e.verified for e in reg.abilities)
+        assert reg.get(1) is None
+
+    def test_synth_registry(self):
+        reg = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
+        assert reg.ability_ids() == [901001, 901002]
+        assert reg.ability_ids(["self_inflicted"]) == [901001]
+        assert reg.ability_ids(["delayed_boss"]) == []
+        assert not reg.get(901002).verified
+
+    def test_verified_defaults_to_false(self):
+        reg = parse_friendly_damage({"abilities": [{"ability_id": 1, "name": "X", "class": "redistribution"}]})
+        assert reg.abilities[0].verified is False
+        assert reg.abilities[0].origin is None
+
+    def test_duplicate_ability_id(self):
+        data = copy.deepcopy(SYNTH_FRIENDLY_DAMAGE)
+        data["abilities"].append({**data["abilities"][0], "class": "delayed_boss"})
+        with pytest.raises(ConfigurationError, match="duplicate ability_id 901001"):
+            parse_friendly_damage(data)
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            {"class": "boss"},  # not a class
+            {"class": None},
+            {"origin": "season"},  # not an origin
+            {"kind": "self_inflicted"},  # unknown key
+        ],
+    )
+    def test_invalid_entry(self, change):
+        data = copy.deepcopy(SYNTH_FRIENDLY_DAMAGE)
+        data["abilities"][0].update(change)
+        with pytest.raises(ConfigurationError, match="friendly-damage registry"):
+            parse_friendly_damage(data)
+
+    def test_missing_class(self):
+        data = copy.deepcopy(SYNTH_FRIENDLY_DAMAGE)
+        del data["abilities"][0]["class"]
+        with pytest.raises(ConfigurationError):
+            parse_friendly_damage(data)
+
+    def test_yaml_error(self, tmp_path):
+        bad = tmp_path / "friendly_damage.yaml"
+        bad.write_text("abilities: [\n", encoding="utf-8")
+        with pytest.raises(ConfigurationError, match="YAML parse error"):
+            load_friendly_damage(bad)
+
+    def test_hash_changes_with_content(self):
+        a = parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE)
+        data = copy.deepcopy(SYNTH_FRIENDLY_DAMAGE)
+        data["abilities"][1]["verified"] = True
+        assert friendly_damage_hash(a) == friendly_damage_hash(parse_friendly_damage(SYNTH_FRIENDLY_DAMAGE))
+        assert friendly_damage_hash(a) != friendly_damage_hash(parse_friendly_damage(data))
+        assert len(friendly_damage_hash(a)) == 12
 
 
 # ===========================================================================

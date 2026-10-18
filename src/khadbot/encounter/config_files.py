@@ -4,9 +4,10 @@ encounter/config_files.py
 Authored configuration for encounter review:
 
     config/registries/cooldowns.yaml                                          → CooldownRegistry
+    config/registries/friendly_damage.yaml                                    → FriendlyDamageRegistry
     config/encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml → EncounterFile
 
-Both are validated with Pydantic and fail fast with ``ConfigurationError``. Each has a
+All are validated with Pydantic and fail fast with ``ConfigurationError``. Each has a
 content hash (first 12 hex of SHA-256 over the canonical JSON dump) that keys derived data,
 so editing a file invalidates annotations and digests built from it.
 
@@ -32,6 +33,7 @@ from khadbot.agent.agent_config import ConfigurationError
 
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
 DEFAULT_REGISTRY_PATH = _CONFIG_ROOT / "registries" / "cooldowns.yaml"
+DEFAULT_FRIENDLY_DAMAGE_PATH = _CONFIG_ROOT / "registries" / "friendly_damage.yaml"
 DEFAULT_ENCOUNTER_ROOT = _CONFIG_ROOT / "encounters"
 
 
@@ -77,6 +79,52 @@ class CooldownRegistry(_Strict):
 
     def spell_ids(self, kinds: Sequence[CooldownKind] | None = None) -> list[int]:
         return [c.spell_id for c in self.cooldowns if kinds is None or c.kind in kinds]
+
+
+# ---------------------------------------------------------------------------
+# Friendly-damage registry
+# ---------------------------------------------------------------------------
+
+FriendlyDamageClass = Literal["redistribution", "delayed_boss", "self_inflicted", "involuntary"]
+# Where the ability comes from: a class spell or talent, an expansion-wide borrowed power, or an item (trinkets,
+# embellishments), which players may keep using past the season that added it.
+FriendlyDamageOrigin = Literal["class", "borrowed_power", "item"]
+
+
+class FriendlyDamageEntry(_Strict):
+    """
+    An ability whose damage lands on players: shared out (``redistribution``), boss damage taken late
+    (``delayed_boss``), a cost the player chose to pay (``self_inflicted``), or self-damage the player can't
+    control, such as a trinket proc (``involuntary``). Matched by ability ID whatever the
+    damage row's source, since some are recorded with the Environment as source.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    ability_id: int
+    name: str
+    class_name: FriendlyDamageClass = Field(alias="class")
+    origin: FriendlyDamageOrigin | None = None  # None when the records don't show where it comes from
+    verified: bool = False
+
+
+class FriendlyDamageRegistry(_Strict):
+    abilities: list[FriendlyDamageEntry]
+
+    @model_validator(mode="after")
+    def _unique_ability_ids(self) -> FriendlyDamageRegistry:
+        seen: set[int] = set()
+        for entry in self.abilities:
+            if entry.ability_id in seen:
+                raise ValueError(f"duplicate ability_id {entry.ability_id} in friendly-damage registry")
+            seen.add(entry.ability_id)
+        return self
+
+    def get(self, ability_id: int) -> FriendlyDamageEntry | None:
+        return next((e for e in self.abilities if e.ability_id == ability_id), None)
+
+    def ability_ids(self, classes: Sequence[FriendlyDamageClass] | None = None) -> list[int]:
+        return [e.ability_id for e in self.abilities if classes is None or e.class_name in classes]
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +401,13 @@ def parse_registry(data: object, label: str = "cooldown registry") -> CooldownRe
         raise ConfigurationError(f"Schema validation failed for {label}:\n{e}") from e
 
 
+def parse_friendly_damage(data: object, label: str = "friendly-damage registry") -> FriendlyDamageRegistry:
+    try:
+        return FriendlyDamageRegistry.model_validate(data)
+    except ValidationError as e:
+        raise ConfigurationError(f"Schema validation failed for {label}:\n{e}") from e
+
+
 def parse_encounter(data: object, label: str = "encounter file") -> EncounterFile:
     try:
         return EncounterFile.model_validate(data)
@@ -363,6 +418,11 @@ def parse_encounter(data: object, label: str = "encounter file") -> EncounterFil
 def load_registry(path: Path | None = None) -> CooldownRegistry:
     path = Path(path) if path else DEFAULT_REGISTRY_PATH
     return parse_registry(_read_yaml(path), str(path))
+
+
+def load_friendly_damage(path: Path | None = None) -> FriendlyDamageRegistry:
+    path = Path(path) if path else DEFAULT_FRIENDLY_DAMAGE_PATH
+    return parse_friendly_damage(_read_yaml(path), str(path))
 
 
 def load_encounter_file(path: Path) -> EncounterFile:
@@ -429,6 +489,10 @@ def encfile_hash(enc: EncounterFile | None) -> str:
 
 
 def registry_hash(registry: CooldownRegistry) -> str:
+    return _content_hash(registry)
+
+
+def friendly_damage_hash(registry: FriendlyDamageRegistry) -> str:
     return _content_hash(registry)
 
 
