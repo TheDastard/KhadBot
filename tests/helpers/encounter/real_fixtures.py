@@ -40,16 +40,17 @@ def fixture_fights(code: str) -> list[int]:
 REAL_PULLS: list[str] = [f"{code}:{fight}" for code in REAL_REPORTS for fight in fixture_fights(code)]
 
 
-async def ingest_fixture(code: str, store: EventStore) -> IngestResult:
+async def ingest_fixture(code: str, store: EventStore, fights: list[int] | None = None) -> IngestResult:
     """
-    Ingest a report's recorded fights offline into ``store``.
+    Ingest a report's recorded fights (or ``fights``) offline into ``store``.
 
-    Buffs use the cooldown-registry filter they were recorded with. Enemy Casts are read unfiltered, which every
+    Buffs use the cooldown-registry filter they were recorded with: cast IDs only, from before registry entries
+    had ``aura_spell_ids``, so these pulls have no Buffs rows for those auras. Enemy Casts are read unfiltered, which every
     fixture pull has, so editing an encounter file's ability IDs never leaves the fixtures without that data type.
     """
     return await ingest_report(
         code,
-        fixture_fights(code),
+        fights or fixture_fights(code),
         store=store,
         cache=RawPageCache(WCL_FIXTURES),
         offline=True,

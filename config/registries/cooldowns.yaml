@@ -4,6 +4,10 @@
 # every entry is unverified until a human fills them in. `kind` is a first-pass port
 # and is verified along with the durations. Analysis skips cooldown availability for null durations
 # and lists used, unverified cooldowns as digest anomalies.
+#
+# `aura_spell_ids` lists the spells a cooldown's aura is applied under when they differ from the
+# cast; the Buffs filter fetches them and their intervals count as the cooldown. The values come
+# from the review file of scripts/build_cooldown_registry.py (SimC client data), unverified in game.
 cooldowns:
   - spell_id: 633
     name: Lay on Hands
@@ -53,6 +57,7 @@ cooldowns:
     kind: raid
     cooldown_s: null
     duration_s: null
+    aura_spell_ids: [81782]
     verified: false
   - spell_id: 29166
     name: Innervate
@@ -95,6 +100,7 @@ cooldowns:
     kind: raid
     cooldown_s: null
     duration_s: null
+    aura_spell_ids: [97463]
     verified: false
   - spell_id: 51052
     name: Anti-Magic Zone
@@ -102,6 +108,7 @@ cooldowns:
     kind: raid
     cooldown_s: null
     duration_s: null
+    aura_spell_ids: [50461, 145629, 332831, 396883, 397303, 397304, 397305]
     verified: false
   - spell_id: 98008
     name: Spirit Link Totem
@@ -109,6 +116,7 @@ cooldowns:
     kind: raid
     cooldown_s: null
     duration_s: null
+    aura_spell_ids: [98007, 325174]
     verified: false
   - spell_id: 207399
     name: Ancestral Protection Totem

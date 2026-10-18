@@ -71,8 +71,26 @@ class TestRegistry:
         reg = load_registry(SYNTH_REGISTRY_FILE)
         assert reg.spell_ids() == [900301, 900302]
         assert reg.spell_ids(["raid"]) == [900301]
+        assert reg.aura_ids() == {900301: 900301, 900311: 900301, 900302: 900302}
+        assert reg.aura_ids(["external"]) == {900302: 900302}
         assert reg.get(900301).class_name == "Shaman"
         assert reg.get(1) is None
+
+    def test_default_registry_aura_ids(self):
+        auras = load_registry().aura_ids(["raid"])
+        assert auras[97463] == 97462  # Rallying Cry
+        assert auras[145629] == 51052  # Anti-Magic Zone
+        assert auras[98007] == 98008  # Spirit Link Totem
+        assert auras[81782] == 62618  # Power Word: Barrier
+
+    @pytest.mark.parametrize("aura", [900302, 900301, 900311])
+    def test_aura_id_used_twice(self, reg_data, aura):
+        # Another entry's cast ID, the entry's own cast ID, or another entry's aura ID.
+        reg_data["cooldowns"][1]["aura_spell_ids"] = [aura]
+        if aura == 900302:
+            reg_data["cooldowns"][0]["aura_spell_ids"] = [aura]
+        with pytest.raises(ConfigurationError, match=f"aura_spell_id {aura} .* already used"):
+            parse_registry(reg_data)
 
     def test_duplicate_spell_id(self, reg_data):
         reg_data["cooldowns"].append(copy.deepcopy(reg_data["cooldowns"][0]))
@@ -416,6 +434,6 @@ class TestEncounterFile:
     def test_fetch_filter_inputs(self):
         enc = load_encounter_file(SYNTH_ENCOUNTER_FILE)
         ids, enemy = fetch_filter_inputs(load_registry(SYNTH_REGISTRY_FILE), {enc.encounter_id: enc})
-        assert ids == [900301, 900302]
+        assert ids == [900301, 900311, 900302]
         assert enemy == {SYNTH_ENCOUNTER_ID: [900101, 900201, 900401, 900501, 900601]}
         assert fetch_filter_inputs(None, {}) == (None, {})

@@ -60,6 +60,9 @@ class CooldownEntry(_Strict):
     cooldown_s: float | None = None
     duration_s: float | None = None
     verified: bool = False
+    # Spells the cooldown's aura is applied under when they differ from the cast (Rallying Cry casts 97462 and
+    # buffs players with 97463). Buffs rows under these IDs count as this entry's aura.
+    aura_spell_ids: list[int] = Field(default_factory=list)
 
 
 class CooldownRegistry(_Strict):
@@ -72,13 +75,32 @@ class CooldownRegistry(_Strict):
             if entry.spell_id in seen:
                 raise ValueError(f"duplicate spell_id {entry.spell_id} in cooldown registry")
             seen.add(entry.spell_id)
+        # An aura ID must name one entry, so an aura interval maps back to a single cooldown.
+        owner = {entry.spell_id: entry.spell_id for entry in self.cooldowns}
+        for entry in self.cooldowns:
+            for aura in entry.aura_spell_ids:
+                if aura in owner:
+                    raise ValueError(
+                        f"aura_spell_id {aura} of cooldown {entry.spell_id} is already used by cooldown {owner[aura]}"
+                    )
+                owner[aura] = entry.spell_id
         return self
 
     def get(self, spell_id: int) -> CooldownEntry | None:
         return next((c for c in self.cooldowns if c.spell_id == spell_id), None)
 
     def spell_ids(self, kinds: Sequence[CooldownKind] | None = None) -> list[int]:
+        """Cast spell IDs of the entries of ``kinds`` (all entries when None)."""
         return [c.spell_id for c in self.cooldowns if kinds is None or c.kind in kinds]
+
+    def aura_ids(self, kinds: Sequence[CooldownKind] | None = None) -> dict[int, int]:
+        """Every spell ID a Buffs row of these entries can carry (cast and ``aura_spell_ids``) -> its entry's spell_id."""
+        return {
+            aura: c.spell_id
+            for c in self.cooldowns
+            if kinds is None or c.kind in kinds
+            for aura in (c.spell_id, *c.aura_spell_ids)
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -499,6 +521,9 @@ def friendly_damage_hash(registry: FriendlyDamageRegistry) -> str:
 def fetch_filter_inputs(
     registry: CooldownRegistry | None, encounters: dict[int, EncounterFile]
 ) -> tuple[list[int] | None, dict[int, list[int]]]:
-    """The ``registry_spell_ids`` / ``enemy_cast_ids`` arguments ``ingest_report`` expects."""
-    spell_ids = registry.spell_ids() if registry is not None else None
+    """
+    The ``registry_spell_ids`` / ``enemy_cast_ids`` arguments ``ingest_report`` expects. The registry IDs are
+    the Buffs filter, so they include each entry's ``aura_spell_ids`` as well as its cast ID.
+    """
+    spell_ids = list(registry.aura_ids()) if registry is not None else None
     return spell_ids, {eid: enc.ability_ids() for eid, enc in encounters.items()}

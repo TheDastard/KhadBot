@@ -39,13 +39,14 @@ ACTORS = [
 # --- abilities (all fake) -----------------------------------------------------
 SWIRL, FIREPOOL, CATACLYSM, SHADOWBOLT, PHASE_SHIFT, CURSE = 900101, 900102, 900201, 900401, 900501, 900601
 LINK_TOTEM, EXTERNAL = 900301, 900302
+LINK_TOTEM_AURA = 900311  # the aura has its own ID, like Spirit Link Totem's
 KICK, PURGE = 900701, 900702
 FILLERS = [900001, 900002, 900003]
 BOSS_MELEE = 900010
 TAUNT = 900703
 
 ENEMY_CAST_FILTER_IDS = [SWIRL, CATACLYSM, SHADOWBOLT, PHASE_SHIFT, CURSE]
-BUFF_FILTER_IDS = [LINK_TOTEM, EXTERNAL]
+BUFF_FILTER_IDS = [LINK_TOTEM, EXTERNAL, LINK_TOTEM_AURA]
 
 ABILITIES = [
     {"gameID": i, "name": n, "type": 1}
@@ -57,6 +58,7 @@ ABILITIES = [
         (PHASE_SHIFT, "Synth Phase Shift"),
         (CURSE, "Synth Curse"),
         (LINK_TOTEM, "Synth Link Totem"),
+        (LINK_TOTEM_AURA, "Synth Link Totem"),
         (EXTERNAL, "Synth Guardian"),
         (KICK, "Synth Kick"),
         (PURGE, "Synth Purge"),
@@ -275,8 +277,8 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         casts.append(ev(18_000, "cast", HEALER, None, LINK_TOTEM))
         casts.append(ev(38_000, "cast", DPS3, TANK, EXTERNAL))
         for p in PLAYERS:
-            buffs.append(ev(18_050, "applybuff", HEALER, p, LINK_TOTEM))
-            buffs.append(ev(26_050, "removebuff", HEALER, p, LINK_TOTEM))
+            buffs.append(ev(18_050, "applybuff", HEALER, p, LINK_TOTEM_AURA))
+            buffs.append(ev(26_050, "removebuff", HEALER, p, LINK_TOTEM_AURA))
         buffs.append(ev(38_050, "applybuff", DPS3, TANK, EXTERNAL))
         buffs.append(ev(44_050, "removebuff", DPS3, TANK, EXTERNAL))
         # Curse on the tank lasts 16 s, dispelled late.
@@ -297,8 +299,8 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         casts.append(ev(44_000, "cast", HEALER, None, LINK_TOTEM))
         for t0 in (19_050, 44_050):
             for p in PLAYERS:
-                buffs.append(ev(t0, "applybuff", HEALER, p, LINK_TOTEM))
-                buffs.append(ev(t0 + 8_000, "removebuff", HEALER, p, LINK_TOTEM))
+                buffs.append(ev(t0, "applybuff", HEALER, p, LINK_TOTEM_AURA))
+                buffs.append(ev(t0 + 8_000, "removebuff", HEALER, p, LINK_TOTEM_AURA))
         debuffs.append(ev(14_000, "applydebuff", BOSS, TANK, CURSE))
         debuffs.append(ev(19_000, "removedebuff", BOSS, TANK, CURSE))
         dispels.append(ev(18_900, "dispel", HEALER, TANK, PURGE, extraAbilityGameID=CURSE))
