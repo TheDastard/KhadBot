@@ -4,11 +4,19 @@
 # ones: haste, damage and stat buffs on the caster, one ally or the raid (Bloodlust, Avenging Wrath,
 # Power Infusion). Damage-window coverage and death-window defensives never read this file. Spell IDs,
 # names, `target`, `cooldown_s` and `duration_s` come from game client data (SimC tables for WoW build
-# 12.1.5.70448) via the review file of scripts/build_registries.py. Avatar, whose damage bonus the
-# heuristic doesn't read, takes its values from its own spell data; Bestial Wrath's target is personal
-# because the ally its auras name is the hunter's pet. Cooldowns and durations are base values before
-# talents. Every entry is unverified until a person checks it in game; analysis lists used, unverified
-# cooldowns as digest anomalies.
+# 12.1.5.70448) via the review file of scripts/build_registries.py. Cooldowns the heuristic can't
+# classify take their values from their own spell data: Pillar of Frost and Dark Transformation (45 s
+# cooldowns, under the generator's 60 s minimum), and Breath of Sindragosa, Convoke the Spirits, Zenith
+# and the three warlock summons, whose effects are scripted. Summon Infernal's duration is null because
+# its spell lasts only for the cast. Each of those was cast in the recorded raid nights.
+#
+# Exceptions to the data: Metamorphosis is listed under 200166, the cast recorded logs show, rather than
+# its player spell 191427, which the logs never show. Bestial Wrath's and Dark Transformation's target
+# is personal because the unit their auras name is the pet. Enhancement's Ascendance (114051) has no
+# aura_spell_ids: the aura the data finds for it, 466772, belongs to Doom Winds, which it triggers.
+#
+# Cooldowns and durations are base values before talents. Every entry is unverified until a person
+# checks it in game; analysis lists used, unverified cooldowns as digest anomalies.
 #
 # target: personal (only the caster), external (one chosen ally), raid (an area or the whole raid).
 #
@@ -26,7 +34,28 @@ cooldowns:
     duration_s: 30.0
     aura_spell_ids: [418189]
     verified: false
-  - spell_id: 191427
+  - spell_id: 1249658
+    name: Breath of Sindragosa
+    class: Death Knight
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 8.0
+    verified: false
+  - spell_id: 1233448
+    name: Dark Transformation
+    class: Death Knight
+    target: personal
+    cooldown_s: 45.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 51271
+    name: Pillar of Frost
+    class: Death Knight
+    target: personal
+    cooldown_s: 45.0
+    duration_s: 12.0
+    verified: false
+  - spell_id: 200166
     name: Metamorphosis
     class: Demon Hunter
     target: personal
@@ -34,12 +63,40 @@ cooldowns:
     duration_s: 20.0
     aura_spell_ids: [162264]
     verified: false
+  - spell_id: 50334
+    name: Berserk
+    class: Druid
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 106951
+    name: Berserk
+    class: Druid
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
+    verified: false
   - spell_id: 194223
     name: Celestial Alignment
     class: Druid
     target: personal
     cooldown_s: 180.0
     duration_s: 15.0
+    verified: false
+  - spell_id: 391528
+    name: Convoke the Spirits
+    class: Druid
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 4.0
+    verified: false
+  - spell_id: 102543
+    name: "Incarnation: Avatar of Ashamane"
+    class: Druid
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 20.0
     verified: false
   - spell_id: 102560
     name: "Incarnation: Chosen of Elune"
@@ -77,6 +134,13 @@ cooldowns:
     cooldown_s: 360.0
     duration_s: 40.0
     verified: false
+  - spell_id: 1250646
+    name: Takedown
+    class: Hunter
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 8.0
+    verified: false
   - spell_id: 288613
     name: Trueshot
     class: Hunter
@@ -84,12 +148,41 @@ cooldowns:
     cooldown_s: 120.0
     duration_s: 15.0
     verified: false
+  - spell_id: 365350
+    name: Arcane Surge
+    class: Mage
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 15.0
+    aura_spell_ids: [365362]
+    verified: false
+  - spell_id: 190319
+    name: Combustion
+    class: Mage
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 10.0
+    verified: false
   - spell_id: 80353
     name: Time Warp
     class: Mage
     target: raid
     cooldown_s: 300.0
     duration_s: 40.0
+    verified: false
+  - spell_id: 123904
+    name: Invoke Xuen, the White Tiger
+    class: Monk
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 1249625
+    name: Zenith
+    class: Monk
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 15.0
     verified: false
   - spell_id: 31884
     name: Avenging Wrath
@@ -111,7 +204,44 @@ cooldowns:
     target: personal
     cooldown_s: 120.0
     duration_s: 15.0
-    aura_spell_ids: [250844, 284508]
+    aura_spell_ids: [194249, 250844, 284508]
+    verified: false
+  - spell_id: 13750
+    name: Adrenaline Rush
+    class: Rogue
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 385627
+    name: Kingsbane
+    class: Rogue
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 14.0
+    aura_spell_ids: [394095]
+    verified: false
+  - spell_id: 121471
+    name: Shadow Blades
+    class: Rogue
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 16.0
+    verified: false
+  - spell_id: 114050
+    name: Ascendance
+    class: Shaman
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
+    aura_spell_ids: [1219480]
+    verified: false
+  - spell_id: 114051
+    name: Ascendance
+    class: Shaman
+    target: personal
+    cooldown_s: 180.0
+    duration_s: 15.0
     verified: false
   - spell_id: 2825
     name: Bloodlust
@@ -120,12 +250,27 @@ cooldowns:
     cooldown_s: 300.0
     duration_s: 40.0
     verified: false
+  - spell_id: 384352
+    name: Doom Winds
+    class: Shaman
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 8.0
+    aura_spell_ids: [466772]
+    verified: false
   - spell_id: 32182
     name: Heroism
     class: Shaman
     target: raid
     cooldown_s: 300.0
     duration_s: 40.0
+    verified: false
+  - spell_id: 191634
+    name: Stormkeeper
+    class: Shaman
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 15.0
     verified: false
   - spell_id: 442726
     name: Malevolence
@@ -134,10 +279,38 @@ cooldowns:
     cooldown_s: 60.0
     duration_s: 20.0
     verified: false
+  - spell_id: 205180
+    name: Summon Darkglare
+    class: Warlock
+    target: personal
+    cooldown_s: 120.0
+    duration_s: 20.0
+    verified: false
+  - spell_id: 265187
+    name: Summon Demonic Tyrant
+    class: Warlock
+    target: personal
+    cooldown_s: 60.0
+    duration_s: 15.0
+    verified: false
+  - spell_id: 1122
+    name: Summon Infernal
+    class: Warlock
+    target: personal
+    cooldown_s: 120.0
+    duration_s: null
+    verified: false
   - spell_id: 107574
     name: Avatar
     class: Warrior
     target: personal
     cooldown_s: 90.0
     duration_s: 20.0
+    verified: false
+  - spell_id: 1719
+    name: Recklessness
+    class: Warrior
+    target: personal
+    cooldown_s: 90.0
+    duration_s: 12.0
     verified: false
