@@ -101,8 +101,8 @@ human task table in `docs/decisions.md`).
 - **Review the failure rules.** Final counts over the 47 recorded pulls are in the status row.
 - **Spectral Coils as a damage window.** Every player takes it, damage scales with how many soak, and it causes
   many overkill deaths. Only Rage of the Shackled is a window today.
-- **Rage of the Shackled `expected_cooldowns: 1`** is a guess; no guide states how many raid cooldowns a channel
-  needs.
+- **Rage of the Shackled `expected_defensive_cooldowns: 1`** is a guess; no guide states how many raid
+  cooldowns a channel needs.
 - **Poisonous Bite** is a dispel mechanic with no failure rule: no source says how long the stacking DoT may
   stay before it counts as a failure (`debuff_duration_gt {ms}` once known).
 - **Soul Constrictor** soakers are an undetected failure. The `hit_while_aura` rule exists, but the logs don't

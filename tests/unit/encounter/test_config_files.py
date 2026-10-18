@@ -343,6 +343,8 @@ class TestEncounterFile:
             (lambda d: d["phases"].append(dict(d["phases"][1])), "duplicate phase"),
             (lambda d: d["mechanics"].append({**d["mechanics"][0], "ability_ids": [1]}), "duplicate mechanic"),
             (lambda d: d["damage_windows"].append(dict(d["damage_windows"][0])), "duplicate damage window"),
+            # Renamed to expected_defensive_cooldowns: an old file fails instead of falling back to the default.
+            (lambda d: d["damage_windows"][0].update(expected_cooldowns=2), "expected_cooldowns"),
             (lambda d: d["mechanics"][1]["ability_ids"].append(900101), "ability 900101 is in mechanics"),
             (lambda d: d["phases"].reverse(), "must use trigger: pull"),
             (lambda d: d["phases"][1].update(start={"trigger": "pull"}), "only the first phase"),

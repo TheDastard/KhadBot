@@ -52,134 +52,6 @@
   ],
   "boss_hp_pct": 78.33,
   "boss_pct": 78.33,
-  "cooldowns": [
-    {
-      "caster": "Moombly",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:108416:1",
-      "spell_id": 108416,
-      "spell_name": "Dark Pact",
-      "t_ms": 46600
-    },
-    {
-      "caster": "Widowmaker",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:1",
-      "spell_id": 48707,
-      "spell_name": "Anti-Magic Shell",
-      "t_ms": 46760
-    },
-    {
-      "caster": "Teppic",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:31224:1",
-      "spell_id": 31224,
-      "spell_name": "Cloak of Shadows",
-      "t_ms": 47376
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:1",
-      "spell_id": 19236,
-      "spell_name": "Desperate Prayer",
-      "t_ms": 47575
-    },
-    {
-      "caster": "Talyssah",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:363534:1",
-      "spell_id": 363534,
-      "spell_name": "Rewind",
-      "t_ms": 47783
-    },
-    {
-      "caster": "Wilmer",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:109304:1",
-      "spell_id": 109304,
-      "spell_name": "Exhilaration",
-      "t_ms": 48316
-    },
-    {
-      "caster": "Discô",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:2",
-      "spell_id": 19236,
-      "spell_name": "Desperate Prayer",
-      "t_ms": 48424
-    },
-    {
-      "caster": "Hugedonut",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:1",
-      "spell_id": 198589,
-      "spell_name": "Blur",
-      "t_ms": 48443
-    },
-    {
-      "caster": "Shinrael",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:22812:1",
-      "spell_id": 22812,
-      "spell_name": "Barkskin",
-      "t_ms": 48955
-    },
-    {
-      "caster": "Dean",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:2",
-      "spell_id": 198589,
-      "spell_name": "Blur",
-      "t_ms": 51254
-    },
-    {
-      "caster": "Verrydis",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:114052:1",
-      "spell_id": 114052,
-      "spell_name": "Ascendance",
-      "t_ms": 53499
-    },
-    {
-      "caster": "Novic",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:64843:1",
-      "spell_id": 64843,
-      "spell_name": "Divine Hymn",
-      "t_ms": 61152
-    },
-    {
-      "caster": "Mekerakesh",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:871:1",
-      "spell_id": 871,
-      "spell_name": "Shield Wall",
-      "t_ms": 74683
-    },
-    {
-      "caster": "Cocodiablo",
-      "category": "defensive",
-      "phase_id": null,
-      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:2",
-      "spell_id": 48707,
-      "spell_name": "Anti-Magic Shell",
-      "t_ms": 117166
-    }
-  ],
   "coverage": "none",
   "coverage_windows": [],
   "cutoff_ms": 91056,
@@ -733,6 +605,134 @@
       "window_healing": 144056,
       "window_ms": 10000,
       "window_self_damage": 0
+    }
+  ],
+  "defensive_cooldowns": [
+    {
+      "caster": "Moombly",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:108416:1",
+      "spell_id": 108416,
+      "spell_name": "Dark Pact",
+      "t_ms": 46600
+    },
+    {
+      "caster": "Widowmaker",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:1",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 46760
+    },
+    {
+      "caster": "Teppic",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:31224:1",
+      "spell_id": 31224,
+      "spell_name": "Cloak of Shadows",
+      "t_ms": 47376
+    },
+    {
+      "caster": "Novic",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:1",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 47575
+    },
+    {
+      "caster": "Talyssah",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:363534:1",
+      "spell_id": 363534,
+      "spell_name": "Rewind",
+      "t_ms": 47783
+    },
+    {
+      "caster": "Wilmer",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:109304:1",
+      "spell_id": 109304,
+      "spell_name": "Exhilaration",
+      "t_ms": 48316
+    },
+    {
+      "caster": "Discô",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:2",
+      "spell_id": 19236,
+      "spell_name": "Desperate Prayer",
+      "t_ms": 48424
+    },
+    {
+      "caster": "Hugedonut",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:1",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 48443
+    },
+    {
+      "caster": "Shinrael",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:22812:1",
+      "spell_id": 22812,
+      "spell_name": "Barkskin",
+      "t_ms": 48955
+    },
+    {
+      "caster": "Dean",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:2",
+      "spell_id": 198589,
+      "spell_name": "Blur",
+      "t_ms": 51254
+    },
+    {
+      "caster": "Verrydis",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:114052:1",
+      "spell_id": 114052,
+      "spell_name": "Ascendance",
+      "t_ms": 53499
+    },
+    {
+      "caster": "Novic",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:64843:1",
+      "spell_id": 64843,
+      "spell_name": "Divine Hymn",
+      "t_ms": 61152
+    },
+    {
+      "caster": "Mekerakesh",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:871:1",
+      "spell_id": 871,
+      "spell_name": "Shield Wall",
+      "t_ms": 74683
+    },
+    {
+      "caster": "Cocodiablo",
+      "category": "defensive",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:2",
+      "spell_id": 48707,
+      "spell_name": "Anti-Magic Shell",
+      "t_ms": 117166
     }
   ],
   "duration_ms": 123903,

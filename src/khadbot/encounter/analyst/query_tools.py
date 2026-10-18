@@ -178,7 +178,9 @@ def get_digest_result(scope: AnalystScope, pull: str) -> ToolResult:
         return r
     d = r.digest
     refs = [make_ref(d.pull_key, "pull")]
-    refs += [x.ref for x in [*d.deaths, *d.mechanics, *d.cooldowns, *d.coverage_windows, *d.offensive_cooldowns]]
+    refs += [
+        x.ref for x in [*d.deaths, *d.mechanics, *d.defensive_cooldowns, *d.coverage_windows, *d.offensive_cooldowns]
+    ]
     # Not subject to CHAR_CAP: the digest's own caps bound it.
     return ToolResult(ok=True, data={"pull_key": d.pull_key, "text": render_digest(d)}, refs=refs)
 
@@ -348,11 +350,12 @@ def list_pulls(*, config: RunnableConfig) -> str:
 
 @tool(parse_docstring=True)
 def get_digest(pull: str, *, config: RunnableConfig) -> str:
-    """Get the rendered digest of one pull: deaths, mechanics, cooldowns, damage windows and anomalies.
+    """Get the rendered digest of one pull: deaths, mechanics, defensive and offensive cooldowns, damage windows
+    and anomalies.
 
     Every record line starts with its evidence ref in brackets. Use it to orient on a pull before
-    querying details. The digest is capped (10 deaths, 8 mechanics, 30 cooldowns); use query_deaths
-    or cooldown_timeline for the full lists.
+    querying details. The digest is capped (10 deaths, 8 mechanics, 30 defensive and 15 offensive
+    cooldowns); use query_deaths or cooldown_timeline for the full lists.
 
     Args:
         pull: Pull key in scope, for example "abc123:7".
@@ -435,9 +438,9 @@ def cooldown_timeline(pull: str, phase: str | None = None, *, config: RunnableCo
     Cooldown rows say who cast which registry cooldown when; their category is "defensive" (keeps players
     alive) or "offensive" (raises damage done, such as Bloodlust). Damage-window rows say, for each
     occurrence of a raid-wide damage event, which defensive raid cooldowns were active at its first hit and
-    whether that met the expected number; offensive cooldowns never count toward it. Their cooldowns_late
-    lists defensive raid cooldowns started after the first hit (late_ms after it); used that much earlier,
-    they would have covered it.
+    whether that met the expected number (defensive_cooldowns_active, covered); offensive cooldowns never
+    count toward it. Their defensive_cooldowns_late lists defensive raid cooldowns started after the first hit
+    (late_ms after it); used that much earlier, they would have covered it.
 
     Args:
         pull: Pull key in scope, for example "abc123:7".

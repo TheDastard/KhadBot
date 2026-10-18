@@ -425,7 +425,7 @@ class TestCooldowns:
         rows = window_coverage(a, synth_enc, synth_defensive)
         assert [w.covered for w in rows] == covered
         assert [w.occurrence for w in rows] == [1, 2]
-        assert rows[0].cooldowns_active == [900301]
+        assert rows[0].defensive_cooldowns_active == [900301]
         assert rows[1].ref == f"ev:SYNTH01:{fight}:win:cataclysm:2"
 
     def test_externals_do_not_cover_raid_windows(self, synth, synth_defensive, synth_enc):
@@ -434,7 +434,7 @@ class TestCooldowns:
         a, _ = get(1)
         second = window_coverage(a, synth_enc, synth_defensive)[1]
         assert second.t_ms == 40_000
-        assert second.cooldowns_active == []
+        assert second.defensive_cooldowns_active == []
 
     def test_late_raid_cooldowns(self, synth, synth_defensive, synth_enc):
         # Copy fight 1's Link Totem aura to start 1 s after the uncovered 40 s Cataclysm, and again past the
@@ -448,10 +448,10 @@ class TestCooldowns:
         ]
         late = dataclasses.replace(a, frame=pl.concat([a.frame, *shifted]))
         first, second = window_coverage(late, synth_enc, synth_defensive)
-        assert first.cooldowns_late == []  # Link Totem was already up
-        assert (second.covered, second.cooldowns_active) == (False, [])
-        assert [(c.spell_id, c.late_ms) for c in second.cooldowns_late] == [(900301, 1_000)]
-        assert all(w.cooldowns_late == [] for w in window_coverage(a, synth_enc, synth_defensive))
+        assert first.defensive_cooldowns_late == []  # Link Totem was already up
+        assert (second.covered, second.defensive_cooldowns_active) == (False, [])
+        assert [(c.spell_id, c.late_ms) for c in second.defensive_cooldowns_late] == [(900301, 1_000)]
+        assert all(w.defensive_cooldowns_late == [] for w in window_coverage(a, synth_enc, synth_defensive))
 
     def test_no_windows_without_encounter_file(self, synth, synth_defensive):
         get, _ = synth

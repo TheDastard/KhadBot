@@ -12,7 +12,7 @@ from helpers.simc.tables import class_spells, effect_row, spec_spells, spell_dat
 
 from khadbot.encounter.registry_candidates import (
     check_registry,
-    classify,
+    classify_defensive,
     classify_offensive,
     defensive_candidates,
     friendly_damage_candidates,
@@ -88,13 +88,13 @@ def data() -> ClientData:
     ],
 )
 def test_targets_and_roles(data: ClientData, spell_id: int, target: str, role: str) -> None:
-    cand = classify(data, spell_id)
+    cand = classify_defensive(data, spell_id)
     assert cand is not None
     assert (cand.target, cand.role) == (target, role)
 
 
 def test_candidate_fields(data: ClientData) -> None:
-    cand = classify(data, PERSONAL)
+    cand = classify_defensive(data, PERSONAL)
     assert cand is not None
     assert (cand.name, cand.class_name, cand.cooldown_s, cand.duration_s) == ("Personal Wall", "Warrior", 120.0, 8.0)
     assert cand.spec_ids == []
@@ -102,14 +102,14 @@ def test_candidate_fields(data: ClientData) -> None:
 
 
 def test_triggered_aura_is_named(data: ClientData) -> None:
-    cand = classify(data, TRIGGER_CAST)
+    cand = classify_defensive(data, TRIGGER_CAST)
     assert cand is not None
     assert cand.aura_spell_ids == [TRIGGERED]
     assert cand.duration_s == 10.0
 
 
 def test_same_name_aura_keeps_the_casts_duration(data: ClientData) -> None:
-    cand = classify(data, BARRIER)
+    cand = classify_defensive(data, BARRIER)
     assert cand is not None
     assert cand.aura_spell_ids == [BARRIER_AURA]
     assert cand.duration_s == 10.0
@@ -118,11 +118,11 @@ def test_same_name_aura_keeps_the_casts_duration(data: ClientData) -> None:
 
 @pytest.mark.parametrize("spell_id", [SHORT, SCRIPTED, NUKE, NOT_PLAYER])
 def test_not_candidates(data: ClientData, spell_id: int) -> None:
-    assert classify(data, spell_id) is None
+    assert classify_defensive(data, spell_id) is None
 
 
 def test_min_cooldown_is_configurable(data: ClientData) -> None:
-    assert classify(data, SHORT, min_cooldown_s=30) is not None
+    assert classify_defensive(data, SHORT, min_cooldown_s=30) is not None
 
 
 def test_candidates_sorted_by_class_then_name(data: ClientData) -> None:
@@ -238,11 +238,11 @@ def test_offensive_candidate_fields(offensive_data: ClientData) -> None:
 
 def test_offensive_aura_on_an_ally_is_not_support(offensive_data: ClientData) -> None:
     # Power Infusion used to be a support candidate in the defensive list, through either of its auras.
-    assert classify(offensive_data, INFUSION) is None
+    assert classify_defensive(offensive_data, INFUSION) is None
 
 
 def test_triggered_immunity_does_not_make_an_offensive_cooldown_defensive(offensive_data: ClientData) -> None:
-    assert classify(offensive_data, LEAP) is None
+    assert classify_defensive(offensive_data, LEAP) is None
     cand = classify_offensive(offensive_data, LEAP)
     assert cand is not None
     assert cand.aura_spell_ids == []  # the immunity is not the cooldown's aura
@@ -250,19 +250,19 @@ def test_triggered_immunity_does_not_make_an_offensive_cooldown_defensive(offens
 
 def test_brief_triggered_immunity_still_counts_without_an_offensive_effect(offensive_data: ClientData) -> None:
     # Cloak of Shadows: its 1 s triggered immunity is the only defensive effect the data shows.
-    cand = classify(offensive_data, CLOAK)
+    cand = classify_defensive(offensive_data, CLOAK)
     assert cand is not None
     assert cand.aura_spell_ids == [CLOAK_IMMUNE]
 
 
 def test_named_offensive_cooldowns_are_never_defensive(offensive_data: ClientData) -> None:
-    assert classify(offensive_data, BESTIAL_WRATH) is None
+    assert classify_defensive(offensive_data, BESTIAL_WRATH) is None
     assert classify_offensive(offensive_data, BESTIAL_WRATH) is not None
 
 
 def test_own_defensive_effect_keeps_a_spell_in_both_lists(offensive_data: ClientData) -> None:
     # Damage done and damage taken on the cast itself: a person picks the file.
-    assert classify(offensive_data, WINGS) is not None
+    assert classify_defensive(offensive_data, WINGS) is not None
     assert classify_offensive(offensive_data, WINGS) is not None
 
 

@@ -101,7 +101,7 @@ def test_resolve_every_kind(synth_data):
     assert (cd["caster"], cd["t_ms"]) == ("Healz", 44000)
 
     win = synth_data.resolve("ev:SYNTH01:1:win:cataclysm:2")
-    assert (win["t_ms"], win["covered"], win["cooldowns_active"]) == (40000, False, [])
+    assert (win["t_ms"], win["covered"], win["defensive_cooldowns_active"]) == (40000, False, [])
 
     event = synth_data.resolve("ev:SYNTH01:1:event:6")
     assert event == {
@@ -162,7 +162,7 @@ def test_every_digest_ref_resolves_to_its_record(synth_data, fight):
     assert refs
     for ref in refs:
         assert synth_data.resolve(ref)["ref"] == ref
-    for record in [*digest.deaths, *digest.cooldowns, *digest.coverage_windows]:
+    for record in [*digest.deaths, *digest.defensive_cooldowns, *digest.coverage_windows]:
         assert synth_data.resolve(record.ref) == record.model_dump(mode="json")
     for stat in digest.mechanics:
         resolved = synth_data.resolve(stat.ref)

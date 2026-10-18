@@ -318,7 +318,7 @@ class DamageWindow(_Entry):
     name: str
     ability_ids: list[int] = Field(min_length=1)
     cluster_window_ms: int = 2000
-    expected_cooldowns: int = 1
+    expected_defensive_cooldowns: int = 1  # defensive raid cooldowns a covered occurrence needs
 
 
 class IgnoredAbility(_Entry):
