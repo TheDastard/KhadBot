@@ -5,7 +5,7 @@ encounter/annotate/pipeline.py
 are listed in frame.py).
 
 Clusters are consecutive hits of one mechanic (or window) whose gap is at most its ``cluster_window_ms``.
-The wipe cutoff is the time cumulative player deaths reach ``ceil(cutoff_fraction * raid_size)``; kills
+``per_cluster`` failures also get their blame context from the pull's position table. The wipe cutoff is the time cumulative player deaths reach ``ceil(cutoff_fraction * raid_size)``; kills
 have no cutoff.
 """
 
@@ -15,11 +15,12 @@ import math
 
 import polars as pl
 
-from khadbot.encounter.annotate.failures import mechanic_failures
+from khadbot.encounter.annotate.failures import BlameContext, blame_context, mechanic_failures
 from khadbot.encounter.annotate.frame import ANNOTATION_COLUMNS, Annotated, aggro_events, is_hit, type_is
 from khadbot.encounter.annotate.phases import boss_ids_of, detect_phases, unmatched_phase
 from khadbot.encounter.config_files import EncounterFile, encfile_hash
 from khadbot.encounter.models import Actor, PhaseSpan, Pull
+from khadbot.encounter.store import empty_positions
 
 # ---------------------------------------------------------------------------
 # Column builders
@@ -75,9 +76,13 @@ def annotate(
     enc: EncounterFile | None,
     actors: list[Actor],
     *,
+    positions: pl.DataFrame | None = None,
     cutoff_fraction: float = 0.5,
 ) -> Annotated:
-    """Tag ``events`` with phases, mechanics, clusters, failures and damage windows."""
+    """
+    Tag ``events`` with phases, mechanics, clusters, failures and damage windows. ``positions`` is the pull's
+    position table (``store.POSITION_SCHEMA``); without one, every living blamed player is ``no_position``.
+    """
     frame = events.sort("seq")
     phases = detect_phases(pull, frame, enc, boss_ids_of(actors)) if enc else []
     mechanics = enc.mechanics if enc else []
@@ -102,15 +107,33 @@ def annotate(
 
     game_ids = {a.actor_id: a.game_id for a in actors}
     failures: dict[int, int | None] = {}
+    contexts: dict[int, BlameContext] = {}
     aggro = aggro_events(frame)
+    table = empty_positions() if positions is None else positions
     for mech in mechanics:
         failures |= mechanic_failures(frame, mech, pull.duration_ms, game_ids, aggro)
+        contexts |= blame_context(frame, mech, game_ids, aggro, table)
     blamed = pl.DataFrame(
         {"seq": list(failures), "blamed_id": list(failures.values())},
         schema={"seq": frame.schema["seq"], "blamed_id": pl.Int32()},
     )
+    context = pl.DataFrame(
+        {
+            "seq": list(contexts),
+            "blame_state": [c.state for c in contexts.values()],
+            "blame_dist_yd": [c.dist_yd for c in contexts.values()],
+            "blame_pos_age_ms": [c.pos_age_ms for c in contexts.values()],
+        },
+        schema={
+            "seq": frame.schema["seq"],
+            "blame_state": pl.Utf8(),
+            "blame_dist_yd": pl.Float32(),
+            "blame_pos_age_ms": pl.Int32(),
+        },
+    )
     frame = (
         frame.join(blamed, on="seq", how="left")
+        .join(context, on="seq", how="left")
         .sort("seq")
         .with_columns(pl.col("seq").is_in(list(failures)).alias("is_failure"))
     )

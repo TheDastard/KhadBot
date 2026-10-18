@@ -1,7 +1,7 @@
 """
 tests/unit/encounter/annotate/test_annotate.py
 
-Annotation: cluster boundaries, each failure rule positive and negative, damage windows,
+Annotation: cluster boundaries, each failure rule positive and negative, blame context, damage windows,
 the wipe cutoff, enc=None, and the on-disk annotation cache.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
-from helpers.encounter.events import BOSS, make_actors, make_events, make_pull
+from helpers.encounter.events import BOSS, make_actors, make_events, make_positions, make_pull
 
 from khadbot.encounter.annotate import ANNOTATION_COLUMNS, AnnotationCache, annotate, annotate_pull
 from khadbot.encounter.annotate import cache as annotate_mod
@@ -300,6 +300,94 @@ def test_per_cluster_without_a_match_still_fails():
 
 
 # ===========================================================================
+# Blame context (where the blamed player was at the hit)
+# ===========================================================================
+
+NPC_AT_ORIGIN = (0, 11, 0, 0)  # the add (actor 11, game ID 2) samples its spot on its swing at t=0
+
+
+def holder_rule(reach=10.0):
+    blame = {"by": "aggro_holder", "npc_game_id": 2, "ms": 30_000}
+    if reach is not None:
+        blame["reach_yd"] = reach
+    return {"rule": "per_cluster", "blame": blame}
+
+
+def context(rows, positions, rule=None, **pull_kw):
+    """(blame_state, blame_dist_yd, blame_pos_age_ms) of every row that has a blame_state."""
+    enc = enc_with([mech(rule or holder_rule())])
+    a = annotate(make_pull(**pull_kw), make_events(rows), enc, ACTORS, positions=make_positions(positions))
+    rows_with = a.frame.filter(pl.col("blame_state").is_not_null())
+    return [(s, None if d is None else round(d, 1), age) for s, d, age in rows_with.select(
+        "blame_state", "blame_dist_yd", "blame_pos_age_ms"
+    ).rows()]  # fmt: skip
+
+
+HELD = [_swing(0, 1), hit(5_000, 4), hit(5_000, 1)]  # player 1 holds the add; the raid hit lands at 5 s
+
+
+def test_blame_state_beyond_reach():
+    assert context(HELD, [NPC_AT_ORIGIN, (4_900, 1, 1_500, 0)]) == [("beyond_reach", 15.0, 100)]
+
+
+def test_blame_state_in_reach():
+    assert context(HELD, [NPC_AT_ORIGIN, (5_000, 1, 300, 400)]) == [("in_reach", 5.0, 0)]
+
+
+def test_blame_state_alive_without_reach():
+    assert context(HELD, [NPC_AT_ORIGIN, (4_900, 1, 1_500, 0)], holder_rule(None)) == [("alive", 15.0, 100)]
+
+
+def test_blame_state_dead():
+    died = [*HELD[:1], {"t_ms": 4_000, "type": "death", "source_id": BOSS, "target_id": 1}, *HELD[1:]]
+    assert context(died, [NPC_AT_ORIGIN, (3_900, 1, 100, 0)]) == [("dead", None, None)]
+
+
+def test_blame_state_resurrected_holder_is_alive():
+    death = {"t_ms": 2_000, "type": "death", "source_id": BOSS, "target_id": 1}
+    rez = {"t_ms": 3_000, "type": "resurrect", "source_id": 2, "target_id": 1, "data_type": "Casts"}
+    own_cast = {"t_ms": 3_000, "type": "cast", "source_id": 1, "ability_id": 77}
+    positions = [NPC_AT_ORIGIN, (4_900, 1, 1_500, 0)]
+    for since in (rez, own_cast):
+        assert context([HELD[0], death, since, *HELD[1:]], positions) == [("beyond_reach", 15.0, 100)]
+    # A death after the rez counts again.
+    again = {**death, "t_ms": 4_000}
+    assert context([HELD[0], death, rez, again, *HELD[1:]], positions) == [("dead", None, None)]
+
+
+def test_blame_state_no_position():
+    stale = [NPC_AT_ORIGIN, (3_499, 1, 1_500, 0)]  # 1,501 ms old at the hit
+    assert context(HELD, stale) == [("no_position", None, None)]
+    assert context(HELD, [(4_900, 1, 1_500, 0)]) == [("no_position", None, None)]  # the NPC was never sampled
+    other_map = [(0, 11, 0, 0, None, 2), (4_900, 1, 1_500, 0)]
+    assert context(HELD, other_map) == [("no_position", None, None)]
+
+
+def test_blame_state_no_holder():
+    assert context(HELD[1:], [NPC_AT_ORIGIN, (4_900, 1, 1_500, 0)]) == [("no_holder", None, None)]
+
+
+def test_blame_state_cast_target_measures_from_the_caster():
+    cast = {"t_ms": 4_000, "type": "cast", "source_id": BOSS, "target_id": 1, "ability_id": 555}
+    rule = {"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 555, "ms": 5_000, "reach_yd": 10}}
+    positions = [(4_000, BOSS, 1_000, 0), (0, 11, 4_000, 0), (5_000, 1, 1_000, 1_200)]
+    assert context([cast, hit(5_000, 1)], positions, rule) == [("beyond_reach", 12.0, 0)]
+
+
+def test_blame_context_only_on_per_cluster_failure_rows():
+    rows = [*HELD, hit(5_500, 2), hit(9_000, 3, ability=200)]
+    enc = enc_with([mech(holder_rule()), mech({"rule": "any_hit"}, mid="other", ability=200)])
+    a = annotate(make_pull(), make_events(rows), enc, ACTORS, positions=make_positions([NPC_AT_ORIGIN]))
+    assert col(a, "blame_state") == [None, "no_position", None, None, None]
+    assert a.frame["blame_dist_yd"].null_count() == a.frame.height
+
+
+def test_annotate_without_positions_marks_living_players_no_position():
+    a = annotate(make_pull(), make_events(HELD), enc_with([mech(holder_rule())]), ACTORS)
+    assert col(a, "blame_state") == [None, "no_position", None]
+
+
+# ===========================================================================
 # Damage windows
 # ===========================================================================
 
@@ -402,19 +490,25 @@ def test_cache_round_trip_and_invalidation(synth_ingested, synth_enc, tmp_path, 
     assert second.phases == first.phases
     assert second.cutoff_ms == first.cutoff_ms
 
-    # A different cutoff fraction or a changed events_hash is a miss.
+    # A different cutoff fraction, events_hash or positions_hash is a miss.
     with pytest.raises(AssertionError, match="cache miss"):
         annotate_pull("SYNTH01:1", synth_ingested, synth_enc, cache=cache, cutoff_fraction=0.4)
-    assert cache.get(first.pull, first.encfile_hash, "other-hash", 0.5) is None
+    ev_hash = synth_ingested.events_hash("SYNTH01:1")
+    pos_hash = synth_ingested.positions_hash("SYNTH01:1")
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is not None
+    assert cache.get(first.pull, first.encfile_hash, "other-hash", 0.5, positions_hash=pos_hash) is None
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash="other-hash") is None
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=None) is None
 
 
 def test_cache_misses_after_annotation_version_change(synth_ingested, synth_enc, tmp_path, monkeypatch):
     cache = AnnotationCache(tmp_path / "annotated")
     first = annotate_pull("SYNTH01:1", synth_ingested, synth_enc, cache=cache)
     ev_hash = synth_ingested.events_hash("SYNTH01:1")
-    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5) is not None
+    pos_hash = synth_ingested.positions_hash("SYNTH01:1")
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is not None
     monkeypatch.setattr(annotate_mod, "ANNOTATION_VERSION", annotate_mod.ANNOTATION_VERSION + 1)
-    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5) is None
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is None
 
 
 def test_annotate_pull_unknown_pull(synth_ingested, synth_enc):

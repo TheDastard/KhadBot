@@ -149,6 +149,11 @@ class DeathRecord(BaseModel):
     after_cutoff: bool
 
 
+# Where the player a ``per_cluster`` failure is charged to was when the occurrence's first hit landed
+# (annotation column ``blame_state``).
+BlameState = Literal["beyond_reach", "in_reach", "dead", "alive", "no_position", "no_holder"]
+
+
 class MechanicStat(BaseModel):
     ref: Ref
     mechanic_id: str

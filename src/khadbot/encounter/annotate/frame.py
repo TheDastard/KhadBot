@@ -11,6 +11,15 @@ The annotated frame: a pull's normalized events plus the annotation columns.
                               rules, the player a ``blame`` spec points at for ``per_cluster``; null if no one
     window_id          Utf8   damage window owning ability_id; set on hits only
     window_occurrence  Int32  1-based occurrence of the window; set on hits only
+    blame_state        Utf8   on per_cluster failure rows (blame ``aggro_holder`` or ``cast_target``), where the
+                              blamed player was at the hit: ``beyond_reach`` / ``in_reach`` (alive, farther than
+                              or within the blame's ``reach_yd`` from the NPC), ``dead`` (a Deaths row at or
+                              before the hit and nothing they did since), ``alive`` (no ``reach_yd`` set),
+                              ``no_position`` (no sample recent enough), ``no_holder`` (``blamed_id`` is null);
+                              null on every other row
+    blame_dist_yd      Float32  with blame_state, the blamed player's distance from the NPC in yards (0.1);
+                              null when dead, without a position or without a holder
+    blame_pos_age_ms   Int32  with blame_dist_yd, the age of the player's position sample
 
 A "hit" is a ``damage`` event on a friendly target. ``ANNOTATION_VERSION`` is bumped whenever the columns
 or their rules change, so cached frames are rebuilt. ``aggro_events`` reads who each NPC was attacking from
@@ -33,10 +42,13 @@ ANNOTATION_COLUMNS: dict[str, pl.DataType] = {
     "blamed_id": pl.Int32(),
     "window_id": pl.Utf8(),
     "window_occurrence": pl.Int32(),
+    "blame_state": pl.Utf8(),
+    "blame_dist_yd": pl.Float32(),
+    "blame_pos_age_ms": pl.Int32(),
 }
 
 # Bump when annotation columns or failure rules change, so cached frames are rebuilt.
-ANNOTATION_VERSION = 3
+ANNOTATION_VERSION = 4
 
 
 @dataclass(frozen=True)
