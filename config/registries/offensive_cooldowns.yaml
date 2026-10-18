@@ -1,0 +1,18 @@
+# Offensive cooldowns.
+#
+# Player cooldowns that raise damage done, which the encounter digest tracks next to the defensive
+# ones: haste, damage and stat buffs on the caster, one ally or the raid (Bloodlust, Avenging Wrath,
+# Power Infusion). Damage-window coverage and death-window defensives never read this file. Spell IDs,
+# names, `target`, `cooldown_s` and `duration_s` come from game client data via the review file of
+# scripts/build_registries.py, or from a person for cooldowns the data can't classify. Cooldowns and
+# durations are base values before talents. Every entry is unverified until a person checks it in game;
+# analysis lists used, unverified cooldowns as digest anomalies.
+#
+# target: personal (only the caster), external (one chosen ally), raid (an area or the whole raid).
+#
+# `aura_spell_ids` lists the spells a cooldown's aura is applied under when they differ from the
+# cast. No spell ID, cast or aura, may also be in defensive_cooldowns.yaml.
+#
+# Entries are sorted by class, then name.
+category: offensive
+cooldowns: []

@@ -152,6 +152,7 @@
     "encfile_hash": "c0bfdf973680",
     "events_hash": "7ca74ccb8ca5d319890618739ec6002ab12818c6a988477fe9a4b9fdef453c5a",
     "friendly_damage_hash": "9937b022415a",
+    "offensive_cooldowns_hash": "bee16b79e5c1",
     "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8"
   },
   "pull_key": "SYNTH01:2",

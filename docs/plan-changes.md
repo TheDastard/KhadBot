@@ -550,7 +550,7 @@ Replace the `produced_from` comment with:
 
 ```
     produced_from: dict[str, str]       # events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
-                                        # friendly_damage_hash
+                                        # offensive_cooldowns_hash, friendly_damage_hash
 ```
 
 ### Refactor plan 6.8 (Findings cache)
@@ -559,8 +559,10 @@ Replace the `cache_key` line with:
 
 ```
 cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
-                   friendly_damage_hash, prompt_version, graph_version, model_id, depth)[:16]
+                   offensive_cooldowns_hash, friendly_damage_hash, prompt_version, graph_version, model_id,
+                   depth)[:16]
 ```
 
 `EncounterData` keys its per-pull records on (pull_key, events_hash, positions_hash, encfile_hash,
-defensive_cooldowns_hash, friendly_damage_hash).
+defensive_cooldowns_hash, offensive_cooldowns_hash, friendly_damage_hash). A cast or aura ID may appear in one
+cooldown file only; loading both with a shared ID raises `ConfigurationError`.

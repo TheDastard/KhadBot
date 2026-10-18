@@ -28,6 +28,7 @@ from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
     FriendlyDamageRegistry,
+    check_cooldown_ids,
     cooldowns_hash,
     friendly_damage_hash,
     load_cooldowns,
@@ -153,6 +154,7 @@ def build_pull_records(
     enc_root: Path | None = None,
     defensive: CooldownRegistry | None = None,
     *,
+    offensive: CooldownRegistry | None = None,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
@@ -170,6 +172,8 @@ def build_pull_records(
     if pull is None:
         raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
     defensive = defensive or load_cooldowns("defensive")
+    offensive = offensive or load_cooldowns("offensive")
+    check_cooldown_ids(defensive, offensive)
     friendly = friendly or load_friendly_damage()
     enc = load_encounter_view(pull.encounter_id, pull.difficulty, enc_root)
     fraction = EncounterConfig().cutoff_fraction if cutoff_fraction is None else cutoff_fraction
@@ -230,6 +234,7 @@ def build_pull_records(
             "positions_hash": store.positions_hash(pull_key) or "",
             "encfile_hash": a.encfile_hash,
             "defensive_cooldowns_hash": cooldowns_hash(defensive),
+            "offensive_cooldowns_hash": cooldowns_hash(offensive),
             "friendly_damage_hash": friendly_damage_hash(friendly),
         },
     )
@@ -253,6 +258,7 @@ def build_digest(
     enc_root: Path | None = None,
     defensive: CooldownRegistry | None = None,
     *,
+    offensive: CooldownRegistry | None = None,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
@@ -268,6 +274,7 @@ def build_digest(
         store,
         enc_root,
         defensive,
+        offensive=offensive,
         friendly=friendly,
         cache=cache,
         cutoff_fraction=cutoff_fraction,

@@ -12,7 +12,7 @@ import re
 import polars as pl
 import pytest
 import yaml
-from helpers.encounter.synth import SYNTH_FRIENDLY_DAMAGE, add_friendly_damage
+from helpers.encounter.synth import SYNTH_FRIENDLY_DAMAGE, SYNTH_OFFENSIVE_COOLDOWNS_FILE, add_friendly_damage
 
 from khadbot.encounter.config_files import parse_friendly_damage
 from khadbot.encounter.digest import render_digest
@@ -275,6 +275,29 @@ def test_records_rebuild_when_a_registry_on_disk_changes(synth_ingested, synth_e
     rebuilt = data.records("SYNTH01:1")
     assert rebuilt is not first
     assert rebuilt.digest.produced_from["friendly_damage_hash"] != first.digest.produced_from["friendly_damage_hash"]
+
+
+def test_records_rebuild_when_the_offensive_registry_on_disk_changes(
+    synth_ingested, synth_enc_root, synth_defensive, tmp_path, monkeypatch
+):
+    from khadbot.encounter import config_files
+
+    path = tmp_path / "offensive_cooldowns.yaml"
+    data = yaml.safe_load(SYNTH_OFFENSIVE_COOLDOWNS_FILE.read_text(encoding="utf-8"))
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    monkeypatch.setattr(config_files, "DEFAULT_OFFENSIVE_COOLDOWNS_PATH", path)
+    encounter_data = EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive)
+    first = encounter_data.records("SYNTH01:1")
+    assert encounter_data.records("SYNTH01:1") is first
+
+    data["cooldowns"][1]["verified"] = True
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    rebuilt = encounter_data.records("SYNTH01:1")
+    assert rebuilt is not first
+    assert (
+        rebuilt.digest.produced_from["offensive_cooldowns_hash"]
+        != (first.digest.produced_from["offensive_cooldowns_hash"])
+    )
 
 
 def test_records_cache_is_bounded(synth_ingested, synth_enc_root, synth_defensive):

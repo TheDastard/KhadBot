@@ -21,6 +21,7 @@ from helpers.encounter.synth import (
     install_synth_encounter,
 )
 
+from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter import digest as digest_mod
 from khadbot.encounter.config_files import (
     cooldowns_hash,
@@ -28,6 +29,7 @@ from khadbot.encounter.config_files import (
     friendly_damage_hash,
     load_encounter_file,
     load_friendly_damage,
+    parse_cooldowns,
     parse_friendly_damage,
 )
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
@@ -43,8 +45,9 @@ def enc_root(tmp_path):
 
 
 @pytest.fixture
-def digest_of(synth_ingested, enc_root, synth_defensive):
+def digest_of(synth_ingested, enc_root, synth_defensive, synth_offensive):
     def build(fight, root=None, **kw):
+        kw.setdefault("offensive", synth_offensive)
         return build_digest(f"SYNTH01:{fight}", synth_ingested, root or enc_root, synth_defensive, **kw)
 
     return build
@@ -85,7 +88,7 @@ def test_golden(digest_of, update_goldens, fight):
 # ===========================================================================
 
 
-def test_wipe_summary(digest_of, synth_ingested, synth_defensive):
+def test_wipe_summary(digest_of, synth_ingested, synth_defensive, synth_offensive):
     d = digest_of(1)
     assert (d.outcome, d.duration_ms, d.phase_reached, d.boss_pct, d.boss_hp_pct, d.cutoff_ms) == (
         "wipe",
@@ -103,6 +106,7 @@ def test_wipe_summary(digest_of, synth_ingested, synth_defensive):
         "positions_hash": synth_ingested.positions_hash("SYNTH01:1"),
         "encfile_hash": encfile_hash(load_encounter_file(SYNTH_ENCOUNTER_FILE)),
         "defensive_cooldowns_hash": cooldowns_hash(synth_defensive),
+        "offensive_cooldowns_hash": cooldowns_hash(synth_offensive),
         "friendly_damage_hash": friendly_damage_hash(load_friendly_damage()),
     }
 
@@ -233,6 +237,22 @@ def test_produced_from_tracks_the_friendly_registry(digest_of):
     d = digest_of(1, friendly=SYNTH_FRIENDLY)
     assert d.produced_from["friendly_damage_hash"] == friendly_damage_hash(SYNTH_FRIENDLY)
     assert d.produced_from["friendly_damage_hash"] != digest_of(1).produced_from["friendly_damage_hash"]
+
+
+def test_produced_from_tracks_the_offensive_registry(digest_of):
+    empty = parse_cooldowns({"category": "offensive", "cooldowns": []}, "offensive")
+    d = digest_of(1, offensive=empty)
+    assert d.produced_from["offensive_cooldowns_hash"] == cooldowns_hash(empty)
+    assert d.produced_from["offensive_cooldowns_hash"] != digest_of(1).produced_from["offensive_cooldowns_hash"]
+
+
+def test_a_spell_in_both_cooldown_files_fails(digest_of, synth_defensive):
+    clash = parse_cooldowns(
+        {"category": "offensive", "cooldowns": [synth_defensive.cooldowns[0].model_dump(by_alias=True)]},
+        "offensive",
+    )
+    with pytest.raises(ConfigurationError, match="900301 is in both the defensive and the offensive cooldowns"):
+        digest_of(1, offensive=clash)
 
 
 # ===========================================================================

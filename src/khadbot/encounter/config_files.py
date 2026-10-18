@@ -33,6 +33,7 @@ from khadbot.agent.agent_config import ConfigurationError
 
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
 DEFAULT_DEFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "defensive_cooldowns.yaml"
+DEFAULT_OFFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "offensive_cooldowns.yaml"
 DEFAULT_FRIENDLY_DAMAGE_PATH = _CONFIG_ROOT / "registries" / "friendly_damage.yaml"
 DEFAULT_ENCOUNTER_ROOT = _CONFIG_ROOT / "encounters"
 
@@ -48,8 +49,8 @@ class _Strict(BaseModel):
 # ---------------------------------------------------------------------------
 
 # Which registry file a cooldown lives in. Defensive cooldowns keep players alive: damage reduction, absorbs,
-# immunities and healing cooldowns.
-CooldownCategory = Literal["defensive"]
+# immunities and healing cooldowns. Offensive cooldowns raise damage done: haste, damage or stat buffs.
+CooldownCategory = Literal["defensive", "offensive"]
 # Who a cooldown's effect lands on: only the caster, one chosen ally, or an area or the whole raid.
 CooldownTarget = Literal["raid", "external", "personal"]
 
@@ -462,8 +463,26 @@ def parse_encounter(data: object, label: str = "encounter file") -> EncounterFil
 
 def load_cooldowns(category: CooldownCategory, path: Path | None = None) -> CooldownRegistry:
     """One category's cooldown file: ``config/registries/<category>_cooldowns.yaml`` unless ``path`` is given."""
-    path = Path(path) if path else {"defensive": DEFAULT_DEFENSIVE_COOLDOWNS_PATH}[category]
+    defaults = {"defensive": DEFAULT_DEFENSIVE_COOLDOWNS_PATH, "offensive": DEFAULT_OFFENSIVE_COOLDOWNS_PATH}
+    path = Path(path) if path else defaults[category]
     return parse_cooldowns(_read_yaml(path), category, str(path))
+
+
+def check_cooldown_ids(*registries: CooldownRegistry) -> None:
+    """
+    Raise ``ConfigurationError`` when a cast or aura ID appears in more than one cooldown file.
+
+    A ``cd:`` ref and an aura interval each name one cooldown, and the Buffs filters of different files must not
+    fetch the same aura twice, so every ID belongs to exactly one category.
+    """
+    owner: dict[int, str] = {}
+    for registry in registries:
+        for aura in registry.aura_ids():
+            if aura in owner and owner[aura] != registry.category:
+                raise ConfigurationError(
+                    f"spell {aura} is in both the {owner[aura]} and the {registry.category} cooldowns"
+                )
+            owner[aura] = registry.category
 
 
 def load_friendly_damage(path: Path | None = None) -> FriendlyDamageRegistry:

@@ -1080,6 +1080,7 @@
     "encfile_hash": "e17e87581ace",
     "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
     "friendly_damage_hash": "9937b022415a",
+    "offensive_cooldowns_hash": "de3c9fae1653",
     "positions_hash": "9ce1e6be7cb77215bb75b1a30bd4386db9d8f3a6693b91f124ee5948371bf778"
   },
   "pull_key": "trMgApZCVYkv3jdq:11",

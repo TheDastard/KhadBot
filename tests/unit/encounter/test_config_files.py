@@ -17,6 +17,7 @@ from helpers.encounter.synth import (
     SYNTH_ENCOUNTER_ID,
     SYNTH_ENCOUNTER_RELPATH,
     SYNTH_FRIENDLY_DAMAGE,
+    SYNTH_OFFENSIVE_COOLDOWNS_FILE,
     install_synth_encounter,
 )
 
@@ -24,6 +25,7 @@ from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.config_files import (
     DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
     DEFAULT_FRIENDLY_DAMAGE_PATH,
+    check_cooldown_ids,
     cooldowns_hash,
     encfile_hash,
     encounter_relpath,
@@ -55,6 +57,35 @@ def reg_data() -> dict:
 # ===========================================================================
 # Registry
 # ===========================================================================
+
+
+class TestOffensiveRegistry:
+    def test_default_file_loads(self):
+        assert load_cooldowns("offensive").category == "offensive"
+
+    def test_synth_file(self):
+        reg = load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE)
+        assert reg.aura_ids() == {902001: 902001, 902011: 902001, 902002: 902002}
+
+    def test_wrong_category_is_rejected(self):
+        with pytest.raises(ConfigurationError, match="is a defensive cooldown file, expected offensive"):
+            load_cooldowns("offensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+
+    def test_default_files_share_no_ids(self):
+        check_cooldown_ids(load_cooldowns("defensive"), load_cooldowns("offensive"))
+
+    @pytest.mark.parametrize("spell", [900301, 900311])
+    def test_id_in_both_files_is_rejected(self, spell):
+        defensive = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+        offensive = parse_cooldowns(
+            {
+                "category": "offensive",
+                "cooldowns": [{"spell_id": spell, "name": "X", "class": "Mage", "target": "raid"}],
+            },
+            "offensive",
+        )
+        with pytest.raises(ConfigurationError, match=f"spell {spell} is in both"):
+            check_cooldown_ids(defensive, offensive)
 
 
 class TestRegistry:
