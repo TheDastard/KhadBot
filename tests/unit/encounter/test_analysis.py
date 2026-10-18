@@ -402,7 +402,7 @@ class TestCooldowns:
     def test_uses_including_unverified(self, synth, synth_defensive):
         get, actors = synth
         a, _ = get(1)
-        uses = cooldown_uses(a, synth_defensive, actors)
+        uses = cooldown_uses(a, [synth_defensive], actors)
         assert [(u.spell_name, u.caster, u.t_ms, u.phase_id) for u in uses] == [
             ("Synth Link Totem", "Healz", 18_000, "p1"),
             ("Synth Guardian", "Gammadps", 38_000, "p2"),
@@ -413,7 +413,7 @@ class TestCooldowns:
     def test_refs_numbered_per_spell(self, synth, synth_defensive):
         get, actors = synth
         a, _ = get(2)
-        assert [u.ref for u in cooldown_uses(a, synth_defensive, actors)] == [
+        assert [u.ref for u in cooldown_uses(a, [synth_defensive], actors)] == [
             "ev:SYNTH01:2:cd:900301:1",
             "ev:SYNTH01:2:cd:900301:2",
         ]

@@ -31,6 +31,7 @@ from helpers.encounter.synth import (
     SYNTH_DEFENSIVE_COOLDOWNS_FILE,
     SYNTH_ENEMY_CAST_IDS,
     SYNTH_OFFENSIVE_COOLDOWN_IDS,
+    SYNTH_OFFENSIVE_COOLDOWNS_FILE,
     install_synth_encounter,
 )
 
@@ -82,7 +83,10 @@ def eval_data(golden_questions, tmp_path_factory) -> dict[str, EncounterData]:
             enc_root = root / "synth_encounters"
             install_synth_encounter(enc_root)
             data[code] = EncounterData(
-                store, enc_root=enc_root, defensive=load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+                store,
+                enc_root=enc_root,
+                defensive=load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE),
+                offensive=load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE),
             )
         else:
             data[code] = EncounterData(store)

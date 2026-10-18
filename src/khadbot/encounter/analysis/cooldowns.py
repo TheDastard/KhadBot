@@ -1,7 +1,8 @@
 """
 encounter/analysis/cooldowns.py
 
-Cooldown casts and damage-window coverage, plus the aura intervals both (and death records) use.
+Cooldown casts (defensive and offensive) and damage-window coverage (defensive only), plus the aura intervals
+both (and death records) use.
 
 Aura activity comes from Buffs ``applybuff`` / ``removebuff`` pairs per (target, spell). An aura with
 no remove event lasts until the pull ends; a remove with no apply (aura up before the pull) starts at 0.
@@ -10,7 +11,7 @@ A cooldown whose aura has its own spell ID (registry ``aura_spell_ids``) gets in
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import NamedTuple
 
 import polars as pl
@@ -64,11 +65,15 @@ def aura_intervals(
     return sorted(out, key=lambda i: (i.start_ms, i.target_id, i.spell_id))
 
 
-def cooldown_uses(a: Annotated, registry: CooldownRegistry, actors: list[Actor]) -> list[CooldownUse]:
-    """Friendly casts of registry spells, in time order; refs are numbered per spell."""
+def cooldown_uses(a: Annotated, registries: Sequence[CooldownRegistry], actors: list[Actor]) -> list[CooldownUse]:
+    """
+    Friendly casts of the spells in ``registries`` (one per cooldown category), in time order; refs are numbered
+    per spell. Each use names the category of the file its spell is in; the files share no spell ID.
+    """
     names = {x.actor_id: x.name for x in actors}
+    entries = {c.spell_id: (c, r.category) for r in registries for c in r.cooldowns}
     casts = (
-        a.frame.filter(type_is("cast") & pl.col("source_friendly") & pl.col("ability_id").is_in(registry.spell_ids()))
+        a.frame.filter(type_is("cast") & pl.col("source_friendly") & pl.col("ability_id").is_in(list(entries)))
         .sort("seq")
         .select("t_ms", "ability_id", "source_id", "phase_id")
         .rows()
@@ -77,12 +82,13 @@ def cooldown_uses(a: Annotated, registry: CooldownRegistry, actors: list[Actor])
     out = []
     for t, spell, source, phase in casts:
         counts[spell] = counts.get(spell, 0) + 1
-        entry = registry.get(spell)
+        entry, category = entries[spell]
         out.append(
             CooldownUse(
                 ref=make_ref(a.pull.pull_key, "cd", spell, counts[spell]),
                 spell_id=spell,
-                spell_name=entry.name if entry else str(spell),
+                spell_name=entry.name,
+                category=category,
                 caster=names.get(source, f"actor-{source}"),
                 t_ms=t,
                 phase_id=phase,

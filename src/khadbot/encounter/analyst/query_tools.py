@@ -178,7 +178,7 @@ def get_digest_result(scope: AnalystScope, pull: str) -> ToolResult:
         return r
     d = r.digest
     refs = [make_ref(d.pull_key, "pull")]
-    refs += [x.ref for x in [*d.deaths, *d.mechanics, *d.cooldowns, *d.coverage_windows]]
+    refs += [x.ref for x in [*d.deaths, *d.mechanics, *d.cooldowns, *d.coverage_windows, *d.offensive_cooldowns]]
     # Not subject to CHAR_CAP: the digest's own caps bound it.
     return ToolResult(ok=True, data={"pull_key": d.pull_key, "text": render_digest(d)}, refs=refs)
 
@@ -430,12 +430,14 @@ def query_events(
 
 @tool(parse_docstring=True)
 def cooldown_timeline(pull: str, phase: str | None = None, *, config: RunnableConfig) -> str:
-    """Get raid cooldown casts and damage-window coverage for one pull, in time order.
+    """Get cooldown casts and damage-window coverage for one pull, in time order.
 
-    Cooldown rows say who cast which registry cooldown when. Damage-window rows say, for each
-    occurrence of a raid-wide damage event, which raid cooldowns were active at its first hit and whether
-    that met the expected number. Their cooldowns_late lists raid cooldowns started after the first hit
-    (late_ms after it); used that much earlier, they would have covered it.
+    Cooldown rows say who cast which registry cooldown when; their category is "defensive" (keeps players
+    alive) or "offensive" (raises damage done, such as Bloodlust). Damage-window rows say, for each
+    occurrence of a raid-wide damage event, which defensive raid cooldowns were active at its first hit and
+    whether that met the expected number; offensive cooldowns never count toward it. Their cooldowns_late
+    lists defensive raid cooldowns started after the first hit (late_ms after it); used that much earlier,
+    they would have covered it.
 
     Args:
         pull: Pull key in scope, for example "abc123:7".
