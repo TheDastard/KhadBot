@@ -140,6 +140,7 @@
   "produced_from": {
     "encfile_hash": "f83c5db0ad74",
     "events_hash": "826ce251c49a7cdf44b0b5b036ba62b54d7d8fb3622cf96bf8979e6ec4407c5c",
+    "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
     "registry_hash": "c0b89b4ecf2c"
   },
   "pull_key": "SYNTH01:2",

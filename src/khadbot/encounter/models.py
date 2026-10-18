@@ -88,7 +88,7 @@ class FetchSpec(BaseModel):
 class IngestResult(BaseModel):
     report_code: str
     pulls: list[str]  # pull_keys ingested
-    skipped: list[str]  # already ingested with the same events_hash
+    skipped: list[str]  # already ingested with the same events_hash, positions_hash and metadata
     failed: dict[str, str]  # pull_key -> error message
     points_spent: float | None  # from WCL rateLimitData, if available
 
@@ -154,6 +154,14 @@ class DeathRecord(BaseModel):
 BlameState = Literal["beyond_reach", "in_reach", "dead", "alive", "no_position", "no_holder"]
 
 
+def _empty(value: object) -> bool:
+    return not value
+
+
+def _none(value: object) -> bool:
+    return value is None
+
+
 class MechanicStat(BaseModel):
     ref: Ref
     mechanic_id: str
@@ -163,6 +171,10 @@ class MechanicStat(BaseModel):
     failures_by_player: dict[str, int]  # name -> count, top 10
     damage_taken: int
     deaths_in_window: int  # deaths whose mechanic_ids include this one
+    # per_cluster mechanics only, left out of dumps when empty: failures per blame state, and the range of the
+    # blamed players' distances from the NPC (yards, [min, max]) per state that has distances.
+    blame_states: dict[BlameState, int] = Field(default_factory=dict, exclude_if=_empty)
+    blame_dist_yd: dict[BlameState, tuple[float, float]] = Field(default_factory=dict, exclude_if=_empty)
 
 
 class MechanicCluster(BaseModel):
@@ -177,6 +189,12 @@ class MechanicCluster(BaseModel):
     damage: int
     failures: int  # failure rows among the cluster's hits
     failed_players: list[str]
+    # per_cluster mechanics only (left out of dumps elsewhere): the player charged with the cluster's failure,
+    # where they were at its first hit, their distance in yards from the NPC, and the NPC's reach.
+    blamed: str | None = Field(None, exclude_if=_none)
+    blame_state: BlameState | None = Field(None, exclude_if=_none)
+    blame_dist_yd: float | None = Field(None, exclude_if=_none)
+    blame_reach_yd: float | None = Field(None, exclude_if=_none)
 
 
 class CooldownUse(BaseModel):
@@ -252,7 +270,7 @@ class PullDigest(BaseModel):
     aggro: list[AggroSummary] = []  # one per boss NPC that swung at a player
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
-    produced_from: dict[str, str]  # events_hash, encfile_hash, registry_hash
+    produced_from: dict[str, str]  # events_hash, positions_hash, encfile_hash, registry_hash
 
 
 # ---------------------------------------------------------------------------

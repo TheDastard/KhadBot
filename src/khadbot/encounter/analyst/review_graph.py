@@ -119,6 +119,7 @@ def pull_cache_key(data: EncounterData, pull_key: str, *, model_id: str, version
     return cache_key(
         pull_key=pull_key,
         events_hash=produced["events_hash"],
+        positions_hash=produced.get("positions_hash", ""),
         encfile_hash=produced["encfile_hash"],
         registry_hash=produced["registry_hash"],
         prompt_version=version,

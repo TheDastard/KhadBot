@@ -887,6 +887,15 @@
       "ref": "ev:H7z1fqDXjRTFnbtg:20:mech:wardens_protection"
     },
     {
+      "blame_dist_yd": {
+        "beyond_reach": [
+          43.6,
+          43.6
+        ]
+      },
+      "blame_states": {
+        "beyond_reach": 1
+      },
       "clusters": 1,
       "damage_taken": 5734490,
       "deaths_in_window": 1,
@@ -914,6 +923,7 @@
   "produced_from": {
     "encfile_hash": "e777c8f48ddd",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
+    "positions_hash": "b94f0d59330c5501aba7e880d6a0ae91ee7c3f488105eb72dde775c0e1c6a933",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:20",

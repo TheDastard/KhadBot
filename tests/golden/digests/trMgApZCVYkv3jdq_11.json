@@ -831,6 +831,7 @@
   "produced_from": {
     "encfile_hash": "e777c8f48ddd",
     "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
+    "positions_hash": "9ce1e6be7cb77215bb75b1a30bd4386db9d8f3a6693b91f124ee5948371bf778",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "trMgApZCVYkv3jdq:11",

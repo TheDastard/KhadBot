@@ -32,6 +32,7 @@ from khadbot.encounter.config_files import (
 )
 from khadbot.encounter.models import (
     Actor,
+    BlameState,
     CooldownUse,
     DeathRecord,
     MechanicStat,
@@ -190,6 +191,7 @@ def build_pull_records(
         anomalies=anomalies,
         produced_from={
             "events_hash": store.events_hash(pull_key) or "",
+            "positions_hash": store.positions_hash(pull_key) or "",
             "encfile_hash": a.encfile_hash,
             "registry_hash": registry_hash(registry),
         },
@@ -247,6 +249,31 @@ def _n(value: int | None) -> str:
     return "?" if value is None else f"{value:,}"
 
 
+# Blame states in the order the MECHANICS line lists them, with their wording.
+_BLAME_STATE_WORDS: dict[BlameState, str] = {
+    "beyond_reach": "beyond reach",
+    "in_reach": "in reach",
+    "alive": "alive",
+    "dead": "dead",
+    "no_position": "no position",
+    "no_holder": "none",
+}
+
+
+def _blame_clause(m: MechanicStat) -> str:
+    """``blamed: 2 beyond reach (31–55 yd), 1 dead, 1 none``: where the charged players were at the hits."""
+    parts = []
+    for state, words in _BLAME_STATE_WORDS.items():
+        if not (n := m.blame_states.get(state)):
+            continue
+        part = f"{n} {words}"
+        if (span := m.blame_dist_yd.get(state)) is not None:
+            lo, hi = (f"{v:.0f}" for v in span)
+            part += f" ({lo} yd)" if lo == hi else f" ({lo}–{hi} yd)"
+        parts.append(part)
+    return "blamed: " + ", ".join(parts)
+
+
 def render_digest(d: PullDigest) -> str:
     """Compact text rendering for the LLM; every record line carries its evidence ref."""
     head = [
@@ -292,6 +319,8 @@ def render_digest(d: PullDigest) -> str:
         )
         if m.failures_by_player:
             line += "; failed: " + ", ".join(f"{name} {n}" for name, n in m.failures_by_player.items())
+        if m.blame_states:
+            line += "; " + _blame_clause(m)
         lines.append(line)
 
     if d.cooldowns:

@@ -583,6 +583,7 @@
   "produced_from": {
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
+    "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:23",

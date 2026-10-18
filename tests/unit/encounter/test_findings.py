@@ -17,6 +17,7 @@ from khadbot.encounter.findings import FindingsStore, cache_key
 BASE = {
     "pull_key": "SYNTH01:1",
     "events_hash": "e" * 64,
+    "positions_hash": "q" * 64,
     "encfile_hash": "f" * 12,
     "registry_hash": "r" * 12,
     "prompt_version": "p" * 12,
@@ -46,6 +47,7 @@ def test_cache_key_is_16_hex_and_stable():
     [
         ("pull_key", "SYNTH01:2"),
         ("events_hash", "0" * 64),
+        ("positions_hash", "0" * 64),
         ("encfile_hash", "0" * 12),
         ("encfile_hash", None),
         ("registry_hash", "0" * 12),

@@ -661,6 +661,15 @@
       "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:caustic_waves"
     },
     {
+      "blame_dist_yd": {
+        "beyond_reach": [
+          21.1,
+          51.9
+        ]
+      },
+      "blame_states": {
+        "beyond_reach": 5
+      },
       "clusters": 5,
       "damage_taken": 27082721,
       "deaths_in_window": 19,
@@ -738,6 +747,7 @@
   "produced_from": {
     "encfile_hash": "e777c8f48ddd",
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
+    "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",

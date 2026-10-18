@@ -30,7 +30,7 @@ from typing import Any, Literal
 import polars as pl
 
 from khadbot.config import EncounterConfig
-from khadbot.encounter.analysis.mechanics import mechanic_clusters
+from khadbot.encounter.analysis.mechanics import blame_reach_yd, mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.config_files import CooldownRegistry, encfile_hash, load_encounter_view, load_registry
 from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
@@ -183,8 +183,9 @@ def pull_summary(r: PullRecords) -> dict[str, Any]:
 
 
 def mechanic_detail(r: PullRecords, stat: MechanicStat) -> dict[str, Any]:
-    """What a ``mech`` ref resolves to: the stat plus one row per cluster."""
-    clusters = mechanic_clusters(r.annotated, stat.mechanic_id, r.actors)
+    """What a ``mech`` ref resolves to: the stat plus one row per cluster (with blame context where it has one)."""
+    reach = blame_reach_yd(r.enc, stat.mechanic_id)
+    clusters = mechanic_clusters(r.annotated, stat.mechanic_id, r.actors, reach_yd=reach)
     return {**stat.model_dump(mode="json"), "cluster_rows": [c.model_dump(mode="json") for c in clusters]}
 
 
@@ -197,8 +198,8 @@ class EncounterData:
     """
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
-    The cache key is (pull_key, events_hash, encfile_hash), so re-ingesting a pull or editing its
-    encounter file rebuilds the records on next use.
+    The cache key is (pull_key, events_hash, positions_hash, encfile_hash), so re-ingesting a pull or editing
+    its encounter file rebuilds the records on next use.
     """
 
     def __init__(
@@ -217,7 +218,7 @@ class EncounterData:
         self.cache = cache
         self.cutoff_fraction = cutoff_fraction
         self._max_cached = max_cached
-        self._records: OrderedDict[tuple[str, str, str], PullRecords] = OrderedDict()
+        self._records: OrderedDict[tuple[str, str, str, str], PullRecords] = OrderedDict()
 
     @classmethod
     def from_config(cls) -> EncounterData:
@@ -241,6 +242,7 @@ class EncounterData:
         key = (
             pull_key,
             self.store.events_hash(pull_key) or "",
+            self.store.positions_hash(pull_key) or "",
             encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
         )
         if (hit := self._records.get(key)) is not None:
