@@ -3,9 +3,9 @@ encounter/annotate/failures.py
 
 Failure rules: which rows of a mechanic are failures, and who is charged with each.
 
-Most rules charge the player hit. ``not_interrupted`` and ``soak_count_lt`` charge no one. ``per_cluster``
-charges the player its ``blame`` spec points at, and ``hits_on_non_tank`` judges each player against the
-aggro holder of the NPC instance that hit them. Who an NPC is attacking comes from the Threat data
+Most rules charge the player hit. ``not_interrupted``, ``soak_count_lt`` and ``debuff_stacks_gt`` charge no
+one. ``per_cluster`` charges the player its ``blame`` spec points at, and ``hits_on_non_tank`` judges each
+player against the aggro holder of the NPC instance that hit them. Who an NPC is attacking comes from the Threat data
 (``frame.aggro_events``): its melee swings name its target, and a taunt debuff landing on it hands it to the
 taunting player. ``per_cluster`` blame and ``hits_on_non_tank`` read the NPC's latest such event.
 
@@ -35,6 +35,9 @@ BLAME_POSITION_MAX_AGE_MS = 1_500
 _ALIVE_AGAIN_SOURCE = ("cast", "begincast")
 _ALIVE_AGAIN_TARGET = ("resurrect",)
 
+_AURA_OPEN = ("applybuff", "applydebuff", "applybuffstack", "applydebuffstack", "refreshbuff", "refreshdebuff")
+_AURA_CLOSE = ("removebuff", "removedebuff")
+
 
 def _victims(rows: pl.DataFrame) -> dict[int, int | None]:
     """Failure rows charged to the friendly player they hit (None for a non-friendly target)."""
@@ -48,6 +51,29 @@ def _aggro_holder(events: pl.DataFrame, npc_ids: set[int], t_ms: int, ms: int) -
     """The player behind the latest swing or taunt on any of ``npc_ids`` in the ``ms`` up to ``t_ms``."""
     recent = events.filter(pl.col("npc_id").is_in(npc_ids) & pl.col("t_ms").is_between(t_ms - ms, t_ms))
     return recent["player_id"][-1] if recent.height else None  # null after the NPC's death
+
+
+def _aura_spans(frame: pl.DataFrame, aura_ids: list[int], duration_ms: int) -> dict[int, list[tuple[int, int]]]:
+    """
+    Friendly target -> ``(start_ms, end_ms)`` spans during which it carried any of ``aura_ids``, both ends
+    inclusive. A span opens on an apply (or a refresh or stack row with no open span) and closes on the
+    matching remove; one never removed lasts to the pull end, and a remove with no apply before it opens at
+    the pull start.
+    """
+    auras = frame.filter(
+        type_is(*_AURA_OPEN, *_AURA_CLOSE) & pl.col("target_friendly") & pl.col("ability_id").is_in(aura_ids)
+    ).sort("seq")
+    open_since: dict[tuple[int, int], int] = {}
+    spans: dict[int, list[tuple[int, int]]] = {}
+    for t, typ, target, ability in auras.select("t_ms", pl.col("type").cast(pl.Utf8), "target_id", "ability_id").rows():
+        key = (target, ability)
+        if typ in _AURA_OPEN:
+            open_since.setdefault(key, t)
+        else:
+            spans.setdefault(target, []).append((open_since.pop(key, 0), t))
+    for (target, _), t in open_since.items():
+        spans.setdefault(target, []).append((t, duration_ms))
+    return spans
 
 
 def _blamed(
@@ -139,6 +165,28 @@ def mechanic_failures(
 
     if rule.rule == "aura_applied":
         return _victims(rows.filter(type_is("applydebuff", "applybuff") & pl.col("target_friendly")))
+
+    if rule.rule == "debuff_stacks_gt":
+        # One failure per occurrence, on its first row, charged to no one. Occurrences group the stack rows
+        # past `value` with the mechanic's cluster gap; they are not hits, so they belong to no cluster.
+        stacks = rows.filter(
+            type_is("applydebuff", "applydebuffstack")
+            & pl.col("target_friendly")
+            & (pl.col("stack") > (rule.value or 0))
+        ).sort("seq")
+        new_occurrence = (pl.col("t_ms").diff() > mech.cluster_window_ms).fill_null(True)
+        return dict.fromkeys(stacks.filter(new_occurrence)["seq"].to_list())
+
+    if rule.rule == "hit_while_aura":
+        # Each player is judged once per cluster, at their first hit, against the listed auras' activity.
+        assert rule.aura_ids is not None  # enforced by FailureRule
+        spans = _aura_spans(frame, rule.aura_ids, duration_ms)
+        first_hits = hits.sort("seq").filter(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id") == 1)
+        return {
+            seq: target
+            for seq, t, target in first_hits.select("seq", "t_ms", "target_id").rows()
+            if any(start <= t <= end for start, end in spans.get(target, ()))
+        }
 
     if rule.rule == "hits_on_non_tank":
         # Each player is judged once per cluster, at their first hit, against the aggro holder of the NPC

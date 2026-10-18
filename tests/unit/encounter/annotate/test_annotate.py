@@ -210,6 +210,104 @@ def test_aura_applied():
     assert blamed(a) == [(0, 3)]
 
 
+def _stack(t, target, stack, typ="applydebuffstack"):
+    return {**_aura(t, typ, target), "stack": stack}
+
+
+def test_debuff_stacks_gt():
+    rows = [
+        _aura(0, "applydebuff", 1),  # no stack: never a failure
+        _stack(1_000, 1, 2),  # at the limit: fine
+        _stack(2_000, 1, 3),  # past it: occurrence 1
+        _stack(2_400, 2, 3),  # 400 ms later: same occurrence
+        _stack(3_400, 3, 4),  # 1,000 ms gap (<= window): same occurrence
+        {**_stack(3_500, BOSS, 5)},  # not a player
+        _stack(9_000, 4, 3, typ="applydebuff"),  # an applydebuff that carries a stack: occurrence 2
+        hit(9_100, 4),  # the mechanic's damage is not judged
+    ]
+    a = run(rows, enc_with([mech({"rule": "debuff_stacks_gt", "value": 2}, kind="debuff")]))
+    assert blamed(a) == [(2, None), (6, None)]
+    # Stack failures are not hits, so they belong to no cluster.
+    assert a.frame.filter(pl.col("is_failure"))["cluster_id"].to_list() == [None, None]
+
+
+def test_debuff_stacks_gt_splits_on_the_gap():
+    rows = [_stack(0, 1, 3), _stack(1_000, 2, 3), _stack(2_001, 3, 3)]
+    a = run(rows, enc_with([mech({"rule": "debuff_stacks_gt", "value": 2}, kind="debuff")]))
+    assert blamed(a) == [(0, None), (2, None)]
+
+
+def test_debuff_stacks_gt_none_past_the_limit():
+    rows = [_stack(0, 1, 2), _stack(500, 2, 1)]
+    a = run(rows, enc_with([mech({"rule": "debuff_stacks_gt", "value": 2}, kind="debuff")]))
+    assert blamed(a) == []
+
+
+AURA = 777
+
+
+def _held(t, typ, target, ability=AURA):
+    return {**_aura(t, typ, target), "ability_id": ability}
+
+
+def hit_while(rows, aura_ids=(AURA,), **kw):
+    rule = {"rule": "hit_while_aura", "aura_ids": list(aura_ids)}
+    return blamed(run(rows, enc_with([mech(rule, kind="soak", **kw)])))
+
+
+def test_hit_while_aura():
+    rows = [
+        _held(0, "applydebuff", 1),
+        hit(1_000, 1),  # carrying the aura: failure, charged to the player hit
+        hit(1_000, 2),  # no aura: fine
+        hit(1_500, 1),  # same player, same cluster: judged once
+        _held(2_000, "removedebuff", 1),
+        hit(10_000, 1),  # aura gone: fine
+    ]
+    assert hit_while(rows) == [(1, 1)]
+
+
+def test_hit_while_aura_refresh_keeps_it_active():
+    rows = [_held(0, "applydebuff", 1), _held(4_000, "refreshdebuff", 1), hit(5_000, 1)]
+    assert hit_while(rows) == [(2, 1)]
+
+
+def test_hit_while_aura_never_removed_lasts_to_pull_end():
+    assert hit_while([_held(0, "applybuff", 1), hit(59_000, 1)]) == [(1, 1)]
+
+
+def test_hit_while_aura_edges():
+    rows = [
+        _held(5_000, "applydebuff", 1),
+        hit(5_000, 1),  # same millisecond as the apply: active
+        _held(6_000, "applydebuff", 2),
+        _held(7_000, "removedebuff", 2),
+        hit(7_001, 2),  # one millisecond after the remove: not active
+    ]
+    assert hit_while(rows) == [(1, 1)]
+
+
+def test_hit_while_aura_remove_without_apply_counts_from_pull_start():
+    assert hit_while([hit(1_000, 1), _held(2_000, "removedebuff", 1)]) == [(0, 1)]
+
+
+def test_hit_while_aura_ignores_other_auras_and_players():
+    rows = [
+        _held(0, "applydebuff", 1, ability=778),  # a different aura
+        {**_held(0, "applydebuff", BOSS)},  # the aura on a non-player
+        hit(1_000, 1),
+        hit(1_000, BOSS),
+    ]
+    assert hit_while(rows) == []
+
+
+def test_hit_while_aura_judges_only_damage_rows():
+    # The aura is also one of the mechanic's own abilities; its aura rows are never failures.
+    rule = {"rule": "hit_while_aura", "aura_ids": [100]}
+    rows = [_aura(0, "applydebuff", 1), hit(500, 1), _aura(800, "removedebuff", 1)]
+    assert blamed(run(rows, enc_with([mech(rule, kind="soak")]))) == [(1, 1)]
+
+
 def _swing(t, target, src=11, inst=None):
     """An NPC melee swing from the Threat data."""
     return {

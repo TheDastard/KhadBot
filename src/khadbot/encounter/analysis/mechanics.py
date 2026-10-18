@@ -72,8 +72,8 @@ def mechanic_clusters(
     """
     Per-cluster breakdown of one mechanic's hits, in cluster order.
 
-    Failures that are not hits (``not_interrupted`` casts) belong to no cluster and are not counted here.
-    A cluster whose failure has blame context (``per_cluster``) also names the player charged, their
+    Failures that are not hits (``not_interrupted`` casts, aura and stack rows) belong to no cluster and are not
+    counted here. A cluster whose failure has blame context (``per_cluster``) also names the player charged, their
     ``blame_state`` and distance, and ``reach_yd`` (the blame spec's, passed in) when a state was judged.
     """
     names = {x.actor_id: x.name for x in actors}
