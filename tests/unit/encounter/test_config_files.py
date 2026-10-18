@@ -174,6 +174,12 @@ class TestFriendlyDamageRegistry:
         assert friendly_damage_hash(a) != friendly_damage_hash(parse_friendly_damage(data))
         assert len(friendly_damage_hash(a)) == 12
 
+    def test_no_encounter_file_ignores_a_registry_ability(self):
+        # Player damage is classified in one place: the registry, not encounter files' ignored_abilities.
+        reg_ids = set(load_friendly_damage().ability_ids())
+        for enc in load_all_encounters().values():
+            assert not reg_ids & {a.ability_id for a in enc.ignored_abilities}, enc.name
+
 
 # ===========================================================================
 # Encounter file
