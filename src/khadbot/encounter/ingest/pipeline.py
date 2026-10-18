@@ -3,8 +3,9 @@ encounter/ingest/pipeline.py
 
 Ingest orchestration: report metadata -> raw pages -> normalized events -> event store.
 
-Resumable through the raw page cache and idempotent through ``events_hash``: a pull whose
-recomputed hash and metadata match the stored ones is skipped without rewriting anything.
+Resumable through the raw page cache and idempotent through ``events_hash`` and ``positions_hash``: a pull
+whose recomputed hashes and metadata match the stored ones is skipped without rewriting anything. A pull
+stored before positions were kept has no ``positions_hash``, so an offline re-ingest adds its position table.
 
 ``refresh_meta`` refetches only ``report.json`` and re-normalizes the stored pulls from their cached
 pages, so a field added to the report query reaches pulls ingested before it without any event request.
@@ -25,10 +26,15 @@ from khadbot.encounter.ingest.fetch import (
     fetch_pull,
     specs_for,
 )
-from khadbot.encounter.ingest.normalize import events_hash, normalize_pull, parse_abilities, parse_report_meta
+from khadbot.encounter.ingest.normalize import (
+    events_hash,
+    normalize_pull_with_positions,
+    parse_abilities,
+    parse_report_meta,
+)
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.models import IngestResult, Pull
-from khadbot.encounter.store import EventStore, ParquetEventStore
+from khadbot.encounter.store import EventStore, ParquetEventStore, positions_hash
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient
 
 logger = logging.getLogger(__name__)
@@ -131,13 +137,18 @@ async def ingest_report(
                 if progress:
                     progress(key, "normalizing", 1.0)
                 pages = {s.dir_name: cache.pages(code, pull.fight_id, s) for s in specs}
-                df = normalize_pull(pull, actors, pages)
+                df, positions = normalize_pull_with_positions(pull, actors, pages)
                 new_hash = events_hash(df)
-                # Pull metadata can change without the events (a field added to the report query), so both must match.
-                if store.events_hash(key) == new_hash and stored.get(pull.fight_id) == pull:
+                # Pull metadata can change without the events (a field added to the report query), and a pull
+                # stored before positions were kept has no positions_hash, so all three must match.
+                if (
+                    store.events_hash(key) == new_hash
+                    and store.positions_hash(key) == positions_hash(positions)
+                    and stored.get(pull.fight_id) == pull
+                ):
                     skipped.append(key)
                     continue
-                store.write_pull(pull, df, new_hash, sorted(name for name, t in truncated.items() if t))
+                store.write_pull(pull, df, new_hash, sorted(name for name, t in truncated.items() if t), positions)
                 ingested.append(key)
             except Exception as exc:  # noqa: BLE001 - one bad pull must not sink the report
                 logger.warning("Ingest failed for %s: %s", key, exc)

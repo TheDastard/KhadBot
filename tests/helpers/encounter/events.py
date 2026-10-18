@@ -10,7 +10,7 @@ from __future__ import annotations
 import polars as pl
 
 from khadbot.encounter.models import Actor, Pull
-from khadbot.encounter.store import EVENT_SCHEMA
+from khadbot.encounter.store import EVENT_SCHEMA, POSITION_ORDER, POSITION_SCHEMA
 
 PLAYERS = [1, 2, 3, 4, 5]
 BOSS = 10
@@ -36,6 +36,19 @@ def make_events(rows: list[dict], friendly: list[int] | None = None) -> pl.DataF
             row["target_friendly"] = row["target_id"] in friendly_ids
         full.append(row)
     return pl.DataFrame(full, schema=EVENT_SCHEMA)
+
+
+def make_positions(rows: list[tuple]) -> pl.DataFrame:
+    """
+    Position table from ``(t_ms, actor_id, x, y)`` tuples, optionally followed by ``instance`` and ``map_id``
+    (default None and 1). Coordinates are raw units: 100 per yard.
+    """
+    full = [(*r, *(None, 1)[len(r) - 4 :]) for r in rows]
+    table = pl.DataFrame(
+        [dict(zip(("t_ms", "actor_id", "x", "y", "instance", "map_id"), r, strict=True)) for r in full],
+        schema={k: POSITION_SCHEMA[k] for k in ("t_ms", "actor_id", "x", "y", "instance", "map_id")},
+    )
+    return table.select(list(POSITION_SCHEMA)).sort(POSITION_ORDER) if full else pl.DataFrame(schema=POSITION_SCHEMA)
 
 
 def make_pull(**kw) -> Pull:

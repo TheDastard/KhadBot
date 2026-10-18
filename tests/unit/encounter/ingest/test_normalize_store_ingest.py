@@ -352,7 +352,8 @@ class TestIngest:
         store = synth_ingest_kwargs["store"]
         pull = next(p for p in store.pulls(CODE) if p.fight_id == 1)
         stale = pull.model_copy(update={"boss_hp_pct": None})
-        store.write_pull(stale, store.events(pull.pull_key), store.events_hash(pull.pull_key))
+        key = pull.pull_key
+        store.write_pull(stale, store.events(key), store.events_hash(key), positions=store.positions(key))
         again = await ingest_report(CODE, **synth_ingest_kwargs)
         assert again.pulls == ["SYNTH01:1"] and again.skipped == ["SYNTH01:2"]
         assert next(p for p in store.pulls(CODE) if p.fight_id == 1).boss_hp_pct == 41.0
