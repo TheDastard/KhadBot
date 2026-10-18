@@ -38,7 +38,7 @@ run = "uv run python main.py cli"
 # ── Testing ─────────────────────────────────────────────────────────────────
 [tasks.check]
 description = "Lint, typecheck and unit tests: the gate for every commit"
-run = ["uv run ruff check src tests", "uv run mypy src", "uv run pytest tests/unit"]
+run = ["uv run ruff check src tests scripts", "uv run mypy src", "uv run pytest tests/unit"]
 
 [tasks.test]
 description = "Run all tests"
@@ -65,12 +65,12 @@ run = "uv run pytest tests/eval -m eval -s --no-cov"
 # ── Code quality ────────────────────────────────────────────────────────────
 [tasks.lint]
 description = "Lint with ruff (read-only)"
-run = "uv run ruff check src tests"
+run = "uv run ruff check src tests scripts"
 
 # Writes files; run lint separately for a read-only check.
 [tasks.format]
 description = "Format and auto-fix with ruff (writes files)"
-run = ["uv run ruff format src tests", "uv run ruff check --fix src tests"]
+run = ["uv run ruff format src tests scripts", "uv run ruff check --fix src tests scripts"]
 
 [tasks.typecheck]
 description = "Type-check with mypy"
