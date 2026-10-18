@@ -14,6 +14,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Data and ingest
 
+- **Fix the ported registry entries.** The game data shows 357170 is Time Dilation, not Rewind (363534);
+  374227 is Zephyr, not Stasis (370537); 97462 is named Rallying Cry; Ancestral Protection Totem (207399) is no
+  longer in the game; Aura Mastery and Tiger's Lust are not defensive cooldowns by the data (Aura Mastery works
+  by modifying Devotion Aura; Tiger's Lust has a 30 s cooldown). Fill `cooldown_s` and `duration_s` from the
+  review file's `registry_check`, still unverified.
+- **Grow the cooldown registry from the review file.** `scripts/build_cooldown_registry.py --fetch midnight`
+  proposes 70 cooldowns for build 12.1.5.70448, 56 of them not in the registry, and lists 100 scripted spells
+  to read by hand (Survival Instincts, Lichborne, Healing Tide Totem, Vampiric Embrace among the defensive
+  ones). Each added ID joins the Buffs filter, so adding them refetches Buffs for every pull; the filter would
+  hold about 110 IDs (under 1 KB) with aura IDs, and WCL's limit on filter length is not known.
+
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
   damage, not registered. When that encounter gets a file, name the mechanic and decide how to tag its damage.

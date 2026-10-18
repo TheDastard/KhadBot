@@ -28,7 +28,7 @@ src/khadbot/
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
-  encounter/         # models, config_files, store, digest, evidence, findings, CLI commands;
+  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, CLI commands;
                      # conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report
     annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
@@ -43,7 +43,7 @@ config/
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # cooldowns.yaml, friendly_damage.yaml
-scripts/             # setup, WCL fixture recorder, clean and distclean
+scripts/             # setup, WCL fixture recorder, cooldown registry generator, clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
@@ -110,7 +110,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 
 ## Game data
 
-Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, or the user. If a value is unknown, use `null` with `verified: false`, or ask.
+Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, the user, or (for player spells) game client data via `scripts/build_cooldown_registry.py`. If a value is unknown, use `null` with `verified: false`, or ask.
 
 ## Git
 
