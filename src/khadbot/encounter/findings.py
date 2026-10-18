@@ -42,6 +42,7 @@ def cache_key(
     *,
     pull_key: str,
     events_hash: str,
+    positions_hash: str,
     encfile_hash: str | None,
     registry_hash: str,
     prompt_version: str,
@@ -53,6 +54,7 @@ def cache_key(
     payload = {
         "pull_key": pull_key,
         "events_hash": events_hash,
+        "positions_hash": positions_hash,
         "encfile_hash": encfile_hash,
         "registry_hash": registry_hash,
         "prompt_version": prompt_version,

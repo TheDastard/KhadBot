@@ -623,6 +623,9 @@
   "encounter_name": "Ula'tek",
   "mechanics": [
     {
+      "blame_states": {
+        "dead": 8
+      },
       "clusters": 8,
       "damage_taken": 336904,
       "deaths_in_window": 1,
@@ -635,6 +638,9 @@
       "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:unchecked_rage"
     },
     {
+      "blame_states": {
+        "no_holder": 2
+      },
       "clusters": 2,
       "damage_taken": 9294740,
       "deaths_in_window": 18,
@@ -658,6 +664,15 @@
       "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:deadly_venom"
     },
     {
+      "blame_dist_yd": {
+        "alive": [
+          29.6,
+          29.6
+        ]
+      },
+      "blame_states": {
+        "alive": 1
+      },
       "clusters": 1,
       "damage_taken": 18433866,
       "deaths_in_window": 18,
@@ -715,6 +730,7 @@
   "produced_from": {
     "encfile_hash": "e777c8f48ddd",
     "events_hash": "3fe207f447b2e72fefd1f2bf20710b325d7b78fcc4db36d53841bfca6c7902e6",
+    "positions_hash": "298e2934044b47a2ff09d6bdd2c4b04e7d10bdc6ec7511ae2cc232482f97034d",
     "registry_hash": "7e9178662e3f"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:10",

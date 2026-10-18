@@ -85,6 +85,7 @@ def test_wipe_summary(digest_of, synth_ingested, synth_registry):
     assert [(u.ability_id, u.share_pct) for u in d.unregistered] == [(900102, 9.9)]
     assert d.produced_from == {
         "events_hash": synth_ingested.events_hash("SYNTH01:1"),
+        "positions_hash": synth_ingested.positions_hash("SYNTH01:1"),
         "encfile_hash": encfile_hash(load_encounter_file(SYNTH_ENCOUNTER_FILE)),
         "registry_hash": registry_hash(synth_registry),
     }
@@ -244,3 +245,56 @@ def test_render_without_encounter_file(digest_of, tmp_path):
     text = render_digest(digest_of(1, root=tmp_path / "empty"))
     assert "reached Synth Stage Two" in text and "coverage none" in text
     assert "MECHANICS" not in text and "DAMAGE WINDOWS" not in text
+
+
+# ===========================================================================
+# Blame context
+# ===========================================================================
+
+
+def _stat(**kw):
+    from khadbot.encounter.models import MechanicStat
+
+    base = dict(
+        ref="ev:SYNTH01:1:mech:m",
+        mechanic_id="m",
+        clusters=4,
+        hits=40,
+        failures=4,
+        failures_by_player={"Tankyboi": 3},
+        damage_taken=1_000,
+        deaths_in_window=0,
+    )
+    return MechanicStat(**{**base, **kw})
+
+
+def test_blame_clause_lists_states_in_order_with_distance_ranges():
+    stat = _stat(
+        blame_states={"no_holder": 1, "dead": 1, "beyond_reach": 2, "in_reach": 1},
+        blame_dist_yd={"beyond_reach": (30.9, 55.5), "in_reach": (12.0, 12.0)},
+    )
+    assert digest_mod._blame_clause(stat) == "blamed: 2 beyond reach (31–56 yd), 1 in reach (12 yd), 1 dead, 1 none"
+    assert digest_mod._blame_clause(
+        _stat(blame_states={"no_position": 1, "alive": 2}, blame_dist_yd={"alive": (5.0, 9.4)})
+    ) == ("blamed: 2 alive (5–9 yd), 1 no position")
+
+
+def test_blame_fields_are_left_out_when_empty_and_old_records_load():
+    from khadbot.encounter.models import MechanicCluster
+
+    plain = _stat()
+    assert "blame_states" not in plain.model_dump() and "blame_dist_yd" not in orjson.loads(plain.model_dump_json())
+    assert _stat(**orjson.loads(plain.model_dump_json())) == plain  # a record stored before the fields existed
+    cluster = MechanicCluster(
+        cluster=1, t_ms=0, end_ms=10, phase_id=None, hits=2, players=2, damage=5, failures=1, failed_players=[]
+    )
+    assert set(cluster.model_dump()) == {
+        "cluster", "t_ms", "end_ms", "phase_id", "hits", "players", "damage", "failures", "failed_players"
+    }  # fmt: skip
+    judged = cluster.model_copy(update={"blamed": "Tankyboi", "blame_state": "dead"}).model_dump()
+    assert (judged["blamed"], judged["blame_state"]) == ("Tankyboi", "dead") and "blame_dist_yd" not in judged
+
+
+def test_synth_mechanics_carry_no_blame_context(digest_of):
+    assert all(not m.blame_states and not m.blame_dist_yd for m in digest_of(1).mechanics)
+    assert "blamed:" not in render_digest(digest_of(1))
