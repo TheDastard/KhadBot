@@ -159,6 +159,8 @@ def test_check_registry_statuses(data: ClientData) -> None:
 # ---------------------------------------------------------------------------
 
 LUST, WRATH, INFUSION, LEAP, LEAP_IMMUNE, WINGS, WEAKEN, QUICK, WAR_CRY, WAR_CRY_AURA = range(900031, 900041)
+CLOAK, CLOAK_IMMUNE = 900041, 900042
+BESTIAL_WRATH = 19574  # skipped by name: the real spell's pet aura carries both effects
 
 
 @pytest.fixture
@@ -174,11 +176,15 @@ def offensive_data() -> ClientData:
         spell_row("Quick", QUICK, cooldown=30000, duration=10000),
         spell_row("War Cry", WAR_CRY, cooldown=180000),
         spell_row("War Cry", WAR_CRY_AURA, duration=30000),
+        spell_row("Cloak", CLOAK, cooldown=120000, duration=5000),
+        spell_row("Cloak Cleanse", CLOAK_IMMUNE, duration=1000),
+        spell_row("Bestial Wrath", BESTIAL_WRATH, cooldown=90000, duration=15000),
     ]
     effects = [
         effect_row(1, LUST, 0, c.E_APPLY_AREA_AURA_RAID, c.A_HASTE_ALL, base=30, target_1=CASTER),
         effect_row(2, WRATH, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=20, target_1=CASTER),
         effect_row(3, INFUSION, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=20, target_1=ALLY),
+        effect_row(13, INFUSION, 1, c.E_APPLY_AURA, MANA_AURA, base=5, target_1=ALLY),
         effect_row(4, LEAP, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=20, target_1=CASTER),
         effect_row(5, LEAP, 1, c.E_TRIGGER_SPELL, 0, trigger=LEAP_IMMUNE, target_1=CASTER),
         effect_row(6, LEAP_IMMUNE, 0, c.E_APPLY_AURA, c.A_DAMAGE_IMMUNITY, target_1=CASTER),
@@ -188,10 +194,25 @@ def offensive_data() -> ClientData:
         effect_row(10, QUICK, 0, c.E_APPLY_AURA, c.A_HASTE_ALL, base=10, target_1=CASTER),
         effect_row(11, WAR_CRY, 0, c.E_DUMMY, 0, target_1=AREA_RAID),
         effect_row(12, WAR_CRY_AURA, 0, c.E_APPLY_AURA, c.A_MOD_PERCENT_STAT, base=10, target_1=CASTER),
+        effect_row(14, CLOAK, 0, c.E_TRIGGER_SPELL, 0, trigger=CLOAK_IMMUNE, target_1=CASTER),
+        effect_row(15, CLOAK_IMMUNE, 0, c.E_APPLY_AURA, c.A_SCHOOL_IMMUNITY, target_1=CASTER),
+        effect_row(16, BESTIAL_WRATH, 0, c.E_APPLY_AURA, c.A_MOD_DAMAGE_PERCENT_DONE, base=25, target_1=CASTER),
+        effect_row(17, BESTIAL_WRATH, 1, c.E_APPLY_AURA, c.A_SCHOOL_ABSORB, target_1=CASTER),
     ]
     spells_by_id, effects_by_spell = parse_spells(spell_data(spells, effects))
     players = parse_player_spells(
-        class_spells([(7, 0, LUST), (2, 0, WRATH), (5, 0, INFUSION), (12, 0, LEAP), (2, 0, WINGS), (1, 0, WAR_CRY)]),
+        class_spells(
+            [
+                (7, 0, LUST),
+                (2, 0, WRATH),
+                (5, 0, INFUSION),
+                (12, 0, LEAP),
+                (2, 0, WINGS),
+                (1, 0, WAR_CRY),
+                (4, 0, CLOAK),
+                (3, 0, BESTIAL_WRATH),
+            ]
+        ),
         spec_spells([(1, 71, WEAKEN), (8, 63, QUICK)]),
         traits([]),
     )
@@ -216,7 +237,7 @@ def test_offensive_candidate_fields(offensive_data: ClientData) -> None:
 
 
 def test_offensive_aura_on_an_ally_is_not_support(offensive_data: ClientData) -> None:
-    # Power Infusion used to be a support candidate in the defensive list.
+    # Power Infusion used to be a support candidate in the defensive list, through either of its auras.
     assert classify(offensive_data, INFUSION) is None
 
 
@@ -225,6 +246,18 @@ def test_triggered_immunity_does_not_make_an_offensive_cooldown_defensive(offens
     cand = classify_offensive(offensive_data, LEAP)
     assert cand is not None
     assert cand.aura_spell_ids == []  # the immunity is not the cooldown's aura
+
+
+def test_brief_triggered_immunity_still_counts_without_an_offensive_effect(offensive_data: ClientData) -> None:
+    # Cloak of Shadows: its 1 s triggered immunity is the only defensive effect the data shows.
+    cand = classify(offensive_data, CLOAK)
+    assert cand is not None
+    assert cand.aura_spell_ids == [CLOAK_IMMUNE]
+
+
+def test_named_offensive_cooldowns_are_never_defensive(offensive_data: ClientData) -> None:
+    assert classify(offensive_data, BESTIAL_WRATH) is None
+    assert classify_offensive(offensive_data, BESTIAL_WRATH) is not None
 
 
 def test_own_defensive_effect_keeps_a_spell_in_both_lists(offensive_data: ClientData) -> None:
@@ -241,7 +274,7 @@ def test_not_offensive_candidates(offensive_data: ClientData, spell_id: int) -> 
 def test_offensive_candidates_sorted_and_complete(offensive_data: ClientData) -> None:
     found = offensive_candidates(offensive_data)
     assert [(x.class_name, x.name) for x in found] == sorted((x.class_name, x.name) for x in found)
-    assert {x.spell_id for x in found} == {LUST, WRATH, INFUSION, LEAP, WINGS, WAR_CRY}
+    assert {x.spell_id for x in found} == {LUST, WRATH, INFUSION, LEAP, WINGS, WAR_CRY, BESTIAL_WRATH}
 
 
 def test_offensive_same_name_aura(offensive_data: ClientData) -> None:

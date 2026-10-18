@@ -23,9 +23,7 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   data, then: copy in the candidates (expected to include Bloodlust, Heroism, Time Warp, Fury of the Aspects,
   Harrier's Cry, Avenging Wrath, Trueshot, Celestial Alignment, Incarnation: Chosen of Elune, Lunar Beam and
   Malevolence) and move Power Infusion over from `defensive_cooldowns.yaml`; pick scripted ones (Recklessness,
-  Combustion, Pillar of Frost, Dragonrage) by hand from the `scripted` list; and check that the triggered-only
-  rule leaves Bestial Wrath, Avatar and Havoc's Metamorphosis (191427) out of the defensive candidates. If it
-  doesn't, say why in the generator.
+  Combustion, Pillar of Frost, Dragonrage) by hand from the `scripted` list.
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.
