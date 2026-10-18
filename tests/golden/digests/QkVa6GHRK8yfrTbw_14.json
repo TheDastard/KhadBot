@@ -858,6 +858,18 @@
   },
   "mechanics": [
     {
+      "clusters": 4,
+      "damage_taken": 9829338,
+      "deaths_in_window": 11,
+      "failures": 11,
+      "failures_by_player": {
+        "Widowmaker": 1
+      },
+      "hits": 232,
+      "mechanic_id": "malignant_shell",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:malignant_shell"
+    },
+    {
       "clusters": 2,
       "damage_taken": 8124050,
       "deaths_in_window": 2,
@@ -928,16 +940,6 @@
       "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:mephitic_thrash"
     },
     {
-      "clusters": 4,
-      "damage_taken": 9829338,
-      "deaths_in_window": 11,
-      "failures": 0,
-      "failures_by_player": {},
-      "hits": 232,
-      "mechanic_id": "malignant_shell",
-      "ref": "ev:QkVa6GHRK8yfrTbw:14:mech:malignant_shell"
-    },
-    {
       "clusters": 38,
       "damage_taken": 5395878,
       "deaths_in_window": 1,
@@ -961,7 +963,7 @@
   "outcome": "wipe",
   "phase_reached": "p1",
   "produced_from": {
-    "encfile_hash": "4c559f4b20b8",
+    "encfile_hash": "e17e87581ace",
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
     "friendly_damage_hash": "9937b022415a",
     "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",

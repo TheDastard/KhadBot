@@ -986,6 +986,18 @@
       "ref": "ev:trMgApZCVYkv3jdq:11:mech:virulent_spit"
     },
     {
+      "clusters": 6,
+      "damage_taken": 23665210,
+      "deaths_in_window": 11,
+      "failures": 6,
+      "failures_by_player": {
+        "Lesnichii": 1
+      },
+      "hits": 593,
+      "mechanic_id": "malignant_shell",
+      "ref": "ev:trMgApZCVYkv3jdq:11:mech:malignant_shell"
+    },
+    {
       "clusters": 2,
       "damage_taken": 5816190,
       "deaths_in_window": 0,
@@ -1059,22 +1071,12 @@
       "hits": 190,
       "mechanic_id": "blight_vein",
       "ref": "ev:trMgApZCVYkv3jdq:11:mech:blight_vein"
-    },
-    {
-      "clusters": 2,
-      "damage_taken": 25585366,
-      "deaths_in_window": 0,
-      "failures": 0,
-      "failures_by_player": {},
-      "hits": 267,
-      "mechanic_id": "mephitic_thrash",
-      "ref": "ev:trMgApZCVYkv3jdq:11:mech:mephitic_thrash"
     }
   ],
   "outcome": "wipe",
   "phase_reached": "p2",
   "produced_from": {
-    "encfile_hash": "4c559f4b20b8",
+    "encfile_hash": "e17e87581ace",
     "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
     "friendly_damage_hash": "9937b022415a",
     "positions_hash": "9ce1e6be7cb77215bb75b1a30bd4386db9d8f3a6693b91f124ee5948371bf778",
