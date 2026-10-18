@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 import polars as pl
 
-from khadbot.encounter.analysis.positions import distance_yd, position_at
+from khadbot.encounter.analysis.positions import distance_yd, latest_per_unit, position_at
 from khadbot.encounter.annotate.frame import is_hit, type_is
 from khadbot.encounter.config_files import Blame, Mechanic
 from khadbot.encounter.models import BlameState
@@ -272,10 +272,14 @@ def _context(
     if _dead_at(frame, player, t0):
         return BlameContext("dead")
     mine = position_at(positions, [player], t0, max_age_ms=BLAME_POSITION_MAX_AGE_MS)
-    # NPCs are sampled only on their own swings and casts, but stand on fixed spots: no age limit.
-    npc = position_at(positions, npc_ids, t0, max_age_ms=None) if npc_ids else None
-    dist = distance_yd(mine, npc) if mine is not None and npc is not None else None
-    if mine is None or dist is None:
+    if mine is None:
+        return BlameContext("no_position")
+    # NPCs are sampled only on their own swings and casts, but stand on fixed spots: no age limit. Each NPC
+    # counts on the map of its own latest sample, so one that has moved to another map is not measured from
+    # where it last stood on the player's.
+    near = [s for s in latest_per_unit(positions, npc_ids, t0, max_age_ms=None) if s.map_id == mine.map_id]
+    dist = distance_yd(mine, near[-1]) if near else None
+    if dist is None:
         return BlameContext("no_position")
     if reach is None:
         state: BlameState = "alive"
@@ -296,9 +300,9 @@ def blame_context(
 
     ``no_holder``: the blame spec found nobody. ``dead``: the blamed player has a Deaths row at or before the
     hit and no cast or resurrect since. Otherwise their latest sample at or before the hit, at most
-    ``BLAME_POSITION_MAX_AGE_MS`` old, against the NPC's latest sample: ``beyond_reach`` or ``in_reach``
-    against the blame's ``reach_yd``, ``alive`` when it has none, ``no_position`` when either sample is
-    missing or the two are on different maps. Other mechanics get no context.
+    ``BLAME_POSITION_MAX_AGE_MS`` old, against the latest sample of the NPCs whose own latest sample is on the
+    player's map: ``beyond_reach`` or ``in_reach`` against the blame's ``reach_yd``, ``alive`` when it has none,
+    ``no_position`` when the player has no sample or no NPC is on their map. Other mechanics get no context.
     """
     if mech.failure is None or mech.failure.rule != "per_cluster" or mech.failure.blame is None:
         return {}

@@ -219,7 +219,7 @@ Add after the normalized event schema table, before the `events_hash` paragraph:
 
 Normalize takes a sample from every raw row that carries `x`, in the same pass that builds the events, from
 every data type, including the Threat rows it drops from the events. A row with no `resourceActor` is skipped.
-Duplicate samples on (`t_ms`, `actor_id`, `instance`, `x`, `y`) are dropped, and rows are sorted by `actor_id`,
+Duplicate samples on (`t_ms`, `actor_id`, `instance`, `x`, `y`, `map_id`) are dropped, and rows are sorted by `actor_id`,
 `instance`, `t_ms` (then `x`, `y`, `map_id`). `facing` is not kept. The events frame and `events_hash` do not
 change. On the 47 Heroic Ula'tek pulls the tables hold 2.02 M samples, 11.4 MB against 38.7 MB of events (+30%).
 
@@ -291,17 +291,18 @@ and null elsewhere: `blame_state` (Utf8), `blame_dist_yd` (Float32, yards rounde
 
 - `no_holder`: `blamed_id` is null.
 - `dead`: the player has a Deaths row at or before the hit and no cast or resurrect since.
-- `no_position`: no player sample at or before the hit within 1,500 ms, no NPC sample, or the two on different
-  maps.
+- `no_position`: no player sample at or before the hit within 1,500 ms, or no NPC whose latest sample is on the
+  player's map.
 - `alive`: alive with a position, and the blame sets no `reach_yd`.
 - `beyond_reach` / `in_reach`: alive and farther than / within `reach_yd` of the NPC.
 
 The player's position is their latest sample at or before the first hit, at most 1,500 ms old (a raid-wide hit
-carries the hit player's own position). The NPC's is its latest sample among the blame's NPC actors (the cast's
-caster for `cast_target`), with no age limit: the bosses stand on fixed spots and are sampled on their own swings
-and casts. Distance and age are null for `dead`, `no_position` and `no_holder`. `annotate()` takes the pull's
+carries the hit player's own position). The NPC's is taken from the blame's NPC actors (the cast's
+caster for `cast_target`): each unit's (actor and instance) latest sample, with no age limit, since the bosses
+stand on fixed spots and are sampled on their own swings and casts; of the units whose latest sample is on the
+player's map, the latest. Coordinates on two maps are never compared. Distance and age are null for `dead`, `no_position` and `no_holder`. `annotate()` takes the pull's
 position table (`positions=`), `annotate_pull` reads it from the store, and the annotation cache also keys on
-`positions_hash`. `ANNOTATION_VERSION` is 4.
+`positions_hash`. `ANNOTATION_VERSION` is 6.
 
 ### Refactor plan 6.4 (Digest)
 

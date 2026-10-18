@@ -308,6 +308,16 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   - **Dumps.** The new `MechanicStat` and `MechanicCluster` fields are left out of dumps when empty or null
     (pydantic `exclude_if`), so mechanics without blame context serialize as before, and stored digests and
     findings load with the defaults.
+  - **Pulls that span several maps (2026-10-18).** `mapID` is the UI map a unit's client was on, and an
+    encounter can move part or all of the raid to another floor or area mid-pull, where coordinates share no
+    frame with the first map. Nothing measures across maps (`distance_yd` returns None, as before). Blame now
+    takes each NPC unit's latest sample (`latest_per_unit`), keeps the units whose latest sample is on the
+    blamed player's map, and measures from the latest of those. Before, it took the latest sample of any NPC
+    unit, so one add on another map hid one on the player's; filtering samples by the player's map instead
+    would measure from where an NPC last stood before it left. Position dedup also keys on `map_id`.
+    `ANNOTATION_VERSION` is 6. None of the 62 local pulls or the recorded fixtures has samples on two maps
+    (every pull is on 2610, or 2632 for `H7z1fqDXjRTFnbtg:23`), so results on them are unchanged and the
+    multi-map case is covered by unit tests only.
 - **Stack and aura failure rules (2026-10-17)**: two new failure rules.
   - `debuff_stacks_gt {value}` (value >= 0): the mechanic's friendly `applydebuffstack` rows, and `applydebuff`
     rows that carry a stack, with `stack` above `value`, grouped into occurrences by the mechanic's

@@ -461,6 +461,24 @@ def test_blame_state_no_position():
     assert context(HELD, other_map) == [("no_position", None, None)]
 
 
+def test_blame_state_npc_that_moved_to_another_map_is_not_measured_from_its_old_spot():
+    # The add stood at the origin on map 1, then was sampled on map 2; the player is still on map 1.
+    moved = [NPC_AT_ORIGIN, (3_000, 11, 200, 0, None, 2), (4_900, 1, 1_500, 0)]
+    assert context(HELD, moved) == [("no_position", None, None)]
+    # Back on map 1 later: measured from there.
+    back = [*moved, (4_000, 11, 300, 0)]
+    assert context(HELD, back) == [("beyond_reach", 12.0, 100)]
+
+
+def test_blame_state_measures_from_the_npc_on_the_players_map():
+    # Two units of the add: instance 1 on the player's map, instance 2 sampled later on another map.
+    split = [(0, 11, 0, 0, 1, 1), (4_000, 11, 1_400, 0, 2, 2), (4_900, 1, 1_500, 0)]
+    assert context(HELD, split) == [("beyond_reach", 15.0, 100)]
+    # The player on map 2 is measured from instance 2.
+    there = [(0, 11, 0, 0, 1, 1), (4_000, 11, 1_400, 0, 2, 2), (4_900, 1, 1_500, 0, None, 2)]
+    assert context(HELD, there) == [("in_reach", 1.0, 100)]
+
+
 def test_blame_state_no_holder():
     assert context(HELD[1:], [NPC_AT_ORIGIN, (4_900, 1, 1_500, 0)]) == [("no_holder", None, None)]
 

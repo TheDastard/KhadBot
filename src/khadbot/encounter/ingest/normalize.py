@@ -244,8 +244,9 @@ def _normalize(
 # WCL ``resourceActor``: the unit a row's resources and position belong to (raw ID and instance fields).
 _RESOURCE_ACTOR = {1: ("sourceID", "sourceInstance"), 2: ("targetID", "targetInstance")}
 
-# Two samples with the same key are one sample seen from two data types (or two page sets).
-_POSITION_KEY = ["t_ms", "actor_id", "instance", "x", "y"]
+# Two samples with the same key are one sample seen from two data types (or two page sets). The map is part of
+# the key: the same coordinates on two maps are two places.
+_POSITION_KEY = ["t_ms", "actor_id", "instance", "x", "y", "map_id"]
 
 
 def _position_sample(e: dict, start_ms: int, out: dict[str, list]) -> None:
