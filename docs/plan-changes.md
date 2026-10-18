@@ -335,3 +335,43 @@ cache_key = sha256(pull_key, events_hash, positions_hash, encfile_hash, registry
 
 `positions_hash` comes from the digest's `produced_from` (empty for a pull stored without a position table).
 `EncounterData` also keys its per-pull records on it.
+
+## encounter/stack-aura-rules
+
+### Refactor plan 6.2 (Configuration files: failure rules)
+
+Add two rows to the failure-rules table, after `debuff_duration_gt` and after `hits_on_non_tank` respectively:
+
+| Rule | Params | A failure is | Charged to |
+|---|---|---|---|
+| `debuff_stacks_gt` | `value` (>= 0) | One per occurrence: the mechanic's friendly `applydebuffstack` rows (and `applydebuff` rows that carry a stack) with `stack` above `value`, grouped by the mechanic's `cluster_window_ms` gap; the failure is on the occurrence's first row. Not a hit, so it belongs to no cluster | No one |
+| `hit_while_aura` | `aura_ids` (non-empty) | Each player hit by the mechanic's damage (judged once per cluster, at their first hit) while carrying any listed aura. An aura is active from its apply, or a refresh or stack row with nothing open, until the matching remove (both ends inclusive), or the pull end if never removed; a remove with no earlier apply counts from the pull start. Aura IDs may also be in `ability_ids`; only damage rows are judged | The player hit |
+
+Replace the validation paragraph's "required params present; `blame` required by `per_cluster` and rejected
+elsewhere;" with:
+
+required params present (`debuff_stacks_gt` needs `value` >= 0, `hit_while_aura` a non-empty `aura_ids`);
+`blame` required by `per_cluster` and rejected elsewhere; `aura_ids` required by `hit_while_aura` and rejected
+elsewhere;
+
+In the example encounter file, add under `mechanics:`:
+
+```
+  - id: stacking_dot
+    name: Acidic Expulsion
+    difficulties: [heroic, mythic]
+    ability_ids: [555555]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 2}   # one failure per spread of stacks past 2, charged to no one
+```
+
+### Refactor plan 6.3 (Analysis records)
+
+Replace the last sentence of the **Clusters** paragraph with:
+
+Failures that are not hits (the enemy cast rows of `not_interrupted`, the aura rows of `aura_applied`, the stack
+rows of `debuff_stacks_gt`) belong to no cluster, so they count in `MechanicStat.failures` but not in any
+`MechanicCluster.failures`.
+
+In the **Blame** paragraph, replace "`ANNOTATION_VERSION` (3)" with "`ANNOTATION_VERSION` (5)". This supersedes
+the "`ANNOTATION_VERSION` is 4" in the `encounter/positions` entry's blame context text: the version is 5.

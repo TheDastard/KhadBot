@@ -48,7 +48,7 @@ ANNOTATION_COLUMNS: dict[str, pl.DataType] = {
 }
 
 # Bump when annotation columns or failure rules change, so cached frames are rebuilt.
-ANNOTATION_VERSION = 4
+ANNOTATION_VERSION = 5
 
 
 @dataclass(frozen=True)

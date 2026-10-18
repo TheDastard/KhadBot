@@ -889,7 +889,7 @@
   "outcome": "wipe",
   "phase_reached": "p3",
   "produced_from": {
-    "encfile_hash": "e777c8f48ddd",
+    "encfile_hash": "6f0ef0a2ba81",
     "events_hash": "beb4f5529aa7922491e4c218169c939ebbf10470efe0918cd0bb1015edfe9216",
     "positions_hash": "e2ba87617afb16bd6b2426fd15ea0cdd018c015847a2ea15d2b70273a8cc75d9",
     "registry_hash": "7e9178662e3f"

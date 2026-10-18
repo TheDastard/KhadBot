@@ -225,6 +225,36 @@ class TestEncounterFile:
             ),
             (lambda d: d["mechanics"][0].update(failure={"rule": "hit_amount_gt"}), "requires 'value'"),
             (lambda d: d["mechanics"][0].update(failure={"rule": "hits_on_non_tank"}), "requires 'ms'"),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "debuff_stacks_gt"}), "requires 'value'"),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "debuff_stacks_gt", "value": -1}),
+                "'value' >= 0",
+            ),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "hit_while_aura"}), "requires 'aura_ids'"),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "hit_while_aura", "aura_ids": []}),
+                "aura_ids",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "any_hit", "aura_ids": [1]}),
+                "'aura_ids' is required",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "debuff_stacks_gt", "value": 2, "blame": {"by": "cast_target", "ability_id": 1}}
+                ),
+                "'blame' is required",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={
+                        "rule": "hit_while_aura",
+                        "aura_ids": [1],
+                        "blame": {"by": "cast_target", "ability_id": 1},
+                    }
+                ),
+                "'blame' is required",
+            ),
             (lambda d: d["phases"][0].pop("difficulties"), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=[]), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=["mythic", "mythic"]), "duplicate difficulty"),

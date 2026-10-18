@@ -54,10 +54,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Failure rules
 
-- **Stack counts.** No rule can test how many stacks a debuff reached ("never let Acidic Expulsion pass 2
-  stacks"). A `debuff_stacks_gt {value}` rule over the `stack` column would cover it.
-- **Hit while carrying a debuff.** No rule can say "taking this mechanic while debuffed with X is a failure"
-  (soaking Spectral Coils with Soul Constrictor). A rule that joins hits to the target's active auras would.
 - **Charging the cause of an add.** Damage from an add that should not have spawned (a hatched Blightscale
   Viper) is counted, but nobody is charged for letting it spawn. Adds have no spawn event, but the hatch shows
   as the egg's aura coming off its carrier (`docs/decisions.md`, "Log investigations"). Implement the proposed
@@ -92,7 +88,11 @@ human task table in `docs/decisions.md`).
 - **Poisonous Bite** is a dispel mechanic with no failure rule: no source says how long the stacking DoT may
   stay before it counts as a failure (`debuff_duration_gt {ms}` once known).
 - **Acidic Expulsion** should fail past 2 stacks; needs the stack-count rule above.
-- **Soul Constrictor** soakers are an undetected failure; needs the hit-while-debuffed rule above.
+- **Soul Constrictor** soakers are an undetected failure. The `hit_while_aura` rule exists, but the logs don't
+  show who soaked while debuffed: Soul Constrictor (1300685) is never reapplied to a player who has it (0 of 2,400
+  applications over 209 Coils), every player hit takes the same amount, and the share debuffed per Coils ranges
+  from 0 to 95% (`docs/decisions.md`, "Stack and aura failure rules"). It needs another signal, such as positions
+  at the impact, or a soak assignment from a raid plan.
 - **Blightscale Viper hatches** are counted as damage but charged to no one. Once the `aura_removed_by` rule
   above exists, give `malignant_shell` `failure: {rule: aura_removed_by, ability_ids: [1292403], on_death: true}`.
   Over the 47 pulls that charges 29 shells broken by Caustic Waves and counts 125 carrier deaths. Each of the 29

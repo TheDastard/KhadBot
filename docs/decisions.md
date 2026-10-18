@@ -303,6 +303,36 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
   - **Dumps.** The new `MechanicStat` and `MechanicCluster` fields are left out of dumps when empty or null
     (pydantic `exclude_if`), so mechanics without blame context serialize as before, and stored digests and
     findings load with the defaults.
+- **Stack and aura failure rules (2026-10-17)**: two new failure rules.
+  - `debuff_stacks_gt {value}` (value >= 0): the mechanic's friendly `applydebuffstack` rows, and `applydebuff`
+    rows that carry a stack, with `stack` above `value`, grouped into occurrences by the mechanic's
+    `cluster_window_ms` gap. Each occurrence is one failure on its first row, charged to no one (like
+    `soak_count_lt`): the stacks come from enemies left alive, not from a player standing somewhere. The rows are
+    not hits, so they belong to no cluster. Ula'tek's Acidic Expulsion (1313531) uses `value: 2`; across the 47
+    recorded pulls its stack rows reach 2 (65 rows), 3 (3) and 4 (1), all of the last two on
+    `trMgApZCVYkv3jdq:26`, which gives 1 failure.
+  - `hit_while_aura {aura_ids}` (non-empty): each player hit by the mechanic's damage while carrying any listed
+    aura, judged once per cluster at their first hit and charged to the player hit. An aura is active from its
+    apply (or a refresh or stack row with nothing open) to the matching remove, both ends inclusive, or to the
+    pull end if never removed; a remove with no apply before it counts from the pull start. Aura IDs may also be
+    in the mechanic's `ability_ids`; only damage rows are judged. No encounter uses it yet.
+  - Validation: `aura_ids` is required by `hit_while_aura` and rejected on every other rule; `blame` stays
+    rejected outside `per_cluster`. `ANNOTATION_VERSION` is now 5, and the optional `aura_ids` field changes
+    every encounter file's hash once (the digest goldens differ only in `encfile_hash`).
+  - **Soul Constrictor has no detectable signal**, so Ula'tek gets no rule for it. Over the 47 recorded pulls
+    (209 Spectral Coils occurrences, Coils damage 1287265 clustered with its 3 s window), Soul Constrictor is
+    aura 1300685: 2,400 `applydebuff` and 2,400 `removedebuff` rows, no refreshes or stacks, each lasting about
+    6 s (median 6,001 ms) and landing 0 to 5 ms before the player's Coils hit. Coils within a burst are 3.1 to
+    4.5 s apart, so a soaker is still debuffed at the next one.
+    - Debuff count: the share of the raid receiving it per occurrence is not a steady half. The median is 45%,
+      but it ranges from 0 to 95%: the first Coils of most pulls debuffs 20 of 21 or 21 of 22 players, and some
+      pulls alternate two groups of about 10 (`H7z1fqDXjRTFnbtg:18`: 11, 10, 10, 11). It is never applied to a
+      player who already has it (0 of 2,400), so a debuffed player soaking again leaves no aura row.
+    - Hit signal: one damage ID for everyone, and every hit in an occurrence is the same size (the ratio to the
+      occurrence median is 0.97 to 1.03 at the 5th and 95th percentiles, for players newly debuffed, already
+      debuffed or neither). No other aura marks soakers.
+    - `hit_while_aura` on 1300685 would charge all 699 hits on players still debuffed from the previous Coils,
+      soakers or not, so it isn't added. The item stays in `docs/follow-ups.md`.
 - **M2 exit criteria waiting on humans**: review of the H3 encounter file. Digest goldens, the token check, the perf
   budgets and the legacy comparison are done.
 

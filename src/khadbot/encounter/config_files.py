@@ -94,6 +94,8 @@ RuleName = Literal[
     "aura_applied",
     "hits_on_non_tank",
     "per_cluster",
+    "debuff_stacks_gt",
+    "hit_while_aura",
 ]
 BlameBy = Literal["cast_target", "aggro_holder"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
@@ -122,6 +124,8 @@ _RULE_PARAM: dict[str, str | None] = {
     "aura_applied": None,
     "hits_on_non_tank": "ms",
     "per_cluster": None,
+    "debuff_stacks_gt": "value",
+    "hit_while_aura": "aura_ids",
 }
 _BLAME_PARAM: dict[str, str] = {"cast_target": "ability_id", "aggro_holder": "npc_game_id"}
 
@@ -193,6 +197,7 @@ class FailureRule(_Strict):
     rule: RuleName
     value: int | None = None
     ms: int | None = None
+    aura_ids: list[int] | None = Field(None, min_length=1)
     blame: Blame | None = None
 
     @model_validator(mode="after")
@@ -200,6 +205,10 @@ class FailureRule(_Strict):
         param = _RULE_PARAM[self.rule]
         if param is not None and getattr(self, param) is None:
             raise ValueError(f"failure rule '{self.rule}' requires '{param}'")
+        if self.rule == "debuff_stacks_gt" and (self.value or 0) < 0:
+            raise ValueError("failure rule 'debuff_stacks_gt' requires 'value' >= 0")
+        if (self.rule == "hit_while_aura") != (self.aura_ids is not None):
+            raise ValueError("'aura_ids' is required by failure rule 'hit_while_aura' and allowed on no other rule")
         if (self.rule == "per_cluster") != (self.blame is not None):
             raise ValueError("'blame' is required by failure rule 'per_cluster' and allowed on no other rule")
         return self
