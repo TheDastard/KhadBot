@@ -44,6 +44,7 @@ Rest of the app:
 | `cli` | Rich + prompt_toolkit REPL |
 | `llm` | `llm_factory.py` and model/provider selection |
 | `app-config` | `config.py`, `.env.example`, environment variables |
+| `agent-tools` | LangChain tools shared by the agent's modes (`tools/`, other than `tools/warcraftlogs/`) |
 | `wcl-client` | Shared WarcraftLogs client and coach WCL tools (`tools/warcraftlogs/`) |
 | `rag` | Retrieval and guide data |
 
