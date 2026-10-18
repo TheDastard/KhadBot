@@ -27,13 +27,22 @@ from typing import Any, Literal, TypeVar
 
 import orjson
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    ValidationError,
+    model_serializer,
+    model_validator,
+)
 
 from khadbot.agent.agent_config import ConfigurationError
 
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
 DEFAULT_DEFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "defensive_cooldowns.yaml"
 DEFAULT_OFFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "offensive_cooldowns.yaml"
+DEFAULT_UTILITY_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "utility_cooldowns.yaml"
 DEFAULT_FRIENDLY_DAMAGE_PATH = _CONFIG_ROOT / "registries" / "friendly_damage.yaml"
 DEFAULT_ENCOUNTER_ROOT = _CONFIG_ROOT / "encounters"
 
@@ -49,10 +58,29 @@ class _Strict(BaseModel):
 # ---------------------------------------------------------------------------
 
 # Which registry file a cooldown lives in. Defensive cooldowns keep players alive: damage reduction, absorbs,
-# immunities and healing cooldowns. Offensive cooldowns raise damage done: haste, damage or stat buffs.
-CooldownCategory = Literal["defensive", "offensive"]
-# Who a cooldown's effect lands on: only the caster, one chosen ally, or an area or the whole raid.
-CooldownTarget = Literal["raid", "external", "personal"]
+# immunities and healing cooldowns. Offensive cooldowns raise damage done: haste, damage or stat buffs. Utility
+# cooldowns help allies move, cast or come back, or control enemies.
+CooldownCategory = Literal["defensive", "offensive", "utility"]
+# Who a cooldown's effect lands on: only the caster, one chosen ally, or an area or the whole raid; for utility
+# cooldowns also one enemy or the enemies in an area.
+CooldownTarget = Literal["raid", "external", "personal", "enemy", "enemies"]
+ENEMY_TARGETS: frozenset[str] = frozenset({"enemy", "enemies"})
+# What a utility cooldown does: on allies, speed (movement), mana, a battle resurrection, root and snare immunity
+# (freedom) or moving an ally (reposition); on enemies, a stun, an incapacitate, a knockback, a grip, a root or a
+# slow.
+UtilityRole = Literal[
+    "resurrect",
+    "mana",
+    "freedom",
+    "reposition",
+    "movement",
+    "stun",
+    "incapacitate",
+    "knockback",
+    "grip",
+    "root",
+    "slow",
+]
 
 
 class CooldownEntry(_Strict):
@@ -68,6 +96,17 @@ class CooldownEntry(_Strict):
     # Spells the cooldown's aura is applied under when they differ from the cast (Rallying Cry casts 97462 and
     # buffs players with 97463). Buffs rows under these IDs count as this entry's aura.
     aura_spell_ids: list[int] = Field(default_factory=list)
+    # What a utility cooldown does; only utility entries have one.
+    role: UtilityRole | None = None
+
+    @model_serializer(mode="wrap")
+    def _drop_unset_role(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Leaving an unset role out keeps the defensive and offensive files' content hashes what they were before
+        # utility cooldowns existed.
+        data: dict[str, Any] = handler(self)
+        if data.get("role") is None:
+            data.pop("role", None)
+        return data
 
 
 class CooldownRegistry(_Strict):
@@ -75,6 +114,17 @@ class CooldownRegistry(_Strict):
 
     category: CooldownCategory
     cooldowns: list[CooldownEntry]
+
+    @model_validator(mode="after")
+    def _roles_and_targets_fit_the_category(self) -> CooldownRegistry:
+        for entry in self.cooldowns:
+            if self.category == "utility" and entry.role is None:
+                raise ValueError(f"utility cooldown {entry.spell_id} has no role")
+            if self.category != "utility" and entry.role is not None:
+                raise ValueError(f"{self.category} cooldown {entry.spell_id} has a role; only utility ones do")
+            if self.category != "utility" and entry.target in ENEMY_TARGETS:
+                raise ValueError(f"{self.category} cooldown {entry.spell_id} targets enemies; only utility ones can")
+        return self
 
     @model_validator(mode="after")
     def _unique_spell_ids(self) -> CooldownRegistry:
@@ -463,7 +513,11 @@ def parse_encounter(data: object, label: str = "encounter file") -> EncounterFil
 
 def load_cooldowns(category: CooldownCategory, path: Path | None = None) -> CooldownRegistry:
     """One category's cooldown file: ``config/registries/<category>_cooldowns.yaml`` unless ``path`` is given."""
-    defaults = {"defensive": DEFAULT_DEFENSIVE_COOLDOWNS_PATH, "offensive": DEFAULT_OFFENSIVE_COOLDOWNS_PATH}
+    defaults = {
+        "defensive": DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
+        "offensive": DEFAULT_OFFENSIVE_COOLDOWNS_PATH,
+        "utility": DEFAULT_UTILITY_COOLDOWNS_PATH,
+    }
     path = Path(path) if path else defaults[category]
     return parse_cooldowns(_read_yaml(path), category, str(path))
 
