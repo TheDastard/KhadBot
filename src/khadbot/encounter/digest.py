@@ -53,6 +53,9 @@ from khadbot.encounter.store import EventStore, split_pull_key
 DEATH_CAP = 10
 MECHANIC_CAP = 8
 COOLDOWN_CAP = 30
+# Long pulls cast 30+ offensive cooldowns; 15 keeps the recorded 10-minute pulls under the 3k-token digest ceiling.
+# Which casts survive the cap: see ``capped_offensive``.
+OFFENSIVE_COOLDOWN_CAP = 15
 UNREGISTERED_CAP = 5
 FULL_COVERAGE_MAX_PCT = 10.0  # unregistered share of friendly damage taken below which coverage is "full"
 
@@ -148,6 +151,23 @@ class PullRecords:
     digest: PullDigest
 
 
+def capped_offensive(uses: list[CooldownUse], offensive: CooldownRegistry) -> list[CooldownUse]:
+    """
+    At most ``OFFENSIVE_COOLDOWN_CAP`` offensive casts, in time order. Raid-wide casts are kept first, so a late
+    Bloodlust is never cut; then each spell's first cast, then each one's second, and so on, earliest first, so
+    one spell cast often (Power Infusion) can't crowd out the rest.
+    """
+    nth: dict[int, int] = {}
+    ranked = []
+    for c in sorted(uses, key=lambda c: c.t_ms):
+        nth[c.spell_id] = nth.get(c.spell_id, 0) + 1
+        entry = offensive.get(c.spell_id)
+        raid = entry is not None and entry.target == "raid"
+        ranked.append(((0 if raid else 1, nth[c.spell_id], c.t_ms), c))
+    kept = [c for _, c in sorted(ranked, key=lambda r: r[0])[:OFFENSIVE_COOLDOWN_CAP]]
+    return sorted(kept, key=lambda c: (c.t_ms, c.ref))
+
+
 def build_pull_records(
     pull_key: str,
     store: EventStore,
@@ -230,7 +250,7 @@ def build_pull_records(
         mechanics=active_mechanics[:MECHANIC_CAP],
         # Each category has its own cap, so a raid's many offensive casts never push defensives out.
         cooldowns=[c for c in cooldowns if c.category == "defensive"][:COOLDOWN_CAP],
-        offensive_cooldowns=[c for c in cooldowns if c.category == "offensive"][:COOLDOWN_CAP],
+        offensive_cooldowns=capped_offensive([c for c in cooldowns if c.category == "offensive"], offensive),
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
         friendly_damage=friendly_dmg,
