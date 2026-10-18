@@ -51,8 +51,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 
 The script skips anything already in place, so it is safe to rerun. It installs Git, uv and mise with winget if
 they're missing, puts mise's shims on your user `PATH`, downloads the LFS fixtures, runs `mise install` and
-`mise run install`, installs the pre-commit hooks, and creates `.env` if there isn't one. `-SkipInstall` only checks
-and configures, and lists anything still missing. Open a new shell afterwards so the `PATH` change applies.
+`mise run install`, installs the pre-commit hooks, and creates `.env` if there isn't one. In a worktree it only checks
+the hooks: every worktree shares the main clone's hooks, so they're installed from the main checkout. `-SkipInstall`
+only checks and configures, and lists anything still missing. Open a new shell afterwards so the `PATH` change applies.
 
 To do it by hand instead: install the tools above, follow the one-time mise setup, then run `git lfs pull`,
 `mise install`, `mise run install`, `uv run pre-commit install` and `copy .env.example .env`.
@@ -109,7 +110,7 @@ Tasks are plain `uv` commands, so they run the same from cmd, PowerShell and Git
 without mise (see `mise.toml`). Set environment variables in your shell before the task, for example
 `LLM_PROVIDER=groq mise run test:integ` from Git Bash.
 
-Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.yaml`; the setup script enables them, or run `uv run pre-commit install`.
+Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.yaml`; the setup script enables them, or run `uv run pre-commit install` from the main checkout (never a worktree: the hooks are shared and record the Python that installed them).
 
 ## Project Structure
 

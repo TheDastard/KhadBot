@@ -89,6 +89,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 - **Python** is 3.14 in `.venv`, pinned by `.python-version`; `requires-python = ">=3.12,<3.15"`; ruff and mypy target 3.12. Don't use syntax newer than 3.12.
 - **uv owns `.venv`.** Don't add Python to `mise.toml`; mise only pins Node and pnpm and runs tasks.
 - **Package name** is `khadbot`, all lowercase, on disk and in git. Windows ignores case but Linux and CI don't, so never create a differently cased path.
+- **Git hooks are shared by every worktree.** `pre-commit install` writes the path of the Python that ran it into `.git/hooks`, so run it only from the main checkout; installed from a worktree, the hooks break for everyone once that worktree is removed. `scripts/setup.ps1` installs them from the main checkout and only checks them in a worktree.
 - **Worktrees have no `.env`.** Tests still pass in one because `load_dotenv` walks up to the main checkout's `.env`; CI has none and sets placeholder WCL credentials instead. Never copy `.env` into a worktree.
 - **CI action tags.** Some actions publish no major-version tag (`astral-sh/setup-uv@v10` doesn't resolve); pin those to a full release. A job failing at "Set up job" usually means an action reference didn't resolve.
 
