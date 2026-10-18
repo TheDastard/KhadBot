@@ -603,7 +603,7 @@ Replace the `cooldowns` field with:
 
 ```
     cooldowns: list[CooldownUse]            # cap 30; defensive cooldowns only
-    offensive_cooldowns: list[CooldownUse] = []    # cap 30
+    offensive_cooldowns: list[CooldownUse] = []    # cap 15: raid casts first, then one per spell at a time
 ```
 
 The rendered section COOLDOWNS becomes DEFENSIVE COOLDOWNS; an OFFENSIVE COOLDOWNS section with the same line

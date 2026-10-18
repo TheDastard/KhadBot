@@ -308,7 +308,7 @@ class PullDigest(BaseModel):
     deaths: list[DeathRecord]  # cap 10; before-cutoff first
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
     cooldowns: list[CooldownUse]  # cap 30; defensive cooldowns only
-    offensive_cooldowns: list[CooldownUse] = []  # cap 30
+    offensive_cooldowns: list[CooldownUse] = []  # cap 15; raid, then external, then personal, kept in time order
     coverage_windows: list[WindowCoverage]
     unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
     friendly_damage: FriendlyDamage = Field(default_factory=FriendlyDamage)

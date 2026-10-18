@@ -34,7 +34,7 @@ from khadbot.encounter.config_files import (
 )
 from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
-from khadbot.encounter.models import LateCooldown
+from khadbot.encounter.models import CooldownUse, LateCooldown
 
 
 @pytest.fixture
@@ -140,10 +140,39 @@ def test_cooldowns_are_split_by_category(digest_of):
 
 def test_each_category_has_its_own_cap(digest_of, monkeypatch):
     monkeypatch.setattr(digest_mod, "COOLDOWN_CAP", 1)
+    monkeypatch.setattr(digest_mod, "OFFENSIVE_COOLDOWN_CAP", 1)
     d = digest_of(1)
     # Battle Cry and Fury come first in time, but defensives keep their own slot.
     assert [c.spell_name for c in d.cooldowns] == ["Synth Link Totem"]
     assert [c.spell_name for c in d.offensive_cooldowns] == ["Synth Battle Cry"]
+
+
+def _use(spell_id: int, t_ms: int) -> CooldownUse:
+    return CooldownUse(
+        ref=f"ev:SYNTH01:1:cd:{spell_id}:{t_ms}",
+        spell_id=spell_id,
+        spell_name=str(spell_id),
+        category="offensive",
+        caster="x",
+        t_ms=t_ms,
+        phase_id=None,
+    )
+
+
+def test_offensive_cap_keeps_raid_cooldowns_first(synth_offensive, monkeypatch):
+    monkeypatch.setattr(digest_mod, "OFFENSIVE_COOLDOWN_CAP", 2)
+    # Fury (personal) three times early, Battle Cry (raid) late: the raid cast survives the cap.
+    uses = [_use(902002, 1_000), _use(902002, 2_000), _use(902002, 3_000), _use(902001, 50_000)]
+    kept = digest_mod.capped_offensive(uses, synth_offensive)
+    assert [(c.spell_id, c.t_ms) for c in kept] == [(902002, 1_000), (902001, 50_000)]
+
+
+def test_offensive_cap_keeps_every_spells_first_cast(synth_offensive, monkeypatch):
+    monkeypatch.setattr(digest_mod, "OFFENSIVE_COOLDOWN_CAP", 3)
+    # A spell cast often can't crowd out another's first cast; 999999 is in no file and ranks as non-raid.
+    uses = [_use(902002, t) for t in (1_000, 2_000, 3_000, 4_000)] + [_use(999999, 9_000)]
+    kept = digest_mod.capped_offensive(uses, synth_offensive)
+    assert [(c.spell_id, c.t_ms) for c in kept] == [(902002, 1_000), (902002, 2_000), (999999, 9_000)]
 
 
 def test_offensive_cooldowns_never_count_as_defensive(digest_of):
