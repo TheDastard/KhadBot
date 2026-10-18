@@ -26,6 +26,7 @@
   "cooldowns": [
     {
       "caster": "Healz",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:SYNTH01:2:cd:900301:1",
       "spell_id": 900301,
@@ -34,6 +35,7 @@
     },
     {
       "caster": "Healz",
+      "category": "defensive",
       "phase_id": "p2",
       "ref": "ev:SYNTH01:2:cd:900301:2",
       "spell_id": 900301,
@@ -143,6 +145,17 @@
       "hits": 14,
       "mechanic_id": "swirl",
       "ref": "ev:SYNTH01:2:mech:swirl"
+    }
+  ],
+  "offensive_cooldowns": [
+    {
+      "caster": "Healz",
+      "category": "offensive",
+      "phase_id": "p1",
+      "ref": "ev:SYNTH01:2:cd:902001:1",
+      "spell_id": 902001,
+      "spell_name": "Synth Battle Cry",
+      "t_ms": 3000
     }
   ],
   "outcome": "kill",

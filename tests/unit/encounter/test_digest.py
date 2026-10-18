@@ -126,6 +126,33 @@ def test_caps(digest_of, monkeypatch):
     assert d.unregistered == []
 
 
+def test_cooldowns_are_split_by_category(digest_of):
+    d = digest_of(1)
+    assert [(c.spell_name, c.category) for c in d.cooldowns] == [
+        ("Synth Link Totem", "defensive"),
+        ("Synth Guardian", "defensive"),
+    ]
+    assert [(c.spell_name, c.caster, c.t_ms, c.category) for c in d.offensive_cooldowns] == [
+        ("Synth Battle Cry", "Healz", 3_000, "offensive"),
+        ("Synth Fury", "Gammadps", 5_000, "offensive"),
+    ]
+
+
+def test_each_category_has_its_own_cap(digest_of, monkeypatch):
+    monkeypatch.setattr(digest_mod, "COOLDOWN_CAP", 1)
+    d = digest_of(1)
+    # Battle Cry and Fury come first in time, but defensives keep their own slot.
+    assert [c.spell_name for c in d.cooldowns] == ["Synth Link Totem"]
+    assert [c.spell_name for c in d.offensive_cooldowns] == ["Synth Battle Cry"]
+
+
+def test_offensive_cooldowns_never_count_as_defensive(digest_of):
+    # Battle Cry's aura covers every player from 3 s to 43 s: the first death and both Cataclysms.
+    d = digest_of(1)
+    assert d.deaths[0].active_defensives == []
+    assert [(w.cooldowns_active, w.covered) for w in d.coverage_windows] == [([900301], True), ([], False)]
+
+
 def test_deaths_before_cutoff_come_first(digest_of, monkeypatch):
     # With a 0.2 fraction the cutoff is the first death, so later deaths are all "after".
     d = digest_of(1, cutoff_fraction=0.2)
@@ -223,7 +250,11 @@ def test_unclassified_anomaly_needs_an_encounter_file(synth_ingested, digest_of,
 
 def test_friendly_damage_unverified(friendly_of, digest_of):
     # Synth Link (901002) is unverified and dealt damage; Self Burn is verified.
-    assert friendly_of().anomalies == ["cooldown_unverified:900302", "friendly_damage_unverified:901002"]
+    assert friendly_of().anomalies == [
+        "cooldown_unverified:900302",
+        "cooldown_unverified:902002",
+        "friendly_damage_unverified:901002",
+    ]
     assert digest_of(2, friendly=SYNTH_FRIENDLY).anomalies == []  # fight 2 has no friendly damage
 
 
@@ -261,7 +292,8 @@ def test_a_spell_in_both_cooldown_files_fails(digest_of, synth_defensive):
 
 
 def test_cooldown_unverified(digest_of):
-    assert digest_of(1).anomalies == ["cooldown_unverified:900302"]
+    # Guardian is an unverified defensive cooldown, Fury an unverified offensive one.
+    assert digest_of(1).anomalies == ["cooldown_unverified:900302", "cooldown_unverified:902002"]
     assert digest_of(2).anomalies == []
 
 
@@ -338,7 +370,13 @@ def test_render(digest_of):
     assert "50.0s Tankyboi (p2) AFTER CUTOFF" in text
     assert "[ev:SYNTH01:1:win:cataclysm:2] cataclysm #2 at 40.0s: NOT covered (active: none)" in text
     assert "- 900102 Synth Fire Pool: 90,000 (9.9%)" in text
-    assert lines[-1] == "ANOMALIES cooldown_unverified:900302"
+    defensive, offensive = lines.index("DEFENSIVE COOLDOWNS"), lines.index("OFFENSIVE COOLDOWNS")
+    assert lines[defensive + 1] == "- [ev:SYNTH01:1:cd:900301:1] 18.0s Synth Link Totem (900301) by Healz (p1)"
+    assert lines[offensive + 1 : offensive + 3] == [
+        "- [ev:SYNTH01:1:cd:902001:1] 3.0s Synth Battle Cry (902001) by Healz (p1)",
+        "- [ev:SYNTH01:1:cd:902002:1] 5.0s Synth Fury (902002) by Gammadps (p1)",
+    ]
+    assert lines[-1] == "ANOMALIES cooldown_unverified:900302, cooldown_unverified:902002"
     # Every record line carries a ref.
     records = [ln for ln in lines if ln.startswith("- [")]
     assert all("[ev:SYNTH01:1:" in ln for ln in records)

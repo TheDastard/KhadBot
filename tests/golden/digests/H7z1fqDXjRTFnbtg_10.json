@@ -36,6 +36,7 @@
   "cooldowns": [
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:1",
       "spell_id": 10060,
@@ -44,6 +45,7 @@
     },
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:2",
       "spell_id": 10060,
@@ -52,6 +54,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:3",
       "spell_id": 10060,
@@ -60,6 +63,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:4",
       "spell_id": 10060,
@@ -68,6 +72,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:5",
       "spell_id": 10060,
@@ -76,6 +81,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:10060:6",
       "spell_id": 10060,
@@ -84,6 +90,7 @@
     },
     {
       "caster": "Moombly",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:108416:1",
       "spell_id": 108416,
@@ -805,6 +812,7 @@
       "ref": "ev:H7z1fqDXjRTFnbtg:10:mech:mothers_wrath_tank"
     }
   ],
+  "offensive_cooldowns": [],
   "outcome": "wipe",
   "phase_reached": "p1",
   "produced_from": {

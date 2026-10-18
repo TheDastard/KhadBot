@@ -226,11 +226,15 @@ def test_query_events_unknown_actor(scope):
 def test_cooldown_timeline(scope, synth_data):
     result = qt.cooldown_timeline_result(scope, "SYNTH01:1")
     assert [r["ref"] for r in result.data] == [
+        "ev:SYNTH01:1:cd:902001:1",
+        "ev:SYNTH01:1:cd:902002:1",
         "ev:SYNTH01:1:cd:900301:1",
         "ev:SYNTH01:1:win:cataclysm:1",
         "ev:SYNTH01:1:cd:900302:1",
         "ev:SYNTH01:1:win:cataclysm:2",
     ]
+    categories = [r.get("category") for r in result.data]
+    assert categories == ["offensive", "offensive", "defensive", None, "defensive", None]
     assert_rows_match_records(result, synth_data)
     p2 = qt.cooldown_timeline_result(scope, "SYNTH01:1", phase="p2")
     assert [r["ref"] for r in p2.data] == ["ev:SYNTH01:1:cd:900302:1", "ev:SYNTH01:1:win:cataclysm:2"]

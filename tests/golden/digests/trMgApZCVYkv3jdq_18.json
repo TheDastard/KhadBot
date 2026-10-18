@@ -84,6 +84,7 @@
   "cooldowns": [
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:1",
       "spell_id": 10060,
@@ -92,6 +93,7 @@
     },
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:2",
       "spell_id": 10060,
@@ -100,6 +102,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:3",
       "spell_id": 10060,
@@ -108,6 +111,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:4",
       "spell_id": 10060,
@@ -116,6 +120,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:5",
       "spell_id": 10060,
@@ -124,6 +129,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:6",
       "spell_id": 10060,
@@ -132,6 +138,7 @@
     },
     {
       "caster": "Mekerakesh",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:871:1",
       "spell_id": 871,
@@ -140,6 +147,7 @@
     },
     {
       "caster": "Kouw",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:403876:1",
       "spell_id": 403876,
@@ -148,6 +156,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:19236:1",
       "spell_id": 19236,
@@ -156,6 +165,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:64843:1",
       "spell_id": 64843,
@@ -164,6 +174,7 @@
     },
     {
       "caster": "Dean",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:198589:1",
       "spell_id": 198589,
@@ -172,6 +183,7 @@
     },
     {
       "caster": "Cocodiablo",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:48707:1",
       "spell_id": 48707,
@@ -180,6 +192,7 @@
     },
     {
       "caster": "Mekerakesh",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:871:2",
       "spell_id": 871,
@@ -188,6 +201,7 @@
     },
     {
       "caster": "Talyssah",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:357170:1",
       "spell_id": 357170,
@@ -196,6 +210,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:47788:1",
       "spell_id": 47788,
@@ -204,6 +219,7 @@
     },
     {
       "caster": "Shinrael",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:22812:1",
       "spell_id": 22812,
@@ -212,6 +228,7 @@
     },
     {
       "caster": "Dripington",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:48707:2",
       "spell_id": 48707,
@@ -220,6 +237,7 @@
     },
     {
       "caster": "Aluriel",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:104773:1",
       "spell_id": 104773,
@@ -228,6 +246,7 @@
     },
     {
       "caster": "Verrydis",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:98008:1",
       "spell_id": 98008,
@@ -236,6 +255,7 @@
     },
     {
       "caster": "Mekerakesh",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:871:3",
       "spell_id": 871,
@@ -244,6 +264,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:19236:2",
       "spell_id": 19236,
@@ -252,6 +273,7 @@
     },
     {
       "caster": "Verrydis",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:108271:1",
       "spell_id": 108271,
@@ -260,6 +282,7 @@
     },
     {
       "caster": "Dean",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:198589:2",
       "spell_id": 198589,
@@ -268,6 +291,7 @@
     },
     {
       "caster": "Shinrael",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:22812:2",
       "spell_id": 22812,
@@ -276,6 +300,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:7",
       "spell_id": 10060,
@@ -284,6 +309,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:8",
       "spell_id": 10060,
@@ -292,6 +318,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:9",
       "spell_id": 10060,
@@ -300,6 +327,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:10",
       "spell_id": 10060,
@@ -308,6 +336,7 @@
     },
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:11",
       "spell_id": 10060,
@@ -316,6 +345,7 @@
     },
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": "p1",
       "ref": "ev:trMgApZCVYkv3jdq:18:cd:10060:12",
       "spell_id": 10060,
@@ -1128,6 +1158,7 @@
       "ref": "ev:trMgApZCVYkv3jdq:18:mech:desperate_thrash"
     }
   ],
+  "offensive_cooldowns": [],
   "outcome": "wipe",
   "phase_reached": "p3",
   "produced_from": {

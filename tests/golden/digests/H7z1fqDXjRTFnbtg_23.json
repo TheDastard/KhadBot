@@ -45,6 +45,7 @@
   "cooldowns": [
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:1",
       "spell_id": 10060,
@@ -53,6 +54,7 @@
     },
     {
       "caster": "Kindrella",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:2",
       "spell_id": 10060,
@@ -61,6 +63,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:3",
       "spell_id": 10060,
@@ -69,6 +72,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:4",
       "spell_id": 10060,
@@ -77,6 +81,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:5",
       "spell_id": 10060,
@@ -85,6 +90,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:10060:6",
       "spell_id": 10060,
@@ -93,6 +99,7 @@
     },
     {
       "caster": "Moombly",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:108416:1",
       "spell_id": 108416,
@@ -101,6 +108,7 @@
     },
     {
       "caster": "Widowmaker",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:1",
       "spell_id": 48707,
@@ -109,6 +117,7 @@
     },
     {
       "caster": "Teppic",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:31224:1",
       "spell_id": 31224,
@@ -117,6 +126,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:1",
       "spell_id": 19236,
@@ -125,6 +135,7 @@
     },
     {
       "caster": "Talyssah",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:363534:1",
       "spell_id": 363534,
@@ -133,6 +144,7 @@
     },
     {
       "caster": "Wilmer",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:109304:1",
       "spell_id": 109304,
@@ -141,6 +153,7 @@
     },
     {
       "caster": "Discô",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:19236:2",
       "spell_id": 19236,
@@ -149,6 +162,7 @@
     },
     {
       "caster": "Hugedonut",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:1",
       "spell_id": 198589,
@@ -157,6 +171,7 @@
     },
     {
       "caster": "Shinrael",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:22812:1",
       "spell_id": 22812,
@@ -165,6 +180,7 @@
     },
     {
       "caster": "Dean",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:198589:2",
       "spell_id": 198589,
@@ -173,6 +189,7 @@
     },
     {
       "caster": "Verrydis",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:114052:1",
       "spell_id": 114052,
@@ -181,6 +198,7 @@
     },
     {
       "caster": "Novic",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:64843:1",
       "spell_id": 64843,
@@ -189,6 +207,7 @@
     },
     {
       "caster": "Mekerakesh",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:871:1",
       "spell_id": 871,
@@ -197,6 +216,7 @@
     },
     {
       "caster": "Cocodiablo",
+      "category": "defensive",
       "phase_id": null,
       "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:48707:2",
       "spell_id": 48707,
@@ -772,6 +792,7 @@
     "unclassified": []
   },
   "mechanics": [],
+  "offensive_cooldowns": [],
   "outcome": "wipe",
   "phase_reached": null,
   "produced_from": {

@@ -585,3 +585,32 @@ class FetchSpec(BaseModel):
 Friendly Buffs are fetched once per cooldown file, each filtered to that file's cast and aura IDs. The offensive
 request is made only when the offensive file has IDs. Both requests' pages live under `Buffs/<filter_hash>/` and
 normalize to `data_type = "Buffs"`. `ingest_report` takes `defensive_spell_ids` and `offensive_spell_ids`.
+
+### Refactor plan 6.3 (Analysis records: CooldownUse)
+
+Add to `CooldownUse`, after `spell_name`:
+
+```
+    category: Literal["defensive", "offensive"]  # the cooldown file the spell is in
+```
+
+`cooldown_uses` reads every cooldown file. Window coverage (`cooldowns_active`, `cooldowns_late`, `covered`) and
+`DeathRecord.active_defensives` read only the defensive file.
+
+### Refactor plan 6.4 (Digest: offensive cooldowns)
+
+Replace the `cooldowns` field with:
+
+```
+    cooldowns: list[CooldownUse]            # cap 30; defensive cooldowns only
+    offensive_cooldowns: list[CooldownUse] = []    # cap 30
+```
+
+The rendered section COOLDOWNS becomes DEFENSIVE COOLDOWNS; an OFFENSIVE COOLDOWNS section with the same line
+format follows DAMAGE WINDOWS. Each section appears only when it has content. `cooldown_unverified:<spell_id>`
+covers unverified cooldowns of either file.
+
+### Refactor plan 6.5 (Evidence refs: cd)
+
+`cd:<spell_id>:<n>` resolves for defensive and offensive cooldowns alike: `n` counts casts of that spell, and no
+spell ID is in both files. The `cooldown_timeline` query tool returns both, each row with its `category`.

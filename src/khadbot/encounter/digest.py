@@ -143,7 +143,7 @@ class PullRecords:
     abilities: dict[int, str]
     deaths: list[DeathRecord]  # every player death, time order (``death:<n>`` refs)
     mechanics: list[MechanicStat]  # every mechanic in the encounter file, file order
-    cooldowns: list[CooldownUse]  # every defensive cooldown cast, time order
+    cooldowns: list[CooldownUse]  # every cooldown cast, defensive and offensive, time order
     windows: list[WindowCoverage]
     digest: PullDigest
 
@@ -183,7 +183,7 @@ def build_pull_records(
 
     deaths = death_records(a, actors, defensive, abilities, friendly=friendly)
     mechanics = mechanic_stats(a, enc, actors, deaths)
-    cooldowns = cooldown_uses(a, defensive, actors)
+    cooldowns = cooldown_uses(a, [defensive, offensive], actors)
     windows = window_coverage(a, enc, defensive)
     unregistered, unregistered_pct = unregistered_damage(a, enc, abilities, friendly)
     friendly_dmg = friendly_damage(a, enc, friendly, actors, abilities, unclassified_cap=unregistered_cap)
@@ -201,7 +201,13 @@ def build_pull_records(
     # An early wipe legitimately never reaches later phases; only flag a phase WCL's transitions say it reached.
     if enc is not None:
         anomalies += [f"phase_trigger_unmatched:{p}" for p in unmatched_phases(pull, a.phases, enc)]
-    unverified = sorted({c.spell_id for c in cooldowns if not (e := defensive.get(c.spell_id)) or not e.verified})
+    unverified = sorted(
+        {
+            c.spell_id
+            for c in cooldowns
+            if not (e := defensive.get(c.spell_id) or offensive.get(c.spell_id)) or not e.verified
+        }
+    )
     anomalies += [f"cooldown_unverified:{s}" for s in unverified]
     if enc is not None and unregistered_pct >= FULL_COVERAGE_MAX_PCT:
         anomalies.append(f"unregistered_damage:{unregistered_pct:.1f}")
@@ -222,7 +228,9 @@ def build_pull_records(
         cutoff_ms=a.cutoff_ms,
         deaths=sorted(deaths, key=lambda d: (d.after_cutoff, d.t_ms))[:DEATH_CAP],
         mechanics=active_mechanics[:MECHANIC_CAP],
-        cooldowns=cooldowns[:COOLDOWN_CAP],
+        # Each category has its own cap, so a raid's many offensive casts never push defensives out.
+        cooldowns=[c for c in cooldowns if c.category == "defensive"][:COOLDOWN_CAP],
+        offensive_cooldowns=[c for c in cooldowns if c.category == "offensive"][:COOLDOWN_CAP],
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
         friendly_damage=friendly_dmg,
@@ -320,6 +328,14 @@ def _blame_clause(m: MechanicStat) -> str:
     return "blamed: " + ", ".join(parts)
 
 
+def _render_cooldowns(title: str, uses: list[CooldownUse]) -> list[str]:
+    """A cooldown section: one line per cast; nothing when there were none."""
+    lines = [title] if uses else []
+    for c in uses:
+        lines.append(f"- [{c.ref}] {_s(c.t_ms)} {c.spell_name} ({c.spell_id}) by {c.caster} ({c.phase_id or '-'})")
+    return lines
+
+
 def _render_friendly(d: PullDigest) -> list[str]:
     """The SELF DAMAGE section: friendly damage by class, then self-inflicted damage per player."""
     fd = d.friendly_damage
@@ -383,10 +399,7 @@ def render_digest(d: PullDigest) -> str:
             line += "; " + _blame_clause(m)
         lines.append(line)
 
-    if d.cooldowns:
-        lines.append("COOLDOWNS")
-    for c in d.cooldowns:
-        lines.append(f"- [{c.ref}] {_s(c.t_ms)} {c.spell_name} ({c.spell_id}) by {c.caster} ({c.phase_id or '-'})")
+    lines += _render_cooldowns("DEFENSIVE COOLDOWNS", d.cooldowns)
 
     if d.coverage_windows:
         lines.append("DAMAGE WINDOWS")
@@ -396,6 +409,8 @@ def render_digest(d: PullDigest) -> str:
         late = ", ".join(f"{c.spell_id} +{_s(c.late_ms)}" for c in w.cooldowns_late)
         late = f"; late: {late}" if late else ""
         lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active}{late})")
+
+    lines += _render_cooldowns("OFFENSIVE COOLDOWNS", d.offensive_cooldowns)
 
     if d.aggro:
         lines.append(f"AGGRO (melee swings by target, taunts landed) [{make_ref(d.pull_key, 'pull')}]")

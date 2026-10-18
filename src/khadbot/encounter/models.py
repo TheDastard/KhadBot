@@ -210,6 +210,7 @@ class CooldownUse(BaseModel):
     ref: Ref
     spell_id: int
     spell_name: str
+    category: Literal["defensive", "offensive"]  # the cooldown file the spell is in
     caster: str
     t_ms: int
     phase_id: str | None
@@ -306,7 +307,8 @@ class PullDigest(BaseModel):
     cutoff_ms: int | None
     deaths: list[DeathRecord]  # cap 10; before-cutoff first
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
-    cooldowns: list[CooldownUse]  # cap 30
+    cooldowns: list[CooldownUse]  # cap 30; defensive cooldowns only
+    offensive_cooldowns: list[CooldownUse] = []  # cap 30
     coverage_windows: list[WindowCoverage]
     unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
     friendly_damage: FriendlyDamage = Field(default_factory=FriendlyDamage)
