@@ -46,6 +46,7 @@ config/
 scripts/             # setup, WCL fixture recorder, registry generator (build_registries.py), clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
+docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
 ```
 
