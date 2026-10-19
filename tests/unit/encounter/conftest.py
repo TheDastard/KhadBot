@@ -82,6 +82,15 @@ def synth_offensive():
 
 
 @pytest.fixture
+def synth_utility():
+    from helpers.encounter.synth import SYNTH_UTILITY_COOLDOWNS_FILE
+
+    from khadbot.encounter.config_files import load_cooldowns
+
+    return load_cooldowns("utility", SYNTH_UTILITY_COOLDOWNS_FILE)
+
+
+@pytest.fixture
 def synth_enc_root(tmp_path):
     """Encounter-file root holding only the synthetic encounter file, at its canonical path."""
     from helpers.encounter.synth import install_synth_encounter
@@ -92,8 +101,14 @@ def synth_enc_root(tmp_path):
 
 
 @pytest.fixture
-def synth_data(synth_ingested, synth_enc_root, synth_defensive, synth_offensive):
+def synth_data(synth_ingested, synth_enc_root, synth_defensive, synth_offensive, synth_utility):
     """EncounterData over ingested SYNTH01 with the synthetic encounter file and cooldown registries."""
     from khadbot.encounter.evidence import EncounterData
 
-    return EncounterData(synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive, offensive=synth_offensive)
+    return EncounterData(
+        synth_ingested,
+        enc_root=synth_enc_root,
+        defensive=synth_defensive,
+        offensive=synth_offensive,
+        utility=synth_utility,
+    )

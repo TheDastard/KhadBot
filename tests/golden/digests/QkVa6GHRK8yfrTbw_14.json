@@ -1099,8 +1099,20 @@
     "events_hash": "902fdf97ae6463bce2caec25b457418d068b7bd24e3a782cefb4f0557b97352e",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
-    "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e"
+    "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",
+    "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",
-  "unregistered": []
+  "unregistered": [],
+  "utility_cooldowns": [
+    {
+      "caster": "Shinrael",
+      "category": "utility",
+      "phase_id": "p1",
+      "ref": "ev:QkVa6GHRK8yfrTbw:14:cd:252216:1",
+      "spell_id": 252216,
+      "spell_name": "Tiger Dash",
+      "t_ms": 14207
+    }
+  ]
 }

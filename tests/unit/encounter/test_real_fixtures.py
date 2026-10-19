@@ -28,8 +28,9 @@ from khadbot.encounter.store import ParquetEventStore
 
 pytestmark = pytest.mark.skipif(not REAL_REPORTS, reason="real WCL fixtures not pulled from Git LFS")
 
-# The digest targets 1.5k to 3k tokens; early resets fall below the floor, so only the ceiling is a hard limit.
-MAX_DIGEST_TOKENS = 3_000
+# The digest targets 1.5k to 3.1k tokens; early resets fall below the floor, so only the ceiling is a hard limit.
+# The ceiling was 3k until the utility section joined the digest (docs/decisions.md).
+MAX_DIGEST_TOKENS = 3_100
 
 
 @pytest.fixture(scope="module")

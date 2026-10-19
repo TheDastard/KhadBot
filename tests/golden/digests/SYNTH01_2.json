@@ -163,10 +163,11 @@
   "produced_from": {
     "defensive_cooldowns_hash": "14ce0bdd3652",
     "encfile_hash": "d0bb9f7022f3",
-    "events_hash": "5d0360cfc1752d1de2399c97a3f6decd0c14f813164c4139f5b6cb1542c35614",
+    "events_hash": "722e88da3c160c7f64a3ec8445aa9bfa88806523a5bc6673c9461990be63f65d",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "bee16b79e5c1",
-    "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8"
+    "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
+    "utility_cooldowns_hash": "ee9c7763e587"
   },
   "pull_key": "SYNTH01:2",
   "unregistered": [
@@ -175,6 +176,17 @@
       "damage": 67000,
       "name": "Synth Fire Pool",
       "share_pct": 9.5
+    }
+  ],
+  "utility_cooldowns": [
+    {
+      "caster": "Tankyboi",
+      "category": "utility",
+      "phase_id": "p2",
+      "ref": "ev:SYNTH01:2:cd:903001:1",
+      "spell_id": 903001,
+      "spell_name": "Synth Stun",
+      "t_ms": 30000
     }
   ]
 }

@@ -123,6 +123,7 @@ def pull_cache_key(data: EncounterData, pull_key: str, *, model_id: str, version
         encfile_hash=produced["encfile_hash"],
         defensive_cooldowns_hash=produced["defensive_cooldowns_hash"],
         offensive_cooldowns_hash=produced.get("offensive_cooldowns_hash", ""),
+        utility_cooldowns_hash=produced.get("utility_cooldowns_hash", ""),
         friendly_damage_hash=produced.get("friendly_damage_hash", ""),
         prompt_version=version,
         graph_version=GRAPH_VERSION,

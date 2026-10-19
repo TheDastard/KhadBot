@@ -919,8 +919,20 @@
     "events_hash": "3fe207f447b2e72fefd1f2bf20710b325d7b78fcc4db36d53841bfca6c7902e6",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
-    "positions_hash": "298e2934044b47a2ff09d6bdd2c4b04e7d10bdc6ec7511ae2cc232482f97034d"
+    "positions_hash": "298e2934044b47a2ff09d6bdd2c4b04e7d10bdc6ec7511ae2cc232482f97034d",
+    "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:10",
-  "unregistered": []
+  "unregistered": [],
+  "utility_cooldowns": [
+    {
+      "caster": "Shinrael",
+      "category": "utility",
+      "phase_id": "p1",
+      "ref": "ev:H7z1fqDXjRTFnbtg:10:cd:1850:1",
+      "spell_id": 1850,
+      "spell_name": "Dash",
+      "t_ms": 596
+    }
+  ]
 }

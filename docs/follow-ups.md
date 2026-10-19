@@ -50,17 +50,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.
-- **Utility cooldowns aren't tracked yet.** `utility_cooldowns.yaml` holds 58 entries from build
-  12.1.5.70448, but nothing in encounter mode reads it. Wiring it in needs its IDs in the casts or Buffs and
-  Debuffs fetch, `cooldown_uses` and a digest section, and `utility_cooldowns_hash` in `produced_from` and the
-  findings cache key. Decide then whether Innervate moves from `defensive_cooldowns.yaml` to the utility
-  file (it changes the defensive hash).
 - **Utility cooldowns the SimC data can't find.** A person must add these to `utility_cooldowns.yaml`: the
   battle resurrections (Rebirth and Intercession lost their resurrect effect; Raise Ally shows only as a
   defensive support candidate and Soulstone as scripted), Mana Tide Totem and Symbol of Hope (not in the
   tables), Wind Rush Totem (its speed aura is missing), Time Spiral and Rescue.
-- **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive and 100
-  offensive cooldowns. The digest shows 30 and 15, and its defensive list stops near 190 s.
+- **Utility auras aren't fetched.** Utility casts come from the unfiltered friendly Casts request; no request
+  fetches their auras. Ally-side auras (speed, freedom) would need a third friendly Buffs filter, and enemy-side
+  ones (stuns, roots, slows) a Debuffs request with `hostilityType: Enemies`, which no fixture has recorded, so
+  its page count and point cost are unknown. Nothing reads utility auras yet; add them when an analysis needs
+  durations or who was stunned, after measuring the Enemies Debuffs cost on one long pull.
+- **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive, 100 offensive
+  and up to 70 utility cooldowns. The digest shows 30, 15 and 1, and its defensive list stops near 190 s.
   `cooldown_timeline` returns at most 25 rows (4,000 characters) a call and filters by `phase` only, so most
   casts are out of reach. Decide between (A) exposing the full stream (filters on category, spell, caster and
   time, plus paging) and (B) filtering the noise (per-spell summary records with their own ref, casts near

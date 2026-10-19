@@ -12,7 +12,12 @@ import re
 import polars as pl
 import pytest
 import yaml
-from helpers.encounter.synth import SYNTH_FRIENDLY_DAMAGE, SYNTH_OFFENSIVE_COOLDOWNS_FILE, add_friendly_damage
+from helpers.encounter.synth import (
+    SYNTH_FRIENDLY_DAMAGE,
+    SYNTH_OFFENSIVE_COOLDOWNS_FILE,
+    SYNTH_UTILITY_COOLDOWNS_FILE,
+    add_friendly_damage,
+)
 
 from khadbot.encounter.config_files import parse_friendly_damage
 from khadbot.encounter.digest import render_digest
@@ -298,6 +303,35 @@ def test_records_rebuild_when_the_offensive_registry_on_disk_changes(
         rebuilt.digest.produced_from["offensive_cooldowns_hash"]
         != (first.digest.produced_from["offensive_cooldowns_hash"])
     )
+
+
+def test_records_rebuild_when_the_utility_registry_on_disk_changes(
+    synth_ingested, synth_enc_root, synth_defensive, synth_offensive, tmp_path, monkeypatch
+):
+    from khadbot.encounter import config_files
+
+    path = tmp_path / "utility_cooldowns.yaml"
+    data = yaml.safe_load(SYNTH_UTILITY_COOLDOWNS_FILE.read_text(encoding="utf-8"))
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    monkeypatch.setattr(config_files, "DEFAULT_UTILITY_COOLDOWNS_PATH", path)
+    encounter_data = EncounterData(
+        synth_ingested, enc_root=synth_enc_root, defensive=synth_defensive, offensive=synth_offensive
+    )
+    first = encounter_data.records("SYNTH01:1")
+    assert encounter_data.records("SYNTH01:1") is first
+
+    data["cooldowns"][1]["verified"] = True
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+    rebuilt = encounter_data.records("SYNTH01:1")
+    assert rebuilt is not first
+    assert (
+        rebuilt.digest.produced_from["utility_cooldowns_hash"] != first.digest.produced_from["utility_cooldowns_hash"]
+    )
+
+
+def test_utility_cast_refs_resolve(synth_data):
+    cd = synth_data.resolve("ev:SYNTH01:1:cd:903002:3")
+    assert (cd["spell_name"], cd["category"], cd["t_ms"]) == ("Synth Sprint", "utility", 40_000)
 
 
 def test_records_cache_is_bounded(synth_ingested, synth_enc_root, synth_defensive):

@@ -18,6 +18,7 @@ from helpers.encounter.synth import (
     SYNTH_ENCOUNTER_RELPATH,
     SYNTH_FRIENDLY_DAMAGE,
     SYNTH_OFFENSIVE_COOLDOWNS_FILE,
+    SYNTH_UTILITY_COOLDOWNS_FILE,
     install_synth_encounter,
 )
 
@@ -91,6 +92,14 @@ class TestUtilityRegistry:
             2094: "incapacitate",
             5246: "incapacitate",
             108199: "grip",
+        }
+
+    def test_synth_file(self):
+        reg = load_cooldowns("utility", SYNTH_UTILITY_COOLDOWNS_FILE)
+        assert {c.spell_id: (c.target, c.role) for c in reg.cooldowns} == {
+            903001: ("enemy", "stun"),
+            903002: ("personal", "movement"),
+            903003: ("raid", "movement"),
         }
 
     def test_enemy_target_and_role(self):
@@ -635,6 +644,18 @@ class TestEncounterFile:
             "offensive_spell_ids": None,
             "enemy_cast_ids": {},
         }
+
+    def test_fetch_filter_inputs_give_utility_no_filter(self):
+        """Utility casts come from the unfiltered Casts request; the file is only checked against the others."""
+        defensive = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)
+        offensive = load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE)
+        utility = load_cooldowns("utility", SYNTH_UTILITY_COOLDOWNS_FILE)
+        assert fetch_filter_inputs(defensive, offensive, {}, utility=utility) == fetch_filter_inputs(
+            defensive, offensive, {}
+        )
+        clash = parse_cooldowns(_cooldown_file("utility", spell_id=902011, role="stun"), "utility")
+        with pytest.raises(ConfigurationError, match="902011 is in both the offensive and the utility"):
+            fetch_filter_inputs(defensive, offensive, {}, utility=clash)
 
     def test_fetch_filter_inputs_reject_a_shared_id(self):
         defensive = load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE)

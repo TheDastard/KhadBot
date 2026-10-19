@@ -616,14 +616,21 @@ def friendly_damage_hash(registry: FriendlyDamageRegistry) -> str:
 
 
 def fetch_filter_inputs(
-    defensive: CooldownRegistry | None, offensive: CooldownRegistry | None, encounters: dict[int, EncounterFile]
+    defensive: CooldownRegistry | None,
+    offensive: CooldownRegistry | None,
+    encounters: dict[int, EncounterFile],
+    *,
+    utility: CooldownRegistry | None = None,
 ) -> dict[str, Any]:
     """
     The ``defensive_spell_ids`` / ``offensive_spell_ids`` / ``enemy_cast_ids`` arguments ``ingest_report``
     expects. Each cooldown file's IDs are one Buffs filter, so they include each entry's ``aura_spell_ids`` as
-    well as its cast ID. Raises ``ConfigurationError`` when the two files share an ID.
+    well as its cast ID. Raises ``ConfigurationError`` when any two files share an ID.
+
+    The utility file gets no filter: its casts come from the unfiltered friendly Casts request, and nothing reads
+    its auras, so it is only checked against the other files.
     """
-    check_cooldown_ids(*(r for r in (defensive, offensive) if r is not None))
+    check_cooldown_ids(*(r for r in (defensive, offensive, utility) if r is not None))
     return {
         "defensive_spell_ids": list(defensive.aura_ids()) if defensive is not None else None,
         "offensive_spell_ids": list(offensive.aura_ids()) if offensive is not None else None,

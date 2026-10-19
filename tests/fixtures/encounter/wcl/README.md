@@ -45,6 +45,10 @@ enemy `Casts` uses `ability.id IN (900101,900201,900401,900501,900601)`; everyth
 - **Offensive cooldowns**: Battle Cry (902001) at 3 s in both fights buffs every player for 40 s under its own
   aura ID (902011), over the first Cataclysm and the first death, which must still show no defensive. Fight 1
   also has Fury (902002), the Mage's own buff, at 5 s.
+- **Utility cooldowns** (casts only; no request fetches their auras): fight 1 has five, more than the
+  digest's utility cap. Betadps casts Sprint (903002, personal) at 2, 20 and 40 s, the tank casts Stun
+  (903001, enemy) on the add at 30 s and the healer casts Rally (903003, raid) at 45 s, so the cap keeps the
+  raid-wide Rally. Fight 2 has one Stun at 30 s.
 - **Phase trigger**: Boss cast of Phase Shift (900501) at 35 s (fight 1) and 30 s (fight 2).
 - **hitPoints / maxHitPoints** on damage and heal events (target's HP after the event). The generator
   queues damage and heals and applies them in time order, so HP follows the fight's timeline.
