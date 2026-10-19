@@ -85,11 +85,14 @@ class Effect:
     type: int
     subtype: int
     base_value: float
-    #: What the effect acts on; for a spell-modifier aura, the property it changes (``P_*`` in ``simc.codes``).
+    #: What the effect acts on, by type: for a spell-modifier aura the property it changes (``P_*`` in
+    #: ``simc.codes``), for an energize the power type, for a mechanic immunity the mechanic.
     misc_value: int
     trigger_spell_id: int
     target_1: int
     target_2: int
+    #: The mechanic the effect applies (``spell_mechanic`` in SimC's ``data_enums.hh``), 0 for none.
+    mechanic: int = 0
 
 
 @dataclass(frozen=True)
@@ -194,6 +197,7 @@ def parse_spells(text: str) -> tuple[dict[int, Spell], dict[int, list[Effect]]]:
             trigger_spell_id=_int(t[22]),
             target_1=_int(t[28]),
             target_2=_int(t[29]),
+            mechanic=_int(t[26]),
         )
         effects.setdefault(effect.spell_id, []).append(effect)
     for rows in effects.values():

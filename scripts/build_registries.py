@@ -26,6 +26,19 @@ the cooldown files of the same names in config/registries/, have three sections 
 A person copies what they accept into the registry, still with verified: false until checked in game. No
 spell may be in both cooldown files.
 
+utility_cooldowns.candidates.yaml proposes utility cooldowns for a utility file that doesn't exist yet. It
+uses its own floor (--utility-min-cooldown, 30 s by default, since most stuns and knockbacks are shorter
+than a minute) and has four sections:
+
+    candidates      every player cooldown that helps allies move, cast or come back (role movement, mana,
+                    resurrect, freedom, reposition) or controls enemies (stun, incapacitate, knockback, grip,
+                    root, slow); target is personal, external or raid, or enemy or enemies; also_candidate
+                    names the other candidate lists the spell is in, in_other_registry the cooldown file
+                    that holds it, and dropped_effects the effect indexes SimC left out
+    dropped_effects long-cooldown spells in no candidate list that SimC kept only part of (Rebirth), which
+                    may do something the data can't show
+    scripted        the scripted list at the utility floor
+
 friendly_damage.candidates.yaml, for config/registries/friendly_damage.yaml, has two:
 
     candidates      every spell with a class mask whose damage lands only on the caster or allies, with
@@ -61,9 +74,12 @@ from khadbot.encounter.registry_candidates import (
     RegistryCheck,
     check_registry,
     defensive_candidates,
+    dropped_effect_spells,
+    dropped_effects,
     friendly_damage_candidates,
     offensive_candidates,
     scripted_spells,
+    utility_candidates,
 )
 from khadbot.simc.client_data import ClientData, load_client_data
 from khadbot.simc.fetch import fetch_tables
@@ -119,6 +135,48 @@ def build_report(
             for c in found
         ],
         "registry_check": _check_rows(checks, "target"),
+        "scripted": [
+            {"spell_id": s, "name": n, "class": cls}
+            for s, n, cls in scripted_spells(data, min_cooldown_s=min_cooldown_s)
+        ],
+    }
+
+
+def build_utility_report(
+    data: ClientData, paths: dict[CooldownCategory, Path], commit: str | None, min_cooldown_s: float
+) -> dict[str, Any]:
+    """The utility review file; ``paths`` names the existing cooldown files, which it checks for overlap."""
+    in_file = {c.spell_id: cat for cat, path in paths.items() for c in load_cooldowns(cat, path).cooldowns}
+    others = {cat: {c.spell_id for c in _FINDERS[cat](data, min_cooldown_s=min_cooldown_s)} for cat in _FINDERS}
+    rows = []
+    for c in utility_candidates(data, min_cooldown_s=min_cooldown_s):
+        also = [cat for cat, ids in others.items() if c.spell_id in ids]
+        missing = dropped_effects(data, c.spell_id)
+        rows.append(
+            {
+                "spell_id": c.spell_id,
+                "name": c.name,
+                "class": c.class_name,
+                "target": c.target,
+                "role": c.role,
+                "cooldown_s": c.cooldown_s,
+                "duration_s": c.duration_s,
+                "charges": c.charges,
+                "spec_ids": c.spec_ids,
+                "aura_spell_ids": c.aura_spell_ids,
+                **({"also_candidate": also} if also else {}),
+                **({"in_other_registry": in_file[c.spell_id]} if c.spell_id in in_file else {}),
+                **({"dropped_effects": missing} if missing else {}),
+                "evidence": c.evidence,
+            }
+        )
+    return {
+        "source": {**_source(data, commit), "min_cooldown_s": min_cooldown_s},
+        "candidates": rows,
+        "dropped_effects": [
+            {"spell_id": s, "name": n, "class": cls, "missing_effects": m}
+            for s, n, cls, m in dropped_effect_spells(data, min_cooldown_s=min_cooldown_s)
+        ],
         "scripted": [
             {"spell_id": s, "name": n, "class": cls}
             for s, n, cls in scripted_spells(data, min_cooldown_s=min_cooldown_s)
@@ -190,6 +248,21 @@ def _summary(category: CooldownCategory, report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _utility_summary(report: dict[str, Any]) -> str:
+    cands = report["candidates"]
+    lines = [
+        f"{len(cands)} utility candidates (cooldown >= {report['source']['min_cooldown_s']:g} s): "
+        + ", ".join(f"{n} {r}" for r, n in sorted(Counter(c["role"] for c in cands).items())),
+        "targets: " + ", ".join(f"{n} {t}" for t, n in sorted(Counter(c["target"] for c in cands).items())),
+        f"{sum('also_candidate' in c for c in cands)} also in another candidate list, "
+        f"{sum('in_other_registry' in c for c in cands)} already in a cooldown file, "
+        f"{sum('dropped_effects' in c for c in cands)} with effects SimC left out",
+        f"{len(report['dropped_effects'])} other spells with dropped effects, "
+        f"{len(report['scripted'])} scripted spells to look at by hand",
+    ]
+    return "\n".join(lines)
+
+
 def _write(out: Path, header: str, report: dict[str, Any]) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(header + yaml.safe_dump(report, sort_keys=False, allow_unicode=True, width=120), encoding="utf-8")
@@ -205,6 +278,9 @@ def main() -> None:
     parser.add_argument("--friendly-damage", type=Path, default=DEFAULT_FRIENDLY_DAMAGE_PATH)
     parser.add_argument("--out-dir", type=Path, help="Where review files go (default: $KHADBOT_DATA_DIR/registry)")
     parser.add_argument("--min-cooldown", type=float, default=60.0, help="Shortest cooldown to include, seconds")
+    parser.add_argument(
+        "--utility-min-cooldown", type=float, default=30.0, help="Shortest utility cooldown to include, seconds"
+    )
     args = parser.parse_args()
     load_dotenv()
     data_dir = Path(get_config().encounter.data_dir)
@@ -232,6 +308,17 @@ def main() -> None:
         )
         print(_summary(category, report))
         print(f"wrote {out}")
+    utility = build_utility_report(data, paths, commit, args.utility_min_cooldown)
+    utility_out = out_dir / "utility_cooldowns.candidates.yaml"
+    _write(
+        utility_out,
+        "# Utility-cooldown candidates generated by scripts/build_registries.py from SimC client data.\n"
+        "# Review file only: nothing loads it, and no utility registry exists yet. SimC drops effects its\n"
+        "# simulations don't read, so check dropped_effects before trusting a candidate's role.\n",
+        utility,
+    )
+    print(_utility_summary(utility))
+    print(f"wrote {utility_out}")
     friendly_out = out_dir / "friendly_damage.candidates.yaml"
     _write(
         friendly_out,

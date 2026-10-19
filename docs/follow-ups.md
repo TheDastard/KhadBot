@@ -16,7 +16,7 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 - **Scripted cooldowns the data can't classify.** `defensive_cooldowns.yaml` now holds 61 of the 64 defensive and
   healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
-  `scripted` list (78 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
+  `scripted` list (63 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
   Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.
 - **Offensive cooldowns still open.** `offensive_cooldowns.yaml` holds 40 entries for build 12.1.5.70448:
   the 44 candidates, which now include spell-modifier auras, minus four already in the defensive file
@@ -49,8 +49,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
   against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
   casts wasted during intermissions.
-- **Utility cooldowns.** Innervate stays in `defensive_cooldowns.yaml` until a `utility_cooldowns.yaml`
-  exists.
+- **Utility cooldowns.** The generator proposes them (`utility_cooldowns.candidates.yaml`: 79 candidates at
+  30 s from build 12.1.5.70448), but no `utility_cooldowns.yaml` exists, so nothing tracks them. Innervate
+  stays in `defensive_cooldowns.yaml` until it does. Creating the file needs `utility` in `CooldownCategory`,
+  `enemy`/`enemies` in `CooldownTarget`, its hash in the cache keys and a digest section. The SimC data can't
+  supply these, so a person must add them: the battle resurrections (Rebirth, Intercession lost their
+  resurrect effect; Raise Ally shows only as a defensive support candidate and Soulstone as scripted), Mana
+  Tide Totem and Symbol of Hope (not in the tables), Wind Rush Totem's speed, Time Spiral, Rescue, and the
+  true role of Blind (disorient) and Intimidating Shout (fear), which the data lists as a slow and a root.
+  Gorefiend's Grasp is listed as a knockback because its dummy carries the knockback mechanic. Some damage cooldowns show up for a
+  side effect: Avatar, Avenging Wrath and Metamorphosis (marked with `in_other_registry`), and Avenging
+  Crusader, The Hunt, Deep Breath, Breath of Eons and Frostwyrm's Fury (not marked).
 - **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive and 100
   offensive cooldowns. The digest shows 30 and 15, and its defensive list stops near 190 s.
   `cooldown_timeline` returns at most 25 rows (4,000 characters) a call and filters by `phase` only, so most

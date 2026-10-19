@@ -14,10 +14,14 @@ from khadbot.encounter.registry_candidates import (
     check_registry,
     classify_defensive,
     classify_offensive,
+    classify_utility,
     defensive_candidates,
+    dropped_effect_spells,
+    dropped_effects,
     friendly_damage_candidates,
     offensive_candidates,
     scripted_spells,
+    utility_candidates,
 )
 from khadbot.simc import codes as c
 from khadbot.simc.client_data import ClientData, parse_player_spells, parse_spells
@@ -418,3 +422,165 @@ def test_check_registry_compares_friendly_damage_origin(friendly_data: ClientDat
     assert (got[RAID_BURN].status, got[RAID_BURN].game_name) == ("name_differs", "Raid Burn")
     assert got[PROC].status == "not_a_candidate"
     assert got[900999].status == "not_in_game_data"
+
+
+# ---------------------------------------------------------------------------
+# Utility cooldowns
+# ---------------------------------------------------------------------------
+
+ROAR, MANA_GIFT, FREEDOM, PULL, PULL_JUMP, REBIRTH, SPRINT, LEAP_SELF = range(900101, 900109)
+STUN_AREA, BASH, SLOW_SHOT, SHOUT, TOTEM, TOTEM_STUN, GRIP, GUST, SPEEDUP = range(900109, 900118)
+TORN, DROPPED, SHORT_STUN, DOT_SLOW = range(900118, 900122)
+CORPSE, SOURCE_AREA_ENEMY, DEST_AREA = 121, 15, 8
+
+
+@pytest.fixture
+def utility_data() -> ClientData:
+    spells = [
+        spell_row("Stampede", ROAR, cooldown=120000, duration=8000),
+        spell_row("Mana Gift", MANA_GIFT, cooldown=180000, duration=8000),
+        spell_row("Freedom", FREEDOM, cooldown=45000, duration=8000),
+        spell_row("Pull Ally", PULL, cooldown=90000),
+        spell_row("Pull Ally", PULL_JUMP),
+        spell_row("Rebirth", REBIRTH, cooldown=600000),
+        spell_row("Sprint", SPRINT, cooldown=120000, duration=8000),
+        spell_row("Leap", LEAP_SELF, cooldown=45000),
+        spell_row("Stomp", STUN_AREA, cooldown=60000, duration=3000),
+        spell_row("Bash", BASH, cooldown=60000, duration=4000),
+        spell_row("Slow Shot", SLOW_SHOT, cooldown=30000, duration=6000),
+        spell_row("Shout", SHOUT, cooldown=90000, duration=8000),
+        spell_row("Static Totem", TOTEM, cooldown=60000),
+        spell_row("Static Totem", TOTEM_STUN, duration=3000),
+        spell_row("Grasp", GRIP, cooldown=90000),
+        spell_row("Gust", GUST, cooldown=30000, duration=6000),
+        spell_row("Speed Up", SPEEDUP, cooldown=60000, duration=6000),
+        spell_row("Torn Shout", TORN, cooldown=120000, duration=8000),
+        spell_row("Lost Rez", DROPPED, cooldown=600000),
+        spell_row("Short Stun", SHORT_STUN, cooldown=20000, duration=2000),
+        spell_row("Dot Slow", DOT_SLOW, cooldown=60000, duration=6000),
+    ]
+    aura = c.E_APPLY_AURA
+    effects = [
+        effect_row(1, ROAR, 0, aura, c.A_MOD_INCREASE_SPEED, base=60, target_1=30),
+        effect_row(2, MANA_GIFT, 0, aura, c.A_OBS_MOD_MANA, base=5, target_1=ALLY),
+        effect_row(3, FREEDOM, 0, aura, c.A_MECHANIC_IMMUNITY, misc=c.MECHANIC_ROOT, target_1=ALLY),
+        effect_row(4, FREEDOM, 1, aura, c.A_MECHANIC_IMMUNITY, misc=c.MECHANIC_SNARE, target_1=ALLY),
+        effect_row(5, PULL, 0, c.E_SCRIPT_EFFECT, 0, target_1=57),
+        effect_row(6, PULL_JUMP, 0, c.E_JUMP, 0, target_1=ALLY),
+        effect_row(7, REBIRTH, 0, c.E_RESURRECT, 0, base=60, target_1=CORPSE),
+        effect_row(8, SPRINT, 0, aura, c.A_MOD_INCREASE_SPEED, base=70, target_1=CASTER),
+        effect_row(9, LEAP_SELF, 0, c.E_JUMP_DEST, 0, target_1=CASTER),
+        effect_row(10, STUN_AREA, 0, aura, c.A_MOD_STUN, target_1=SOURCE_AREA_ENEMY),
+        effect_row(11, BASH, 0, aura, c.A_MOD_STUN, target_1=ENEMY),
+        effect_row(12, SLOW_SHOT, 0, aura, c.A_MOD_DECREASE_SPEED, base=-50, target_1=ANY),
+        # A fear on one enemy beside an area slow: the area wins the target, the fear the role.
+        effect_row(13, SHOUT, 0, aura, c.A_MOD_FEAR, target_1=ENEMY),
+        effect_row(14, SHOUT, 1, aura, c.A_MOD_DECREASE_SPEED, base=-70, target_1=SOURCE_AREA_ENEMY),
+        effect_row(15, TOTEM, 0, c.E_SUMMON, 0, target_1=DEST_AREA_ALLY),
+        effect_row(16, TOTEM_STUN, 0, aura, c.A_MOD_STUN, target_1=SOURCE_AREA_ENEMY),
+        effect_row(17, GRIP, 0, c.E_DUMMY, 0, mechanic=c.MECHANIC_KNOCKBACK, target_1=DEST_AREA),
+        effect_row(18, GRIP, 1, c.E_PULL_TOWARDS_DESTIANTION, 0, target_1=DEST_AREA),
+        effect_row(19, GUST, 0, c.E_KNOCK_BACK, 0, base=100, target_1=DEST_AREA),
+        # A speed aura with a negative value slows the caster; it is not utility.
+        effect_row(20, SPEEDUP, 0, aura, c.A_MOD_INCREASE_SPEED, base=-30, target_1=CASTER),
+        effect_row(21, TORN, 1, aura, c.A_MOD_DECREASE_SPEED, base=-70, target_1=ENEMY),
+        effect_row(22, DROPPED, 1, c.E_DUMMY, 0, base=100),
+        effect_row(23, SHORT_STUN, 0, aura, c.A_MOD_STUN, target_1=ENEMY),
+        # A slow aura that speeds the enemy up is not a slow.
+        effect_row(24, DOT_SLOW, 0, aura, c.A_MOD_DECREASE_SPEED, base=10, target_1=ENEMY),
+    ]
+    spells_by_id, effects_by_spell = parse_spells(spell_data(spells, effects))
+    druid = [ROAR, MANA_GIFT, REBIRTH, SPRINT, LEAP_SELF, STUN_AREA, BASH, GUST, SPEEDUP]
+    warrior = [SHOUT, TORN, DROPPED, SHORT_STUN, DOT_SLOW]
+    players = parse_player_spells(
+        class_spells(
+            [(11, 0, s) for s in druid]
+            + [(1, 0, s) for s in warrior]
+            + [(2, 0, FREEDOM), (5, 0, PULL), (3, 0, SLOW_SHOT), (7, 0, TOTEM), (6, 0, GRIP)]
+        ),
+        spec_spells([]),
+        traits([]),
+    )
+    return ClientData(build="12.0.0.1", spells=spells_by_id, effects=effects_by_spell, player_spells=players)
+
+
+@pytest.mark.parametrize(
+    ("spell_id", "target", "role"),
+    [
+        (ROAR, "raid", "movement"),
+        (MANA_GIFT, "external", "mana"),
+        (FREEDOM, "external", "freedom"),
+        (PULL, "external", "reposition"),
+        (REBIRTH, "external", "resurrect"),
+        (SPRINT, "personal", "movement"),
+        (STUN_AREA, "enemies", "stun"),
+        (BASH, "enemy", "stun"),
+        (SLOW_SHOT, "enemy", "slow"),
+        (SHOUT, "enemies", "incapacitate"),
+        (TOTEM, "enemies", "stun"),
+        (GRIP, "enemies", "knockback"),
+        (GUST, "enemies", "knockback"),
+    ],
+)
+def test_utility_targets_and_roles(utility_data: ClientData, spell_id: int, target: str, role: str) -> None:
+    cand = classify_utility(utility_data, spell_id, min_cooldown_s=30)
+    assert cand is not None
+    assert (cand.target, cand.role) == (target, role)
+
+
+@pytest.mark.parametrize("spell_id", [LEAP_SELF, SPEEDUP, SHORT_STUN, DOT_SLOW, DROPPED, PULL_JUMP])
+def test_not_utility_candidates(utility_data: ClientData, spell_id: int) -> None:
+    """A leap of the caster alone, a negative speed aura, a short cooldown, a slow that speeds up, a spell
+    whose effect SimC dropped and a non-player spell are not utility candidates."""
+    assert classify_utility(utility_data, spell_id, min_cooldown_s=30) is None
+
+
+def test_utility_evidence_names_codes(utility_data: ClientData) -> None:
+    cand = classify_utility(utility_data, FREEDOM, min_cooldown_s=30)
+    assert cand is not None
+    assert cand.evidence == [
+        f"{FREEDOM}#0 A_MECHANIC_IMMUNITY MECHANIC_ROOT T_UNIT_TARGET_ALLY",
+        f"{FREEDOM}#1 A_MECHANIC_IMMUNITY MECHANIC_SNARE T_UNIT_TARGET_ALLY",
+    ]
+    assert cand.duration_s == 8.0
+
+
+def test_utility_same_name_spell_names_its_aura(utility_data: ClientData) -> None:
+    cand = classify_utility(utility_data, TOTEM)
+    assert cand is not None
+    assert cand.aura_spell_ids == [TOTEM_STUN]
+    assert "(same-name spell)" in cand.evidence[0]
+
+
+def test_utility_effects_without_an_aura_name_no_aura_spell(utility_data: ClientData) -> None:
+    cand = classify_utility(utility_data, GUST, min_cooldown_s=30)
+    assert cand is not None
+    assert (cand.aura_spell_ids, cand.duration_s) == ([], 6.0)
+
+
+def test_utility_floor_defaults_to_a_minute(utility_data: ClientData) -> None:
+    assert classify_utility(utility_data, SLOW_SHOT) is None
+    assert {x.spell_id for x in utility_candidates(utility_data)} == {
+        ROAR, MANA_GIFT, PULL, REBIRTH, SPRINT, STUN_AREA, BASH, SHOUT, TOTEM, GRIP, TORN
+    }  # fmt: skip
+
+
+def test_utility_candidates_sorted_by_class_then_name(utility_data: ClientData) -> None:
+    names = [(x.class_name, x.name) for x in utility_candidates(utility_data, min_cooldown_s=30)]
+    assert names == sorted(names)
+
+
+def test_dropped_effects_name_missing_indexes(utility_data: ClientData) -> None:
+    assert dropped_effects(utility_data, TORN) == [0]
+    assert dropped_effects(utility_data, BASH) == []
+    assert dropped_effects(utility_data, 900999) == []
+
+
+def test_dropped_effect_spells_leave_out_candidates(utility_data: ClientData) -> None:
+    """Torn Shout lost an effect but is still a candidate (a slow); Lost Rez matched nothing."""
+    assert dropped_effect_spells(utility_data) == [(DROPPED, "Lost Rez", "Warrior", [0])]
+
+
+def test_scripted_list_leaves_out_utility_candidates(utility_data: ClientData) -> None:
+    """Static Totem and Grasp work through a summon and a dummy, but the utility rules explain them."""
+    assert scripted_spells(utility_data) == [(DROPPED, "Lost Rez", "Warrior")]
