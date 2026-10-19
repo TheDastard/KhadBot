@@ -899,7 +899,7 @@
   "outcome": "wipe",
   "phase_reached": null,
   "produced_from": {
-    "defensive_cooldowns_hash": "b77b9414d96a",
+    "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "none",
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
     "friendly_damage_hash": "9937b022415a",

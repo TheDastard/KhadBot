@@ -70,7 +70,7 @@ class TestUtilityRegistry:
     def test_default_file_loads(self):
         reg = load_cooldowns("utility")
         assert reg.category == "utility"
-        assert len(reg.cooldowns) == 58
+        assert len(reg.cooldowns) == 59
         assert all(c.role is not None for c in reg.cooldowns)
         assert not any(c.verified for c in reg.cooldowns)
         keys = [(c.class_name, c.name, c.spell_id) for c in reg.cooldowns]
@@ -80,6 +80,7 @@ class TestUtilityRegistry:
         reg = load_cooldowns("utility")
         assert reg.get(106898).target == "raid"  # Stampeding Roar
         assert reg.get(192058).role == "stun"  # Capacitor Totem
+        assert (reg.get(29166).target, reg.get(29166).role) == ("external", "mana")  # Innervate
         assert set(reg.spell_ids(["enemy", "enemies"])) & set(reg.spell_ids(["raid", "external", "personal"])) == set()
         assert {c.role for c in reg.cooldowns} >= {"movement", "mana", "freedom", "reposition", "stun", "grip", "slow"}
 
@@ -179,8 +180,8 @@ class TestRegistry:
 
         reg = load_cooldowns("defensive")
         assert DEFAULT_DEFENSIVE_COOLDOWNS_PATH.exists()
-        # Ancestral Protection Totem is gone from the game data; Tiger's Lust is movement utility.
-        dropped = {207399, 116841}
+        # Ancestral Protection Totem is gone from the game data; Tiger's Lust and Innervate are utility.
+        dropped = {207399, 116841, 29166}
         assert set(MAJOR_COOLDOWN_IDS) - dropped <= set(reg.spell_ids())
         assert not dropped & set(reg.spell_ids())
         # Ported names corrected from the game data.
@@ -188,9 +189,10 @@ class TestRegistry:
 
     def test_default_registry_values_come_from_game_data(self):
         reg = load_cooldowns("defensive")
-        assert len(reg.cooldowns) == 63
+        assert len(reg.cooldowns) == 62
         # Offensive cooldowns stay out: Power Infusion, and the three the SimC heuristic once misread.
         assert not {10060, 19574, 107574, 191427} & set(reg.spell_ids())
+        assert 29166 not in reg.spell_ids()  # Innervate is in the utility file
         assert all(c.cooldown_s is not None and c.cooldown_s >= 60 for c in reg.cooldowns)
         assert not any(c.verified for c in reg.cooldowns)
         # Instant heals have no duration; everything else lasts.
