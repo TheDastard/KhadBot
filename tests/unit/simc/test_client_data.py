@@ -36,6 +36,7 @@ def data() -> ClientData:
         effect_row(2, WALL, 1, 6, 108, base=20, misc=7, target_1=1),
         effect_row(1, WALL, 0, 6, 87, base=-30, target_1=1, target_2=21),
         effect_row(3, SHIELD, 0, 64, 0, trigger=WALL),
+        effect_row(4, TALENT, 0, 6, 77, misc=7, mechanic=12, target_1=21),
     ]
     spells_by_id, effects_by_spell = parse_spells(spell_data(spells, effects))
     players = parse_player_spells(
@@ -63,6 +64,12 @@ def test_effects_parse_in_index_order(data: ClientData) -> None:
     assert (first.target_1, first.target_2) == (1, 21)
     assert (second.index, second.subtype, second.misc_value) == (1, 108, 7)  # a spell modifier on P_CRIT
     assert data.effects[SHIELD][0].trigger_spell_id == WALL
+
+
+def test_effect_misc_value_and_mechanic_parse(data: ClientData) -> None:
+    effect = data.effects[TALENT][0]
+    assert (effect.misc_value, effect.mechanic) == (7, 12)
+    assert (data.effects[WALL][0].misc_value, data.effects[WALL][0].mechanic) == (0, 0)
 
 
 def test_player_spells_record_class_and_specs(data: ClientData) -> None:

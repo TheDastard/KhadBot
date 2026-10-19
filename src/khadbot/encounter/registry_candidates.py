@@ -25,6 +25,13 @@ the raid is ``raid``. Casts that work through an area trigger, a totem or a scri
 same-name spells for their aura. All of this is a heuristic; every candidate is unverified until a human
 checks it.
 
+A utility candidate (``utility_candidates``) is a player cooldown that helps allies move, cast or come back
+(speed, mana, resurrection, root and snare immunity, moving an ally) or controls enemies (stun,
+incapacitate, root, slow, grip, knockback). Its ``target`` is personal, external or raid for allies, and
+enemy or enemies for one enemy or an area. SimC's tables keep only the effects its simulations read, so a
+spell may have lost the effect that matters (Rebirth's resurrection, Blind's disorient);
+``dropped_effects`` names the gaps.
+
 A friendly-damage candidate (for ``config/registries/friendly_damage.yaml``) is any spell with a class
 mask, player spell or not, with a damage effect or damage aura that lands only on the caster or allies:
 Stagger, Burning Rush, Shadow Word: Death's backlash. The data can't tell shared-out damage from
@@ -35,7 +42,7 @@ borrowed-power effects (class mask 0), so recorded logs stay the main way to fin
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -97,7 +104,7 @@ HEAL_EFFECTS = frozenset({c.E_HEAL, c.E_HEAL_MAX_HEALTH, c.E_HEAL_PCT})
 # Heals that count on a single target too; a plain E_HEAL counts only when it lands on an area.
 _BIG_HEALS = {c.E_HEAL_MAX_HEALTH, c.E_HEAL_PCT}
 # Casts whose aura comes from a separate, unlinked spell (see _same_name_hits).
-_INDIRECT_EFFECTS = {c.E_DUMMY, c.E_SUMMON, c.E_CREATE_AREA_TRIGGER}
+_INDIRECT_EFFECTS = frozenset({c.E_DUMMY, c.E_SUMMON, c.E_CREATE_AREA_TRIGGER})
 _AREA_PLACEMENT = {c.E_SUMMON, c.E_CREATE_AREA_TRIGGER}
 _DUMMY_AURAS = {c.A_DUMMY, c.A_PERIODIC_DUMMY}
 
@@ -112,6 +119,7 @@ _SUPPORT_TARGETS = {"T_UNIT_TARGET_ALLY", "T_UNIT_CASTER_TARGET_RAID", "T_UNIT_T
 _FRIENDLY_TARGETS = set(c.TARGETS) - {c.T_UNIT_TARGET_ANY}
 
 _TARGET_RANK = {"personal": 0, "external": 1, "raid": 2}
+_ALLY_TARGETS = frozenset(_TARGET_RANK)
 _TRIGGER_DEPTH = 2
 
 
@@ -210,40 +218,46 @@ def _effect_hit(effect: Effect) -> _Hit | None:
     return None
 
 
-def _hits(data: ClientData, spell_id: int, depth: int = 0) -> Iterator[_Hit]:
+_HitFn = Callable[[Effect], "_Hit | None"]
+
+
+def _hits(data: ClientData, spell_id: int, depth: int = 0, hit_fn: _HitFn = _effect_hit) -> Iterator[_Hit]:
     """Hits from a spell's effects and from the spells it triggers, ``_TRIGGER_DEPTH`` levels down."""
     for effect in data.effects.get(spell_id, []):
-        hit = _effect_hit(effect)
+        hit = hit_fn(effect)
         if hit:
             yield hit
         triggers = effect.type == c.E_TRIGGER_SPELL or (
             effect.type in c.AURA_EFFECTS and effect.subtype == c.A_PERIODIC_TRIGGER_SPELL
         )
         if triggers and effect.trigger_spell_id and effect.trigger_spell_id != spell_id and depth < _TRIGGER_DEPTH:
-            yield from _hits(data, effect.trigger_spell_id, depth + 1)
+            yield from _hits(data, effect.trigger_spell_id, depth + 1, hit_fn)
 
 
-def _same_name_hits(data: ClientData, spell: Spell) -> list[_Hit]:
-    """Defensive, healing or offensive hits on other spells that share the cast's name.
+def _same_name_hits(
+    data: ClientData, spell: Spell, hit_fn: _HitFn = _effect_hit, indirect: frozenset[int] = _INDIRECT_EFFECTS
+) -> list[_Hit]:
+    """Hits found by ``hit_fn`` on other spells that share the cast's name.
 
     Area triggers, totems and scripted dummy effects apply their aura from a separate spell the data does not
     link to the cast (Power Word: Barrier, Anti-Magic Zone, Rallying Cry). That spell usually has the cast's
     name, so a spell whose effects find nothing falls back to same-name spells that are not player spells.
     """
     own = data.effects.get(spell.spell_id, [])
-    if not any(e.type in _INDIRECT_EFFECTS for e in own):
+    if not any(e.type in indirect for e in own):
         return []
     # A cast that places something on the ground or targets an area helps everyone near it, whatever target the
-    # linked aura itself names.
+    # linked aura itself names. Effects on enemies already name their own reach.
     area = any(e.type in _AREA_PLACEMENT or (_effect_target(e) or ("",))[0] == "raid" for e in own)
     out: list[_Hit] = []
     for other in data.by_name.get(spell.name, []):
         if other == spell.spell_id or other in data.player_spells:
             continue
-        for hit in _hits(data, other):
+        for hit in _hits(data, other, hit_fn=hit_fn):
             if hit.role == "support":
                 continue
-            out.append(_Hit(hit.effect, hit.role, "raid" if area else hit.target, hit.what, hit.label))
+            target = "raid" if area and hit.target in _ALLY_TARGETS else hit.target
+            out.append(_Hit(hit.effect, hit.role, target, hit.what, hit.label))
     return out
 
 
@@ -280,6 +294,17 @@ def classify_offensive(data: ClientData, spell_id: int, *, min_cooldown_s: float
     return _classify(data, spell_id, offensive=True, min_cooldown_s=min_cooldown_s)
 
 
+def _duration_ms(data: ClientData, spell: Spell, aura_ids: list[int], same_name: bool) -> float:
+    """How long a cooldown's effect lasts: its aura spells' duration, or the cast's own."""
+    durations = [data.spells[a].duration_ms for a in aura_ids if a in data.spells and data.spells[a].duration_ms > 0]
+    if spell.duration_ms > 0 and (same_name or not durations):
+        # Same-name spells include old and talent variants with unrelated durations; the cast's own wins.
+        return spell.duration_ms
+    if durations:
+        return min(durations) if same_name else max(durations)
+    return 0
+
+
 def _classify(data: ClientData, spell_id: int, *, offensive: bool, min_cooldown_s: float) -> Candidate | None:
     spell = data.spells.get(spell_id)
     owner = data.player_spells.get(spell_id)
@@ -312,14 +337,7 @@ def _classify(data: ClientData, spell_id: int, *, offensive: bool, min_cooldown_
     chosen = [h for h in main if h.target == target]
     role = "defensive" if any(h.role == "defensive" for h in chosen) else chosen[0].role
     aura_ids = list(dict.fromkeys(h.effect.spell_id for h in chosen))
-    durations = [data.spells[a].duration_ms for a in aura_ids if a in data.spells and data.spells[a].duration_ms > 0]
-    if spell.duration_ms > 0 and (same_name or not durations):
-        # Same-name spells include old and talent variants with unrelated durations; the cast's own wins.
-        duration_ms = spell.duration_ms
-    elif durations:
-        duration_ms = min(durations) if same_name else max(durations)
-    else:
-        duration_ms = 0
+    duration_ms = _duration_ms(data, spell, aura_ids, same_name)
     class_id, specs = owner
     return Candidate(
         spell_id=spell_id,
@@ -352,8 +370,217 @@ def offensive_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> l
     return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
 
 
+# ---------------------------------------------------------------------------
+# Utility cooldowns
+# ---------------------------------------------------------------------------
+
+# Ally-side utility. Speed and mana auras count only with a positive value, cost auras only with a negative one.
+SPEED_AURAS = frozenset(
+    {
+        c.A_MOD_INCREASE_SPEED,
+        c.A_MOD_SPEED_ALWAYS,
+        c.A_MOD_SPEED_NOT_STACK,
+        c.A_MOD_MINIMUM_SPEED_PCT,
+        c.A_MOD_MINIMUM_SPEED,
+    }
+)
+_MANA_REGEN_AURAS = {c.A_PERIODIC_ENERGIZE, c.A_MOD_POWER_REGEN_PERCENT}  # misc value is the power type
+_MANA_COST_AURAS = {c.A_MOD_POWER_COST_SCHOOL_PCT, c.A_MOD_MANA_COST_PCT}
+_ENERGIZE_EFFECTS = {c.E_ENERGIZE, c.E_ENERGIZE_PCT}
+_RESURRECT_EFFECTS = {c.E_RESURRECT, c.E_RESURRECT_WITH_AURA}
+# Immunity to the mechanics that stop a player moving: Blessing of Freedom's root and snare immunity.
+_FREEDOM_MECHANICS = {c.MECHANIC_ROOT, c.MECHANIC_SNARE, c.MECHANIC_SLOW, c.MECHANIC_DAZE, c.MECHANIC_FREEZE}
+_FREEDOM_STATES = {c.A_MOD_ROOT, c.A_MOD_ROOT_2, c.A_MOD_DECREASE_SPEED}
+# Effects that move a unit: on an ally a reposition (Leap of Faith), on an enemy a grip or a knockback.
+_PULL_EFFECTS = {c.E_PLAYER_PULL, c.E_PULL_TOWARDS_DESTIANTION}
+_KNOCKBACK_EFFECTS = {c.E_KNOCK_BACK, c.E_KNOCK_BACK_DESTINATION}
+_ALLY_MOVE_EFFECTS = {*_PULL_EFFECTS, c.E_JUMP, c.E_JUMP_DEST, c.E_LEAP}
+
+# Enemy-side control, by aura type and, for effects whose aura type doesn't say (scripted or dummy auras), by the
+# mechanic the effect carries. A slow counts only with a negative value.
+_CONTROL_AURAS: dict[int, str] = {
+    c.A_MOD_STUN: "stun",
+    c.A_MOD_STUN_DISABLE_GRAVITY: "stun",
+    c.A_MOD_CONFUSE: "incapacitate",
+    c.A_MOD_FEAR: "incapacitate",
+    c.A_MOD_FEAR_2: "incapacitate",
+    c.A_MOD_ROOT: "root",
+    c.A_MOD_ROOT_2: "root",
+    c.A_MOD_ROOT_DISABLE_GRAVITY: "root",
+    c.A_MOD_DECREASE_SPEED: "slow",
+}
+_CONTROL_MECHANICS: dict[int, str] = {
+    c.MECHANIC_STUN: "stun",
+    c.MECHANIC_DISORIENT: "incapacitate",
+    c.MECHANIC_FLEE: "incapacitate",
+    c.MECHANIC_SLEEP: "incapacitate",
+    c.MECHANIC_INCAPACITATE: "incapacitate",
+    c.MECHANIC_POLYMORPH: "incapacitate",
+    c.MECHANIC_ROOT: "root",
+    c.MECHANIC_FREEZE: "root",
+    c.MECHANIC_SNARE: "slow",
+    c.MECHANIC_SLOW: "slow",
+    c.MECHANIC_DAZE: "slow",
+    c.MECHANIC_KNOCKBACK: "knockback",
+}
+
+#: Utility kinds, the strongest first: a candidate's ``role`` is the first of its kinds in this order.
+UTILITY_KINDS = (
+    "resurrect",
+    "mana",
+    "freedom",
+    "reposition",
+    "movement",
+    "stun",
+    "incapacitate",
+    "knockback",
+    "grip",
+    "root",
+    "slow",
+)
+# Enemy targets rank above ally ones, so a cast that controls enemies and also touches the caster (a slow-immune
+# leap that roots where it lands) is listed for what it does to enemies.
+_UTILITY_TARGET_RANK = {**_TARGET_RANK, "enemy": 3, "enemies": 4}
+# Utility casts also reach their effect through a scripted effect on the cast (Leap of Faith, Shockwave).
+_UTILITY_INDIRECT = frozenset({*_INDIRECT_EFFECTS, c.E_SCRIPT_EFFECT})
+
+
+def _enemy_target(effect: Effect) -> tuple[str, str] | None:
+    """("enemy" or "enemies", label) for an effect that can land on enemies, or None.
+
+    T_UNIT_TARGET_ANY counts as one enemy here: a stun or a grip on it is cast on a hostile unit.
+    """
+    if effect.type in c.AREA_AURA_EFFECTS:
+        return None
+    targets = {effect.target_1, effect.target_2} - {0}
+    for t in targets:
+        if t in c.AREA_ENEMY_TARGETS:
+            return "enemies", c.AREA_ENEMY_TARGETS[t]
+    for t in targets:
+        if t in c.SINGLE_ENEMY_TARGETS:
+            return "enemy", c.SINGLE_ENEMY_TARGETS[t]
+        if t == c.T_UNIT_TARGET_ANY:
+            return "enemy", "T_UNIT_TARGET_ANY"
+    return None
+
+
+def _ally_utility(effect: Effect) -> tuple[str, str] | None:
+    """(kind, what) when an effect helps an ally move, cast or come back, before checking its target."""
+    if effect.type in _RESURRECT_EFFECTS:
+        return "resurrect", c.EFFECT_TYPES[effect.type]
+    if effect.type in _ENERGIZE_EFFECTS and effect.misc_value == c.POWER_MANA and effect.base_value > 0:
+        return "mana", c.EFFECT_TYPES[effect.type]
+    if effect.type in _ALLY_MOVE_EFFECTS:
+        return "reposition", c.EFFECT_TYPES[effect.type]
+    if effect.type not in c.AURA_EFFECTS:
+        return None
+    what = c.AURA_TYPES.get(effect.subtype, f"aura {effect.subtype}")
+    if effect.subtype in SPEED_AURAS and effect.base_value > 0:
+        return "movement", what
+    if effect.subtype in _MANA_REGEN_AURAS and effect.misc_value == c.POWER_MANA and effect.base_value > 0:
+        return "mana", what
+    if effect.subtype in (c.A_MOD_MANA_REGEN_PCT, c.A_OBS_MOD_MANA) and effect.base_value > 0:
+        return "mana", what
+    if effect.subtype in _MANA_COST_AURAS and effect.base_value < 0:
+        return "mana", what
+    if effect.subtype == c.A_MECHANIC_IMMUNITY and effect.misc_value in _FREEDOM_MECHANICS:
+        return "freedom", f"{what} {c.MECHANICS[effect.misc_value]}"
+    if effect.subtype == c.A_STATE_IMMUNITY and effect.misc_value in _FREEDOM_STATES:
+        return "freedom", f"{what} {c.AURA_TYPES[effect.misc_value]}"
+    return None
+
+
+def _enemy_utility(effect: Effect) -> tuple[str, str] | None:
+    """(kind, what) when an effect controls or moves a unit, before checking its target."""
+    if effect.type in _KNOCKBACK_EFFECTS:
+        return "knockback", c.EFFECT_TYPES[effect.type]
+    if effect.type in _PULL_EFFECTS:
+        return "grip", c.EFFECT_TYPES[effect.type]
+    if effect.type in c.AURA_EFFECTS and effect.subtype in _CONTROL_AURAS:
+        if effect.subtype == c.A_MOD_DECREASE_SPEED and effect.base_value >= 0:
+            return None
+        return _CONTROL_AURAS[effect.subtype], c.AURA_TYPES[effect.subtype]
+    if effect.mechanic in _CONTROL_MECHANICS:
+        return _CONTROL_MECHANICS[effect.mechanic], c.MECHANICS[effect.mechanic]
+    return None
+
+
+def _utility_hit(effect: Effect) -> _Hit | None:
+    """How one effect helps allies move, cast or come back, or controls enemies, or None."""
+    ally = _ally_utility(effect)
+    if ally:
+        kind, what = ally
+        if kind == "resurrect":
+            targets = {effect.target_1, effect.target_2} & set(c.CORPSE_ALLY_TARGETS)
+            if targets:
+                return _Hit(effect, kind, "external", what, c.CORPSE_ALLY_TARGETS[min(targets)])
+        found = _effect_target(effect)
+        # A leap or a pull of the caster alone is the caster's own movement, not help for an ally.
+        if found and not (kind == "reposition" and found[0] == "personal"):
+            return _Hit(effect, kind, found[0], what, found[1])
+    enemy = _enemy_utility(effect)
+    if enemy:
+        found = _enemy_target(effect)
+        if found:
+            return _Hit(effect, enemy[0], found[0], enemy[1], found[1])
+    return None
+
+
+def classify_utility(data: ClientData, spell_id: int, *, min_cooldown_s: float = 60.0) -> Candidate | None:
+    """A utility-cooldown candidate for ``spell_id``, or None.
+
+    Ally-side utility moves players faster, gives mana, brings a dead player back, frees players from roots and
+    snares or moves an ally (Stampeding Roar, Innervate, Rebirth, Blessing of Freedom, Leap of Faith). Enemy-side
+    utility stuns, incapacitates, roots, slows, grips or knocks back enemies (Capacitor Totem, Gorefiend's Grasp,
+    Typhoon). ``target`` is personal, external or raid for allies, enemy or enemies for one enemy or an area, and
+    ``role`` is the strongest kind in ``UTILITY_KINDS``.
+    """
+    spell = data.spells.get(spell_id)
+    owner = data.player_spells.get(spell_id)
+    if spell is None or owner is None or spell.effective_cooldown_ms < min_cooldown_s * 1000:
+        return None
+    hits = list(_hits(data, spell_id, hit_fn=_utility_hit))
+    same_name = False
+    if not hits:
+        hits = _same_name_hits(data, spell, _utility_hit, _UTILITY_INDIRECT)
+        same_name = bool(hits)
+    if not hits:
+        return None
+    target = max((h.target for h in hits), key=_UTILITY_TARGET_RANK.__getitem__)
+    chosen = [h for h in hits if h.target == target]
+    # The role is the strongest kind on the target's side, so a single-target fear beside an area slow is
+    # listed as an incapacitate on enemies.
+    side = [h for h in hits if (h.target in _ALLY_TARGETS) == (target in _ALLY_TARGETS)]
+    role = min((h.role for h in side), key=UTILITY_KINDS.index)
+    aura_ids = list(dict.fromkeys(h.effect.spell_id for h in chosen if h.effect.type in c.AURA_EFFECTS))
+    class_id, specs = owner
+    return Candidate(
+        spell_id=spell_id,
+        name=spell.name,
+        class_name=CLASS_NAMES[class_id],
+        target=target,
+        role=role,
+        cooldown_s=spell.effective_cooldown_ms / 1000,
+        duration_s=_seconds(_duration_ms(data, spell, aura_ids, same_name)),
+        charges=spell.charges,
+        spec_ids=sorted(specs),
+        aura_spell_ids=[a for a in aura_ids if a != spell_id],
+        evidence=[h.describe(same_name=same_name) for h in hits],
+    )
+
+
+def utility_candidates(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[Candidate]:
+    """Every player cooldown in the client data with an ally- or enemy-side utility effect, by class then name.
+
+    A spell can be a candidate here and in another list (a damage cooldown that also roots); a person decides
+    which file it belongs in.
+    """
+    found = (classify_utility(data, s, min_cooldown_s=min_cooldown_s) for s in data.player_spells)
+    return sorted((x for x in found if x), key=lambda x: (x.class_name, x.name, x.spell_id))
+
+
 def scripted_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[tuple[int, str, str]]:
-    """(spell ID, name, class) of long-cooldown player spells whose effects are scripted, in neither candidate list.
+    """(spell ID, name, class) of long-cooldown player spells whose effects are scripted, in no candidate list.
 
     The game implements some cooldowns in server scripts behind dummy effects (Survival Instincts, Healing
     Tide Totem, Vampiric Embrace), so the data can't say what they do. Spells that also deal damage are left
@@ -370,11 +597,39 @@ def scripted_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[t
         )
         if not scripted or any(e.type == c.E_SCHOOL_DAMAGE for e in own):
             continue
-        candidate = classify_defensive(data, spell_id, min_cooldown_s=min_cooldown_s) or classify_offensive(
-            data, spell_id, min_cooldown_s=min_cooldown_s
-        )
-        if candidate is None:
+        if not _any_candidate(data, spell_id, min_cooldown_s):
             out.append((spell_id, spell.name, CLASS_NAMES[class_id]))
+    return sorted(out, key=lambda r: (r[2], r[1], r[0]))
+
+
+def _any_candidate(data: ClientData, spell_id: int, min_cooldown_s: float) -> bool:
+    return any(
+        f(data, spell_id, min_cooldown_s=min_cooldown_s)
+        for f in (classify_defensive, classify_offensive, classify_utility)
+    )
+
+
+def dropped_effects(data: ClientData, spell_id: int) -> list[int]:
+    """Effect indexes below a spell's highest one that SimC's tables leave out."""
+    present = {e.index for e in data.effects.get(spell_id, [])}
+    return sorted(set(range(max(present))) - present) if present else []
+
+
+def dropped_effect_spells(data: ClientData, *, min_cooldown_s: float = 60.0) -> list[tuple[int, str, str, list[int]]]:
+    """(spell ID, name, class, missing effect indexes) of long-cooldown player spells SimC kept only part of.
+
+    SimC's tables keep the effects its simulations read and drop the rest, which leaves gaps in a spell's effect
+    indexes: Rebirth keeps only its dummy effect, not the resurrection, and Blind only its slow, not the
+    disorient. Spells in a candidate list are left out; what remains may do something the data can't show.
+    """
+    out = []
+    for spell_id, (class_id, _) in data.player_spells.items():
+        spell = data.spells.get(spell_id)
+        if spell is None or spell.effective_cooldown_ms < min_cooldown_s * 1000:
+            continue
+        missing = dropped_effects(data, spell_id)
+        if missing and not _any_candidate(data, spell_id, min_cooldown_s):
+            out.append((spell_id, spell.name, CLASS_NAMES[class_id], missing))
     return sorted(out, key=lambda r: (r[2], r[1], r[0]))
 
 
