@@ -116,6 +116,15 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   2. Add the fetch spec and normalize it (damage rows with a friendly source and an NPC target).
   3. Add the encounter-file block, the rule, the digest section and a `kill:<id>` ref.
   4. Author the Ula'tek entry: the Venomous Heart (game ID 267460) during `rage_of_the_shackled`.
+- **Cached findings outlive code changes below the analyst.** The findings `cache_key` holds data and config
+  hashes, `prompt_version` and `GRAPH_VERSION`, but nothing for annotation, analysis or digest code,
+  `ANNOTATION_VERSION` or `EncounterConfig.cutoff_fraction`, so a review after such a change can serve findings
+  built from the old records. The annotation cache is likewise not keyed by pull metadata, so a `--refresh-meta`
+  that changes phase transitions keeps the old phase spans. Decide which versions join each key (see "What
+  invalidates what" in `docs/encounter-pipeline.md`).
+- **Serving analysis to many views.** Dashboards and other readers use `PullRecords` through `EncounterData`,
+  which rebuilds records per process and keeps a few in memory. Investigate how to serve many views and users at
+  scale, for example persisting serialized records keyed by their `produced_from` hashes.
 
 ### Failure rules
 
