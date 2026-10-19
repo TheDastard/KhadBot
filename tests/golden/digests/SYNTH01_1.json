@@ -338,10 +338,11 @@
   "produced_from": {
     "defensive_cooldowns_hash": "14ce0bdd3652",
     "encfile_hash": "d0bb9f7022f3",
-    "events_hash": "65b3136ce6a060f03ec1917414c717656b39300bd41be7bb89d212f3c6cca632",
+    "events_hash": "2f71019351bc48012e02f5f26132b21da41b9743f8439f602ae2c55eb8299aac",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "bee16b79e5c1",
-    "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8"
+    "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
+    "utility_cooldowns_hash": "ee9c7763e587"
   },
   "pull_key": "SYNTH01:1",
   "unregistered": [
@@ -350,6 +351,17 @@
       "damage": 90000,
       "name": "Synth Fire Pool",
       "share_pct": 9.9
+    }
+  ],
+  "utility_cooldowns": [
+    {
+      "caster": "Healz",
+      "category": "utility",
+      "phase_id": "p2",
+      "ref": "ev:SYNTH01:1:cd:903003:1",
+      "spell_id": 903003,
+      "spell_name": "Synth Rally",
+      "t_ms": 45000
     }
   ]
 }

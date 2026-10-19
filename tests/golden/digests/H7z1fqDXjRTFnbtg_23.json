@@ -904,7 +904,8 @@
     "events_hash": "8337cd7b2ff23f05c05ad12cab1df1ab40b22097a5e477aea282582597231875",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
-    "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d"
+    "positions_hash": "a9fb07bd85b5344b6d0d1829d69e91f073aee3106f98b89fa36401535df6027d",
+    "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:23",
   "unregistered": [
@@ -937,6 +938,17 @@
       "damage": 3891558,
       "name": "Melee",
       "share_pct": 2.9
+    }
+  ],
+  "utility_cooldowns": [
+    {
+      "caster": "Lesnichii",
+      "category": "utility",
+      "phase_id": null,
+      "ref": "ev:H7z1fqDXjRTFnbtg:23:cd:102793:1",
+      "spell_id": 102793,
+      "spell_name": "Ursol's Vortex",
+      "t_ms": 42114
     }
   ]
 }

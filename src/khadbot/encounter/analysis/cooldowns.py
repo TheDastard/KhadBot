@@ -1,8 +1,8 @@
 """
 encounter/analysis/cooldowns.py
 
-Cooldown casts (defensive and offensive) and damage-window coverage (defensive only), plus the aura intervals
-both (and death records) use.
+Cooldown casts (defensive, offensive and utility) and damage-window coverage (defensive only), plus the aura
+intervals coverage (and death records) use.
 
 Aura activity comes from Buffs ``applybuff`` / ``removebuff`` pairs per (target, spell). An aura with
 no remove event lasts until the pull ends; a remove with no apply (aura up before the pull) starts at 0.

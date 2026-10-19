@@ -42,6 +42,7 @@ LINK_TOTEM, EXTERNAL = 900301, 900302
 LINK_TOTEM_AURA = 900311  # the aura has its own ID, like Spirit Link Totem's
 BATTLE_CRY, FURY = 902001, 902002  # offensive cooldowns: raid and personal
 BATTLE_CRY_AURA = 902011
+STUN, SPRINT, RALLY = 903001, 903002, 903003  # utility cooldowns: enemy, personal and raid
 KICK, PURGE = 900701, 900702
 FILLERS = [900001, 900002, 900003]
 BOSS_MELEE = 900010
@@ -66,6 +67,9 @@ ABILITIES = [
         (BATTLE_CRY, "Synth Battle Cry"),
         (BATTLE_CRY_AURA, "Synth Battle Cry"),
         (FURY, "Synth Fury"),
+        (STUN, "Synth Stun"),
+        (SPRINT, "Synth Sprint"),
+        (RALLY, "Synth Rally"),
         (KICK, "Synth Kick"),
         (PURGE, "Synth Purge"),
         (BOSS_MELEE, "Synth Melee"),
@@ -323,6 +327,15 @@ def build_fight(fight: dict) -> dict[str, list[dict]]:
         casts.append(ev(5_000, "cast", DPS3, None, FURY))
         offensive_buffs.append(ev(5_050, "applybuff", DPS3, DPS3, FURY))
         offensive_buffs.append(ev(25_050, "removebuff", DPS3, DPS3, FURY))
+
+    # Utility cooldowns: casts only, since no request fetches their auras. The wipe has five, more than the
+    # digest's utility cap: Betadps sprints three times, the tank stuns the add and the healer rallies the raid,
+    # so the cap keeps the raid-wide Rally and drops the rest. The kill has one stun.
+    casts.append(ev(30_000, "cast", TANK, ADD, STUN))
+    if not kill:
+        for t in (2_000, 20_000, 40_000):
+            casts.append(ev(t, "cast", DPS2, None, SPRINT))
+        casts.append(ev(45_000, "cast", HEALER, None, RALLY))
 
     sim.run()
 

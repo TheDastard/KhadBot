@@ -1,0 +1,28 @@
+# Utility cooldowns matching the synthetic SYNTH01 report. All IDs and durations are fake.
+# Stun controls one enemy, Sprint is the caster's own and unverified, Rally speeds up the raid.
+category: utility
+cooldowns:
+  - spell_id: 903001
+    name: Synth Stun
+    class: Warrior
+    target: enemy
+    role: stun
+    cooldown_s: 30
+    duration_s: 4
+    verified: true
+  - spell_id: 903002
+    name: Synth Sprint
+    class: Rogue
+    target: personal
+    role: movement
+    cooldown_s: 15
+    duration_s: 8
+    verified: false
+  - spell_id: 903003
+    name: Synth Rally
+    class: Priest
+    target: raid
+    role: movement
+    cooldown_s: 120
+    duration_s: 10
+    verified: true

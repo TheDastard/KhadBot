@@ -97,8 +97,13 @@ def format_ingest_result(result: IngestResult) -> str:
 
 
 def default_filter_kwargs() -> dict:
-    """Fetch-filter inputs from both cooldown registries and every authored encounter file."""
-    return fetch_filter_inputs(load_cooldowns("defensive"), load_cooldowns("offensive"), load_all_encounters())
+    """Fetch-filter inputs from the cooldown registries and every authored encounter file."""
+    return fetch_filter_inputs(
+        load_cooldowns("defensive"),
+        load_cooldowns("offensive"),
+        load_all_encounters(),
+        utility=load_cooldowns("utility"),
+    )
 
 
 def _console_progress(pull_key: str, stage: str, pct: float) -> None:

@@ -210,7 +210,7 @@ class CooldownUse(BaseModel):
     ref: Ref
     spell_id: int
     spell_name: str
-    category: Literal["defensive", "offensive"]  # the cooldown file the spell is in
+    category: Literal["defensive", "offensive", "utility"]  # the cooldown file the spell is in
     caster: str
     t_ms: int
     phase_id: str | None
@@ -309,6 +309,7 @@ class PullDigest(BaseModel):
     mechanics: list[MechanicStat]  # cap 8; by failures desc, then damage
     defensive_cooldowns: list[CooldownUse]  # cap 30
     offensive_cooldowns: list[CooldownUse] = []  # cap 15; raid, then external, then personal, kept in time order
+    utility_cooldowns: list[CooldownUse] = []  # see UTILITY_COOLDOWN_CAP; raid and enemy-side first, time order
     coverage_windows: list[WindowCoverage]
     unregistered: list[UnregisteredAbility]  # cap 5; boss damage only, friendly damage is in friendly_damage
     friendly_damage: FriendlyDamage = Field(default_factory=FriendlyDamage)
@@ -316,7 +317,7 @@ class PullDigest(BaseModel):
     coverage: Literal["full", "partial", "none"]
     anomalies: list[str]
     # events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash, offensive_cooldowns_hash,
-    # friendly_damage_hash
+    # utility_cooldowns_hash, friendly_damage_hash
     produced_from: dict[str, str]
 
 

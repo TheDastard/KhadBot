@@ -134,6 +134,21 @@
     "type": 1
    },
    {
+    "gameID": 903001,
+    "name": "Synth Stun",
+    "type": 1
+   },
+   {
+    "gameID": 903002,
+    "name": "Synth Sprint",
+    "type": 1
+   },
+   {
+    "gameID": 903003,
+    "name": "Synth Rally",
+    "type": 1
+   },
+   {
     "gameID": 900701,
     "name": "Synth Kick",
     "type": 1

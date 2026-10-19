@@ -53,9 +53,13 @@ from khadbot.encounter.store import EventStore, split_pull_key
 DEATH_CAP = 10
 MECHANIC_CAP = 8
 DEFENSIVE_COOLDOWN_CAP = 30
-# Long pulls cast 30+ offensive cooldowns; 15 keeps the recorded 10-minute pulls under the 3k-token digest ceiling.
+# Long pulls cast 30+ offensive cooldowns; 15 kept the recorded 10-minute pulls under the 3k-token digest ceiling.
 # Which casts survive the cap: see ``capped_offensive``.
 OFFENSIVE_COOLDOWN_CAP = 15
+# Pulls cast up to 70 utility cooldowns, most of them personal movement. The section holds one cast, the
+# top-ranked raid or enemy-side one; cooldown_timeline lists the rest. With it the largest recorded digest is
+# about 3,001 tokens, under the 3.1k ceiling. Which cast survives the cap: see ``capped_utility``.
+UTILITY_COOLDOWN_CAP = 1
 UNREGISTERED_CAP = 5
 FULL_COVERAGE_MAX_PCT = 10.0  # unregistered share of friendly damage taken below which coverage is "full"
 
@@ -146,7 +150,7 @@ class PullRecords:
     abilities: dict[int, str]
     deaths: list[DeathRecord]  # every player death, time order (``death:<n>`` refs)
     mechanics: list[MechanicStat]  # every mechanic in the encounter file, file order
-    cooldowns: list[CooldownUse]  # every cooldown cast, defensive and offensive, time order
+    cooldowns: list[CooldownUse]  # every cooldown cast, of every category, time order
     windows: list[WindowCoverage]
     digest: PullDigest
 
@@ -157,14 +161,37 @@ def capped_offensive(uses: list[CooldownUse], offensive: CooldownRegistry) -> li
     Bloodlust is never cut; then each spell's first cast, then each one's second, and so on, earliest first, so
     one spell cast often (Power Infusion) can't crowd out the rest.
     """
+    return _capped(uses, offensive, OFFENSIVE_COOLDOWN_CAP, {"raid": 0})
+
+
+# Utility tiers: raid-wide casts, then enemy control and externals, then the caster's own (mostly movement).
+_UTILITY_TIERS = {"raid": 0, "enemy": 1, "enemies": 1, "external": 1, "personal": 2}
+
+
+def capped_utility(uses: list[CooldownUse], utility: CooldownRegistry) -> list[CooldownUse]:
+    """
+    At most ``UTILITY_COOLDOWN_CAP`` utility casts, in time order. Raid-wide casts are kept first, then casts on
+    enemies or another player, then the caster's own, so a pull's many personal movement casts (Death's Advance,
+    Divine Steed) fill the section only when nothing else does. Within a tier each spell's first cast comes
+    first, then each one's second, and so on, earliest first.
+    """
+    return _capped(uses, utility, UTILITY_COOLDOWN_CAP, _UTILITY_TIERS)
+
+
+def _capped(
+    uses: list[CooldownUse], registry: CooldownRegistry, cap: int, tiers: Mapping[str, int]
+) -> list[CooldownUse]:
+    """The first ``cap`` casts by (tier of the spell's target, nth cast of the spell, time), in time order.
+    A target missing from ``tiers``, or a spell missing from ``registry``, ranks after every tier."""
+    last = max(tiers.values(), default=0) + 1
     nth: dict[int, int] = {}
     ranked = []
     for c in sorted(uses, key=lambda c: c.t_ms):
         nth[c.spell_id] = nth.get(c.spell_id, 0) + 1
-        entry = offensive.get(c.spell_id)
-        raid = entry is not None and entry.target == "raid"
-        ranked.append(((0 if raid else 1, nth[c.spell_id], c.t_ms), c))
-    kept = [c for _, c in sorted(ranked, key=lambda r: r[0])[:OFFENSIVE_COOLDOWN_CAP]]
+        entry = registry.get(c.spell_id)
+        tier = tiers.get(entry.target, last) if entry is not None else last
+        ranked.append(((tier, nth[c.spell_id], c.t_ms), c))
+    kept = [c for _, c in sorted(ranked, key=lambda r: r[0])[:cap]]
     return sorted(kept, key=lambda c: (c.t_ms, c.ref))
 
 
@@ -175,6 +202,7 @@ def build_pull_records(
     defensive: CooldownRegistry | None = None,
     *,
     offensive: CooldownRegistry | None = None,
+    utility: CooldownRegistry | None = None,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
@@ -193,7 +221,8 @@ def build_pull_records(
         raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
     defensive = defensive or load_cooldowns("defensive")
     offensive = offensive or load_cooldowns("offensive")
-    check_cooldown_ids(defensive, offensive)
+    utility = utility or load_cooldowns("utility")
+    check_cooldown_ids(defensive, offensive, utility)
     friendly = friendly or load_friendly_damage()
     enc = load_encounter_view(pull.encounter_id, pull.difficulty, enc_root)
     fraction = EncounterConfig().cutoff_fraction if cutoff_fraction is None else cutoff_fraction
@@ -203,7 +232,7 @@ def build_pull_records(
 
     deaths = death_records(a, actors, defensive, abilities, friendly=friendly)
     mechanics = mechanic_stats(a, enc, actors, deaths)
-    cooldowns = cooldown_uses(a, [defensive, offensive], actors)
+    cooldowns = cooldown_uses(a, [defensive, offensive, utility], actors)
     windows = window_coverage(a, enc, defensive)
     unregistered, unregistered_pct = unregistered_damage(a, enc, abilities, friendly)
     friendly_dmg = friendly_damage(a, enc, friendly, actors, abilities, unclassified_cap=unregistered_cap)
@@ -221,11 +250,14 @@ def build_pull_records(
     # An early wipe legitimately never reaches later phases; only flag a phase WCL's transitions say it reached.
     if enc is not None:
         anomalies += [f"phase_trigger_unmatched:{p}" for p in unmatched_phases(pull, a.phases, enc)]
+    # Utility casts are left out: nothing reads a utility entry's cooldown or duration, and a pull casts a dozen
+    # different ones.
     unverified = sorted(
         {
             c.spell_id
             for c in cooldowns
-            if not (e := defensive.get(c.spell_id) or offensive.get(c.spell_id)) or not e.verified
+            if c.category != "utility"
+            and (not (e := defensive.get(c.spell_id) or offensive.get(c.spell_id)) or not e.verified)
         }
     )
     anomalies += [f"cooldown_unverified:{s}" for s in unverified]
@@ -251,6 +283,7 @@ def build_pull_records(
         # Each category has its own cap, so a raid's many offensive casts never push defensives out.
         defensive_cooldowns=[c for c in cooldowns if c.category == "defensive"][:DEFENSIVE_COOLDOWN_CAP],
         offensive_cooldowns=capped_offensive([c for c in cooldowns if c.category == "offensive"], offensive),
+        utility_cooldowns=capped_utility([c for c in cooldowns if c.category == "utility"], utility),
         coverage_windows=windows,
         unregistered=unregistered[:unregistered_cap],
         friendly_damage=friendly_dmg,
@@ -263,6 +296,7 @@ def build_pull_records(
             "encfile_hash": a.encfile_hash,
             "defensive_cooldowns_hash": cooldowns_hash(defensive),
             "offensive_cooldowns_hash": cooldowns_hash(offensive),
+            "utility_cooldowns_hash": cooldowns_hash(utility),
             "friendly_damage_hash": friendly_damage_hash(friendly),
         },
     )
@@ -287,6 +321,7 @@ def build_digest(
     defensive: CooldownRegistry | None = None,
     *,
     offensive: CooldownRegistry | None = None,
+    utility: CooldownRegistry | None = None,
     friendly: FriendlyDamageRegistry | None = None,
     cache: AnnotationCache | None = None,
     cutoff_fraction: float | None = None,
@@ -303,6 +338,7 @@ def build_digest(
         enc_root,
         defensive,
         offensive=offensive,
+        utility=utility,
         friendly=friendly,
         cache=cache,
         cutoff_fraction=cutoff_fraction,
@@ -431,6 +467,7 @@ def render_digest(d: PullDigest) -> str:
         lines.append(f"- [{w.ref}] {w.window_id} #{w.occurrence} at {_s(w.t_ms)}: {status} (active: {active}{late})")
 
     lines += _render_cooldowns("OFFENSIVE COOLDOWNS", d.offensive_cooldowns)
+    lines += _render_cooldowns("UTILITY COOLDOWNS", d.utility_cooldowns)
 
     if d.aggro:
         lines.append(f"AGGRO (melee swings by target, taunts landed) [{make_ref(d.pull_key, 'pull')}]")

@@ -2,11 +2,12 @@
 #
 # Player cooldowns that help allies move, cast or come back, or that control enemies: speed (Stampeding
 # Roar), mana (Evocation), root and snare immunity (Spirit Walk), moving an ally (Leap of Faith), and
-# stuns, incapacitates, knockbacks, grips, roots and slows (Capacitor Totem, Ring of Peace). Nothing in
-# encounter mode reads this file yet. Spell IDs, names, `target`, `role`, `cooldown_s` and `duration_s`
-# come from game client data (SimC tables for WoW build 12.1.5.70448) via the review file of
-# scripts/build_registries.py, with a 30 s cooldown floor. Cooldowns and durations are base values before
-# talents. Every entry is unverified until a person checks it in game.
+# stuns, incapacitates, knockbacks, grips, roots and slows (Capacitor Totem, Ring of Peace). The encounter
+# digest lists their casts; no Buffs or Debuffs request fetches their auras, and nothing reads their
+# cooldowns or durations. Spell IDs, names, `target`, `role`, `cooldown_s` and `duration_s` come from game
+# client data (SimC tables for WoW build 12.1.5.70448) via the review file of scripts/build_registries.py,
+# with a 30 s cooldown floor. Cooldowns and durations are base values before talents. Every entry is
+# unverified until a person checks it in game.
 #
 # Three roles were set by hand because SimC's tables drop the effect that decides them: Blind's
 # disorient and Intimidating Shout's fear (the data shows only their slow and root), and Gorefiend's

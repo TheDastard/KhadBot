@@ -380,6 +380,14 @@
    "fight": 0
   },
   {
+   "timestamp": 330000,
+   "type": "cast",
+   "sourceID": 1,
+   "abilityGameID": 903001,
+   "fight": 0,
+   "targetID": 11
+  },
+  {
    "timestamp": 331500,
    "type": "cast",
    "sourceID": 1,

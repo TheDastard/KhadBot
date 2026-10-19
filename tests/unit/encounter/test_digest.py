@@ -32,7 +32,7 @@ from khadbot.encounter.config_files import (
     parse_cooldowns,
     parse_friendly_damage,
 )
-from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
+from khadbot.encounter.digest import build_digest, build_pull_records, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
 from khadbot.encounter.models import CooldownUse, LateCooldown
 
@@ -45,9 +45,10 @@ def enc_root(tmp_path):
 
 
 @pytest.fixture
-def digest_of(synth_ingested, enc_root, synth_defensive, synth_offensive):
+def digest_of(synth_ingested, enc_root, synth_defensive, synth_offensive, synth_utility):
     def build(fight, root=None, **kw):
         kw.setdefault("offensive", synth_offensive)
+        kw.setdefault("utility", synth_utility)
         return build_digest(f"SYNTH01:{fight}", synth_ingested, root or enc_root, synth_defensive, **kw)
 
     return build
@@ -88,7 +89,7 @@ def test_golden(digest_of, update_goldens, fight):
 # ===========================================================================
 
 
-def test_wipe_summary(digest_of, synth_ingested, synth_defensive, synth_offensive):
+def test_wipe_summary(digest_of, synth_ingested, synth_defensive, synth_offensive, synth_utility):
     d = digest_of(1)
     assert (d.outcome, d.duration_ms, d.phase_reached, d.boss_pct, d.boss_hp_pct, d.cutoff_ms) == (
         "wipe",
@@ -107,6 +108,7 @@ def test_wipe_summary(digest_of, synth_ingested, synth_defensive, synth_offensiv
         "encfile_hash": encfile_hash(load_encounter_file(SYNTH_ENCOUNTER_FILE)),
         "defensive_cooldowns_hash": cooldowns_hash(synth_defensive),
         "offensive_cooldowns_hash": cooldowns_hash(synth_offensive),
+        "utility_cooldowns_hash": cooldowns_hash(synth_utility),
         "friendly_damage_hash": friendly_damage_hash(load_friendly_damage()),
     }
 
@@ -136,23 +138,39 @@ def test_cooldowns_are_split_by_category(digest_of):
         ("Synth Battle Cry", "Healz", 3_000, "offensive"),
         ("Synth Fury", "Gammadps", 5_000, "offensive"),
     ]
+    # Five utility casts against a cap of 1: the raid-wide Rally wins over the enemy Stun and the personal Sprints.
+    assert [(c.spell_name, c.caster, c.t_ms, c.category) for c in d.utility_cooldowns] == [
+        ("Synth Rally", "Healz", 45_000, "utility"),
+    ]
+    assert [c.spell_name for c in digest_of(2).utility_cooldowns] == ["Synth Stun"]
+
+
+def test_records_keep_every_utility_cast(synth_ingested, enc_root, synth_defensive, synth_offensive, synth_utility):
+    r = build_pull_records(
+        "SYNTH01:1", synth_ingested, enc_root, synth_defensive, offensive=synth_offensive, utility=synth_utility
+    )
+    utility = [c for c in r.cooldowns if c.category == "utility"]
+    assert [c.ref for c in utility if c.spell_id == 903002] == [f"ev:SYNTH01:1:cd:903002:{n}" for n in (1, 2, 3)]
+    assert len(utility) == 5
 
 
 def test_each_category_has_its_own_cap(digest_of, monkeypatch):
     monkeypatch.setattr(digest_mod, "DEFENSIVE_COOLDOWN_CAP", 1)
     monkeypatch.setattr(digest_mod, "OFFENSIVE_COOLDOWN_CAP", 1)
+    monkeypatch.setattr(digest_mod, "UTILITY_COOLDOWN_CAP", 1)
     d = digest_of(1)
-    # Battle Cry and Fury come first in time, but defensives keep their own slot.
+    # Battle Cry, Fury and a Sprint come first in time, but each category keeps its own slot.
     assert [c.spell_name for c in d.defensive_cooldowns] == ["Synth Link Totem"]
     assert [c.spell_name for c in d.offensive_cooldowns] == ["Synth Battle Cry"]
+    assert [c.spell_name for c in d.utility_cooldowns] == ["Synth Rally"]
 
 
-def _use(spell_id: int, t_ms: int) -> CooldownUse:
+def _use(spell_id: int, t_ms: int, category: str = "offensive") -> CooldownUse:
     return CooldownUse(
         ref=f"ev:SYNTH01:1:cd:{spell_id}:{t_ms}",
         spell_id=spell_id,
         spell_name=str(spell_id),
-        category="offensive",
+        category=category,
         caster="x",
         t_ms=t_ms,
         phase_id=None,
@@ -173,6 +191,25 @@ def test_offensive_cap_keeps_every_spells_first_cast(synth_offensive, monkeypatc
     uses = [_use(902002, t) for t in (1_000, 2_000, 3_000, 4_000)] + [_use(999999, 9_000)]
     kept = digest_mod.capped_offensive(uses, synth_offensive)
     assert [(c.spell_id, c.t_ms) for c in kept] == [(902002, 1_000), (902002, 2_000), (999999, 9_000)]
+
+
+def test_utility_cap_keeps_raid_then_enemy_and_external_casts_first(synth_utility, monkeypatch):
+    monkeypatch.setattr(digest_mod, "UTILITY_COOLDOWN_CAP", 3)
+    # Sprint (personal) four times early, Stun (enemy) twice and Rally (raid) once late: the raid cast, then
+    # Stun's first and second casts, survive; every Sprint is personal and drops.
+    uses = [_use(903002, t, "utility") for t in (1_000, 2_000, 3_000, 4_000)]
+    uses += [_use(903001, 10_000, "utility"), _use(903001, 40_000, "utility"), _use(903003, 50_000, "utility")]
+    kept = digest_mod.capped_utility(uses, synth_utility)
+    assert [(c.spell_id, c.t_ms) for c in kept] == [(903001, 10_000), (903001, 40_000), (903003, 50_000)]
+
+
+def test_utility_cap_fills_spare_slots_with_personal_casts(synth_utility, monkeypatch):
+    monkeypatch.setattr(digest_mod, "UTILITY_COOLDOWN_CAP", 3)
+    # One Stun leaves two slots for Sprint's first two casts; 999999 is in no file and ranks after every tier.
+    uses = [_use(999999, 500, "utility")] + [_use(903002, t, "utility") for t in (1_000, 2_000, 3_000)]
+    uses.append(_use(903001, 9_000, "utility"))
+    kept = digest_mod.capped_utility(uses, synth_utility)
+    assert [(c.spell_id, c.t_ms) for c in kept] == [(903002, 1_000), (903002, 2_000), (903001, 9_000)]
 
 
 def test_offensive_cooldowns_never_count_as_defensive(digest_of):
@@ -306,6 +343,21 @@ def test_produced_from_tracks_the_offensive_registry(digest_of):
     assert d.produced_from["offensive_cooldowns_hash"] != digest_of(1).produced_from["offensive_cooldowns_hash"]
 
 
+def test_produced_from_tracks_the_utility_registry(digest_of):
+    empty = parse_cooldowns({"category": "utility", "cooldowns": []}, "utility")
+    d = digest_of(1, utility=empty)
+    assert d.produced_from["utility_cooldowns_hash"] == cooldowns_hash(empty)
+    assert d.produced_from["utility_cooldowns_hash"] != digest_of(1).produced_from["utility_cooldowns_hash"]
+    assert d.utility_cooldowns == []
+
+
+def test_a_spell_in_the_utility_and_another_cooldown_file_fails(digest_of, synth_offensive):
+    entry = synth_offensive.cooldowns[0].model_dump(by_alias=True) | {"target": "raid", "role": "movement"}
+    clash = parse_cooldowns({"category": "utility", "cooldowns": [entry]}, "utility")
+    with pytest.raises(ConfigurationError, match="902001 is in both the offensive and the utility cooldowns"):
+        digest_of(1, utility=clash)
+
+
 def test_a_spell_in_both_cooldown_files_fails(digest_of, synth_defensive):
     clash = parse_cooldowns(
         {"category": "offensive", "cooldowns": [synth_defensive.cooldowns[0].model_dump(by_alias=True)]},
@@ -321,7 +373,8 @@ def test_a_spell_in_both_cooldown_files_fails(digest_of, synth_defensive):
 
 
 def test_cooldown_unverified(digest_of):
-    # Guardian is an unverified defensive cooldown, Fury an unverified offensive one.
+    # Guardian is an unverified defensive cooldown, Fury an unverified offensive one. Sprint is an unverified
+    # utility cooldown, and utility casts never raise the anomaly.
     assert digest_of(1).anomalies == ["cooldown_unverified:900302", "cooldown_unverified:902002"]
     assert digest_of(2).anomalies == []
 
@@ -404,6 +457,11 @@ def test_render(digest_of):
     assert lines[offensive + 1 : offensive + 3] == [
         "- [ev:SYNTH01:1:cd:902001:1] 3.0s Synth Battle Cry (902001) by Healz (p1)",
         "- [ev:SYNTH01:1:cd:902002:1] 5.0s Synth Fury (902002) by Gammadps (p1)",
+    ]
+    utility = lines.index("UTILITY COOLDOWNS")
+    assert utility > offensive
+    assert lines[utility + 1 : utility + 2] == [
+        "- [ev:SYNTH01:1:cd:903003:1] 45.0s Synth Rally (903003) by Healz (p2)",
     ]
     assert lines[-1] == "ANOMALIES cooldown_unverified:900302, cooldown_unverified:902002"
     # Every record line carries a ref.

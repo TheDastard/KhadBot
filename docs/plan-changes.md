@@ -625,3 +625,40 @@ covers unverified cooldowns of either file.
 
 `cd:<spell_id>:<n>` resolves for defensive and offensive cooldowns alike: `n` counts casts of that spell, and no
 spell ID is in both files. The `cooldown_timeline` query tool returns both, each row with its `category`.
+
+## encounter/utility-cooldowns
+
+### Refactor plan 6.2 (Configuration files: cooldown registries)
+
+`utility_cooldowns.yaml` (`category: utility`) joins the other two files. Its entries also take `target: enemy`
+(one enemy) or `enemies` (an area of enemies) and require a `role`: `movement`, `mana`, `resurrect`, `freedom`,
+`reposition`, `stun`, `incapacitate`, `knockback`, `grip`, `root` or `slow`. The defensive and offensive files
+reject both. Its content hash is `utility_cooldowns_hash`. No fetch filter reads it: utility casts come from the
+unfiltered friendly Casts request, and their auras aren't fetched.
+
+### Refactor plan 6.3 (Analysis records: CooldownUse)
+
+```
+    category: Literal["defensive", "offensive", "utility"]  # the cooldown file the spell is in
+```
+
+### Refactor plan 6.4 (Digest: utility cooldowns)
+
+Add after `offensive_cooldowns`:
+
+```
+    utility_cooldowns: list[CooldownUse] = []      # cap 1: raid casts, then enemy and external, then personal;
+                                                   # one per spell at a time within each tier
+```
+
+A UTILITY COOLDOWNS section with the same line format follows OFFENSIVE COOLDOWNS. `cooldown_unverified` leaves
+utility casts out. `produced_from` gains `utility_cooldowns_hash` after `offensive_cooldowns_hash`.
+
+The digest's token target becomes 1.5k to 3.1k (was 1.5k to 3k), so the utility section fits next to the
+40-entry offensive file.
+
+### Refactor plan 6.5 and 6.8 (Evidence refs, findings cache)
+
+`cd:<spell_id>:<n>` resolves for utility casts too, and `cooldown_timeline` returns them with `category:
+utility`. The findings `cache_key` and the `EncounterData` records key gain `utility_cooldowns_hash` after
+`offensive_cooldowns_hash`.

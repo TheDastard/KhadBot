@@ -213,9 +213,9 @@ class EncounterData:
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
     The cache key is (pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
-    offensive_cooldowns_hash, friendly_damage_hash), so re-ingesting a pull or editing its encounter file or a
-    registry rebuilds the records on next use. Registries not passed in are reread from ``config/`` on every lookup,
-    like encounter files.
+    offensive_cooldowns_hash, utility_cooldowns_hash, friendly_damage_hash), so re-ingesting a pull or editing its
+    encounter file or a registry rebuilds the records on next use. Registries not passed in are reread from
+    ``config/`` on every lookup, like encounter files.
     """
 
     def __init__(
@@ -225,6 +225,7 @@ class EncounterData:
         enc_root: Path | None = None,
         defensive: CooldownRegistry | None = None,
         offensive: CooldownRegistry | None = None,
+        utility: CooldownRegistry | None = None,
         friendly: FriendlyDamageRegistry | None = None,
         cache: AnnotationCache | None = None,
         cutoff_fraction: float | None = None,
@@ -234,6 +235,7 @@ class EncounterData:
         self.enc_root = enc_root
         self._defensive = defensive
         self._offensive = offensive
+        self._utility = utility
         self._friendly = friendly
         self.cache = cache
         self.cutoff_fraction = cutoff_fraction
@@ -261,6 +263,7 @@ class EncounterData:
         pull_key = pull.pull_key
         defensive = self._defensive or load_cooldowns("defensive")
         offensive = self._offensive or load_cooldowns("offensive")
+        utility = self._utility or load_cooldowns("utility")
         friendly = self._friendly or load_friendly_damage()
         key = (
             pull_key,
@@ -269,6 +272,7 @@ class EncounterData:
             encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
             cooldowns_hash(defensive),
             cooldowns_hash(offensive),
+            cooldowns_hash(utility),
             friendly_damage_hash(friendly),
         )
         if (hit := self._records.get(key)) is not None:
@@ -280,6 +284,7 @@ class EncounterData:
             self.enc_root,
             defensive,
             offensive=offensive,
+            utility=utility,
             friendly=friendly,
             cache=self.cache,
             cutoff_fraction=self.cutoff_fraction,
