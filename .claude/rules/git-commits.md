@@ -48,6 +48,8 @@ Rest of the app:
 | `wcl-client` | Shared WarcraftLogs client and coach WCL tools (`tools/warcraftlogs/`) |
 | `rag` | Retrieval and guide data |
 | `simc` | SimC generated client data: codes, parser and fetch (`simc/`) |
+| `api` | The dashboard API (`src/khadbot/api/`), its `serve` subcommand and the generated `contracts/` |
+| `web` | The dashboard frontend (`web/`) |
 
 Repo-wide:
 
