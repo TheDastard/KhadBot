@@ -69,3 +69,4 @@ env/
 # Encounter review local data (raw WCL pages, parquet events, sqlite stores)
 # -----------------------------------------------------------------------------
 .khadbot_data/
+.khadbot_fixture_data/
