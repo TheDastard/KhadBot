@@ -112,6 +112,8 @@ class EventStore(Protocol):
 
     def write_abilities(self, code: str, abilities: dict[int, str]) -> None: ...
 
+    def reports(self) -> list[str]: ...
+
     def pulls(self, code: str) -> list[Pull]: ...
 
     def events_hash(self, pull_key: str) -> str | None: ...
@@ -221,6 +223,12 @@ class ParquetEventStore:
         _atomic(self.root / code / "abilities.json", lambda tmp: tmp.write_bytes(data))
 
     # --- reads ---------------------------------------------------------------
+
+    def reports(self) -> list[str]:
+        """Codes of the reports with at least one stored pull, sorted."""
+        if not self.root.is_dir():
+            return []
+        return sorted(p.name for p in self.root.iterdir() if p.is_dir() and self._records(p.name))
 
     def pulls(self, code: str) -> list[Pull]:
         return [Pull.model_validate(r["pull"]) for r in self._records(code)]
