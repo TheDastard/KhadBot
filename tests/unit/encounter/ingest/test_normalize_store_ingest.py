@@ -301,6 +301,20 @@ class TestStore:
         assert store.pulls("NOPE") == []
         assert store.actors("NOPE") == []
 
+    def test_reports_lists_codes_with_stored_pulls(self, loaded, meta):
+        store, _, _ = loaded
+        assert store.reports() == [CODE]
+        (store.root / "EMPTY").mkdir()  # a report directory without pulls.json is not a report
+        pulls, _ = meta
+        df = store.events(pulls[1].pull_key)
+        store.write_pull(pulls[1].model_copy(update={"report_code": "AAA"}), df, events_hash(df))
+        assert store.reports() == ["AAA", CODE]
+
+    def test_reports_without_root(self, tmp_path):
+        from khadbot.encounter.store import ParquetEventStore
+
+        assert ParquetEventStore(tmp_path / "missing").reports() == []
+
     def test_filter_types(self, loaded):
         store, pull, df = loaded
         got = store.events(pull.pull_key, types=["death", "interrupt"])
