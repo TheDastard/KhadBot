@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight>]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000]]
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ import sys
 from collections.abc import Sequence
 
 from langchain_core.messages import AIMessage, HumanMessage
+
+SERVE_HOST = "127.0.0.1"
 
 # ---------------------------------------------------------------------------
 # Subcommands
@@ -97,6 +99,15 @@ def _run_digest(code: str, fight: int, as_json: bool, unregistered: bool) -> Non
         print(render_digest(d))
 
 
+def _run_serve(port: int) -> None:
+    import uvicorn
+
+    from khadbot.api import create_app
+
+    # Local only: WCL credentials stay in the server's environment, and nothing is exposed beyond this machine.
+    uvicorn.run(create_app(), host=SERVE_HOST, port=port)
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -124,6 +135,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List the top unregistered and unclassified friendly abilities (authoring)",
     )
+    serve = sub.add_parser("serve", help=f"Serve the read-only dashboard API on {SERVE_HOST} (KHADBOT_DATA_DIR)")
+    serve.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
     return parser
 
 
@@ -142,6 +155,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_ingest(args.code, args.fights, args.offline, args.refresh_meta)
     elif command == "digest":
         _run_digest(args.code, args.fight, args.json, args.unregistered)
+    elif command == "serve":
+        _run_serve(args.port)
 
 
 if __name__ == "__main__":

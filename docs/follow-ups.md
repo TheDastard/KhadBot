@@ -166,6 +166,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
   section 6.2 has the current layout.
 
+### Dashboard API
+
+- **Night summary on large reports.** `EncounterData` keeps records for 32 pulls, so the night summary or the
+  report view of a 47-pull night rebuilds records for most pulls on every request (with the annotation cache,
+  about 0.3 s each, behind one lock). Measure on a full night and, if it is too slow, cache the per-pull
+  aggregates the night needs keyed by `events_hash` and `encfile_hash`, rather than raising the LRU size (records
+  hold the whole annotated frame).
+- **Typed evidence records.** `GET /v1/evidence/{ref}` returns `record` as an untyped object. If the context
+  panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic
+  detail with its cluster rows, the event row) and make the response a union keyed on `kind`.
+
 ## Encounters
 
 ### Ula'tek (3492), Heroic

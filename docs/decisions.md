@@ -486,6 +486,51 @@ Outcome: **keep polars + parquet (D7 unchanged).** Measured on the dev machine o
 - **The `-m perf` tests** ingested the real fixture reports without fight IDs and failed on the fights with no
   recorded pages. They now ingest only the recorded fights; all 12 pass.
 
+### Dashboard API (2026-10-16)
+
+The read API the digest dashboard is built on, in `src/khadbot/api/`. It serves the encounter pipeline's records;
+it adds no analysis of its own beyond the night aggregates.
+
+- **Stack and serving.** FastAPI with uvicorn. `python main.py serve [--port 8000]` binds to `127.0.0.1` only and
+  reads `KHADBOT_DATA_DIR`; CORS allows only `http://localhost:3000` and `http://127.0.0.1:3000`, GET only. WCL
+  credentials stay in the server's environment and nothing in this API calls WCL or an LLM. The frontend is
+  Next.js with client-rendered data views fetching from this API (no Next.js route handlers or server data
+  fetching), so there is one backend.
+- **Contracts as built.** Refs are the `ev:<report>:<fight>:<kind>...` grammar `evidence.py` parses, URL-encoded
+  in paths and `?ref=`. Coverage is `full | partial | none`. `PullDigest` is returned unchanged. URLs address a
+  pull by WCL fight ID; the ordinal within its encounter-and-difficulty group (`P1`...`Pn`) is a display label.
+  `contracts/openapi.json` is generated from the app (`mise run gen:contracts`, or `uv run python scripts/gen_contracts.py`) and a unit test
+  fails on drift.
+- **`?full=true` digest** keeps the `PullDigest` shape and the digest's ordering but replaces the capped lists
+  with every record: every death, every mechanic in the encounter file (including ones with no hits), every
+  cooldown use and window. The unregistered list stays capped, since the records hold only the capped one.
+- **Evidence records and event rows are untyped objects** in the contract (`record: object`, `rows: object[]`):
+  they are exactly the dicts `EncounterData.resolve` returns, so the browser sees what the verify step checks.
+  `kind` is the published `RefKind` enum.
+- **A night is a whole report**, one section per encounter and difficulty in the order first pulled. Section
+  coverage is `none` without an encounter file for that difficulty, `partial` if any pull is partial, else
+  `full`. Best pull: the first kill, else the wipe with the lowest boss health (ties: lower fight progress).
+  The most common first death is counted over every pull in the section ("on N of M pulls", M = all pulls).
+- **Briefing numbers pass the verify check.** Each line cites refs such that every number in it is in a
+  resolved record or is a ref count, the same rule `check_finding` applies: "on N of M pulls" cites N `death`
+  (or `mech`) refs and the M `pull` refs. That rules out sums and medians, so the mechanic line reads "Y was
+  failed on N of M pulls, most on Pk (n failures)" instead of "Y failed N times across M pulls": a night's total
+  failures is in no single record. The night total is still in the KPI and the mechanic table, with its refs.
+- **Timeline mechanic markers** are clusters; clusters have no ref of their own, so each carries its mechanic's
+  `mech` ref plus the cluster number.
+- **Events** take `actor` as a name or an actor ID and reject an unknown actor (`unknown_actor`); windows over
+  30 s or reversed are `bad_window`; rows cap at 200 with `truncated`, `total` and a note. Request validation
+  errors use the same `{code, message}` body (`bad_request`, 422) as every other error.
+- **Findings** come from `FindingsStore.for_pull` (flagged rows left out). A row is `stale` when its recorded
+  `events_hash` differs from the store's or its `encfile_hash` differs from the current difficulty view's.
+  Reading never creates the SQLite file.
+- **Concurrency.** Handlers run in FastAPI's thread pool and hold one lock while they build records, because the
+  `EncounterData` LRU is shared. Fine for one local user; see follow-ups for large reports.
+- **Fixture data.** `scripts/build_fixture_data.py --out <dir>` (`mise run gen:fixture-data`) ingests the recorded
+  fixture reports offline through `ingest.recorded` (with the Buffs filter the fixtures were recorded with,
+  `RECORDED_BUFF_IDS`), the same code the test helpers use, and copies each
+  `report.json` so titles show. Playwright and local demos serve that directory.
+
 ## Human task status
 
 | ID | Task | Status |

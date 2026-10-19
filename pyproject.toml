@@ -27,6 +27,10 @@ dependencies = [
     "orjson>=3.10",               # fast JSON for raw WCL pages and event hashing
     "pyyaml>=6.0",                # agent / encounter / registry config files
     "python-dotenv>=1.0.0",       # load .env (imported by agent/coach.py)
+
+    # --- Dashboard API ---
+    "fastapi>=0.143.3",           # read-only dashboard API (src/khadbot/api/), OpenAPI contract
+    "uvicorn>=0.54.0",            # ASGI server for `main.py serve`
 ]
 
 [project.optional-dependencies]
@@ -107,6 +111,8 @@ filterwarnings = [
     "ignore::UserWarning:langchain_core",
     # langchain_core's callback manager calls asyncio.iscoroutinefunction, deprecated in Python 3.14
     "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:langchain_core",
+    # starlette's TestClient (FastAPI) warns that it will move from httpx to httpx2; httpx is what the repo uses
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
 ]
 
 [tool.ruff]
