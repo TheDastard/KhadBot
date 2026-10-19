@@ -12,9 +12,10 @@
 # disorient and Intimidating Shout's fear (the data shows only their slow and root), and Gorefiend's
 # Grasp, whose pull the data marks only with the knockback mechanic. Damage cooldowns that show up for a
 # side effect (The Hunt's stun, Frozen Orb's slow, Avenging Crusader's speed) are left out, and so is
-# every spell already in defensive_cooldowns.yaml or offensive_cooldowns.yaml (Innervate, Dispersion,
-# Avatar). Battle resurrections, Mana Tide Totem, Symbol of Hope, Wind Rush Totem and Time Spiral are
-# missing because the tables don't show what they do.
+# every spell already in defensive_cooldowns.yaml or offensive_cooldowns.yaml (Dispersion, Avatar).
+# Innervate moved here from defensive_cooldowns.yaml (role mana), since it keeps no one alive. Battle
+# resurrections, Mana Tide Totem, Symbol of Hope, Wind Rush Totem and Time Spiral are missing because the
+# tables don't show what they do.
 #
 # target: personal (only the caster), external (one chosen ally), raid (an area or the whole raid),
 # enemy (one chosen enemy), enemies (an area or a cone of enemies).
@@ -127,6 +128,14 @@ cooldowns:
     role: slow
     cooldown_s: 30.0
     duration_s: 3.0
+    verified: false
+  - spell_id: 29166
+    name: Innervate
+    class: Druid
+    target: external
+    role: mana
+    cooldown_s: 180.0
+    duration_s: 8.0
     verified: false
   - spell_id: 102359
     name: Mass Entanglement

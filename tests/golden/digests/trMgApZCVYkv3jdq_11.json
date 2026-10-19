@@ -1261,7 +1261,7 @@
   "outcome": "wipe",
   "phase_reached": "p2",
   "produced_from": {
-    "defensive_cooldowns_hash": "b77b9414d96a",
+    "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "1e5398dfceb0",
     "events_hash": "d3c0ccb1775ef399d5accaa067fc62d1e37be31fe1e62a1c32d8a8764a9027b0",
     "friendly_damage_hash": "9937b022415a",

@@ -15,9 +15,10 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 ### Data and ingest
 
 - **Scripted cooldowns the data can't classify.** `defensive_cooldowns.yaml` now holds 61 of the 64 defensive and
-  healing candidates from build 12.1.5.70448 plus Innervate, Power Infusion and Aura Mastery. The review file's
-  `scripted` list (63 spells) still needs a person: defensive ones such as Survival Instincts, Lichborne,
-  Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time Spiral.
+  healing candidates from build 12.1.5.70448 plus Aura Mastery; Power Infusion moved to the offensive file and
+  Innervate to the utility file. The review file's `scripted` list (63 spells) still needs a person: defensive
+  ones such as Survival Instincts, Lichborne, Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time
+  Spiral.
 - **Offensive cooldowns still open.** `offensive_cooldowns.yaml` holds 40 entries for build 12.1.5.70448:
   the 44 candidates, which now include spell-modifier auras, minus four already in the defensive file
   (Vengeance's Metamorphosis, Invoke Chi-Ji, Invoke Niuzao, Aura Mastery) and those left out below, plus

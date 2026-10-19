@@ -48,7 +48,6 @@
     "cooldown_unverified:19236",
     "cooldown_unverified:19574",
     "cooldown_unverified:22812",
-    "cooldown_unverified:29166",
     "cooldown_unverified:31224",
     "cooldown_unverified:31884",
     "cooldown_unverified:42650",
@@ -1320,7 +1319,7 @@
   "outcome": "kill",
   "phase_reached": "p3",
   "produced_from": {
-    "defensive_cooldowns_hash": "b77b9414d96a",
+    "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "1e5398dfceb0",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
     "friendly_damage_hash": "9937b022415a",
