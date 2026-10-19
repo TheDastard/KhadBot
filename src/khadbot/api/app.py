@@ -1,0 +1,81 @@
+"""
+api/app.py
+
+The FastAPI application: ``create_app`` wires the read router to an ``ApiContext`` (encounter data, findings
+store, data directory), maps errors to one ``{code, message}`` body and allows only the local dev origins.
+
+More routers (ingest) and their dependencies plug in through ``create_app``'s ``routers`` argument and the
+context, so serving and the generated contract stay in one place. ``openapi_document`` renders the contract
+committed as ``contracts/openapi.json``.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Sequence
+from pathlib import Path
+
+from fastapi import APIRouter, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from khadbot.api.routes import router
+from khadbot.api.schemas import API_VERSION
+from khadbot.api.views import ApiContext, ApiError
+from khadbot.config import EncounterConfig
+from khadbot.encounter.annotate import AnnotationCache
+from khadbot.encounter.evidence import EncounterData
+from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.store import ParquetEventStore
+
+CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+
+def create_app(
+    data: EncounterData | None = None,
+    findings: FindingsStore | None = None,
+    *,
+    data_dir: Path | str | None = None,
+    routers: Sequence[APIRouter] = (),
+) -> FastAPI:
+    """
+    The dashboard API over ``data`` and ``findings``.
+
+    Without them, both are read from ``data_dir`` (default ``KHADBOT_DATA_DIR``) with the authored files under
+    ``config/``. Nothing is read from disk until a request arrives, so building the app for its OpenAPI document
+    needs no data. ``routers`` are mounted after the read router.
+    """
+    root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
+    if data is None:
+        data = EncounterData(ParquetEventStore(root / "events"), cache=AnnotationCache(root / "annotated"))
+    if findings is None:
+        findings = FindingsStore(root / "khadbot.sqlite")
+
+    app = FastAPI(
+        title="KhadBot Dashboard API",
+        version=API_VERSION,
+        description="Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
+    )
+    app.state.ctx = ApiContext(data=data, findings=findings, data_dir=root)
+    app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
+
+    @app.exception_handler(ApiError)
+    async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status, content={"code": exc.code, "message": exc.message})
+
+    @app.exception_handler(RequestValidationError)
+    async def _bad_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+        problems = "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())
+        return JSONResponse(status_code=422, content={"code": "bad_request", "message": problems})
+
+    app.include_router(router)
+    for extra in routers:
+        app.include_router(extra)
+    return app
+
+
+def openapi_document(app: FastAPI | None = None) -> str:
+    """The OpenAPI document as sorted, indented JSON with a final newline (``contracts/openapi.json``)."""
+    app = app or create_app(data_dir=Path("."))
+    return json.dumps(app.openapi(), indent=2, sort_keys=True, ensure_ascii=False) + "\n"

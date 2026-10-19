@@ -1,0 +1,2840 @@
+{
+  "components": {
+    "schemas": {
+      "AbilityDamage": {
+        "properties": {
+          "ability_id": {
+            "title": "Ability Id",
+            "type": "integer"
+          },
+          "damage": {
+            "title": "Damage",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "required": [
+          "ability_id",
+          "name",
+          "damage"
+        ],
+        "title": "AbilityDamage",
+        "type": "object"
+      },
+      "AggroSummary": {
+        "description": "Who one boss NPC attacked and who taunted it, from the Threat data.",
+        "properties": {
+          "npc": {
+            "title": "Npc",
+            "type": "string"
+          },
+          "swings": {
+            "title": "Swings",
+            "type": "integer"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/AggroTarget"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "taunts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Taunts",
+            "type": "object"
+          }
+        },
+        "required": [
+          "npc",
+          "swings",
+          "targets",
+          "taunts"
+        ],
+        "title": "AggroSummary",
+        "type": "object"
+      },
+      "AggroTarget": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "share_pct": {
+            "title": "Share Pct",
+            "type": "number"
+          },
+          "swings": {
+            "title": "Swings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "swings",
+          "share_pct"
+        ],
+        "title": "AggroTarget",
+        "type": "object"
+      },
+      "BestPull": {
+        "description": "The section's first kill, or else its wipe with the lowest boss health (ties: lower fight progress).",
+        "properties": {
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Pct"
+          },
+          "fight": {
+            "title": "Fight",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "phase_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Name"
+          },
+          "phase_reached": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Reached"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fight",
+          "ordinal",
+          "label",
+          "outcome",
+          "boss_hp_pct",
+          "boss_pct",
+          "phase_reached",
+          "phase_name",
+          "ref"
+        ],
+        "title": "BestPull",
+        "type": "object"
+      },
+      "BriefingLine": {
+        "description": "A fixed-template sentence; every number in ``text`` appears in the records its ``refs`` resolve to.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "first_death",
+              "most_failed_mechanic",
+              "best_pull"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text",
+          "refs"
+        ],
+        "title": "BriefingLine",
+        "type": "object"
+      },
+      "CachedFindings": {
+        "description": "Cached findings for a pull; ``stale`` when the pull's events or encounter file changed since.",
+        "properties": {
+          "cache_key": {
+            "title": "Cache Key",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "flagged": {
+            "default": false,
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "produced_by": {
+            "$ref": "#/components/schemas/ProducedBy"
+          },
+          "pull_key": {
+            "title": "Pull Key",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknowns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pull_key",
+          "findings",
+          "unknowns",
+          "produced_by",
+          "cache_key",
+          "created_at",
+          "stale"
+        ],
+        "title": "CachedFindings",
+        "type": "object"
+      },
+      "CooldownMarker": {
+        "properties": {
+          "caster": {
+            "title": "Caster",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "defensive",
+              "offensive",
+              "utility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "spell": {
+            "title": "Spell",
+            "type": "string"
+          },
+          "spell_id": {
+            "title": "Spell Id",
+            "type": "integer"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "t_ms",
+          "spell_id",
+          "spell",
+          "category",
+          "caster",
+          "ref"
+        ],
+        "title": "CooldownMarker",
+        "type": "object"
+      },
+      "CooldownUse": {
+        "properties": {
+          "caster": {
+            "title": "Caster",
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "defensive",
+              "offensive",
+              "utility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "spell_id": {
+            "title": "Spell Id",
+            "type": "integer"
+          },
+          "spell_name": {
+            "title": "Spell Name",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ref",
+          "spell_id",
+          "spell_name",
+          "category",
+          "caster",
+          "t_ms",
+          "phase_id"
+        ],
+        "title": "CooldownUse",
+        "type": "object"
+      },
+      "DeathMarker": {
+        "properties": {
+          "after_cutoff": {
+            "title": "After Cutoff",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "t_ms",
+          "name",
+          "after_cutoff",
+          "ref"
+        ],
+        "title": "DeathMarker",
+        "type": "object"
+      },
+      "DeathRecord": {
+        "properties": {
+          "active_defensives": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Active Defensives",
+            "type": "array"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "integer"
+          },
+          "after_cutoff": {
+            "title": "After Cutoff",
+            "type": "boolean"
+          },
+          "killing_ability_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Killing Ability Id"
+          },
+          "killing_ability_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Killing Ability Name"
+          },
+          "mechanic_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mechanic Ids",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "overkill": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overkill"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          },
+          "time_to_die_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time To Die Ms"
+          },
+          "top_hits": {
+            "items": {
+              "$ref": "#/components/schemas/Hit"
+            },
+            "title": "Top Hits",
+            "type": "array"
+          },
+          "window_damage": {
+            "title": "Window Damage",
+            "type": "integer"
+          },
+          "window_healing": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Healing"
+          },
+          "window_ms": {
+            "default": 10000,
+            "title": "Window Ms",
+            "type": "integer"
+          },
+          "window_self_damage": {
+            "default": 0,
+            "title": "Window Self Damage",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ref",
+          "actor_id",
+          "name",
+          "t_ms",
+          "phase_id",
+          "killing_ability_id",
+          "killing_ability_name",
+          "overkill",
+          "time_to_die_ms",
+          "window_damage",
+          "window_healing",
+          "top_hits",
+          "mechanic_ids",
+          "active_defensives",
+          "after_cutoff"
+        ],
+        "title": "DeathRecord",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "description": "Every error response: a stable machine code and a message for people.",
+        "properties": {
+          "code": {
+            "examples": [
+              "report_not_found",
+              "pull_not_found",
+              "unresolvable_ref",
+              "bad_window"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "EventsPage": {
+        "description": "Event rows exactly as their ``event`` refs resolve, capped (see ``truncated`` and ``total``).",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rows",
+          "refs",
+          "truncated",
+          "total"
+        ],
+        "title": "EventsPage",
+        "type": "object"
+      },
+      "Evidence": {
+        "description": "The record a ref names, exactly as the analyst's verify step resolves it.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/RefKind"
+          },
+          "record": {
+            "additionalProperties": true,
+            "title": "Record",
+            "type": "object"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "kind",
+          "record"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "Finding": {
+        "properties": {
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Refs",
+            "type": "array"
+          },
+          "scope": {
+            "enum": [
+              "pull",
+              "cross_pull"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "claim",
+          "refs",
+          "confidence",
+          "scope"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "FindingsList": {
+        "properties": {
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/CachedFindings"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "findings",
+          "truncated",
+          "total"
+        ],
+        "title": "FindingsList",
+        "type": "object"
+      },
+      "FirstDeath": {
+        "description": "The killing ability of the earliest death that is most common across the section's pulls.",
+        "properties": {
+          "ability_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability Id"
+          },
+          "ability_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability Name"
+          },
+          "of_pulls": {
+            "title": "Of Pulls",
+            "type": "integer"
+          },
+          "pull_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pull Refs",
+            "type": "array"
+          },
+          "pulls": {
+            "title": "Pulls",
+            "type": "integer"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ability_id",
+          "ability_name",
+          "pulls",
+          "of_pulls",
+          "refs",
+          "pull_refs"
+        ],
+        "title": "FirstDeath",
+        "type": "object"
+      },
+      "FriendlyDamage": {
+        "description": "Damage players took from their own side: friendly-damage registry abilities (whatever the source) and any\nother friendly-source damage the encounter file doesn't name. None of it counts toward the unregistered share.",
+        "properties": {
+          "by_class": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "By Class",
+            "type": "object"
+          },
+          "damage": {
+            "default": 0,
+            "title": "Damage",
+            "type": "integer"
+          },
+          "self_inflicted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PlayerSelfDamage"
+            },
+            "title": "Self Inflicted",
+            "type": "array"
+          },
+          "share_pct": {
+            "default": 0.0,
+            "title": "Share Pct",
+            "type": "number"
+          },
+          "unclassified": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/UnregisteredAbility"
+            },
+            "title": "Unclassified",
+            "type": "array"
+          }
+        },
+        "title": "FriendlyDamage",
+        "type": "object"
+      },
+      "GroupInfo": {
+        "description": "One encounter and difficulty within a report.",
+        "properties": {
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "pulls": {
+            "title": "Pulls",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "encounter_name",
+          "difficulty",
+          "difficulty_name",
+          "pulls"
+        ],
+        "title": "GroupInfo",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "api_version": {
+            "default": "1.0.0",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "data_dir": {
+            "title": "Data Dir",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_dir"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Hit": {
+        "properties": {
+          "ability_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability Id"
+          },
+          "ability_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability Name"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "t_ms",
+          "ability_id",
+          "ability_name",
+          "amount",
+          "source_name"
+        ],
+        "title": "Hit",
+        "type": "object"
+      },
+      "LateCooldown": {
+        "properties": {
+          "late_ms": {
+            "title": "Late Ms",
+            "type": "integer"
+          },
+          "spell_id": {
+            "title": "Spell Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "spell_id",
+          "late_ms"
+        ],
+        "title": "LateCooldown",
+        "type": "object"
+      },
+      "MechanicMarker": {
+        "description": "One cluster of a mechanic's hits. Its ``ref`` is the mechanic's ``mech`` ref (clusters have none).",
+        "properties": {
+          "cluster": {
+            "title": "Cluster",
+            "type": "integer"
+          },
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "title": "Mechanic Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mechanic_id",
+          "name",
+          "cluster",
+          "t_ms",
+          "end_ms",
+          "hits",
+          "failures",
+          "ref"
+        ],
+        "title": "MechanicMarker",
+        "type": "object"
+      },
+      "MechanicStat": {
+        "properties": {
+          "blame_dist_yd": {
+            "additionalProperties": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "propertyNames": {
+              "enum": [
+                "beyond_reach",
+                "in_reach",
+                "dead",
+                "alive",
+                "no_position",
+                "no_holder"
+              ]
+            },
+            "title": "Blame Dist Yd",
+            "type": "object"
+          },
+          "blame_states": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "beyond_reach",
+                "in_reach",
+                "dead",
+                "alive",
+                "no_position",
+                "no_holder"
+              ]
+            },
+            "title": "Blame States",
+            "type": "object"
+          },
+          "clusters": {
+            "title": "Clusters",
+            "type": "integer"
+          },
+          "damage_taken": {
+            "title": "Damage Taken",
+            "type": "integer"
+          },
+          "deaths_in_window": {
+            "title": "Deaths In Window",
+            "type": "integer"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "failures_by_player": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Failures By Player",
+            "type": "object"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "title": "Mechanic Id",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "mechanic_id",
+          "clusters",
+          "hits",
+          "failures",
+          "failures_by_player",
+          "damage_taken",
+          "deaths_in_window"
+        ],
+        "title": "MechanicStat",
+        "type": "object"
+      },
+      "MostFailedMechanic": {
+        "properties": {
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "title": "Mechanic Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pulls_failed": {
+            "title": "Pulls Failed",
+            "type": "integer"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mechanic_id",
+          "name",
+          "failures",
+          "pulls_failed",
+          "refs"
+        ],
+        "title": "MostFailedMechanic",
+        "type": "object"
+      },
+      "NightMechanic": {
+        "properties": {
+          "damage_taken": {
+            "title": "Damage Taken",
+            "type": "integer"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "title": "Mechanic Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pulls_affected": {
+            "title": "Pulls Affected",
+            "type": "integer"
+          },
+          "refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mechanic_id",
+          "name",
+          "failures",
+          "hits",
+          "damage_taken",
+          "pulls_affected",
+          "refs"
+        ],
+        "title": "NightMechanic",
+        "type": "object"
+      },
+      "NightSection": {
+        "description": "One encounter and difficulty of the report, computed over that group's pulls only.",
+        "properties": {
+          "best_pull": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BestPull"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "briefing": {
+            "items": {
+              "$ref": "#/components/schemas/BriefingLine"
+            },
+            "title": "Briefing",
+            "type": "array"
+          },
+          "coverage": {
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "findings_available": {
+            "title": "Findings Available",
+            "type": "integer"
+          },
+          "findings_stale": {
+            "title": "Findings Stale",
+            "type": "integer"
+          },
+          "kills": {
+            "title": "Kills",
+            "type": "integer"
+          },
+          "mechanics": {
+            "items": {
+              "$ref": "#/components/schemas/NightMechanic"
+            },
+            "title": "Mechanics",
+            "type": "array"
+          },
+          "most_common_first_death": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FirstDeath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "most_failed_mechanic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MostFailedMechanic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pulls": {
+            "title": "Pulls",
+            "type": "integer"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendRow"
+            },
+            "title": "Trend",
+            "type": "array"
+          },
+          "wipes": {
+            "title": "Wipes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "encounter_name",
+          "difficulty",
+          "difficulty_name",
+          "coverage",
+          "pulls",
+          "kills",
+          "wipes",
+          "best_pull",
+          "most_failed_mechanic",
+          "most_common_first_death",
+          "trend",
+          "mechanics",
+          "findings_available",
+          "findings_stale",
+          "briefing"
+        ],
+        "title": "NightSection",
+        "type": "object"
+      },
+      "NightSummary": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/NightSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/NightTotals"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "totals",
+          "sections"
+        ],
+        "title": "NightSummary",
+        "type": "object"
+      },
+      "NightTotals": {
+        "properties": {
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "kills": {
+            "title": "Kills",
+            "type": "integer"
+          },
+          "pulls": {
+            "title": "Pulls",
+            "type": "integer"
+          },
+          "wipes": {
+            "title": "Wipes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pulls",
+          "kills",
+          "wipes",
+          "duration_ms"
+        ],
+        "title": "NightTotals",
+        "type": "object"
+      },
+      "PhaseMarker": {
+        "properties": {
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "start_ms",
+          "end_ms"
+        ],
+        "title": "PhaseMarker",
+        "type": "object"
+      },
+      "PlayerSelfDamage": {
+        "properties": {
+          "abilities": {
+            "items": {
+              "$ref": "#/components/schemas/AbilityDamage"
+            },
+            "title": "Abilities",
+            "type": "array"
+          },
+          "damage": {
+            "title": "Damage",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "damage",
+          "abilities"
+        ],
+        "title": "PlayerSelfDamage",
+        "type": "object"
+      },
+      "ProducedBy": {
+        "properties": {
+          "encfile_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encfile Hash"
+          },
+          "events_hashes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Events Hashes",
+            "type": "object"
+          },
+          "graph_version": {
+            "title": "Graph Version",
+            "type": "string"
+          },
+          "model_id": {
+            "title": "Model Id",
+            "type": "string"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_id",
+          "prompt_version",
+          "graph_version",
+          "encfile_hash",
+          "events_hashes"
+        ],
+        "title": "ProducedBy",
+        "type": "object"
+      },
+      "PullDigest": {
+        "properties": {
+          "aggro": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AggroSummary"
+            },
+            "title": "Aggro",
+            "type": "array"
+          },
+          "anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Anomalies",
+            "type": "array"
+          },
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Pct"
+          },
+          "coverage": {
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "coverage_windows": {
+            "items": {
+              "$ref": "#/components/schemas/WindowCoverage"
+            },
+            "title": "Coverage Windows",
+            "type": "array"
+          },
+          "cutoff_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Ms"
+          },
+          "deaths": {
+            "items": {
+              "$ref": "#/components/schemas/DeathRecord"
+            },
+            "title": "Deaths",
+            "type": "array"
+          },
+          "defensive_cooldowns": {
+            "items": {
+              "$ref": "#/components/schemas/CooldownUse"
+            },
+            "title": "Defensive Cooldowns",
+            "type": "array"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "friendly_damage": {
+            "$ref": "#/components/schemas/FriendlyDamage"
+          },
+          "mechanics": {
+            "items": {
+              "$ref": "#/components/schemas/MechanicStat"
+            },
+            "title": "Mechanics",
+            "type": "array"
+          },
+          "offensive_cooldowns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CooldownUse"
+            },
+            "title": "Offensive Cooldowns",
+            "type": "array"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "phase_reached": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Reached"
+          },
+          "produced_from": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Produced From",
+            "type": "object"
+          },
+          "pull_key": {
+            "title": "Pull Key",
+            "type": "string"
+          },
+          "unregistered": {
+            "items": {
+              "$ref": "#/components/schemas/UnregisteredAbility"
+            },
+            "title": "Unregistered",
+            "type": "array"
+          },
+          "utility_cooldowns": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CooldownUse"
+            },
+            "title": "Utility Cooldowns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pull_key",
+          "encounter_name",
+          "outcome",
+          "duration_ms",
+          "phase_reached",
+          "boss_pct",
+          "cutoff_ms",
+          "deaths",
+          "mechanics",
+          "defensive_cooldowns",
+          "coverage_windows",
+          "unregistered",
+          "coverage",
+          "anomalies",
+          "produced_from"
+        ],
+        "title": "PullDigest",
+        "type": "object"
+      },
+      "PullSummary": {
+        "description": "One pull in a report group. Every value is in the record its ``ref`` (a ``pull`` ref) resolves to.",
+        "properties": {
+          "anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Anomalies",
+            "type": "array"
+          },
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Pct"
+          },
+          "coverage": {
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "deaths": {
+            "title": "Deaths",
+            "type": "integer"
+          },
+          "deaths_before_cutoff": {
+            "title": "Deaths Before Cutoff",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "fight": {
+            "title": "Fight",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "phase_reached": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Reached"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fight",
+          "ordinal",
+          "label",
+          "outcome",
+          "duration_ms",
+          "boss_pct",
+          "boss_hp_pct",
+          "phase_reached",
+          "deaths",
+          "deaths_before_cutoff",
+          "coverage",
+          "anomalies",
+          "ref"
+        ],
+        "title": "PullSummary",
+        "type": "object"
+      },
+      "PullTimeline": {
+        "description": "Digest-level markers for one pull, built from the same uncapped records the digest uses.",
+        "properties": {
+          "cooldowns": {
+            "items": {
+              "$ref": "#/components/schemas/CooldownMarker"
+            },
+            "title": "Cooldowns",
+            "type": "array"
+          },
+          "cutoff_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Ms"
+          },
+          "deaths": {
+            "items": {
+              "$ref": "#/components/schemas/DeathMarker"
+            },
+            "title": "Deaths",
+            "type": "array"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "mechanics": {
+            "items": {
+              "$ref": "#/components/schemas/MechanicMarker"
+            },
+            "title": "Mechanics",
+            "type": "array"
+          },
+          "phases": {
+            "items": {
+              "$ref": "#/components/schemas/PhaseMarker"
+            },
+            "title": "Phases",
+            "type": "array"
+          },
+          "pull_key": {
+            "title": "Pull Key",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "windows": {
+            "items": {
+              "$ref": "#/components/schemas/WindowMarker"
+            },
+            "title": "Windows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pull_key",
+          "duration_ms",
+          "cutoff_ms",
+          "ref",
+          "phases",
+          "deaths",
+          "mechanics",
+          "cooldowns",
+          "windows"
+        ],
+        "title": "PullTimeline",
+        "type": "object"
+      },
+      "RefKind": {
+        "description": "The kind of record an evidence ref names (the part after ``ev:<report>:<fight>:``, or ``plan``).",
+        "enum": [
+          "death",
+          "mech",
+          "cd",
+          "win",
+          "event",
+          "pull",
+          "plan"
+        ],
+        "title": "RefKind",
+        "type": "string"
+      },
+      "ReportDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ReportGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "groups",
+          "truncated",
+          "total"
+        ],
+        "title": "ReportDetail",
+        "type": "object"
+      },
+      "ReportGroup": {
+        "properties": {
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "pulls": {
+            "items": {
+              "$ref": "#/components/schemas/PullSummary"
+            },
+            "title": "Pulls",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "encounter_name",
+          "difficulty",
+          "difficulty_name",
+          "pulls",
+          "truncated",
+          "total"
+        ],
+        "title": "ReportGroup",
+        "type": "object"
+      },
+      "ReportInfo": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupInfo"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "pulls": {
+            "title": "Pulls",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "pulls",
+          "groups"
+        ],
+        "title": "ReportInfo",
+        "type": "object"
+      },
+      "ReportList": {
+        "properties": {
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportInfo"
+            },
+            "title": "Reports",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reports",
+          "truncated",
+          "total"
+        ],
+        "title": "ReportList",
+        "type": "object"
+      },
+      "TrendRow": {
+        "properties": {
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Pct"
+          },
+          "coverage": {
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "deaths_before_cutoff": {
+            "title": "Deaths Before Cutoff",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "fight": {
+            "title": "Fight",
+            "type": "integer"
+          },
+          "first_death_is_top": {
+            "title": "First Death Is Top",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ordinal",
+          "label",
+          "fight",
+          "outcome",
+          "boss_hp_pct",
+          "boss_pct",
+          "duration_ms",
+          "deaths_before_cutoff",
+          "coverage",
+          "first_death_is_top",
+          "ref"
+        ],
+        "title": "TrendRow",
+        "type": "object"
+      },
+      "UnregisteredAbility": {
+        "properties": {
+          "ability_id": {
+            "title": "Ability Id",
+            "type": "integer"
+          },
+          "damage": {
+            "title": "Damage",
+            "type": "integer"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "share_pct": {
+            "title": "Share Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ability_id",
+          "name",
+          "damage",
+          "share_pct"
+        ],
+        "title": "UnregisteredAbility",
+        "type": "object"
+      },
+      "WindowCoverage": {
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "defensive_cooldowns_active": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Defensive Cooldowns Active",
+            "type": "array"
+          },
+          "defensive_cooldowns_late": {
+            "items": {
+              "$ref": "#/components/schemas/LateCooldown"
+            },
+            "title": "Defensive Cooldowns Late",
+            "type": "array"
+          },
+          "occurrence": {
+            "title": "Occurrence",
+            "type": "integer"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          },
+          "window_id": {
+            "title": "Window Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "window_id",
+          "occurrence",
+          "t_ms",
+          "defensive_cooldowns_active",
+          "covered"
+        ],
+        "title": "WindowCoverage",
+        "type": "object"
+      },
+      "WindowMarker": {
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "occurrence": {
+            "title": "Occurrence",
+            "type": "integer"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          },
+          "window_id": {
+            "title": "Window Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "t_ms",
+          "window_id",
+          "name",
+          "occurrence",
+          "covered",
+          "ref"
+        ],
+        "title": "WindowMarker",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
+    "title": "KhadBot Dashboard API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/evidence/{ref}": {
+      "get": {
+        "description": "The record a ref names (URL-encode the ref), as the analyst's verify step resolves it.",
+        "operationId": "get_evidence_v1_evidence__ref__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The ref is malformed or names no record"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Raid-plan refs cannot be resolved yet"
+          }
+        },
+        "summary": "Get Evidence",
+        "tags": [
+          "evidence"
+        ]
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "description": "Status, the data directory in use and the API version.",
+        "operationId": "health_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/v1/reports": {
+      "get": {
+        "description": "Ingested reports with their encounter and difficulty groups.",
+        "operationId": "list_reports_v1_reports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "List Reports",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/reports/{code}": {
+      "get": {
+        "description": "The report's groups in the order first pulled, each with its pull summaries in time order.",
+        "operationId": "get_report_v1_reports__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/reports/{code}/night": {
+      "get": {
+        "description": "Report totals plus one section per encounter and difficulty: KPIs, trend, mechanic table and briefing.",
+        "operationId": "get_night_v1_reports__code__night_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NightSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Night",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/reports/{code}/pulls/{fight}/digest": {
+      "get": {
+        "description": "The pull's digest as built. ``full=true`` replaces the capped lists with every record.",
+        "operationId": "get_digest_v1_reports__code__pulls__fight__digest_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fight",
+            "required": true,
+            "schema": {
+              "title": "Fight",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "full",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Full",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullDigest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Digest",
+        "tags": [
+          "pulls"
+        ]
+      }
+    },
+    "/v1/reports/{code}/pulls/{fight}/events": {
+      "get": {
+        "description": "Event rows in a window of at most 30 s, exactly as their ``event`` refs resolve, capped at 200 rows.",
+        "operationId": "get_events_v1_reports__code__pulls__fight__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fight",
+            "required": true,
+            "schema": {
+              "title": "Fight",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Window start, fight-relative ms (inclusive)",
+            "in": "query",
+            "name": "t_from_ms",
+            "required": true,
+            "schema": {
+              "description": "Window start, fight-relative ms (inclusive)",
+              "title": "T From Ms",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Window end, fight-relative ms (inclusive); at most 30 s after start",
+            "in": "query",
+            "name": "t_to_ms",
+            "required": true,
+            "schema": {
+              "description": "Window end, fight-relative ms (inclusive); at most 30 s after start",
+              "title": "T To Ms",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Actor name or ID, as source or target",
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Actor name or ID, as source or target",
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ability_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ability Id"
+            }
+          },
+          {
+            "description": "Event types to keep (repeat the parameter)",
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Event types to keep (repeat the parameter)",
+              "title": "Types"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad window or unknown actor"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Events",
+        "tags": [
+          "pulls"
+        ]
+      }
+    },
+    "/v1/reports/{code}/pulls/{fight}/findings": {
+      "get": {
+        "description": "Cached findings for the pull with ``stale`` set; empty when none are cached. Never runs the analyst.",
+        "operationId": "get_findings_v1_reports__code__pulls__fight__findings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fight",
+            "required": true,
+            "schema": {
+              "title": "Fight",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingsList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Findings",
+        "tags": [
+          "pulls"
+        ]
+      }
+    },
+    "/v1/reports/{code}/pulls/{fight}/timeline": {
+      "get": {
+        "description": "Phase spans and markers for deaths, mechanic clusters, cooldown uses and damage windows, each with its ref.",
+        "operationId": "get_timeline_v1_reports__code__pulls__fight__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fight",
+            "required": true,
+            "schema": {
+              "title": "Fight",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullTimeline"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report or pull not ingested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Timeline",
+        "tags": [
+          "pulls"
+        ]
+      }
+    }
+  }
+}

@@ -70,3 +70,25 @@ class TestDigestSubcommand:
     def test_fight_must_be_int(self):
         with pytest.raises(SystemExit):
             main(["digest", "ABC123", "four"])
+
+
+class TestServeSubcommand:
+    def test_default_port(self):
+        with patch("khadbot.main._run_serve") as run:
+            main(["serve"])
+        run.assert_called_once_with(8000)
+
+    def test_port(self):
+        with patch("khadbot.main._run_serve") as run:
+            main(["serve", "--port", "8123"])
+        run.assert_called_once_with(8123)
+
+    def test_binds_to_loopback_only(self, tmp_path, monkeypatch):
+        from khadbot.main import _run_serve
+
+        monkeypatch.setenv("KHADBOT_DATA_DIR", str(tmp_path))
+        with patch("uvicorn.run") as run:
+            _run_serve(8123)
+        app = run.call_args.args[0]
+        assert run.call_args.kwargs == {"host": "127.0.0.1", "port": 8123}
+        assert app.state.ctx.data_dir == tmp_path

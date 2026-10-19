@@ -23,27 +23,30 @@ KhadBot has two modes. The user picks one explicitly with `/mode`; there is no L
 
 ```
 src/khadbot/
-  main.py            # entry point: cli, ingest, digest subcommands
+  main.py            # entry point: cli, ingest, digest, serve subcommands
   session.py         # Mode, Session, run_turn()
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
   encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, CLI commands;
                      # conversation and plan to come
-    ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report
+    ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report, offline recorded ingest
     annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
     analysis/        # deaths, mechanics, cooldowns, aggro
     analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
   simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL
   tools/             # LangChain @tools and the shared WarcraftLogs client
+  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary
 config/
   agents/            # coach.yaml, encounter.yaml
   personas/          # khadgar, thrall, xalatath
   templates/         # Jinja system-prompt template
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
-scripts/             # setup, WCL fixture recorder, registry generator (build_registries.py), clean and distclean
+contracts/           # openapi.json generated from the API (the frontend's types come from it)
+scripts/             # setup, WCL fixture recorder, registry generator (build_registries.py), fixture data builder,
+                     # contract generator, clean and distclean
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates
