@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from khadbot.storage import LocalBlobStore, atomic_write, default_blob_store, resolve_blobs
+from khadbot.storage import LocalBlobStore, atomic_write, default_blob_store, local, resolve_blobs
 
 # ---------------------------------------------------------------------------
 # Layout
@@ -81,6 +81,41 @@ def test_failed_replace_keeps_the_old_object_and_cleans_up(tmp_path, monkeypatch
 
     monkeypatch.setattr(os, "replace", broken_replace)
     with pytest.raises(OSError, match="disk full"):
+        blobs.put("events/ABC/pulls.json", b"new")
+    assert blobs.get("events/ABC/pulls.json") == b"old"
+    assert sorted(p.name for p in (tmp_path / "events" / "ABC").iterdir()) == ["pulls.json"]
+
+
+def test_put_retries_a_sharing_violation_until_it_clears(tmp_path, monkeypatch):
+    blobs = LocalBlobStore(tmp_path)
+    real_replace = os.replace
+    calls = 0
+
+    def busy_then_free(src, dst):
+        nonlocal calls
+        calls += 1
+        if calls <= 15:  # more tries than the old fixed count allowed
+            raise PermissionError(13, "Access is denied")
+        real_replace(src, dst)
+
+    monkeypatch.setattr(local, "_SHARING_FIRST_DELAY_S", 0.0001)
+    monkeypatch.setattr(local, "_SHARING_MAX_DELAY_S", 0.0001)
+    monkeypatch.setattr(os, "replace", busy_then_free)
+    blobs.put("events/ABC/pulls.json", b"new")
+    assert blobs.get("events/ABC/pulls.json") == b"new"
+    assert calls == 16
+
+
+def test_put_gives_up_on_a_sharing_violation_after_the_deadline(tmp_path, monkeypatch):
+    blobs = LocalBlobStore(tmp_path)
+    blobs.put("events/ABC/pulls.json", b"old")
+
+    def always_busy(src, dst):
+        raise PermissionError(13, "Access is denied")
+
+    monkeypatch.setattr(local, "_SHARING_DEADLINE_S", 0.05)
+    monkeypatch.setattr(os, "replace", always_busy)
+    with pytest.raises(PermissionError):
         blobs.put("events/ABC/pulls.json", b"new")
     assert blobs.get("events/ABC/pulls.json") == b"old"
     assert sorted(p.name for p in (tmp_path / "events" / "ABC").iterdir()) == ["pulls.json"]
