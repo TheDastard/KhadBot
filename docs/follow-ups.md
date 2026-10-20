@@ -76,6 +76,32 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   proposed classes, unverified.
 - **WCL's limit on filter length.** The defensive Buffs filter now holds 95 IDs (under 1 KB); offensive
   cooldowns have their own Buffs request and filter. WCL's limit on filter length is not known.
+- **Fetch with the user's WCL token.** Once KhadBot is hosted, the app's 3,600 points an hour cover about ten
+  25-pull nights, and raid nights cluster on the same evenings. WoWAnalyzer's server sends a signed-in user's
+  requests to `/api/v2/user` with that user's token and uses the app token only for visitors who aren't signed
+  in. `WarcraftLogsClient.query` already accepts a `user_token`, but encounter ingest never passes one. Steps:
+  1. Confirm whose budget a user-token request spends. Read `rateLimitData` with the app token and with a user
+     token before and after one ingest, and record the result in `docs/wcl-api.md`. WCL's API docs couldn't
+     be read when this was written.
+  2. If the user's budget pays, thread the user token through `ingest_report` and the fetch specs.
+  3. Data fetched with a user token can include private reports. The hosted store must record which users may
+     read a report, so cached pages and records never reach a user whose own token can't see it. WoWAnalyzer
+     adds the WCL user ID to the cache key of signed-in requests for the same reason.
+- **Rate-limit users on the app budget.** Requests without a user token (users not signed in to WCL,
+  Discord-only users, background jobs) share the app's hourly points. Not built: a global points bucket kept in
+  step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected
+  wait instead of failing when the bucket is empty. Keep headroom for live ingest of linked guilds' raids.
+- **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
+  filter. Each request costs about 2 points plus about 1 per extra page (`docs/wcl-api.md`). Wipefest joined
+  every config's filter into one `(a) or (b)` expression and paged through a single request per fight. Measure
+  on one long recorded pull whether fewer requests with merged `filterExpression`s cut points and wall time:
+  points spent (`rateLimitData` before and after), pages, bytes and time, with the normalized events asserted
+  identical. Open points:
+  - `dataType` and `hostilityType` are per-request arguments. Check whether a request without `dataType` and a
+    filter on event type returns the same rows, and whether friendly and enemy specs can share one request.
+  - Normalize, the truncation anomaly and the raw cache's `_complete` markers are per spec, and the cache path
+    holds the filter hash. A merged request needs its pages' data type taken from each event's `type`.
+  - A merged filter is longer, so it runs into WCL's unknown limit on filter length (above).
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
@@ -124,7 +150,8 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   invalidates what" in `docs/encounter-pipeline.md`).
 - **Serving analysis to many views.** Dashboards and other readers use `PullRecords` through `EncounterData`,
   which rebuilds records per process and keeps a few in memory. Investigate how to serve many views and users at
-  scale, for example persisting serialized records keyed by their `produced_from` hashes.
+  scale, for example persisting serialized records keyed by their `produced_from` hashes. A proposed hosted
+  design (shared storage, job queue, read models, WCL budget): https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B
 
 ### Failure rules
 
