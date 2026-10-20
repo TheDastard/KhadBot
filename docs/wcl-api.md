@@ -295,7 +295,8 @@ results go in the two subsections below with the date and report code; the follo
 **Whose budget a user-token request spends** (`scripts/probe_wcl_budget.py`). It signs you in to Warcraft Logs
 with PKCE: your browser opens, and a listener on `http://localhost:8976/callback` catches the redirect (`--port`
 changes the port). Register that exact URL as a redirect URL on the WCL client first. The client is used without
-its secret unless you pass `--with-secret`. Then it reads `rateLimitData` with the app token and with your token
+its secret unless you pass `--with-secret`, and WCL refuses the token exchange without it (HTTP 400,
+`invalid_request`) when the client is not registered as public, so pass it for a normal confidential client. Then it reads `rateLimitData` with the app token and with your token
 (twice each, to see what a read costs), fetches the current specs of the shortest recorded pull
 (`H7z1fqDXjRTFnbtg:10`, 37 s) with your token, reads both again and prints which counter moved.
 
@@ -315,9 +316,35 @@ through the real `normalize_pull`). `--max-pages` caps any stream. `--variants` 
 
 ### Budget probe results
 
-Not run yet. Date, report code and fight, the table the script prints, and the verdict go here.
+2026-10-20, `H7z1fqDXjRTFnbtg:10` (37 s), fetched with a user token. It needed `--with-secret`: without it WCL
+refused the token exchange with HTTP 400, `error=invalid_request`, so the client is not registered as public.
+
+| Counter read with | Limit per hour | Spent before | Spent after | Moved | Cost of one read |
+|---|---|---|---|---|---|
+| app token | 3600 | 5 | 18 | 13 | 1 |
+| user token | 3600 | 6 | 19 | 13 | 1 |
+
+The script's verdict: both counters moved by the same amount, so one shared pool. The reads interleave (app 5,
+user 6, fetch, app 18, user 19) and each read costs 1 point, so the fetch itself cost about 11 points.
+
+Caveat, and the open part: the signed-in user owns the API client. This can't tell "a user token spends the
+app's pool" from "the client owner's token shares the client's pool"; another WCL account's token might have its
+own budget. A second account's token settles it.
 
 ### Merged-filter results
 
-Not run yet. Date, report code and fight, the table the script prints, and whether a variant saves at least 15%
-of points or time go here.
+2026-10-20, `trMgApZCVYkv3jdq:26` (526 s), app token. A back-to-back `rateLimitData` read moved the counter by 1.
+
+| Run | Requests | Pages | Bytes | Events | Wall s | Points | Points saved | Time saved | Frames identical |
+|---|---|---|---|---|---|---|---|---|---|
+| baseline | 11 | 21 | 52156515 | 123799 | 9.8 | 24.31 | | | |
+| hostility | rejected: Friendlies/all: WarcraftLogs GraphQL error: Internal server error | | | | | | | | |
+| datatype | 10 | 20 | 52156480 | 123799 | 4.1 | 21 | 14% | 58% | True (ignoring tie order: True) |
+
+- **No `dataType` is refused.** The one-second probe of a Friendlies request with no `dataType` got an internal
+  server error from the API, so one request per hostility is not possible as specified.
+- **Merging same-type requests keeps the rows.** The `datatype` variant (the two Buffs requests as one, with
+  their ability IDs unioned) normalized to the baseline's frame exactly: 0 unassigned, 0 missing and 0 ambiguous
+  rows. It saved 13.6% of points (21 against 24.31), under the 15% bar: about one request's cost.
+- **The 58% time saving is not trustworthy yet.** It ran straight after the baseline fetched the same pull, so
+  WCL-side caching may explain part of it. One run each, no repeats.
