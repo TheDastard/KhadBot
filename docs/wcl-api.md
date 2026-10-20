@@ -314,6 +314,26 @@ through the real `normalize_pull`). `--max-pages` caps any stream. `--variants` 
 
     uv run python scripts/compare_merged_filters.py
 
+Two more variants measure their own baseline, the requests they would replace, so they can run without the
+single-pull baseline:
+
+- `crossfight` fetches the small specs (Deaths, both Buffs, Debuffs, Dispels, Interrupts, Threat, enemy Casts;
+  `--batch-specs` changes the list) once per pull through `fetch_pull`, one pull at a time as ingest does, then
+  once per spec with every pull's fight ID. Enemy Casts get one request per encounter filter. The batched rows are
+  split back by their `fight` field and compared per pull. `--batch-fights` picks the pulls: `encounter` (every
+  pull of `--fight`'s encounter, the default; 25 pulls and 200 baseline requests on `trMgApZCVYkv3jdq`), `all`,
+  or a list such as `4,5,6,7,8,9`.
+- `healonly` fetches Healing unfiltered, then with `--heal-filter`, and checks that the filtered rows are exactly
+  the baseline's `heal` rows. It also reports how many rows and position samples the filter drops. The filter
+  syntax for event type is not confirmed, so there is no default; a one-second probe runs first, and a rejected
+  filter costs about one request.
+
+`--variant-first` runs these two before their baselines. Run each order once to see whether WCL-side caching
+favours whichever goes second.
+
+    uv run python scripts/compare_merged_filters.py --variants crossfight --batch-fights 4,5,6,7,8,9
+    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter "<expression>"
+
 ### Budget probe results
 
 2026-10-20, `H7z1fqDXjRTFnbtg:10` (37 s), fetched with a user token. It needed `--with-secret`: without it WCL
