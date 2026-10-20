@@ -75,6 +75,15 @@ every later stage.
 Requests are retried with backoff on WCL rate limits; `EncounterConfig` sets the page size, concurrency and retry
 count.
 
+`ingest_report` and `fetch_pull` take an optional `token_provider`, an async callable returning a signed-in user's WCL
+access token. With it every request (report metadata, event pages and the points reads) goes to `/api/v2/user` with
+that token, and `points_spent` counts the user's budget; without it they use the app token. The provider is called
+for every request so it can refresh. On an HTTP 401 it is called once more and the request retried once; a second
+401 raises `UserTokenRejectedError`. When ingest fetches `report.json` it adds one key, `khadbotFetchedWith`, set to
+`"user"` or `"app"`: which kind of token fetched it, never which user. `"user"` means the report may be private. A
+`report.json` without the key (every directory written before it) reads as unrecorded, and a cached `report.json`
+is never rewritten by a later ingest, so the key describes the fetch that wrote the file.
+
 ## 2. Normalize
 
 `encounter/ingest/normalize.py` turns the raw JSON into typed tables. It flattens and cleans; it does not interpret.

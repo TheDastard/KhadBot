@@ -83,7 +83,9 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   1. Confirm whose budget a user-token request spends. Read `rateLimitData` with the app token and with a user
      token before and after one ingest, and record the result in `docs/wcl-api.md`. WCL's API docs couldn't
      be read when this was written.
-  2. If the user's budget pays, thread the user token through `ingest_report` and the fetch specs.
+  2. Done: `ingest_report` and `fetch_pull` take a `token_provider` and send every request to `/api/v2/user` with
+     it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. Whether the user's
+     budget pays is still step 1's question; with no provider, ingest uses the app token as before.
   3. Data fetched with a user token can include private reports. The hosted store must record which users may
      read a report, so cached pages and records never reach a user whose own token can't see it. WoWAnalyzer
      adds the WCL user ID to the cache key of signed-in requests for the same reason.
