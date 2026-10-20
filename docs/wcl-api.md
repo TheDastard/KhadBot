@@ -284,3 +284,40 @@ spot under 2,500; ranged = the rest.
 A per-pull table reads in about 7 ms. An as-of lookup of 1,000 (actor, time) probes takes 1.5 to 3.3 ms after the
 first call. Normalize already parses every page, so the extra work is about the 2 s per night the columns
 spike measured.
+
+## Budget and merged-filter probes
+
+Two scripts measure what the docs above can't say yet. Both spend WCL points, so each prints an estimate and waits
+for a typed `yes` before every live step. Neither prints or writes a token. Run them from a checkout whose `.env`
+holds `WARCRAFTLOGS_CLIENT_ID` and `WARCRAFTLOGS_CLIENT_SECRET` (a worktree finds the main checkout's `.env`). The
+results go in the two subsections below with the date and report code; the follow-ups are rewritten from them.
+
+**Whose budget a user-token request spends** (`scripts/probe_wcl_budget.py`). It signs you in to Warcraft Logs
+with PKCE: your browser opens, and a listener on `http://localhost:8976/callback` catches the redirect (`--port`
+changes the port). Register that exact URL as a redirect URL on the WCL client first. The client is used without
+its secret unless you pass `--with-secret`. Then it reads `rateLimitData` with the app token and with your token
+(twice each, to see what a read costs), fetches the current specs of the shortest recorded pull
+(`H7z1fqDXjRTFnbtg:10`, 37 s) with your token, reads both again and prints which counter moved.
+
+    uv run python scripts/probe_wcl_budget.py
+
+**Whether merging fetch filters pays** (`scripts/compare_merged_filters.py`). On `trMgApZCVYkv3jdq:26` (526 s;
+its metadata comes from the recorded `report.json`, so it costs nothing) it fetches the current specs through
+`fetch_pull`, then two merged variants: `hostility` (one request per hostility, no `dataType`, so it first sends
+a one-second probe to see whether the API accepts that) and `datatype` (one request per data type and hostility,
+the two Buffs filters merged). Per run it reports points, requests, pages, bytes, events and wall time, and
+whether the rows normalize to the same frame as the baseline (assigned back to specs by row identity, then
+through the real `normalize_pull`). `--max-pages` caps any stream. `--variants` picks a subset.
+`--friendly-filter` and `--enemy-filter` replace the `hostility` variant's filters; only the
+`ability.id IN (...)` form is known to work (see Events above), so the default Friendlies request is unfiltered.
+
+    uv run python scripts/compare_merged_filters.py
+
+### Budget probe results
+
+Not run yet. Date, report code and fight, the table the script prints, and the verdict go here.
+
+### Merged-filter results
+
+Not run yet. Date, report code and fight, the table the script prints, and whether a variant saves at least 15%
+of points or time go here.
