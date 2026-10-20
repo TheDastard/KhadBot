@@ -14,7 +14,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from khadbot.api.night import build_night
+from khadbot.api.night import build_night, build_report_detail, read_source
 from khadbot.api.schemas import (
     ErrorBody,
     EventsPage,
@@ -33,7 +33,6 @@ from khadbot.api.views import (
     cached_findings,
     events_page,
     full_digest,
-    report_groups,
     report_info,
     timeline,
 )
@@ -77,15 +76,14 @@ def list_reports(ctx: Ctx) -> ReportList:
 def get_report(code: str, ctx: Ctx) -> ReportDetail:
     """The report's groups in the order first pulled, each with its pull summaries in time order."""
     with ctx.lock:
-        groups = report_groups(ctx, code)
-    return ReportDetail(code=code, title=ctx.title(code), groups=groups, truncated=False, total=len(groups))
+        return build_report_detail(read_source(ctx), code)
 
 
 @router.get("/reports/{code}/night", response_model=NightSummary, responses=_NOT_FOUND, tags=["reports"])
 def get_night(code: str, ctx: Ctx) -> NightSummary:
     """Report totals plus one section per encounter and difficulty: KPIs, trend, mechanic table and briefing."""
     with ctx.lock:
-        return build_night(ctx, code)
+        return build_night(read_source(ctx), code)
 
 
 @router.get("/reports/{code}/pulls/{fight}/digest", response_model=PullDigest, responses=_NOT_FOUND, tags=["pulls"])

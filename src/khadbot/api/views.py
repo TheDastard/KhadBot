@@ -1,9 +1,10 @@
 """
 api/views.py
 
-Pure builders behind the read endpoints: report groups and pull summaries, the pull timeline, capped event rows and
-cached findings with their staleness. They read through ``EncounterData`` (records, cached in its LRU) and the
-``FindingsStore``, and never call WCL or an LLM.
+Pure builders behind the read endpoints: the report list, the pull timeline, capped event rows and cached findings
+with their staleness. They read through ``EncounterData`` (records, cached in its LRU) and the ``FindingsStore``,
+and never call WCL or an LLM. The report detail and night summary are in ``night.py``, which can also read them
+from the read-model tables.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
+from typing import TYPE_CHECKING, Protocol
 
 import orjson
 import polars as pl
@@ -24,22 +26,23 @@ from khadbot.api.schemas import (
     GroupInfo,
     MechanicMarker,
     PhaseMarker,
-    PullSummary,
     PullTimeline,
-    ReportGroup,
     ReportInfo,
     WindowMarker,
 )
 from khadbot.encounter.analysis.mechanics import mechanic_clusters
 from khadbot.encounter.config_files import WCL_DIFFICULTY, encfile_hash, load_encounter_view
 from khadbot.encounter.digest import PullRecords
-from khadbot.encounter.evidence import EncounterData, event_row, pull_summary
+from khadbot.encounter.evidence import EncounterData, event_row
 from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import Pull, PullDigest, make_ref
 from khadbot.storage import InvalidKeyError
 
-PULL_CAP = 500  # pull summaries per group
+if TYPE_CHECKING:
+    from khadbot.api.night import ReadSource
+
+PULL_CAP = 500  # pull summaries per group (report detail)
 EVENT_ROW_CAP = 200
 MAX_EVENT_WINDOW_MS = 30_000  # same as the analyst's query_events
 
@@ -68,6 +71,8 @@ class ApiContext:
     data_dir: Path | None = None
     raw: RawPageCache | None = None
     lock: RLock = field(default_factory=RLock)
+    # Where the report detail and night summary read from; None means these records (``night.RecordsSource``).
+    read_source: ReadSource | None = None
 
     def title(self, code: str) -> str | None:
         """The report title from the cached report metadata (``raw/<code>/report.json``), if present."""
@@ -104,9 +109,16 @@ class ApiContext:
 GroupKey = tuple[int, int | None]  # (encounter_id, difficulty)
 
 
-def group_pulls(pulls: list[Pull]) -> list[tuple[GroupKey, list[Pull]]]:
+class _Groupable(Protocol):
+    @property
+    def encounter_id(self) -> int: ...
+    @property
+    def difficulty(self) -> int | None: ...
+
+
+def group_pulls[P: _Groupable](pulls: list[P]) -> list[tuple[GroupKey, list[P]]]:
     """Pulls (already in time order) grouped by encounter and difficulty, groups in the order first pulled."""
-    groups: dict[GroupKey, list[Pull]] = {}
+    groups: dict[GroupKey, list[P]] = {}
     for p in pulls:
         groups.setdefault((p.encounter_id, p.difficulty), []).append(p)
     return list(groups.items())
@@ -129,44 +141,6 @@ def report_info(ctx: ApiContext, code: str) -> ReportInfo:
         for (eid, diff), members in group_pulls(pulls)
     ]
     return ReportInfo(code=code, title=ctx.title(code), pulls=len(pulls), groups=groups)
-
-
-def summarize_pull(r: PullRecords, ordinal: int) -> PullSummary:
-    """A pull's row in its group: the fields of what its ``pull`` ref resolves to, plus fight and ordinal."""
-    s = pull_summary(r)
-    return PullSummary(
-        fight=r.pull.fight_id,
-        ordinal=ordinal,
-        label=f"P{ordinal}",
-        outcome=s["outcome"],
-        duration_ms=s["duration_ms"],
-        boss_pct=s["boss_pct"],
-        boss_hp_pct=s["boss_hp_pct"],
-        phase_reached=s["phase_reached"],
-        deaths=s["deaths"],
-        deaths_before_cutoff=s["deaths_before_cutoff"],
-        coverage=s["coverage"],
-        anomalies=s["anomalies"],
-        ref=s["ref"],
-    )
-
-
-def report_groups(ctx: ApiContext, code: str) -> list[ReportGroup]:
-    out = []
-    for (eid, diff), members in group_pulls(ctx.pulls(code)):
-        rows = [summarize_pull(ctx.data.records(p.pull_key), i) for i, p in enumerate(members[:PULL_CAP], start=1)]
-        out.append(
-            ReportGroup(
-                encounter_id=eid,
-                encounter_name=members[0].encounter_name,
-                difficulty=diff,
-                difficulty_name=difficulty_name(diff),
-                pulls=rows,
-                truncated=len(members) > PULL_CAP,
-                total=len(members),
-            )
-        )
-    return out
 
 
 # ---------------------------------------------------------------------------
@@ -316,8 +290,17 @@ def cached_findings(ctx: ApiContext, pull: Pull) -> list[CachedFindings]:
     out = []
     for pf in ctx.findings.for_pull(pull.pull_key):
         produced = pf.produced_by
-        stale = produced.events_hashes.get(pull.pull_key) != events_hash or (
-            produced.encfile_hash is not None and produced.encfile_hash != current_enc
+        stale = findings_stale(
+            produced.events_hashes.get(pull.pull_key), produced.encfile_hash, events_hash, current_enc
         )
         out.append(CachedFindings(**pf.model_dump(), stale=stale))
     return out
+
+
+def findings_stale(
+    produced_events_hash: str | None, produced_encfile_hash: str | None, events_hash: str, encfile_hash: str
+) -> bool:
+    """A findings set is stale if the pull's events changed since, or its encounter file did (when it had one)."""
+    return produced_events_hash != events_hash or (
+        produced_encfile_hash is not None and produced_encfile_hash != encfile_hash
+    )
