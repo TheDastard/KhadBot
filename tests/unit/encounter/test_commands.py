@@ -69,9 +69,7 @@ class TestFormat:
 
 class TestHandler:
     async def test_runs_ingest_with_parsed_args(self):
-        with patch(
-            "khadbot.encounter.commands.ingest_report", new=AsyncMock(return_value=result(pulls=["ABC:3"]))
-        ) as m:
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock(return_value=result(pulls=["ABC:3"]))) as m:
             out = await ingest_command("ABC --fights 3 --offline")
         assert m.await_args.args == ("ABC", [3])
         assert m.await_args.kwargs["offline"] is True
@@ -81,21 +79,19 @@ class TestHandler:
         assert isinstance(m.await_args.kwargs["enemy_cast_ids"], dict)
 
     async def test_bad_args_return_usage_without_ingesting(self):
-        with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock()) as m:
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock()) as m:
             out = await ingest_command("")
         m.assert_not_awaited()
         assert "Usage: /ingest" in out
 
     async def test_refresh_meta_is_passed_through(self):
-        with patch(
-            "khadbot.encounter.commands.ingest_report", new=AsyncMock(return_value=result(pulls=["ABC:3"]))
-        ) as m:
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock(return_value=result(pulls=["ABC:3"]))) as m:
             await ingest_command("ABC --refresh-meta")
         assert m.await_args.kwargs["refresh_meta"] is True
         assert m.await_args.kwargs["offline"] is False
 
     async def test_refresh_meta_with_offline_is_a_usage_error(self):
-        with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock()) as m:
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock()) as m:
             out = await ingest_command("ABC --refresh-meta --offline")
         m.assert_not_awaited()
         assert "--refresh-meta" in out and "Usage: /ingest" in out
@@ -104,14 +100,14 @@ class TestHandler:
 class TestIngestRemembersReport:
     async def test_sets_last_report(self, monkeypatch):
         monkeypatch.setattr(commands, "_last_report", None)
-        with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock(return_value=result(skipped=["ABC:3"]))):
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock(return_value=result(skipped=["ABC:3"]))):
             await ingest_command("ABC")
         assert commands._last_report == "ABC"
 
     async def test_failed_ingest_does_not(self, monkeypatch):
         monkeypatch.setattr(commands, "_last_report", None)
         failed = result(failed={"ABC:3": "boom"})
-        with patch("khadbot.encounter.commands.ingest_report", new=AsyncMock(return_value=failed)):
+        with patch("khadbot.jobs.run.ingest_report", new=AsyncMock(return_value=failed)):
             await ingest_command("ABC")
         assert commands._last_report is None
 

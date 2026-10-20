@@ -152,6 +152,15 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   a report, progression) still load every pull's records and annotated frame; per-pull tables for them are the
   open part. A proposed hosted design (shared storage, job queue, read models, WCL budget):
   https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B
+- **Read-model projection is not wired into `ProcessPull`.** `jobs.run.read_model_projector()` is the hook: it
+  returns None in every mode until the read-model tables exist. When they do, return a projector over
+  `khadbot.db.read_models` for `DatabaseConfig().hosted` (it must be idempotent: `ProcessPull` calls it on repeat
+  runs too). Remove this item then.
+- **The CLI's `/review` does not use `ReviewPull`.** `/review` runs `ProcessPull` per pull and then the whole
+  review graph, because the answer needs the cross-pull synthesis that `ReviewPull` leaves out. Reviewing each pull
+  with `ReviewPull` first would call the model twice for a pull whose analysis is partial (those are not cached).
+  The queue runs `ReviewPull` per pull and the synthesis afterwards; give the graph a way to synthesize from
+  findings it is handed if `/review` should report per-pull progress too.
 - **Authored files are re-parsed on every records lookup.** `EncounterData.records` reads the cooldown files, the
   friendly-damage registry and the encounter file from `config/` each time the in-process cache misses (about
   115 ms for the registries, tens of ms for the encounter file), which is most of a stored read (about 190 ms a
