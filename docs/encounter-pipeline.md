@@ -7,19 +7,19 @@ what it stores, what it reads from `config/`, and what invalidates it. Runtime d
 
 ```
 WCL ──fetch──> raw/ ──normalize──> events/ ──annotate──> annotated/ ──analysis──> PullRecords ──caps──> PullDigest ──render──> text
-                 ▲                                ▲                                ▲                                   │
-   encounter-file ability IDs,      encounter file (one         cooldown files, friendly-damage                analyst ──verify──> findings
+                 ▲                                ▲                                ▲  │                               │
+   encounter-file ability IDs,      encounter file (one         cooldown files, friendly-damage          records/ (persisted)    analyst ──verify──> findings
    cooldown-file IDs                difficulty's view)          registry, encounter file
    (fetch filters)
 ```
 
-Fetch, normalize and annotate write to disk. `PullRecords` and the digest are rebuilt on request (`EncounterData`
-keeps recent ones in memory), which is cheap while the annotation cache hits. Findings are the only persisted
-model output.
+Fetch, normalize, annotate and analysis write to disk. `EncounterData` serves `PullRecords` from its in-process cache,
+then from the records store, and builds and stores them only when neither has them (stage 5). The digest is built
+with the records. Findings are the only persisted model output.
 
-The raw page cache, the event store and the annotation cache read and write whole objects through a `BlobStore`
-(`src/khadbot/storage/`), under keys equal to the paths below relative to `KHADBOT_DATA_DIR` (`raw/…`, `events/…`,
-`annotated/…`). `storage.default_blob_store()` picks the store; today it is always `LocalBlobStore` over the data
+The raw page cache, the event store, the annotation cache and the records store read and write whole objects through
+a `BlobStore` (`src/khadbot/storage/`), under keys equal to the paths below relative to `KHADBOT_DATA_DIR` (`raw/…`, `events/…`,
+`annotated/…`, `records/…`). `storage.default_blob_store()` picks the store; today it is always `LocalBlobStore` over the data
 directory, which reads and writes exactly the files the stages wrote before the seam existed. Every put is atomic (a
 reader sees the old object or the new one), and listings skip the `*.tmp` files an interrupted write leaves. The
 findings and checkpoint SQLite databases are not blobs and stay files under the data directory.
@@ -145,6 +145,25 @@ annotated/<report>/<fight>__<encfile_hash>.json
 registry, then runs `encounter/analysis/` over the annotated frame. The records are uncapped, and every evidence ref
 (`ev:<report>:<fight>:<kind>:...`) resolves against them.
 
+The records are stored by `encounter/records_store.py`, so a process that did not build a pull's records reads them:
+
+```
+records/<report>/<fight>__<hash>.json
+```
+
+`<hash>` is the first 16 hex of SHA-256 over the digest's `produced_from` (`digest.records_inputs`): the events,
+positions, encounter-file, three cooldown-file and friendly-damage hashes, `ANNOTATION_VERSION`, `RECORDS_VERSION`,
+the cutoff fraction and `pull_hash`. A blob is never updated; changed inputs give a new key and the old blob stays
+(nothing deletes them yet). The JSON holds the deaths, mechanics, cooldown uses, window coverage and the capped
+digest (`StoredRecords`). The annotated frame, the pull, the actors and abilities and the encounter file are not in
+it: a load reads the frame through the annotation cache (annotating again if it is missing), the rest from the event
+store and `config/`.
+
+`EncounterData.records` reads, in order, its in-process cache (32 pulls), the records store, and then builds the
+records and writes them to the store. A blob that fails to parse or whose `produced_from` differs from the inputs is
+a miss, logged, and is overwritten by the rebuild. A failed write is logged and the read still succeeds. A store
+built without a records store (tests, `build_digest`) neither reads nor writes `records/`.
+
 | Record | From | Holds |
 |---|---|---|
 | `DeathRecord` per player death (`death:<n>`) | `deaths` | killing blow, overkill, time to die, damage taken, healing and self-damage in the last 10 s, top 5 hits, mechanics involved, defensives active |
@@ -230,13 +249,14 @@ reads the raw cache, the event store files, the position table or WCL. Results a
 
 ## 8. Other consumers
 
-Other readers of analysis, such as a dashboard or desktop app, read `PullRecords` through `EncounterData` for now,
-the same records the analyst cites, rather than the digest or the cache files. How to serve many views at scale is
-still to be investigated (records are rebuilt per process and not persisted).
+Other readers of analysis, such as a dashboard or desktop app, read `PullRecords` through `EncounterData`, the same
+records the analyst cites, rather than the digest or the cache files. Records persist (stage 5), so a reader process
+does not rebuild what another one built. Views that aggregate across pulls (a night, a progression) still load every
+pull's records and its annotated frame; per-pull tables for those are still to come (`docs/follow-ups.md`).
 
 ## What invalidates what
 
-Every cache is keyed by content hashes, so a change takes effect at the first stage whose inputs it touches and flows
+Every cache is keyed by content hashes (`records/` by the `produced_from` ones), so a change takes effect at the first stage whose inputs it touches and flows
 down from there. Changes to fetch filters take effect only when `ingest` runs again.
 
 | Change | Re-ingest | Fetch | Annotation | Records and digest | Findings |
@@ -256,7 +276,8 @@ down from there. Changes to fetch filters take effect only when `ingest` runs ag
 
 `ANNOTATION_VERSION`, `RECORDS_VERSION` (`digest.py`, hand-bumped when analysis or record-building code changes
 its output), the cutoff fraction and `pull_hash` (a hash of the whole stored `Pull`) are in
-`PullDigest.produced_from`, so they key the in-process records and the findings. The annotation sidecar keeps a
+`PullDigest.produced_from`, so they key the in-process records, the stored records and the findings; a "rebuilt"
+records cell above means the stored blob misses too and a new one is written beside the old. The annotation sidecar keeps a
 narrower hash of only the pull fields annotation reads. The one gap left is a code change whose author forgot to
 bump a version constant.
 
@@ -266,5 +287,21 @@ WCL bills by points, with a budget of 3,600 points per hour for the app. With th
 14 points, so a full raid night is a small share of the hourly budget. Raw pages dominate disk use: a night is
 hundreds of MB of JSON and tens of MB of parquet. Measured costs and their method are in `docs/wcl-api.md`.
 
+Stored records, measured on a copy of a real 21-pull night (a kill and wipes of one raid, real encounter files and
+registries): 1.66 MB of `records/` against 23.2 MB of `annotated/` and 29.4 MB of `events/` for the same night, about
+79 KB per pull (the seven recorded fixture pulls average 78 KB). Time to get one pull's records, on the dev machine
+(Windows, local disk, best of three, a fresh `EncounterData` per pull, annotation cache warm):
+
+| Path | Per pull | Whole 21-pull night |
+|---|---|---|
+| Build (analysis over the annotated frame) | about 0.5 s | 10.5 s |
+| Load from the records store | about 0.19 s | 3.9 s |
+
+With the cooldown files and registry passed in rather than read from `config/`, the fixture pulls take about 240 ms
+to build and 39 ms to load. The rest of a load is YAML parsing of the authored files, which every lookup repeats
+(about 115 ms for the four registry files and tens of ms for the encounter file); parsing the blob itself takes
+about 1.3 ms. With the annotation cache cold, a load still re-annotates the frame, so it saves only the analysis
+step; the annotation cache is part of what a second process needs to find.
+
 `mise run clean` never touches `KHADBOT_DATA_DIR`. Deleting `raw/` means the next ingest refetches from WCL; deleting
-`events/` or `annotated/` only costs local recomputation (an offline re-ingest rebuilds `events/` from `raw/`).
+`events/`, `annotated/` or `records/` only costs local recomputation (an offline re-ingest rebuilds `events/` from `raw/`).

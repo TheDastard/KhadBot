@@ -28,6 +28,7 @@ from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
+from khadbot.encounter.records_store import RecordsStore
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.storage import BlobStore, LocalBlobStore, default_blob_store
 
@@ -55,7 +56,7 @@ def create_app(
     if blobs is None:
         blobs = LocalBlobStore(root) if data_dir is not None else default_blob_store()
     if data is None:
-        data = EncounterData(ParquetEventStore(blobs), cache=AnnotationCache(blobs))
+        data = EncounterData(ParquetEventStore(blobs), cache=AnnotationCache(blobs), records_store=RecordsStore(blobs))
     if findings is None:
         findings = SqliteFindingsStore(root / "khadbot.sqlite")
 

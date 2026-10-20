@@ -33,6 +33,7 @@ from khadbot.encounter.config_files import (
     FriendlyDamageRegistry,
     check_cooldown_ids,
     cooldowns_hash,
+    encfile_hash,
     friendly_damage_hash,
     load_cooldowns,
     load_encounter_view,
@@ -210,6 +211,37 @@ def pull_hash(pull: Pull) -> str:
     return hashlib.sha256(orjson.dumps(pull.model_dump(mode="json"), option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
 
 
+def records_inputs(
+    pull: Pull,
+    store: EventStore,
+    enc: EncounterFile | None,
+    defensive: CooldownRegistry,
+    offensive: CooldownRegistry,
+    utility: CooldownRegistry,
+    friendly: FriendlyDamageRegistry,
+    cutoff_fraction: float,
+) -> dict[str, str]:
+    """
+    Everything a pull's records are a function of, as the digest's ``produced_from``: content hashes of the stored
+    events and positions, the encounter file, the three cooldown files and the friendly-damage registry, the two
+    code versions, the cutoff fraction and the whole ``Pull``. The in-process records key and the records store's
+    blob key both come from this, so they can't disagree about what a change invalidates.
+    """
+    return {
+        "events_hash": store.events_hash(pull.pull_key) or "",
+        "positions_hash": store.positions_hash(pull.pull_key) or "",
+        "encfile_hash": encfile_hash(enc),
+        "defensive_cooldowns_hash": cooldowns_hash(defensive),
+        "offensive_cooldowns_hash": cooldowns_hash(offensive),
+        "utility_cooldowns_hash": cooldowns_hash(utility),
+        "friendly_damage_hash": friendly_damage_hash(friendly),
+        "annotation_version": str(ANNOTATION_VERSION),
+        "records_version": str(RECORDS_VERSION),
+        "cutoff_fraction": repr(cutoff_fraction),
+        "pull_hash": pull_hash(pull),
+    }
+
+
 def build_pull_records(
     pull_key: str,
     store: EventStore,
@@ -305,19 +337,7 @@ def build_pull_records(
         aggro=aggro_summaries(a, actors),
         coverage=coverage,
         anomalies=anomalies,
-        produced_from={
-            "events_hash": store.events_hash(pull_key) or "",
-            "positions_hash": store.positions_hash(pull_key) or "",
-            "encfile_hash": a.encfile_hash,
-            "defensive_cooldowns_hash": cooldowns_hash(defensive),
-            "offensive_cooldowns_hash": cooldowns_hash(offensive),
-            "utility_cooldowns_hash": cooldowns_hash(utility),
-            "friendly_damage_hash": friendly_damage_hash(friendly),
-            "annotation_version": str(ANNOTATION_VERSION),
-            "records_version": str(RECORDS_VERSION),
-            "cutoff_fraction": repr(fraction),
-            "pull_hash": pull_hash(pull),
-        },
+        produced_from=records_inputs(pull, store, enc, defensive, offensive, utility, friendly, fraction),
     )
     return PullRecords(
         pull=pull,
