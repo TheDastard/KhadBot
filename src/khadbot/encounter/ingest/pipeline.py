@@ -19,10 +19,13 @@ from collections.abc import Mapping, Sequence
 
 from khadbot.config import get_config
 from khadbot.encounter.ingest.fetch import (
+    FETCHED_WITH_KEY,
     MissingFixtureError,
     ProgressFn,
     RawPageCache,
+    TokenProvider,
     fetch_pull,
+    query_wcl,
     specs_for,
 )
 from khadbot.encounter.ingest.normalize import (
@@ -51,23 +54,33 @@ def default_store() -> ParquetEventStore:
 
 
 async def _report_meta(
-    client: WarcraftLogsClient | None, cache: RawPageCache, code: str, *, offline: bool, refresh: bool = False
+    client: WarcraftLogsClient | None,
+    cache: RawPageCache,
+    code: str,
+    *,
+    offline: bool,
+    refresh: bool = False,
+    token_provider: TokenProvider | None = None,
 ) -> dict:
     if not refresh and (meta := cache.report_meta(code)) is not None:
         return meta
     if offline or client is None:
         raise MissingFixtureError(f"Report metadata for '{code}' is not in the raw cache.")
-    data = await client.query(GET_REPORT_META, {"code": code})
+    data = await query_wcl(client, GET_REPORT_META, {"code": code}, token_provider)
     report = (data.get("reportData") or {}).get("report")
     if report is None:
         raise WarcraftLogsAPIError(f"WarcraftLogs report '{code}' was not found.")
+    # Which kind of token fetched it, never which user: a report fetched with a user token may be private.
+    report = {**report, FETCHED_WITH_KEY: "user" if token_provider else "app"}
     cache.write_report_meta(code, report)
     return report
 
 
-async def _points_spent(client: WarcraftLogsClient) -> float | None:
+async def _points_spent(client: WarcraftLogsClient, token_provider: TokenProvider | None = None) -> float | None:
+    """Points spent this hour on the budget the ingest draws from: the user's with a provider, else the app's."""
     try:
-        return float((await client.rate_limit())["pointsSpentThisHour"])
+        user_token = await token_provider() if token_provider else None
+        return float((await client.rate_limit(user_token=user_token))["pointsSpentThisHour"])
     except Exception:  # noqa: BLE001 - cost reporting must never fail an ingest
         return None
 
@@ -85,6 +98,7 @@ async def ingest_report(
     enemy_cast_ids: Mapping[int, Sequence[int]] | None = None,
     refresh_meta: bool = False,
     offensive_spell_ids: Sequence[int] | None = None,
+    token_provider: TokenProvider | None = None,
 ) -> IngestResult:
     """
     Ingest the requested fights of ``code`` (all encounter fights when ``fight_ids`` is None).
@@ -96,6 +110,10 @@ async def ingest_report(
     ``refresh_meta`` refetches the report metadata and rewrites the stored pulls whose metadata changed,
     reading their events from the raw page cache only; fights not stored yet are left alone. It needs WCL,
     so it cannot be combined with ``offline``.
+
+    ``token_provider`` is an async callable returning a user's WCL access token. With it every WCL request goes
+    to the user endpoint with that token and ``points_spent`` counts the user's budget; the report metadata
+    records that a user token fetched it. With none, ingest uses the app token as before.
     """
     if refresh_meta and offline:
         raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
@@ -107,8 +125,10 @@ async def ingest_report(
             wcl = get_config().warcraftlogs
             client = await stack.enter_async_context(WarcraftLogsClient(wcl.client_id, wcl.client_secret))
 
-        before = await _points_spent(client) if client and not offline else None
-        meta = await _report_meta(client, cache, code, offline=offline, refresh=refresh_meta)
+        before = await _points_spent(client, token_provider) if client and not offline else None
+        meta = await _report_meta(
+            client, cache, code, offline=offline, refresh=refresh_meta, token_provider=token_provider
+        )
         pulls, actors = parse_report_meta(code, meta)
         store.write_actors(code, actors)
         store.write_abilities(code, parse_abilities(meta))
@@ -138,7 +158,14 @@ async def ingest_report(
                 )
                 # A metadata refresh never requests event pages: they come from the raw cache only.
                 truncated = await fetch_pull(
-                    client, cache, code, pull, specs, offline=offline or refresh_meta, progress=progress
+                    client,
+                    cache,
+                    code,
+                    pull,
+                    specs,
+                    offline=offline or refresh_meta,
+                    progress=progress,
+                    token_provider=token_provider,
                 )
                 if progress:
                     progress(key, "normalizing", 1.0)
@@ -160,7 +187,7 @@ async def ingest_report(
                 logger.warning("Ingest failed for %s: %s", key, exc)
                 failed[key] = str(exc)
 
-        after = await _points_spent(client) if client and not offline else None
+        after = await _points_spent(client, token_provider) if client and not offline else None
 
     spent = after - before if before is not None and after is not None else None
     return IngestResult(report_code=code, pulls=ingested, skipped=skipped, failed=failed, points_spent=spent)

@@ -22,7 +22,7 @@ import hashlib
 import logging
 import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 import orjson
@@ -31,11 +31,22 @@ from khadbot.config import EncounterConfig
 from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.storage import BlobStore, join_key, resolve_blobs
-from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient, WarcraftLogsRateLimitError
+from khadbot.tools.warcraftlogs._client import (
+    WarcraftLogsAPIError,
+    WarcraftLogsClient,
+    WarcraftLogsRateLimitError,
+    WarcraftLogsUnauthorizedError,
+)
 
 logger = logging.getLogger(__name__)
 
 ProgressFn = Callable[[str, str, float], None]  # (pull_key, stage, pct)
+
+# Returns a user's WCL access token, refreshing it if needed. ``None`` in place of a provider means the app token.
+TokenProvider = Callable[[], Awaitable[str]]
+
+# Key added to the cached report metadata: which kind of token fetched it. Never records which user.
+FETCHED_WITH_KEY = "khadbotFetchedWith"
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -44,6 +55,10 @@ ProgressFn = Callable[[str, str, float], None]  # (pull_key, stage, pct)
 
 class MissingFixtureError(Exception):
     """Raised in offline mode when a page set is not in the raw cache."""
+
+
+class UserTokenRejectedError(WarcraftLogsAPIError):
+    """Raised when WCL rejects a user token as unauthorized even after the provider was asked for a fresh one."""
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +169,11 @@ class RawPageCache:
     def write_report_meta(self, code: str, data: dict) -> None:
         self.blobs.put(join_key(self.prefix, code, "report.json"), orjson.dumps(data))
 
+    def fetched_with(self, code: str) -> str | None:
+        """``"user"`` or ``"app"``: the token kind that fetched the cached metadata. ``None`` if unrecorded."""
+        value = (self.report_meta(code) or {}).get(FETCHED_WITH_KEY)
+        return value if value in ("user", "app") else None
+
     def pages(self, code: str, fight: int, spec: FetchSpec) -> list[dict]:
         directory = self._dir(code, fight, spec) + "/"
         keys = [k for k in self.blobs.list(directory) if _PAGE_NAME.fullmatch(k[len(directory) :])]
@@ -190,6 +210,30 @@ def _request_semaphore(limit: int) -> asyncio.Semaphore:
 # ---------------------------------------------------------------------------
 
 
+async def query_wcl(
+    client: WarcraftLogsClient,
+    gql: str,
+    variables: dict[str, Any],
+    token_provider: TokenProvider | None = None,
+) -> dict[str, Any]:
+    """
+    One WCL query, on the app token or (with ``token_provider``) the signed-in user's.
+
+    The provider is asked for the token on every request, so it can refresh an expired one. If WCL answers 401,
+    it is asked once more and the request is retried once; a second 401 raises ``UserTokenRejectedError``.
+    """
+    if token_provider is None:
+        return await client.query(gql, variables)
+    try:
+        return await client.query(gql, variables, user_token=await token_provider())
+    except WarcraftLogsUnauthorizedError:
+        logger.info("WCL rejected the user token; asking for a fresh one and retrying once")
+    try:
+        return await client.query(gql, variables, user_token=await token_provider())
+    except WarcraftLogsUnauthorizedError as exc:
+        raise UserTokenRejectedError("WCL rejected the user's access token after a refresh.") from exc
+
+
 async def _request_page(
     client: WarcraftLogsClient,
     code: str,
@@ -198,6 +242,7 @@ async def _request_page(
     start: int,
     cfg: EncounterConfig,
     max_retries: int,
+    token_provider: TokenProvider | None = None,
 ) -> dict:
     """One events request with rate-limit backoff. Gives up (re-raises) after ``max_retries`` retries."""
     variables: dict[str, Any] = {
@@ -214,7 +259,7 @@ async def _request_page(
     while True:
         try:
             async with _request_semaphore(cfg.wcl_max_concurrency):
-                data = await client.query(GET_EVENTS_PAGE, variables)
+                data = await query_wcl(client, GET_EVENTS_PAGE, variables, token_provider)
             break
         except WarcraftLogsRateLimitError as exc:
             if attempt >= max_retries:
@@ -239,6 +284,7 @@ async def _fetch_spec(
     offline: bool,
     cfg: EncounterConfig,
     max_retries: int,
+    token_provider: TokenProvider | None = None,
 ) -> bool:
     """Fetch (or resume) one data type. Returns True if pagination did not terminate cleanly."""
     if cache.is_complete(code, pull.fight_id, spec):
@@ -257,7 +303,7 @@ async def _fetch_spec(
     start = int(cached[-1]["nextPageTimestamp"]) if cached else pull.start_ms
     truncated = False
     while True:
-        page = await _request_page(client, code, pull, spec, start, cfg, max_retries)
+        page = await _request_page(client, code, pull, spec, start, cfg, max_retries, token_provider)
         cache.write_page(code, pull.fight_id, spec, index, page)
         index += 1
         nxt = page.get("nextPageTimestamp")
@@ -282,12 +328,14 @@ async def fetch_pull(
     offline: bool = False,
     progress: ProgressFn | None = None,
     max_retries: int | None = None,
+    token_provider: TokenProvider | None = None,
 ) -> dict[str, bool]:
     """
     Fetch every spec for one pull into the raw cache.
 
     Returns ``{spec.key: truncated}``. All specs are attempted even if one fails (so cached progress is
-    kept); the first failure is re-raised afterwards.
+    kept); the first failure is re-raised afterwards. ``token_provider`` makes every request use a user token
+    (see ``query_wcl``); without it they use the app token.
     """
     cfg = EncounterConfig()
     retries = cfg.wcl_max_retries if max_retries is None else max_retries
@@ -295,7 +343,17 @@ async def fetch_pull(
 
     async def one(spec: FetchSpec) -> bool:
         nonlocal done
-        result = await _fetch_spec(client, cache, code, pull, spec, offline=offline, cfg=cfg, max_retries=retries)
+        result = await _fetch_spec(
+            client,
+            cache,
+            code,
+            pull,
+            spec,
+            offline=offline,
+            cfg=cfg,
+            max_retries=retries,
+            token_provider=token_provider,
+        )
         done += 1
         if progress:
             progress(pull.pull_key, f"fetched {spec.key}", done / len(specs))

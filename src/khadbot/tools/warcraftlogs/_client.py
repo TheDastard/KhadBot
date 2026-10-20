@@ -86,6 +86,14 @@ class WarcraftLogsRateLimitError(WarcraftLogsAPIError):
         self.retry_after_s = retry_after_s
 
 
+class WarcraftLogsUnauthorizedError(WarcraftLogsAPIError):
+    """
+    Raised on HTTP 401: the bearer token was rejected, usually because a user access token expired.
+
+    Callers that hold a refresh token can refresh and retry; the client never does.
+    """
+
+
 class WarcraftLogsPrivateReportError(WarcraftLogsAPIError):
     """
     Raised when a report requires a user-level PKCE token.
@@ -212,6 +220,8 @@ class WarcraftLogsClient:
         WarcraftLogsPrivateReportError
             The report is private and no ``user_token`` was supplied, or the
             supplied user token does not have access.
+        WarcraftLogsUnauthorizedError
+            WCL answered HTTP 401 (the token was rejected or has expired).
         WarcraftLogsAPIError
             Any other GraphQL-level or HTTP error.
         """
@@ -236,6 +246,8 @@ class WarcraftLogsClient:
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 401:
+                raise WarcraftLogsUnauthorizedError("WarcraftLogs rejected the access token (HTTP 401).") from exc
             if exc.response.status_code == 429:
                 raise WarcraftLogsRateLimitError(
                     "WarcraftLogs rate limit hit (HTTP 429).",
@@ -268,9 +280,9 @@ class WarcraftLogsClient:
 
         return body.get("data", {})
 
-    async def rate_limit(self) -> dict[str, Any]:
-        """Return ``{limitPerHour, pointsSpentThisHour, pointsResetIn}`` for the current credentials."""
-        data = await self.query(RATE_LIMIT_QUERY)
+    async def rate_limit(self, *, user_token: str | None = None) -> dict[str, Any]:
+        """Return ``{limitPerHour, pointsSpentThisHour, pointsResetIn}`` for the app, or for ``user_token``'s user."""
+        data = await self.query(RATE_LIMIT_QUERY, user_token=user_token)
         return data.get("rateLimitData", {})
 
 
