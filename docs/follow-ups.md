@@ -147,10 +147,22 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
   unless a store is passed, so a hosted deployment must pass `default_findings_store()` itself. The hosted API
   should do that, and own the pool's lifecycle (`close_pool` on shutdown).
-- **Serving analysis to many views.** Dashboards and other readers use `PullRecords` through `EncounterData`,
-  which rebuilds records per process and keeps a few in memory. Investigate how to serve many views and users at
-  scale, for example persisting serialized records keyed by their `produced_from` hashes. A proposed hosted
-  design (shared storage, job queue, read models, WCL budget): https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B
+- **Serving analysis to many views: read models still to come.** Records persist (`records/` in the blob store,
+  `encounter/records_store.py`), so a second process serves what the first built. Views that span pulls (a night,
+  a report, progression) still load every pull's records and annotated frame; per-pull tables for them are the
+  open part. A proposed hosted design (shared storage, job queue, read models, WCL budget):
+  https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B
+- **Authored files are re-parsed on every records lookup.** `EncounterData.records` reads the cooldown files, the
+  friendly-damage registry and the encounter file from `config/` each time the in-process cache misses (about
+  115 ms for the registries, tens of ms for the encounter file), which is most of a stored read (about 190 ms a
+  pull against about 40 ms with them preloaded). Cache them by file mtime or content hash without losing "an
+  edit rebuilds on next use".
+- **A stored read still loads the annotated frame.** `RecordsStore.get` returns `PullRecords` with the frame read
+  through the annotation cache (re-annotating if it is missing), even for a caller that wants only the digest or
+  deaths. Make `PullRecords.annotated` lazy if a view needs records without frames, before the read-model tables
+  do it.
+- **Stale record blobs are never deleted.** A changed input writes a new `records/` key and leaves the old blob.
+  A retention pass should delete blobs whose hash no current pull would produce.
 
 ### Failure rules
 
@@ -169,8 +181,8 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 - **Night summary on large reports.** `EncounterData` keeps records for 32 pulls, so the night summary or the
   report view of a 47-pull night rebuilds records for most pulls on every request (with the annotation cache,
-  about 0.3 s each, behind one lock). Measure on a full night and, if it is too slow, cache the per-pull
-  aggregates the night needs keyed by `events_hash` and `encfile_hash`, rather than raising the LRU size (records
+  about 0.3 s each, behind one lock; with the records store about 0.2 s each, 3.9 s for a 21-pull night). If
+  that is too slow, cache the per-pull aggregates the night needs keyed by `events_hash` and `encfile_hash`, rather than raising the LRU size (records
   hold the whole annotated frame).
 - **Typed evidence records.** `GET /v1/evidence/{ref}` returns `record` as an untyped object. If the context
   panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic

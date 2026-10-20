@@ -265,7 +265,7 @@ def test_records_are_cached_until_events_change(synth_data, synth_ingested):
 
 
 def test_records_rebuild_when_a_version_or_the_cutoff_fraction_changes(synth_ingested, synth_enc_root, monkeypatch):
-    from khadbot.encounter import evidence
+    from khadbot.encounter import digest as digest_mod
 
     data = EncounterData(synth_ingested, enc_root=synth_enc_root)
     first = data.records("SYNTH01:1")
@@ -275,11 +275,11 @@ def test_records_rebuild_when_a_version_or_the_cutoff_fraction_changes(synth_ing
         produced.values()
     )
 
-    monkeypatch.setattr(evidence, "RECORDS_VERSION", evidence.RECORDS_VERSION + 1)
+    monkeypatch.setattr(digest_mod, "RECORDS_VERSION", digest_mod.RECORDS_VERSION + 1)
     after_records = data.records("SYNTH01:1")
     assert after_records is not first
 
-    monkeypatch.setattr(evidence, "ANNOTATION_VERSION", evidence.ANNOTATION_VERSION + 1)
+    monkeypatch.setattr(digest_mod, "ANNOTATION_VERSION", digest_mod.ANNOTATION_VERSION + 1)
     after_annotation = data.records("SYNTH01:1")
     assert after_annotation is not after_records
 

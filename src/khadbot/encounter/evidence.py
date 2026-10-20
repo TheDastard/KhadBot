@@ -32,25 +32,16 @@ import polars as pl
 from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.mechanics import blame_reach_yd, mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
-from khadbot.encounter.annotate.frame import ANNOTATION_VERSION
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     FriendlyDamageRegistry,
-    cooldowns_hash,
-    encfile_hash,
-    friendly_damage_hash,
     load_cooldowns,
     load_encounter_view,
     load_friendly_damage,
 )
-from khadbot.encounter.digest import (
-    RECORDS_VERSION,
-    PullRecords,
-    build_pull_records,
-    default_annotation_cache,
-    pull_hash,
-)
+from khadbot.encounter.digest import PullRecords, build_pull_records, records_inputs
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
+from khadbot.encounter.records_store import RecordsStore
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
 from khadbot.storage import default_blob_store
 
@@ -220,11 +211,13 @@ class EncounterData:
     """
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
-    The cache key is (pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
-    offensive_cooldowns_hash, utility_cooldowns_hash, friendly_damage_hash, ANNOTATION_VERSION, RECORDS_VERSION,
-    the cutoff fraction, pull_hash), so re-ingesting a pull, refreshing its metadata or editing its encounter
-    file or a registry rebuilds the records on next use. Registries not passed in are reread from ``config/`` on
-    every lookup, like encounter files.
+    The pull key plus ``digest.records_inputs`` (events_hash, positions_hash, encfile_hash, the three cooldown
+    hashes, friendly_damage_hash, ANNOTATION_VERSION, RECORDS_VERSION, the cutoff fraction, pull_hash) key the
+    records, so re-ingesting a pull, refreshing its metadata or editing its encounter file or a registry rebuilds
+    them on next use. Registries not passed in are reread from ``config/`` on every lookup, like encounter files.
+
+    A lookup reads the in-process cache, then ``records_store`` (when given) under the same inputs, then builds
+    the records and writes them there. A failed write is logged and does not fail the lookup.
     """
 
     def __init__(
@@ -237,6 +230,7 @@ class EncounterData:
         utility: CooldownRegistry | None = None,
         friendly: FriendlyDamageRegistry | None = None,
         cache: AnnotationCache | None = None,
+        records_store: RecordsStore | None = None,
         cutoff_fraction: float | None = None,
         max_cached: int = 32,
     ) -> None:
@@ -247,14 +241,16 @@ class EncounterData:
         self._utility = utility
         self._friendly = friendly
         self.cache = cache
+        self.records_store = records_store
         self.cutoff_fraction = cutoff_fraction
         self._max_cached = max_cached
         self._records: OrderedDict[tuple[str, ...], PullRecords] = OrderedDict()
 
     @classmethod
     def from_config(cls) -> EncounterData:
-        """Store and annotation cache in the default blob store, authored files from ``config/``."""
-        return cls(ParquetEventStore(default_blob_store()), cache=default_annotation_cache())
+        """Store, annotation cache and records store in the default blob store, authored files from ``config/``."""
+        blobs = default_blob_store()
+        return cls(ParquetEventStore(blobs), cache=AnnotationCache(blobs), records_store=RecordsStore(blobs))
 
     def pull(self, pull_key: str) -> Pull | None:
         try:
@@ -274,34 +270,32 @@ class EncounterData:
         offensive = self._offensive or load_cooldowns("offensive")
         utility = self._utility or load_cooldowns("utility")
         friendly = self._friendly or load_friendly_damage()
-        key = (
-            pull_key,
-            self.store.events_hash(pull_key) or "",
-            self.store.positions_hash(pull_key) or "",
-            encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)),
-            cooldowns_hash(defensive),
-            cooldowns_hash(offensive),
-            cooldowns_hash(utility),
-            friendly_damage_hash(friendly),
-            str(ANNOTATION_VERSION),
-            str(RECORDS_VERSION),
-            repr(EncounterConfig().cutoff_fraction if self.cutoff_fraction is None else self.cutoff_fraction),
-            pull_hash(pull),
-        )
+        enc = load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)
+        fraction = EncounterConfig().cutoff_fraction if self.cutoff_fraction is None else self.cutoff_fraction
+        inputs = records_inputs(pull, self.store, enc, defensive, offensive, utility, friendly, fraction)
+        key = (pull_key, *inputs.values())
         if (hit := self._records.get(key)) is not None:
             self._records.move_to_end(key)
             return hit
-        records = build_pull_records(
-            pull_key,
-            self.store,
-            self.enc_root,
-            defensive,
-            offensive=offensive,
-            utility=utility,
-            friendly=friendly,
-            cache=self.cache,
-            cutoff_fraction=self.cutoff_fraction,
-        )
+        records = None
+        if self.records_store is not None:
+            records = self.records_store.get(
+                pull, inputs, store=self.store, enc=enc, cache=self.cache, cutoff_fraction=fraction
+            )
+        if records is None:
+            records = build_pull_records(
+                pull_key,
+                self.store,
+                self.enc_root,
+                defensive,
+                offensive=offensive,
+                utility=utility,
+                friendly=friendly,
+                cache=self.cache,
+                cutoff_fraction=self.cutoff_fraction,
+            )
+            if self.records_store is not None:
+                self.records_store.put(records)
         self._records[key] = records
         while len(self._records) > self._max_cached:
             self._records.popitem(last=False)
