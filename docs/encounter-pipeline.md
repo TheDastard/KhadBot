@@ -270,8 +270,46 @@ reads the raw cache, the event store files, the position table or WCL. Results a
 
 Other readers of analysis, such as a dashboard or desktop app, read `PullRecords` through `EncounterData`, the same
 records the analyst cites, rather than the digest or the cache files. Records persist (stage 5), so a reader process
-does not rebuild what another one built. Views that aggregate across pulls (a night, a progression) still load every
-pull's records and its annotated frame; per-pull tables for those are still to come (`docs/follow-ups.md`).
+does not rebuild what another one built. Views that aggregate across pulls (the report detail, the night summary,
+progression) can instead read per-pull tables in Postgres projected from the records (stage 9); in local mode they
+load every pull's records and annotated frame, as before.
+
+## 9. Read models (hosted mode)
+
+`db/read_models.py` projects one pull's records into small Postgres tables (`db/migrations/0002_read_models.sql`)
+that hold what the night, report and progression views filter, sort or aggregate on. Everything else stays in the
+records blob, which each `pulls` row names (`records_key`). Events stay in parquet.
+
+| Table | One row per | Holds |
+|---|---|---|
+| `reports` | report | title, start time, the token kind that fetched it (`khadbotFetchedWith`), fetch time when the caller knows it; guild and visibility columns are empty until the report query fetches them |
+| `pulls` | pull | the `Pull` fields the report detail and night summary show, the digest's phase reached (and its encounter-file name), coverage, cutoff, death counts, anomalies, `events_hash` and `encfile_hash` from `produced_from`, the records hash and key, `RECORDS_VERSION` and `READ_MODEL_VERSION` |
+| `pull_deaths` | player death (`death:<n>`) | time, phase, killing ability, overkill, time to die, after cutoff |
+| `pull_mechanics` | mechanic in the encounter file | its encounter-file name, clusters, hits, failures, damage taken, deaths in window |
+| `pull_cooldowns` | cooldown cast (`cd:` ref) | spell, category, caster, time, phase |
+| `pull_windows` | damage-window occurrence | its encounter-file name, time, covered, defensive cooldowns active, how many came late |
+
+`project(pull, records)` is pure. `project_pull(pool, records, report_meta)` is the writer: in one transaction it
+upserts the `reports` row, locks it (so one report's pulls are written one at a time), and, unless the pull's row
+already has the same records hash and `READ_MODEL_VERSION`, deletes the pull's rows in all five tables and inserts
+them again. Projecting the same records twice writes nothing, and a re-ingest, a changed authored file or a
+`RECORDS_VERSION` bump (all of which change the records hash) replaces the pull's rows. A change to the projection
+itself bumps `READ_MODEL_VERSION` (`read_models.py`), which re-projects every pull the next time it is projected.
+The caller decides when to project; nothing projects on its own yet, so the tables hold what was last projected.
+
+`api/night.py` builds the report detail and the night summary from per-pull inputs that a `ReadSource` supplies:
+`RecordsSource` reads records through `EncounterData` and findings from the findings store (local mode, the
+default), and `SqlSource` reads `db/queries.py` (the pull rows, each pull's first death and its hit or failed
+mechanics, and the unflagged findings' hashes). Aggregation happens in Python on both paths, so they give the same
+result when the tables were projected from the records the other path would load. A findings set is stale on the
+SQL path when its events or encounter-file hash differs from the pull row's, which are the hashes the records were
+built from. A pull not yet projected is missing from the SQL path's report. `create_app(read_source=...)` picks the
+source; without one the API reads records, as before.
+
+`queries.progression(conn, encounter_id, difficulty)` returns, per night (one report) in start order, the pulls,
+kills and best boss health (0 with a kill), and each failed mechanic's failures and pulls failed. It reads
+`pulls` through `pulls_encounter (encounter_id, difficulty, report_code)` and the child tables through their
+primary keys, which start with `(report_code, fight_id)`.
 
 ## What invalidates what
 
@@ -299,6 +337,10 @@ its output), the cutoff fraction and `pull_hash` (a hash of the whole stored `Pu
 records cell above means the stored blob misses too and a new one is written beside the old. The annotation sidecar keeps a
 narrower hash of only the pull fields annotation reads. The one gap left is a code change whose author forgot to
 bump a version constant.
+
+The read-model rows follow the records: every change that rebuilds a pull's records gives it a new records hash, so
+the next projection of that pull replaces its rows; a change only to the projection code needs a
+`READ_MODEL_VERSION` bump. Findings are not projected; the SQL path reads the `findings` table directly.
 
 ## Cost and size
 

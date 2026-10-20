@@ -147,11 +147,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
   unless a store is passed, so a hosted deployment must pass `default_findings_store()` itself. The hosted API
   should do that, and own the pool's lifecycle (`close_pool` on shutdown).
-- **Serving analysis to many views: read models still to come.** Records persist (`records/` in the blob store,
-  `encounter/records_store.py`), so a second process serves what the first built. Views that span pulls (a night,
-  a report, progression) still load every pull's records and annotated frame; per-pull tables for them are the
-  open part. A proposed hosted design (shared storage, job queue, read models, WCL budget):
-  https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B
 - **Read-model projection is not wired into `ProcessPull`.** `jobs.run.read_model_projector()` is the hook: it
   returns None in every mode until the read-model tables exist. When they do, return a projector over
   `khadbot.db.read_models` for `DatabaseConfig().hosted` (it must be idempotent: `ProcessPull` calls it on repeat
@@ -161,6 +156,21 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   with `ReviewPull` first would call the model twice for a pull whose analysis is partial (those are not cached).
   The queue runs `ReviewPull` per pull and the synthesis afterwards; give the graph a way to synthesize from
   findings it is handed if `/review` should report per-pull progress too.
+- **The API doesn't read the read models yet.** `night.SqlSource` serves the report detail and night summary
+  from the read-model tables, but `create_app` uses it only when a caller passes `read_source`; the hosted API
+  should pass `SqlSource(get_pool())` (`docs/encounter-pipeline.md`, stage 9).
+- **Read-model query plans not yet captured.** The plans of the report, night and progression queries have not
+  been read on a seeded database; `pytest tests/integration/hosted -m hosted -s -k query_plans` prints them. Check
+  that progression uses `pulls_encounter` once a database holds more than a few nights.
+- **Read-model equality is checked in CI on the synthetic report only.** The CI `hosted` job checks out without
+  Git LFS, so the SQL-against-records equality and progression tests skip the recorded reports there (the
+  multi-group report included). Run the hosted tests locally with the LFS pages, or give the job LFS.
+- **Report guild and visibility are not fetched.** `reports.guild_id`, `guild_name` and `visibility` stay empty:
+  the report query doesn't ask WCL for them. Add them to the report query (checking the field names against the
+  WCL schema, `docs/wcl-api.md`) and fill them in `read_models.report_row`; the WCL budget's per-guild allowance
+  needs the guild.
+- **Read-model rows of removed pulls stay.** The writer replaces one pull's rows at a time; a fight that drops
+  out of a report on re-ingest, or a deleted report, keeps its rows until something deletes them (retention).
 - **Authored files are re-parsed on every records lookup.** `EncounterData.records` reads the cooldown files, the
   friendly-damage registry and the encounter file from `config/` each time the in-process cache misses (about
   115 ms for the registries, tens of ms for the encounter file), which is most of a stored read (about 190 ms a
@@ -196,11 +206,12 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 
 ### Dashboard API
 
-- **Night summary on large reports.** `EncounterData` keeps records for 32 pulls, so the night summary or the
-  report view of a 47-pull night rebuilds records for most pulls on every request (with the annotation cache,
-  about 0.3 s each, behind one lock; with the records store about 0.2 s each, 3.9 s for a 21-pull night). If
-  that is too slow, cache the per-pull aggregates the night needs keyed by `events_hash` and `encfile_hash`, rather than raising the LRU size (records
-  hold the whole annotated frame).
+- **Night summary on large reports in local mode.** `EncounterData` keeps records for 32 pulls, so the night
+  summary or the report view of a 47-pull night rebuilds records for most pulls on every request (with the
+  annotation cache, about 0.3 s each, behind one lock; with the records store about 0.2 s each, 3.9 s for a
+  21-pull night). Hosted mode reads the read-model tables instead (`night.SqlSource`). If local mode is too slow,
+  serve it from the same per-pull inputs (`night.PullFacts`) cached by records hash, rather than raising the LRU
+  size (records hold the whole annotated frame).
 - **Typed evidence records.** `GET /v1/evidence/{ref}` returns `record` as an untyped object. If the context
   panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic
   detail with its cluster rows, the event row) and make the response a union keyed on `kind`.

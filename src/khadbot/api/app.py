@@ -20,6 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from khadbot.api.night import ReadSource
 from khadbot.api.routes import router
 from khadbot.api.schemas import API_VERSION
 from khadbot.api.views import ApiContext, ApiError
@@ -42,6 +43,7 @@ def create_app(
     data_dir: Path | str | None = None,
     blobs: BlobStore | None = None,
     routers: Sequence[APIRouter] = (),
+    read_source: ReadSource | None = None,
 ) -> FastAPI:
     """
     The dashboard API over ``data`` and ``findings``.
@@ -50,7 +52,8 @@ def create_app(
     (default ``KHADBOT_DATA_DIR``), with the authored files under ``config/``. ``blobs`` defaults to a local store
     over ``data_dir`` when that is given, and to ``storage.default_blob_store()`` otherwise. Nothing is read until a
     request arrives, so building the app for its OpenAPI document needs no data. ``routers`` are mounted after the
-    read router.
+    read router. ``read_source`` serves the report detail and night summary (``night.SqlSource`` reads the read-model
+    tables); without it they are built from ``data``'s records.
     """
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
     if blobs is None:
@@ -65,7 +68,9 @@ def create_app(
         version=API_VERSION,
         description="Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
     )
-    app.state.ctx = ApiContext(data=data, findings=findings, data_dir=root, raw=RawPageCache(blobs))
+    app.state.ctx = ApiContext(
+        data=data, findings=findings, data_dir=root, raw=RawPageCache(blobs), read_source=read_source
+    )
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
 
     @app.exception_handler(ApiError)
