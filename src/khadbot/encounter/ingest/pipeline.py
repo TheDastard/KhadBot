@@ -16,9 +16,8 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 
-from khadbot.config import EncounterConfig, get_config
+from khadbot.config import get_config
 from khadbot.encounter.ingest.fetch import (
     MissingFixtureError,
     ProgressFn,
@@ -35,17 +34,20 @@ from khadbot.encounter.ingest.normalize import (
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.models import IngestResult, Pull
 from khadbot.encounter.store import EventStore, ParquetEventStore, positions_hash
+from khadbot.storage import default_blob_store
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient
 
 logger = logging.getLogger(__name__)
 
 
 def default_cache() -> RawPageCache:
-    return RawPageCache(Path(EncounterConfig().data_dir) / "raw")
+    """The raw page cache in the default blob store (``raw/`` under ``KHADBOT_DATA_DIR`` locally)."""
+    return RawPageCache(default_blob_store())
 
 
 def default_store() -> ParquetEventStore:
-    return ParquetEventStore(Path(EncounterConfig().data_dir) / "events")
+    """The event store in the default blob store (``events/`` under ``KHADBOT_DATA_DIR`` locally)."""
+    return ParquetEventStore(default_blob_store())
 
 
 async def _report_meta(

@@ -52,6 +52,7 @@ from khadbot.encounter.digest import (
 )
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
+from khadbot.storage import default_blob_store
 
 __all__ = [
     "ClaimNumber",
@@ -252,16 +253,16 @@ class EncounterData:
 
     @classmethod
     def from_config(cls) -> EncounterData:
-        """Store and annotation cache under ``KHADBOT_DATA_DIR``, authored files from ``config/``."""
-        root = Path(EncounterConfig().data_dir)
-        return cls(ParquetEventStore(root / "events"), cache=default_annotation_cache())
+        """Store and annotation cache in the default blob store, authored files from ``config/``."""
+        return cls(ParquetEventStore(default_blob_store()), cache=default_annotation_cache())
 
     def pull(self, pull_key: str) -> Pull | None:
         try:
             code, fight = split_pull_key(pull_key)
-        except ValueError:
+            pulls = self.store.pulls(code)
+        except ValueError:  # not a pull key, or a code no storage key can hold (storage.InvalidKeyError)
             return None
-        return next((p for p in self.store.pulls(code) if p.fight_id == fight), None)
+        return next((p for p in pulls if p.fight_id == fight), None)
 
     def records(self, pull_key: str) -> PullRecords:
         """Uncapped analysis records for an ingested pull. Raises ``KeyError`` if it is not ingested."""

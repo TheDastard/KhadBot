@@ -5,7 +5,7 @@ Event store: the normalized event and position schemas, and events and positions
 protocol so the implementation (polars + parquet today, possibly DuckDB later) can change without touching
 callers.
 
-Layout (rooted at ``$KHADBOT_DATA_DIR/events``)::
+Keys, under ``events/`` in the blob store (``$KHADBOT_DATA_DIR/events`` in the local store)::
 
     <report>/pulls.json        # [{"pull": Pull, "events_hash": str, "positions_hash": str | None,
                                #   "truncated": [dir_name]}]
@@ -21,15 +21,15 @@ as an empty table until the pull is re-ingested.
 from __future__ import annotations
 
 import hashlib
+import io
 import os
-from collections.abc import Callable
-from pathlib import Path
 from typing import Protocol
 
 import orjson
 import polars as pl
 
 from khadbot.encounter.models import Actor, Pull
+from khadbot.storage import BlobStore, join_key, resolve_blobs
 
 # ---------------------------------------------------------------------------
 # Schema
@@ -145,39 +145,43 @@ def split_pull_key(pull_key: str) -> tuple[str, int]:
     return code, int(fight)
 
 
-def _atomic(path: Path, write: Callable[[Path], object]) -> None:
-    """Run ``write(tmp_path)`` then ``os.replace`` onto ``path`` so readers never see a partial file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    try:
-        write(tmp)
-        os.replace(tmp, path)
-    finally:
-        tmp.unlink(missing_ok=True)
+def _parquet_bytes(df: pl.DataFrame) -> bytes:
+    """``df`` as parquet bytes, the same bytes ``df.write_parquet(path)`` writes to a file."""
+    buf = io.BytesIO()
+    df.write_parquet(buf)
+    return buf.getvalue()
 
 
 class ParquetEventStore:
-    """EventStore over per-pull parquet files."""
+    """
+    EventStore over per-pull parquet objects in a ``BlobStore``, under the ``events/`` prefix by default.
 
-    def __init__(self, root: Path) -> None:
-        self.root = Path(root)
+    ``blobs`` may also be a directory laid out like the store itself (``<data_dir>/events``); see
+    ``storage.resolve_blobs``.
+    """
 
-    # --- paths ---------------------------------------------------------------
+    def __init__(self, blobs: BlobStore | str | os.PathLike[str], prefix: str | None = None) -> None:
+        self.blobs, self.prefix = resolve_blobs(blobs, prefix, "events")
 
-    def _pulls_path(self, code: str) -> Path:
-        return self.root / code / "pulls.json"
+    # --- keys ----------------------------------------------------------------
 
-    def _events_path(self, pull_key: str) -> Path:
+    def _key(self, code: str, *parts: str) -> str:
+        return join_key(self.prefix, code, *parts)
+
+    def _pulls_key(self, code: str) -> str:
+        return self._key(code, "pulls.json")
+
+    def _events_key(self, pull_key: str) -> str:
         code, fight = split_pull_key(pull_key)
-        return self.root / code / f"{fight}.parquet"
+        return self._key(code, f"{fight}.parquet")
 
-    def _positions_path(self, pull_key: str) -> Path:
+    def _positions_key(self, pull_key: str) -> str:
         code, fight = split_pull_key(pull_key)
-        return self.root / code / "positions" / f"{fight}.parquet"
+        return self._key(code, "positions", f"{fight}.parquet")
 
     def _records(self, code: str) -> list[dict]:
-        path = self._pulls_path(code)
-        return orjson.loads(path.read_bytes()) if path.exists() else []
+        data = self.blobs.get(self._pulls_key(code))
+        return orjson.loads(data) if data is not None else []
 
     # --- writes --------------------------------------------------------------
 
@@ -193,15 +197,15 @@ class ParquetEventStore:
         Store a pull's events and, when given, its position table (hashed here). Without ``positions`` the pull
         has no position table: a stale one is removed and the record's ``positions_hash`` is null.
         """
-        _atomic(self._events_path(pull.pull_key), lambda tmp: df.write_parquet(tmp))
-        pos_path = self._positions_path(pull.pull_key)
+        self.blobs.put(self._events_key(pull.pull_key), _parquet_bytes(df))
+        pos_key = self._positions_key(pull.pull_key)
         pos_hash: str | None = None
         if positions is not None:
             table = positions.select(list(POSITION_SCHEMA))
-            _atomic(pos_path, lambda tmp: table.write_parquet(tmp))
+            self.blobs.put(pos_key, _parquet_bytes(table))
             pos_hash = positions_hash(table)
         else:
-            pos_path.unlink(missing_ok=True)
+            self.blobs.delete(pos_key)
         records = [r for r in self._records(pull.report_code) if r["pull"]["fight_id"] != pull.fight_id]
         records.append(
             {
@@ -212,23 +216,27 @@ class ParquetEventStore:
             }
         )
         records.sort(key=lambda r: r["pull"]["fight_id"])
-        _atomic(self._pulls_path(pull.report_code), lambda tmp: tmp.write_bytes(orjson.dumps(records)))
+        self.blobs.put(self._pulls_key(pull.report_code), orjson.dumps(records))
 
     def write_actors(self, code: str, actors: list[Actor]) -> None:
         df = pl.DataFrame([a.model_dump() for a in actors], schema=_ACTOR_SCHEMA)
-        _atomic(self.root / code / "actors.parquet", lambda tmp: df.write_parquet(tmp))
+        self.blobs.put(self._key(code, "actors.parquet"), _parquet_bytes(df))
 
     def write_abilities(self, code: str, abilities: dict[int, str]) -> None:
         data = orjson.dumps(abilities, option=orjson.OPT_NON_STR_KEYS | orjson.OPT_SORT_KEYS)
-        _atomic(self.root / code / "abilities.json", lambda tmp: tmp.write_bytes(data))
+        self.blobs.put(self._key(code, "abilities.json"), data)
 
     # --- reads ---------------------------------------------------------------
 
     def reports(self) -> list[str]:
         """Codes of the reports with at least one stored pull, sorted."""
-        if not self.root.is_dir():
-            return []
-        return sorted(p.name for p in self.root.iterdir() if p.is_dir() and self._records(p.name))
+        base = f"{self.prefix}/" if self.prefix else ""
+        codes = {
+            rest.removesuffix("/pulls.json")
+            for key in self.blobs.list(base)
+            if (rest := key[len(base) :]).endswith("/pulls.json") and rest.count("/") == 1
+        }
+        return sorted(code for code in codes if self._records(code))
 
     def pulls(self, code: str) -> list[Pull]:
         return [Pull.model_validate(r["pull"]) for r in self._records(code)]
@@ -250,16 +258,16 @@ class ParquetEventStore:
         return list(rec["truncated"]) if rec else []
 
     def actors(self, code: str) -> list[Actor]:
-        path = self.root / code / "actors.parquet"
-        if not path.exists():
+        data = self.blobs.get(self._key(code, "actors.parquet"))
+        if data is None:
             return []
-        return [Actor(**row) for row in pl.read_parquet(path).to_dicts()]
+        return [Actor(**row) for row in pl.read_parquet(io.BytesIO(data)).to_dicts()]
 
     def abilities(self, code: str) -> dict[int, str]:
-        path = self.root / code / "abilities.json"
-        if not path.exists():
+        data = self.blobs.get(self._key(code, "abilities.json"))
+        if data is None:
             return {}
-        return {int(k): v for k, v in orjson.loads(path.read_bytes()).items()}
+        return {int(k): v for k, v in orjson.loads(data).items()}
 
     def events(
         self,
@@ -272,10 +280,10 @@ class ParquetEventStore:
         t_to: int | None = None,
     ) -> pl.DataFrame:
         """Filtered events, ``t_from``/``t_to`` inclusive. ``actor_id`` matches source or target."""
-        path = self._events_path(pull_key)
-        if not path.exists():
+        data = self.blobs.get(self._events_key(pull_key))
+        if data is None:
             return empty_events()
-        lf = pl.scan_parquet(path)
+        lf = pl.scan_parquet(io.BytesIO(data))
         if types is not None:
             lf = lf.filter(pl.col("type").cast(pl.Utf8).is_in(types))
         if actor_id is not None:
@@ -290,10 +298,12 @@ class ParquetEventStore:
 
     def positions(self, pull_key: str) -> pl.DataFrame:
         """The pull's position table; empty when it has none (no samples, or ingested before positions)."""
-        path = self._positions_path(pull_key)
-        if not path.exists() or self.positions_hash(pull_key) is None:
+        if self.positions_hash(pull_key) is None:
             return empty_positions()
-        return pl.read_parquet(path)
+        data = self.blobs.get(self._positions_key(pull_key))
+        if data is None:
+            return empty_positions()
+        return pl.read_parquet(io.BytesIO(data))
 
 
 _ACTOR_SCHEMA = {

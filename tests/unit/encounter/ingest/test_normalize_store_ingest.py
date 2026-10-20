@@ -304,7 +304,7 @@ class TestStore:
     def test_reports_lists_codes_with_stored_pulls(self, loaded, meta):
         store, _, _ = loaded
         assert store.reports() == [CODE]
-        (store.root / "EMPTY").mkdir()  # a report directory without pulls.json is not a report
+        (store.blobs.root / "EMPTY").mkdir()  # a report directory without pulls.json is not a report
         pulls, _ = meta
         df = store.events(pulls[1].pull_key)
         store.write_pull(pulls[1].model_copy(update={"report_code": "AAA"}), df, events_hash(df))
@@ -346,7 +346,7 @@ class TestStore:
         store.write_pull(pull, df, "newhash", [])
         assert store.events_hash(pull.pull_key) == "newhash"
         assert len(store.pulls(CODE)) == 1
-        assert not list(store.root.rglob("*.tmp"))
+        assert not list(store.blobs.root.rglob("*.tmp"))
 
 
 # ===========================================================================
@@ -373,10 +373,10 @@ class TestIngest:
     async def test_second_run_is_a_noop(self, synth_ingest_kwargs):
         await ingest_report(CODE, **synth_ingest_kwargs)
         store = synth_ingest_kwargs["store"]
-        before = (store.root / CODE / "1.parquet").stat().st_mtime_ns
+        before = (store.blobs.root / CODE / "1.parquet").stat().st_mtime_ns
         again = await ingest_report(CODE, **synth_ingest_kwargs)
         assert again.pulls == [] and again.skipped == ["SYNTH01:1", "SYNTH01:2"]
-        assert (store.root / CODE / "1.parquet").stat().st_mtime_ns == before
+        assert (store.blobs.root / CODE / "1.parquet").stat().st_mtime_ns == before
 
     async def test_changed_pull_metadata_is_rewritten(self, synth_ingest_kwargs):
         # A field added to the report query (boss health) must reach pulls already stored with the same events.
@@ -396,12 +396,11 @@ class TestIngest:
         assert result.failed == {"SYNTH01:9": "fight not found in report"}
 
     async def test_partial_failure_continues(self, synth_ingest_kwargs, synth_cache):
-        import shutil
-
         spec = next(
             s for s in specs_for(SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CAST_IDS[90001]) if s.dir_name == "Healing"
         )
-        shutil.rmtree(synth_cache._dir(CODE, 1, spec))  # fight 1 loses a data type
+        for key in synth_cache.blobs.list(synth_cache._dir(CODE, 1, spec) + "/"):  # fight 1 loses a data type
+            synth_cache.blobs.delete(key)
         result = await ingest_report(CODE, **synth_ingest_kwargs)
         assert result.pulls == ["SYNTH01:2"]
         assert list(result.failed) == ["SYNTH01:1"]
@@ -416,7 +415,7 @@ class TestIngest:
     async def test_refresh_meta_requests_only_metadata(self, synth_ingest_kwargs, synth_cache):
         await ingest_report(CODE, **synth_ingest_kwargs)
         store = synth_ingest_kwargs["store"]
-        pages = sorted(p for p in (synth_cache.root / CODE).rglob("*") if p.is_file() and p.name != "report.json")
+        pages = sorted(p for p in (synth_cache.blobs.root / CODE).rglob("*") if p.is_file() and p.name != "report.json")
         before = {p: (p.stat().st_mtime_ns, p.read_bytes()) for p in pages}
         meta = orjson.loads(orjson.dumps(synth_cache.report_meta(CODE)))
         meta["fights"][0]["bossPercentage"] = 40.0  # WCL now reports a different value for fight 1

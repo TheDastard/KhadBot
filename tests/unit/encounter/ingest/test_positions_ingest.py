@@ -124,15 +124,15 @@ class TestStore:
         store, pull, _, table = stored
         assert store.positions(pull.pull_key).equals(table)
         assert store.positions_hash(pull.pull_key) == positions_hash(table)
-        assert (store.root / CODE / "positions" / "1.parquet").exists()
-        assert not list(store.root.rglob("*.tmp"))
+        assert (store.blobs.root / CODE / "positions" / "1.parquet").exists()
+        assert not list(store.blobs.root.rglob("*.tmp"))
 
     def test_rewrite_without_positions_removes_the_table(self, stored):
         store, pull, df, _ = stored
         store.write_pull(pull, df, events_hash(df))
         assert store.positions_hash(pull.pull_key) is None
         assert store.positions(pull.pull_key).equals(empty_positions())
-        assert not (store.root / CODE / "positions" / "1.parquet").exists()
+        assert not (store.blobs.root / CODE / "positions" / "1.parquet").exists()
 
     def test_unknown_pull(self, stored):
         store, _, _, _ = stored
@@ -155,13 +155,13 @@ async def test_record_without_positions_hash_loads_and_reingest_adds_the_table(s
     store = synth_ingest_kwargs["store"]
     await ingest_report(CODE, **synth_ingest_kwargs)
     # A pulls.json record written before positions were kept: no positions_hash key, no table.
-    path = store.root / CODE / "pulls.json"
+    path = store.blobs.root / CODE / "pulls.json"
     records = orjson.loads(path.read_bytes())
     for r in records:
         del r["positions_hash"]
     path.write_bytes(orjson.dumps(records))
     for fight in (1, 2):
-        (store.root / CODE / "positions" / f"{fight}.parquet").unlink()
+        (store.blobs.root / CODE / "positions" / f"{fight}.parquet").unlink()
 
     assert [p.fight_id for p in store.pulls(CODE)] == [1, 2]
     assert store.positions_hash("SYNTH01:1") is None
@@ -171,7 +171,7 @@ async def test_record_without_positions_hash_loads_and_reingest_adds_the_table(s
     again = await ingest_report(CODE, **synth_ingest_kwargs)
     assert again.pulls == ["SYNTH01:1", "SYNTH01:2"] and again.skipped == []
     assert store.positions_hash("SYNTH01:1") == positions_hash(empty_positions())
-    assert (store.root / CODE / "positions" / "1.parquet").exists()
+    assert (store.blobs.root / CODE / "positions" / "1.parquet").exists()
     assert store.events_hash("SYNTH01:1") == ev_hash
 
     third = await ingest_report(CODE, **synth_ingest_kwargs)

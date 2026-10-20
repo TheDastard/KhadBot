@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
+import orjson
 import pytest
 
 from khadbot.encounter.ingest.fetch import (
@@ -21,6 +22,7 @@ from khadbot.encounter.ingest.fetch import (
     specs_for,
 )
 from khadbot.encounter.models import FetchSpec, Pull
+from khadbot.storage import LocalBlobStore
 from khadbot.tools.warcraftlogs._client import WarcraftLogsRateLimitError
 
 CODE = "ABC123"
@@ -169,6 +171,34 @@ class TestRawPageCache:
         cache = RawPageCache(tmp_path)
         cache.write_page(CODE, 1, FetchSpec(data_type="Deaths"), 0, EMPTY_PAGE)
         assert not list(tmp_path.rglob("*.tmp"))
+
+    def test_blob_store_keys_mirror_the_data_directory(self, tmp_path):
+        blobs = LocalBlobStore(tmp_path)
+        cache = RawPageCache(blobs)
+        spec = FetchSpec(data_type="Deaths")
+        page = {"data": [{"timestamp": 1}], "nextPageTimestamp": None}
+        cache.write_report_meta(CODE, {"title": "x"})
+        cache.write_page(CODE, 1, spec, 0, page)
+        cache.mark_complete(CODE, 1, spec)
+        assert blobs.list() == [
+            f"raw/{CODE}/1/Deaths/none/_complete",
+            f"raw/{CODE}/1/Deaths/none/page_000.json",
+            f"raw/{CODE}/report.json",
+        ]
+        # The bytes are orjson's, as the path-based cache wrote them.
+        assert (tmp_path / "raw" / CODE / "1" / "Deaths" / "none" / "page_000.json").read_bytes() == orjson.dumps(page)
+        assert RawPageCache(tmp_path / "raw").pages(CODE, 1, spec) == [page]
+
+    def test_pages_are_only_the_page_objects_directly_in_the_spec_directory(self, tmp_path):
+        blobs = LocalBlobStore(tmp_path)
+        cache = RawPageCache(blobs)
+        spec = FetchSpec(data_type="Deaths")
+        cache.write_page(CODE, 1, spec, 0, EMPTY_PAGE)
+        base = f"raw/{CODE}/1/Deaths/none"
+        blobs.put(f"{base}/notes.json", b"{}")
+        blobs.put(f"{base}/nested/page_001.json", b"{}")
+        (tmp_path / "raw" / CODE / "1" / "Deaths" / "none" / "page_001.json.tmp").write_bytes(b"partial")
+        assert cache.pages(CODE, 1, spec) == [EMPTY_PAGE]
 
     def test_filter_hash(self):
         assert filter_hash(None) == "none"

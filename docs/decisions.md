@@ -37,6 +37,7 @@ Source plan: <https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE> (Encounter Revi
 | D28 | Utility cooldowns in encounter mode | Encounter mode reads `utility_cooldowns.yaml`. `cooldown_uses` takes all three files, so `CooldownUse.category` can be `utility` and `cd:` refs and `cooldown_timeline` cover utility casts. `PullDigest.utility_cooldowns` holds at most `UTILITY_COOLDOWN_CAP` (1) of them, rendered as UTILITY COOLDOWNS after OFFENSIVE COOLDOWNS: raid-wide casts first, then casts on enemies or another player, then the caster's own, and within a tier each spell's first cast, then its second, earliest first (`capped_utility`, sharing `_capped` with `capped_offensive`). `utility_cooldowns_hash` joins `produced_from`, the `EncounterData` records key and the findings `cache_key`; `build_pull_records`, `build_digest` and `EncounterData` take the file as `utility`. No request is added: utility casts come from the unfiltered friendly Casts request, and `fetch_filter_inputs(..., utility=)` only checks the file against the others. Utility casts raise no `cooldown_unverified` anomaly | Nothing reads a utility aura yet: coverage and death windows stay defensive-only, so a Buffs filter for ally auras or a Debuffs request on enemies (stuns, roots) would spend WCL points for no reader, and no fixture has recorded the Enemies Debuffs cost. The recorded pulls cast 2 to 71 utility cooldowns (before Innervate moved), 107 of 246 of them Death's Advance and 45 Divine Steed, so personal movement goes last. With the 40-entry offensive file the largest recorded digest is about 2,975 tokens without a utility section and 3,062 with four utility lines, each about 21 tokens; even one line reaches 3,001. The digest ceiling rises from 3,000 to 3,100 tokens and the cap is 1, so the section names the top-ranked raid or enemy-side cast and `cooldown_timeline` lists the rest. Unverified-anomaly codes for utility casts would have added about 90 tokens to the largest digests for entries whose cooldown and duration nothing reads | 2026-10-18 |
 | D29 | Postgres foundation | Hosted mode keeps its relational state in PostgreSQL, major version 17 (the CI `hosted` job runs the `postgres:17` image), through `psycopg` 3 with `psycopg_pool` and no ORM. `DatabaseConfig` reads `KHADBOT_MODE` (`local`, the default, or `hosted`), `DATABASE_URL` and the pool sizes. `python main.py migrate` (`mise run db:migrate`) applies the numbered files in `src/khadbot/db/migrations/` in order: each file and its `schema_migrations` row (version, name, checksum) commit together, a session advisory lock serialises runners, and an applied file whose content (line endings ignored) has changed is an error, so a schema change is always a new file. `FindingsStore` is now a protocol; `SqliteFindingsStore` is the old class and `PostgresFindingsStore` stores the report as `jsonb` with the same methods. `default_findings_store()` returns the Postgres store when `KHADBOT_MODE=hosted`, else the SQLite file. Local mode never imports the connection code and needs no database. Tests marked `hosted` live in `tests/integration/hosted/`, skip without `DATABASE_URL`, and give each test its own schema | Local mode must keep working with nothing installed, so the choice is configuration, not code: one protocol, two implementations, and one contract test suite both pass. Plain SQL files and a 100-line runner are enough for a schema this size, and a checksum catches the edited-after-applied file that would otherwise leave databases diverged. Version 17 is the newest major the common managed hosts all offer; the pin is in one place (the workflow) and moves with a new migration check | 2026-10-20 |
 | D30 | Code versions in cache keys | `ANNOTATION_VERSION`, `RECORDS_VERSION` (new, `digest.py`, bumped by hand when analysis or record-building code changes its output) the cutoff fraction and `pull_hash` (a hash of the whole stored `Pull`, so any `--refresh-meta` change misses) join `PullDigest.produced_from`, the `EncounterData` records key and the findings `cache_key`. The annotation cache sidecar also stores `pull_hash`, a narrower hash of the `Pull` fields annotation reads (`start_ms`, `end_ms`, `duration_ms`, `kill`, `phase_transitions`, `friendly_player_ids`); a sidecar without it misses once | Findings are about to be shared between users, so a result built by old code must not be served after a change. Code can't be hashed reliably, so a hand-bumped constant is the cheapest honest signal; the cutoff and pull metadata are plain data and are hashed. The change misses every cached annotation and finding once and changes `produced_from` in every digest golden | 2026-10-20 |
+| D31 | Blob storage seam | The raw page cache, the event store and the annotation cache read and write whole objects through a `BlobStore` protocol (`src/khadbot/storage/`: `get`, atomic `put`, `exists`, recursive sorted `list` by string prefix, `delete`) under keys equal to their old paths relative to `KHADBOT_DATA_DIR` (`raw/…`, `events/…`, `annotated/…`). `storage.default_blob_store()` is the one factory; it returns `LocalBlobStore` over the data directory, and the `default_*` factories, `EncounterData.from_config` and `create_app` use it. Each persistence class takes a store and a key prefix, and still accepts a directory path. Keys are validated (relative, no `.`/`..` or empty segments, no characters a Windows path can't hold, no `.tmp` suffix). The findings and checkpoint databases are not blobs. See "Blob storage seam (2026-10-20)" under implementation notes | A hosted deployment needs object storage without rewriting every stage, and mirroring the paths means an existing data directory works unchanged: the local store writes the same bytes the path-based classes did, which a golden manifest built by the old classes checks. Whole objects suit both parquet-per-pull and S3, and timings on the largest recorded night stayed within run-to-run noise | 2026-10-20 |
 
 ## Implementation notes (deviations from the plan text)
 
@@ -532,6 +533,52 @@ it adds no analysis of its own beyond the night aggregates.
   fixture reports offline through `ingest.recorded` (with the Buffs filter the fixtures were recorded with,
   `RECORDED_BUFF_IDS`), the same code the test helpers use, and copies each
   `report.json` so titles show. Playwright and local demos serve that directory.
+
+### Blob storage seam (2026-10-20)
+
+The raw page cache, the event store and the annotation cache read and write through a `BlobStore`
+(`src/khadbot/storage/`), so a later object-store implementation can replace the data directory without touching
+the stages.
+
+- **Protocol.** `get(key) -> bytes | None`, `put(key, data)`, `exists`, `list(prefix)`, `delete`. Whole objects
+  only: parquet goes through `BytesIO`, and the event store reads the whole events object before filtering
+  instead of scanning the file. `put` is atomic. `list` is recursive, sorted, and treats the prefix as a string
+  prefix, the way S3 does. Deleting a missing key is not an error.
+- **Keys mirror the data directory.** `raw/<report>/…`, `events/<report>/…`, `annotated/<report>/…`, exactly the
+  old paths relative to `KHADBOT_DATA_DIR`, so `LocalBlobStore` over an existing directory reads it unchanged and
+  writes the same bytes. Keys are `/`-separated and relative, and may not hold empty, `.` or `..` segments,
+  backslashes, colons or other characters a Windows path can't hold, or end in `.tmp` (the suffix of an
+  in-progress local write, which listings skip). An invalid key raises `InvalidKeyError`, a `ValueError`; the API
+  answers a report code no key can hold with `report_not_found`, and an evidence ref with one is unresolvable.
+- **One factory.** `storage.default_blob_store()` returns `LocalBlobStore(KHADBOT_DATA_DIR)`; `default_cache`,
+  `default_store`, `default_annotation_cache`, `EncounterData.from_config` and `create_app` all use it, and
+  `create_app` takes `blobs=` too. Each persistence class takes a store plus a key prefix (`raw`, `events`,
+  `annotated` by default) and also still accepts a directory path, meaning a store rooted at that stage's
+  directory with no prefix. The recorded fixtures (a raw layout without `raw/`), the scripts and most tests use
+  that form unchanged.
+- **Local writes.** `atomic_write` writes a uniquely named `*.tmp` sibling and renames it over the target, so two
+  writers never share a temporary file. On Windows a rename onto a file a reader has open, or an open during a
+  rename, fails with a sharing violation; both sides retry for up to about a second (2 ms doubling, 10 tries).
+  The contract suite's concurrent read-while-overwrite test failed without the retry.
+- **Contract tests.** `tests/helpers/storage/contract.py` holds the behaviour every store must have;
+  `tests/unit/storage/test_blob_contract.py` runs it for each entry in `BLOB_STORES`, so another implementation
+  joins by adding an entry, and an integration suite can subclass the same class.
+- **Compatibility.** `tests/golden/storage/data_dir_manifest.json` is the SHA-256 of every file under `events/`
+  and `annotated/` after ingesting and digesting the recorded fixtures (3 reports, 7 pulls, 37 files). It was
+  produced by the path-based classes from before this change; the blob store matches it file for file, rewrites
+  the same bytes over an existing directory, and reads events, positions, actors, abilities and annotations as
+  `polars` reads the files. Digests built through it match the existing digest goldens.
+- **Timings.** Offline ingest and digest of the largest recorded night (`H7z1fqDXjRTFnbtg`, 4 pulls, 126 MB of raw
+  pages) through the default factories, 10 runs each, before and after interleaved, medians:
+
+  | Step | Before | After | Change |
+  |---|---|---|---|
+  | Offline ingest into an empty data directory | 4.44 s | 4.39 s | -1% |
+  | Offline re-ingest (every pull skipped) | 3.94 s | 3.79 s | -4% |
+  | Digest of every pull, annotation cache empty | 1.72 s | 1.75 s | +2% |
+  | Digest of every pull, annotation cache warm | 1.29 s | 1.35 s | +4% |
+
+  Run-to-run spread on this Windows machine is 10 to 30%, larger than any of the changes.
 
 ## Human task status
 
