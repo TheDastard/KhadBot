@@ -52,6 +52,7 @@ from khadbot.encounter.findings import FindingsStore, cache_key, now
 from khadbot.encounter.models import (
     AnalysisReport,
     AnalysisRequest,
+    Depth,
     ProducedBy,
     PullFindings,
 )
@@ -254,6 +255,75 @@ def build_review_graph() -> CompiledStateGraph:
     return g.compile()
 
 
+def _review_config(
+    req: AnalysisRequest, run: ReviewRun, *, callbacks: list | None = None, run_id: UUID | None = None
+) -> RunnableConfig:
+    """The graph config for one review: the run context plus tracing metadata and concurrency limits."""
+    config: RunnableConfig = {
+        "configurable": {"review": run},
+        "callbacks": callbacks,
+        "run_name": "encounter_review",
+        "tags": ["encounter_review"],
+        "metadata": {
+            "request_id": req.request_id,
+            "graph_version": GRAPH_VERSION,
+            "model_id": run.model_id,
+            "pulls": list(req.pulls),
+            "depth": req.depth,
+        },
+        "max_concurrency": EncounterConfig().analyst_max_concurrency,
+        "recursion_limit": 50 + 4 * len(req.pulls),
+    }
+    if run_id is not None:
+        config["run_id"] = run_id
+    return config
+
+
+class ModelMismatchError(Exception):
+    """The configured analyst model is not the one the caller expected."""
+
+
+@dataclass(frozen=True)
+class PullReview:
+    """The outcome of ``review_pull``: the pull's findings and whether they came from the cache."""
+
+    findings: PullFindings
+    cached: bool
+    partial: bool  # the analysis was partial or had no structured report, so it was not cached
+
+
+async def review_pull(
+    pull_key: str,
+    *,
+    depth: Depth = "standard",
+    store: EncounterData | EventStore,
+    findings: FindingsStore,
+    expected_model_id: str | None = None,
+    callbacks: list | None = None,
+) -> PullReview:
+    """
+    Review one pull without the cross-pull synthesis: its cached findings, or a fresh analysis that is cached.
+
+    This is the per-pull half of ``review`` (same cache key, same analysis, same caching rule), so a pull
+    reviewed here is free in a later ``review``. Raises ``KeyError`` if the pull is not ingested, and
+    ``ModelMismatchError`` (before any model call) if ``expected_model_id`` is given and is not the analyst's.
+    """
+    data = store if isinstance(store, EncounterData) else EncounterData(store)
+    if data.pull(pull_key) is None:
+        raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
+    model = llm_factory.get_llm(role="analyst")
+    run = ReviewRun(data=data, findings=findings, model=model, model_id=model_id_of(model))
+    if expected_model_id is not None and expected_model_id != run.model_id:
+        raise ModelMismatchError(f"the analyst model is {run.model_id}, not the expected {expected_model_id}")
+    req = AnalysisRequest(request_id=uuid4().hex, question=STANDARD_REVIEW_QUESTION, pulls=[pull_key], depth=depth)
+    key = pull_cache_key(data, pull_key, model_id=run.model_id, version=review_prompt_version(), depth=depth)
+    hit = findings.get(key)
+    if hit is not None and not hit.flagged:
+        return PullReview(hit, cached=True, partial=False)
+    out = await analyze_pull_node({"request": req, "pull": pull_key}, _review_config(req, run, callbacks=callbacks))
+    return PullReview(out["fresh"][0], cached=False, partial=bool(out["partial_pulls"]))
+
+
 async def review(
     req: AnalysisRequest,
     *,
@@ -273,23 +343,7 @@ async def review(
     data = store if isinstance(store, EncounterData) else EncounterData(store)
     model = llm_factory.get_llm(role="analyst")
     run = ReviewRun(data=data, findings=findings, model=model, model_id=model_id_of(model))
-    config: RunnableConfig = {
-        "configurable": {"review": run},
-        "callbacks": callbacks,
-        "run_name": "encounter_review",
-        "tags": ["encounter_review"],
-        "metadata": {
-            "request_id": req.request_id,
-            "graph_version": GRAPH_VERSION,
-            "model_id": run.model_id,
-            "pulls": list(req.pulls),
-            "depth": req.depth,
-        },
-        "max_concurrency": EncounterConfig().analyst_max_concurrency,
-        "recursion_limit": 50 + 4 * len(req.pulls),
-    }
-    if run_id is not None:
-        config["run_id"] = run_id
+    config = _review_config(req, run, callbacks=callbacks, run_id=run_id)
     initial: ReviewState = {
         "request": req,
         "pulls": [],

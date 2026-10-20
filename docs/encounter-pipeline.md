@@ -45,6 +45,22 @@ leaves. The findings and checkpoint SQLite databases are not blobs and stay file
 
 Annotation runs inside `/digest` and `/review`; it has no command of its own.
 
+### Job functions
+
+`/ingest`, `/digest`, `/review` and the `ingest` and `digest` entry points run through the job functions in
+`src/khadbot/jobs/`, the same functions the hosted queue runs. A job takes a spec, a `JobContext` and a `Progress`:
+
+| Job | Spec | Does | Progress `(stage, pull)` |
+|---|---|---|---|
+| `run_ingest_report` | `IngestReport(code, fights, auth, offline, refresh_meta)` | Stages 1 to 3 for the report; returns the `IngestResult` (its `pulls` are the ones written) | `("ingest", None)`, ingest's own `fetched <spec>` and `normalizing` per pull, `("ingest", None)` |
+| `run_process_pull` | `ProcessPull(pull_key)` | Stages 4 and 5: annotate, build and store the records; then project the read models when a projector is wired (hosted) | `("records", pull)` twice, then `("project", pull)` twice with a projector |
+| `run_review_pull` | `ReviewPull(pull_key, depth, model)` | Stage 7 for one pull, without the synthesis: cached findings, or a fresh analysis that is cached | `("review", pull)` twice |
+
+A job is idempotent: a second run finds stage 3's hashes, the annotation, the records or the findings already stored
+and writes nothing. A spec holds `AppAuth` or `UserAuth(user_id)`, never a token; the context's `TokenResolver`
+resolves it to ingest's `token_provider` at run time, and local mode resolves `AppAuth` only. `/digest` runs
+`ProcessPull` without a records store, and `/review` runs it for each pull before the analyst reads them.
+
 ## 1. Fetch: raw page cache
 
 `encounter/ingest/fetch.py` pages through WCL's `events` query once per fetch spec (a data type, a hostility and an

@@ -16,11 +16,10 @@ from uuid import uuid4
 
 from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.analyst import ReviewEstimate, estimate_review_cost, review
-from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_cooldowns
-from khadbot.encounter.digest import UNREGISTERED_CAP, build_digest, default_annotation_cache, render_digest
+from khadbot.encounter.digest import build_digest, default_annotation_cache, render_digest
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, default_findings_store
-from khadbot.encounter.ingest import default_store, ingest_report
+from khadbot.encounter.ingest import default_store
 from khadbot.encounter.models import (
     AnalysisReport,
     AnalysisRequest,
@@ -30,6 +29,18 @@ from khadbot.encounter.models import (
     UnregisteredAbility,
 )
 from khadbot.encounter.store import EventStore
+from khadbot.jobs import (
+    IngestReport,
+    JobContext,
+    LineProgress,
+    ProcessPull,
+    Progress,
+    run_ingest_report,
+    run_process_pull,
+)
+from khadbot.jobs import (
+    default_filter_kwargs as default_filter_kwargs,  # re-exported for the eval harness
+)
 
 # Report code of the last successful /ingest in this process; /digest and /pulls default to it.
 _last_report: str | None = None
@@ -96,20 +107,11 @@ def format_ingest_result(result: IngestResult) -> str:
     return "\n".join(lines)
 
 
-def default_filter_kwargs() -> dict:
-    """Fetch-filter inputs from the cooldown registries and every authored encounter file."""
-    return fetch_filter_inputs(
-        load_cooldowns("defensive"),
-        load_cooldowns("offensive"),
-        load_all_encounters(),
-        utility=load_cooldowns("utility"),
-    )
-
-
-def _console_progress(pull_key: str, stage: str, pct: float) -> None:
+def console_progress() -> Progress:
+    """Job progress printed as muted ``<pull>  <stage>  <percent>`` lines on the CLI console."""
     from khadbot.cli.console import console
 
-    console.print(f"[ui.muted]{pull_key}  {stage}  {pct:.0%}[/ui.muted]")
+    return LineProgress(lambda line: console.print(f"[ui.muted]{line}[/ui.muted]"))
 
 
 async def ingest_command(arg: str) -> str:
@@ -121,14 +123,8 @@ async def ingest_command(arg: str) -> str:
             raise UsageError(f"{REFRESH_OFFLINE_ERROR}\n\n{INGEST_USAGE}")
     except UsageError as exc:
         return f"**{exc}**"
-    result = await ingest_report(
-        ns.code,
-        fights,
-        offline=ns.offline,
-        refresh_meta=ns.refresh_meta,
-        progress=_console_progress,
-        **default_filter_kwargs(),
-    )
+    spec = IngestReport(code=ns.code, fights=fights, offline=ns.offline, refresh_meta=ns.refresh_meta)
+    result = await run_ingest_report(spec, JobContext(), console_progress())
     global _last_report
     if result.pulls or result.skipped:
         _last_report = result.report_code
@@ -190,12 +186,27 @@ def format_digest(d: PullDigest, *, as_json: bool = False) -> str:
     return f"```text\n{render_digest(d)}\n```"
 
 
-def run_digest(
+async def pull_digest(pull_key: str, *, unregistered: bool = False, store: EventStore | None = None) -> PullDigest:
+    """
+    The digest of one ingested pull, from the local store. The ordinary digest comes from the ``ProcessPull`` job,
+    run silently and without a records store, so a digest command writes only what it always wrote (the annotation
+    cache). ``unregistered`` widens the authoring lists past what the job's records hold, so it builds directly.
+    Raises ``KeyError`` for a pull that is not ingested.
+    """
+    store = store or default_store()
+    cache = default_annotation_cache()
+    if unregistered:
+        return build_digest(pull_key, store, cache=cache, unregistered_cap=UNREGISTERED_LIMIT)
+    data = EncounterData(store, cache=cache)
+    await run_process_pull(ProcessPull(pull_key=pull_key), JobContext(data=data))
+    return data.digest(pull_key)
+
+
+async def run_digest(
     pull_key: str, *, as_json: bool = False, unregistered: bool = False, store: EventStore | None = None
 ) -> str:
     """Build a digest from the local store and format it as markdown."""
-    cap = UNREGISTERED_LIMIT if unregistered else UNREGISTERED_CAP
-    d = build_digest(pull_key, store or default_store(), cache=default_annotation_cache(), unregistered_cap=cap)
+    d = await pull_digest(pull_key, unregistered=unregistered, store=store)
     if unregistered:
         return format_unregistered(pull_key, d.unregistered, d.friendly_damage.unclassified)
     return format_digest(d, as_json=as_json)
@@ -206,7 +217,7 @@ async def digest_command(arg: str) -> str:
     try:
         ns = digest_parser().parse_args(shlex.split(arg))
         pull_key = resolve_pull_key(ns.target, _last_report)
-        return run_digest(pull_key, as_json=ns.json, unregistered=ns.unregistered)
+        return await run_digest(pull_key, as_json=ns.json, unregistered=ns.unregistered)
     except UsageError as exc:
         return f"**{exc}**"
     except KeyError as exc:
@@ -307,6 +318,10 @@ async def review_command(arg: str, *, data: EncounterData | None = None, finding
     from khadbot.cli.console import console
 
     console.print(f"[ui.muted]{estimate}[/ui.muted]")
+    # Records are built (and stored) pull by pull, with progress, before the analyst reads them.
+    ctx, progress = JobContext(data=data), console_progress()
+    for key in pulls:
+        await run_process_pull(ProcessPull(pull_key=key), ctx, progress)
     req = AnalysisRequest(
         request_id=uuid4().hex, question=" ".join(words) or DEFAULT_REVIEW_QUESTION, pulls=pulls, depth=ns.depth
     )

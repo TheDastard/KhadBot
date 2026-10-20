@@ -54,23 +54,13 @@ def _run_ingest(code: str, fights: str | None, offline: bool, refresh_meta: bool
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.encounter.commands import default_filter_kwargs, format_ingest_result, parse_fights
-    from khadbot.encounter.ingest import ingest_report
+    from khadbot.encounter.commands import format_ingest_result, parse_fights
+    from khadbot.jobs import IngestReport, JobContext, LineProgress, run_ingest_report
 
     console = Console()
-
-    def progress(pull_key: str, stage: str, pct: float) -> None:
-        console.print(f"[dim]{pull_key}  {stage}  {pct:.0%}[/dim]")
-
+    spec = IngestReport(code=code, fights=parse_fights(fights), offline=offline, refresh_meta=refresh_meta)
     result = asyncio.run(
-        ingest_report(
-            code,
-            parse_fights(fights),
-            offline=offline,
-            refresh_meta=refresh_meta,
-            progress=progress,
-            **default_filter_kwargs(),
-        )
+        run_ingest_report(spec, JobContext(), LineProgress(lambda line: console.print(f"[dim]{line}[/dim]")))
     )
     console.print(Markdown(format_ingest_result(result)))
     if result.failed:
@@ -81,14 +71,12 @@ def _run_digest(code: str, fight: int, as_json: bool, unregistered: bool) -> Non
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.encounter.commands import UNREGISTERED_LIMIT, format_unregistered
-    from khadbot.encounter.digest import build_digest, default_annotation_cache, render_digest
-    from khadbot.encounter.ingest import default_store
+    from khadbot.encounter.commands import format_unregistered, pull_digest
+    from khadbot.encounter.digest import render_digest
 
     pull_key = f"{code}:{fight}"
-    kwargs = {"unregistered_cap": UNREGISTERED_LIMIT} if unregistered else {}
     try:
-        d = build_digest(pull_key, default_store(), cache=default_annotation_cache(), **kwargs)
+        d = asyncio.run(pull_digest(pull_key, unregistered=unregistered))
     except KeyError as exc:
         sys.exit(str(exc.args[0]))
     if unregistered:
