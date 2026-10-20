@@ -563,7 +563,9 @@ the stages.
   that form unchanged.
 - **Local writes.** `atomic_write` writes a uniquely named `*.tmp` sibling and renames it over the target, so two
   writers never share a temporary file. On Windows a rename onto a file a reader has open, or an open during a
-  rename, fails with a sharing violation; both sides retry for up to about a second (2 ms doubling, 10 tries).
+  rename, fails with a sharing violation; both sides retry for up to five seconds (2 ms doubling, at most 50 ms
+  between tries). A first version gave up after 10 doubling tries, about two seconds, and the test below then
+  failed now and then on Windows CI, when a reader re-reading in a loop outlasted the writer's retries.
   The contract suite's concurrent read-while-overwrite test failed without the retry.
 - **Contract tests.** `tests/helpers/storage/contract.py` holds the behaviour every store must have;
   `tests/unit/storage/test_blob_contract.py` runs it for each entry in `BLOB_STORES`, so another implementation

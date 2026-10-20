@@ -23,24 +23,26 @@ from khadbot.storage.blob import TMP_SUFFIX, validate_key, validate_prefix
 
 
 # On Windows, replacing a file that a reader has open, or opening one while it is being replaced, fails with
-# PermissionError (a sharing violation). Both sides hold a file for one read or one rename, so each retries with
-# backoff for up to about a second (2 ms doubling, 10 retries) before giving up.
-_SHARING_RETRIES = 10
+# PermissionError (a sharing violation). Both sides hold a file for one read or one rename, so each retries for up
+# to five seconds, starting at 2 ms and doubling to at most 50 ms between tries. A fixed count of doubling retries
+# gave up after about two seconds, which a reader re-reading the same file in a loop could outlast.
+_SHARING_DEADLINE_S = 5.0
 _SHARING_FIRST_DELAY_S = 0.002
+_SHARING_MAX_DELAY_S = 0.05
 
 
 def _retry_sharing[T](op: Callable[[], T], *, give_up: Callable[[], bool] = lambda: False) -> T:
     """Run ``op``, retrying on PermissionError unless ``give_up()`` says the error is permanent."""
+    deadline = time.monotonic() + _SHARING_DEADLINE_S
     delay = _SHARING_FIRST_DELAY_S
-    for attempt in range(_SHARING_RETRIES + 1):
+    while True:
         try:
             return op()
         except PermissionError:
-            if attempt == _SHARING_RETRIES or give_up():
+            if time.monotonic() >= deadline or give_up():
                 raise
             time.sleep(delay)
-            delay *= 2
-    raise AssertionError("unreachable")
+            delay = min(delay * 2, _SHARING_MAX_DELAY_S)
 
 
 def atomic_write(path: Path, data: bytes) -> None:
