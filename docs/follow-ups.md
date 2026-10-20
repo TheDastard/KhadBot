@@ -80,9 +80,10 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   25-pull nights, and raid nights cluster on the same evenings. WoWAnalyzer's server sends a signed-in user's
   requests to `/api/v2/user` with that user's token and uses the app token only for visitors who aren't signed
   in. `WarcraftLogsClient.query` already accepts a `user_token`, but encounter ingest never passes one. Steps:
-  1. Confirm whose budget a user-token request spends. Read `rateLimitData` with the app token and with a user
-     token before and after one ingest, and record the result in `docs/wcl-api.md`. WCL's API docs couldn't
-     be read when this was written.
+  1. Whose budget a user-token request spends: measured 2026-10-20 (`docs/wcl-api.md`, "Budget probe results").
+     The app and user counters moved together by the same amount, one shared pool, but the signed-in user owned
+     the API client. Still open: whether another WCL account's token has its own budget. A second account
+     settles it; until then plan on the app's pool alone.
   2. Done: `ingest_report` and `fetch_pull` take a `token_provider` and send every request to `/api/v2/user` with
      it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. Whether the user's
      budget pays is still step 1's question; with no provider, ingest uses the app token as before.
@@ -94,16 +95,17 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected
   wait instead of failing when the bucket is empty. Keep headroom for live ingest of linked guilds' raids.
 - **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
-  filter. Each request costs about 2 points plus about 1 per extra page (`docs/wcl-api.md`). Wipefest joined
-  every config's filter into one `(a) or (b)` expression and paged through a single request per fight. Measure
-  on one long recorded pull whether fewer requests with merged `filterExpression`s cut points and wall time:
-  points spent (`rateLimitData` before and after), pages, bytes and time, with the normalized events asserted
-  identical. Open points:
-  - `dataType` and `hostilityType` are per-request arguments. Check whether a request without `dataType` and a
-    filter on event type returns the same rows, and whether friendly and enemy specs can share one request.
-  - Normalize, the truncation anomaly and the raw cache's `_complete` markers are per spec, and the cache path
-    holds the filter hash. A merged request needs its pages' data type taken from each event's `type`.
-  - A merged filter is longer, so it runs into WCL's unknown limit on filter length (above).
+  filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl-api.md`, "Merged-filter results"):
+  - One request per hostility with no `dataType` is refused (internal server error), so that merge is out.
+  - Merging same-type requests (the two Buffs requests as one, ability IDs unioned) gave identical normalized
+    frames but saved 14% of points (21 against 24.31), under the 15% bar, and 58% of wall time on one run that
+    followed the baseline fetch of the same pull, so WCL-side caching may explain part of it.
+  - Still open before building a merged fetch: repeat the `datatype` run several times with a cold cache and
+    see whether the time saving holds. Combining friendly and enemy Casts needs `hostilityType` left out, whose
+    behaviour is unknown; a merged filter is also longer, so it runs into WCL's unknown limit on filter length
+    (above).
+  - A merged request needs its pages' data type taken from the rows, and normalize, the truncation anomaly and
+    the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
