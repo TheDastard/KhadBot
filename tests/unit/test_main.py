@@ -92,3 +92,18 @@ class TestServeSubcommand:
         app = run.call_args.args[0]
         assert run.call_args.kwargs == {"host": "127.0.0.1", "port": 8123}
         assert app.state.ctx.data_dir == tmp_path
+
+
+class TestMigrateSubcommand:
+    def test_dispatches(self):
+        with patch("khadbot.main._run_migrate") as run:
+            main(["migrate"])
+        run.assert_called_once_with()
+
+    def test_missing_database_url_exits_with_the_reason(self, monkeypatch):
+        from khadbot.main import _run_migrate
+
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        with pytest.raises(SystemExit) as exc:
+            _run_migrate()
+        assert "DATABASE_URL" in str(exc.value)

@@ -30,7 +30,7 @@ from khadbot.encounter.analyst.review_graph import (
     render_findings,
     review,
 )
-from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.findings import SqliteFindingsStore
 from khadbot.encounter.models import AnalysisRequest
 
 
@@ -43,8 +43,8 @@ def request(*pulls: str, depth: str = "standard", question: str = "What went wro
 
 
 @pytest.fixture
-def findings(tmp_path) -> FindingsStore:
-    return FindingsStore(tmp_path / "khadbot.sqlite")
+def findings(tmp_path) -> SqliteFindingsStore:
+    return SqliteFindingsStore(tmp_path / "khadbot.sqlite")
 
 
 @pytest.fixture

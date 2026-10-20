@@ -26,7 +26,7 @@ from khadbot.api.views import ApiContext, ApiError
 from khadbot.config import EncounterConfig
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.encounter.store import ParquetEventStore
 
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -50,7 +50,7 @@ def create_app(
     if data is None:
         data = EncounterData(ParquetEventStore(root / "events"), cache=AnnotationCache(root / "annotated"))
     if findings is None:
-        findings = FindingsStore(root / "khadbot.sqlite")
+        findings = SqliteFindingsStore(root / "khadbot.sqlite")
 
     app = FastAPI(
         title="KhadBot Dashboard API",

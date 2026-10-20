@@ -1,11 +1,13 @@
 """
 encounter/findings.py
 
-SQLite store for per-pull findings, keyed so a change to the data, the authored files, the prompts,
-the graph, the model or the depth misses the cache instead of serving stale findings.
+Per-pull findings, keyed so a change to the data, the authored files, the prompts, the graph, the model or
+the depth misses the cache instead of serving stale findings.
 
-Uses stdlib ``sqlite3`` with one short-lived connection per call, so the store is safe to share
-between concurrent analyst runs. The table is created on first use.
+``FindingsStore`` is the interface. ``SqliteFindingsStore`` is local mode's implementation: stdlib ``sqlite3``
+with one short-lived connection per call, so it is safe to share between concurrent analyst runs, and its table
+is created on first use. Hosted mode uses ``khadbot.db.PostgresFindingsStore``; ``default_findings_store``
+picks by ``KHADBOT_MODE``.
 """
 
 from __future__ import annotations
@@ -16,10 +18,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 import orjson
 
-from khadbot.config import EncounterConfig
+from khadbot.config import DatabaseConfig, EncounterConfig
 from khadbot.encounter.models import Depth, PullFindings
 
 # ---------------------------------------------------------------------------
@@ -76,7 +79,27 @@ def cache_key(
 # ---------------------------------------------------------------------------
 
 
-class FindingsStore:
+class FindingsStore(Protocol):
+    """Per-pull findings storage. Implementations: ``SqliteFindingsStore`` and ``PostgresFindingsStore``."""
+
+    def get(self, key: str) -> PullFindings | None:
+        """The findings stored under ``key``, flagged or not, or None."""
+        ...
+
+    def put(self, pf: PullFindings) -> None:
+        """Store ``pf`` under its cache key, replacing any earlier row."""
+        ...
+
+    def for_pull(self, pull_key: str, *, include_flagged: bool = False) -> list[PullFindings]:
+        """Stored findings for a pull, newest first. Flagged rows are left out unless asked for."""
+        ...
+
+    def flag(self, finding_id: str) -> bool:
+        """Flag the stored findings that contain ``finding_id``. Returns False if none do."""
+        ...
+
+
+class SqliteFindingsStore:
     """Per-pull findings in a SQLite file."""
 
     def __init__(self, db_path: str | Path) -> None:
@@ -139,5 +162,9 @@ def now() -> datetime:
 
 
 def default_findings_store() -> FindingsStore:
-    """The findings database under ``KHADBOT_DATA_DIR``."""
-    return FindingsStore(Path(EncounterConfig().data_dir) / "khadbot.sqlite")
+    """Postgres in hosted mode (``KHADBOT_MODE=hosted``), else the SQLite file under ``KHADBOT_DATA_DIR``."""
+    if DatabaseConfig().hosted:
+        from khadbot.db import PostgresFindingsStore, get_pool
+
+        return PostgresFindingsStore(get_pool())
+    return SqliteFindingsStore(Path(EncounterConfig().data_dir) / "khadbot.sqlite")

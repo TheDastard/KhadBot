@@ -24,6 +24,11 @@ class EmbeddingBackend(StrEnum):
     LOCAL = "local"  # sentence-transformers
 
 
+class DeploymentMode(StrEnum):
+    LOCAL = "local"  # filesystem blobs, SQLite findings, no auth: today's CLI
+    HOSTED = "hosted"  # Postgres (and object storage), chosen by KHADBOT_MODE=hosted
+
+
 class VectorStore(StrEnum):
     CHROMA = "chroma"
     PGVECTOR = "pgvector"
@@ -96,6 +101,22 @@ class EncounterConfig:
 
 
 @dataclass(frozen=True)
+class DatabaseConfig:
+    """Hosted-mode Postgres settings. Local mode ignores all of them."""
+
+    mode: DeploymentMode = field(
+        default_factory=lambda: DeploymentMode(_optional("KHADBOT_MODE", DeploymentMode.LOCAL))
+    )
+    database_url: str = field(default_factory=lambda: _optional("DATABASE_URL"))
+    pool_min_size: int = field(default_factory=lambda: int(_optional("KHADBOT_DB_POOL_MIN", "1")))
+    pool_max_size: int = field(default_factory=lambda: int(_optional("KHADBOT_DB_POOL_MAX", "10")))
+
+    @property
+    def hosted(self) -> bool:
+        return self.mode is DeploymentMode.HOSTED
+
+
+@dataclass(frozen=True)
 class SimCConfig:
     binary_path: str = field(default_factory=lambda: _optional("SIMC_BINARY_PATH", "simc"))
     timeout_seconds: int = field(default_factory=lambda: int(_optional("SIMC_TIMEOUT_SECONDS", "120")))
@@ -148,6 +169,7 @@ class AppConfig:
     warcraftlogs: WarcraftLogsConfig = field(default_factory=WarcraftLogsConfig)
     simc: SimCConfig = field(default_factory=SimCConfig)
     encounter: EncounterConfig = field(default_factory=EncounterConfig)
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)

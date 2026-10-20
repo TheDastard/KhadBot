@@ -31,6 +31,10 @@ dependencies = [
     # --- Dashboard API ---
     "fastapi>=0.143.3",           # read-only dashboard API (src/khadbot/api/), OpenAPI contract
     "uvicorn>=0.54.0",            # ASGI server for `main.py serve`
+
+    # --- Hosted mode (Postgres) ---
+    "psycopg[binary]>=3.3.6",     # PostgreSQL driver; the binary extra avoids needing libpq on the host
+    "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
 ]
 
 [project.optional-dependencies]
@@ -77,6 +81,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.package-data]
+# The migration runner reads these at run time, so a built wheel must carry them.
+"khadbot.db" = ["migrations/*.sql"]
+
 [tool.uv]
 # uv owns the Python version (.python-version) and .venv; mise only pins Node and pnpm and runs tasks.
 required-version = ">=0.13"
@@ -100,6 +108,7 @@ addopts = """
 markers = [
     "perf: timing/memory budget tests; run with -m perf",
     "eval: golden-question evals against a real LLM; run with -m eval",
+    "hosted: needs Postgres (DATABASE_URL); skipped without it, run by the CI hosted job",
 ]
 
 # Treat these warnings as errors so they don't silently mask issues
