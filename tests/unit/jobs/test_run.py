@@ -20,6 +20,7 @@ from khadbot.jobs import (
     JobContext,
     LocalTokenResolver,
     ModelMismatchError,
+    PostgresReadModelProjector,
     ProcessPull,
     RecordingProgress,
     ReviewPull,
@@ -195,9 +196,31 @@ class TestReadModelHook:
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
         assert read_model_projector() is None
 
-    def test_no_projector_is_wired_in_hosted_mode_yet(self, monkeypatch):
+    def test_hosted_mode_projects_into_postgres_without_connecting_yet(self, monkeypatch):
         monkeypatch.setenv("KHADBOT_MODE", "hosted")
-        assert read_model_projector() is None
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        assert isinstance(read_model_projector(), PostgresReadModelProjector)  # no pool opened to build it
+
+    async def test_hosted_process_pull_calls_the_writer(self, make_data, raw_cache, monkeypatch):
+        """ProcessPull in hosted mode hands the records and the report metadata to the read-model writer."""
+        monkeypatch.setenv("KHADBOT_MODE", "hosted")
+        calls: list[tuple] = []
+        pool = object()
+
+        def write(p, records, meta) -> bool:
+            calls.append((p, records.pull.pull_key, meta))
+            return len(calls) == 1  # the real writer writes once, then finds the rows current
+
+        default = read_model_projector()
+        assert isinstance(default, PostgresReadModelProjector)
+        projector = PostgresReadModelProjector(raw_cache, pool=lambda: pool, write=write)
+        ctx = JobContext(data=make_data(), projector=projector)
+        spec = ProcessPull(pull_key="SYNTH01:1")
+        assert (await run_process_pull(spec, ctx)).projected
+        assert (await run_process_pull(spec, ctx)).projected
+        meta = raw_cache.report_meta("SYNTH01")
+        assert meta is not None
+        assert calls == [(pool, "SYNTH01:1", meta), (pool, "SYNTH01:1", meta)]
 
 
 # ===========================================================================
