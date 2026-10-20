@@ -35,6 +35,8 @@ dependencies = [
     # --- Hosted mode (Postgres) ---
     "psycopg[binary]>=3.3.6",     # PostgreSQL driver; the binary extra avoids needing libpq on the host
     "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
+    "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, MinIO) for hosted blobs
+    "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
 ]
 
 [project.optional-dependencies]
@@ -53,6 +55,7 @@ dev = [
 
     # --- HTTP mocking ---
     "respx>=0.21.0",            # async-native HTTP mocking for httpx
+    "moto[s3]>=5.2.4",          # in-memory S3 for the S3 blob store unit tests
 
     # --- Linting / formatting ---
     "ruff>=0.4.0",              # fast linter + formatter; replaces flake8 + black
@@ -108,7 +111,7 @@ addopts = """
 markers = [
     "perf: timing/memory budget tests; run with -m perf",
     "eval: golden-question evals against a real LLM; run with -m eval",
-    "hosted: needs Postgres (DATABASE_URL); skipped without it, run by the CI hosted job",
+    "hosted: needs Postgres (DATABASE_URL) or S3 settings (KHADBOT_S3_BUCKET); skipped without them, run by the CI hosted job",
 ]
 
 # Treat these warnings as errors so they don't silently mask issues

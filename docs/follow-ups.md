@@ -164,6 +164,14 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **Stale record blobs are never deleted.** A changed input writes a new `records/` key and leaves the old blob.
   A retention pass should delete blobs whose hash no current pull would produce.
 
+- **No MinIO in CI.** The S3 blob store is covered in CI only by the moto-backed unit tests. The
+  `tests/integration/hosted/test_blob_s3.py` suite runs the same contract against a real S3-compatible service
+  but skips without `KHADBOT_S3_BUCKET`, and the CI `hosted` job has no MinIO service container. Add one (and the
+  bucket, `AWS_*` and `KHADBOT_S3_*` variables) to that job.
+- **No way to move a local data directory into a bucket.** Objects written to `raw/` without going through the
+  compressing store (a plain upload of `.khadbot_data/raw`) have no `.zst` suffix and are not seen by it. A copy
+  command should read every key from the local store and put it through `default_blob_store()`.
+
 ### Failure rules
 
 - **Failures charged to no one.** Occurrences with no aggro holder (an untanked boss at a stage start, a tail

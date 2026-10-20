@@ -105,6 +105,31 @@ no encounter file existed yet) and `scripts/spike_wcl_cost.py` (no filters).
 - Parsing one long pull's pages: stdlib `json` 1.58 s, `orjson` 0.56 s. Normalizing it: 2.3 s.
 - Digest per pull (no encounter file yet): 0.1 to 0.7 s and about 850 to 1,250 tokens.
 
+## Raw page compression (2026-10-20)
+
+How well zstd compresses the raw pages that hosted mode stores in object storage (`CompressedBlobStore`, `raw/`
+only). Measured on a copy of `raw/H7z1fqDXjRTFnbtg` (the 16-pull night above): 453 objects, 439.3 MB, one page per
+object as WCL returned it, compressed and decompressed one object at a time in memory with `zstandard` 0.25.0
+(single thread, Python 3.14, Windows dev machine). Times are process CPU time, because other jobs were sharing the
+machine; read them as relative, not as a benchmark.
+
+| zstd level | Stored | Ratio | Compress | Decompress |
+|---|---|---|---|---|
+| 1 | 29.2 MB | 15.1x | 375 MB/s | 562 MB/s |
+| 3 (zstd default) | 30.6 MB | 14.4x | 253 MB/s | 469 MB/s |
+| 6 | 25.5 MB | 17.2x | 68 MB/s | 686 MB/s |
+| 9 (KhadBot default) | 22.3 MB | 19.7x | 58 MB/s | 740 MB/s |
+
+- A first run (wall clock, with the machine busy) also timed level 19: 18.0 MB (24.4x), but 1 MB/s to compress, far
+  too slow for an ingest.
+- By data type at level 3: Healing 328.5 MB to 21.7 MB (15.1x), DamageTaken 73.7 to 5.6 (13.1x), Casts 32.3 to
+  2.9 (11.3x); the small types compress 4x to 17x. `report.json` goes from 0.2 MB to 0.03 MB (4.7x).
+- Page sizes: median 1.7 kB (the many small types), 90th percentile 4.3 MB, largest 4.7 MB. The largest page takes
+  about 16 ms to compress at level 3 and 16 ms to decompress.
+- A night of raw pages that is about 440 MB costs about 22 MB at the default level, so storage for raw pages is
+  about 5% of the uncompressed size. Compressing the whole night at level 9 takes about 8 s of CPU against a WCL
+  fetch of about 2 minutes; reading it all back takes under 1 s.
+
 ## Threat data (2026-10-11)
 
 `dataType: Threat` is in the live `EventDataType` enum. Probed on `trMgApZCVYkv3jdq:18` through `events`,
