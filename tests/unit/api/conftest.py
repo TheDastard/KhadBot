@@ -1,8 +1,8 @@
 """
 tests/unit/api/conftest.py
 
-Session-scoped API datasets (``tests/helpers/api/datasets.py``): ``synth`` always, ``real`` when the recorded
-fixtures' Git LFS pages are pulled. Every test here runs with outbound network connections blocked.
+Every API test runs with outbound network connections blocked. The datasets (``synth_dataset``, ``real_dataset``
+and the parametrised ``dataset``) are session fixtures in ``tests/conftest.py``.
 """
 
 from __future__ import annotations
@@ -10,8 +10,6 @@ from __future__ import annotations
 import socket
 
 import pytest
-from helpers.api.datasets import Dataset, build_real, build_synth
-from helpers.encounter.real_fixtures import REAL_REPORTS
 
 _LOOPBACK = {"127.0.0.1", "::1", "localhost"}
 
@@ -28,24 +26,6 @@ def no_network(monkeypatch):
         return real_connect(self, address)
 
     monkeypatch.setattr(socket.socket, "connect", guarded)
-
-
-@pytest.fixture(scope="session")
-def synth_dataset(tmp_path_factory) -> Dataset:
-    return build_synth(tmp_path_factory.mktemp("api_synth"))
-
-
-@pytest.fixture(scope="session")
-def real_dataset(tmp_path_factory) -> Dataset:
-    if not REAL_REPORTS:
-        pytest.skip("real WCL fixtures not pulled from Git LFS")
-    return build_real(tmp_path_factory.mktemp("api_real"))
-
-
-@pytest.fixture(params=["synth", "real"])
-def dataset(request) -> Dataset:
-    """Each test that takes ``dataset`` runs once per dataset."""
-    return request.getfixturevalue(f"{request.param}_dataset")
 
 
 @pytest.fixture

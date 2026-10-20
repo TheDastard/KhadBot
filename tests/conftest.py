@@ -8,6 +8,7 @@ Fixture groups:
   - Agent config / assembler — used by unit and integration agent tests
   - CLI console              — used by unit and integration CLI tests
   - Raider.IO HTTP mocks     — used by tool-level unit tests (test_raiderio.py etc.)
+  - Encounter datasets       — used by the API, read-model and hosted read-model tests
 """
 
 import io
@@ -294,3 +295,36 @@ def update_goldens(request) -> bool:
     import os
 
     return bool(request.config.getoption("--update-goldens") or os.environ.get("UPDATE_GOLDEN"))
+
+
+# ---------------------------------------------------------------------------
+# Encounter datasets
+# ---------------------------------------------------------------------------
+# Ingested data directories served by the dashboard API (tests/helpers/api/datasets.py), built once per run:
+# ``synth`` always, ``real`` when the recorded fixtures' Git LFS pages are pulled. Shared across:
+#   tests/unit/api/
+#   tests/unit/db/test_read_models.py
+#   tests/integration/hosted/test_read_models_pg.py
+
+
+@pytest.fixture(scope="session")
+def synth_dataset(tmp_path_factory):
+    from helpers.api.datasets import build_synth
+
+    return build_synth(tmp_path_factory.mktemp("api_synth"))
+
+
+@pytest.fixture(scope="session")
+def real_dataset(tmp_path_factory):
+    from helpers.api.datasets import build_real
+    from helpers.encounter.real_fixtures import REAL_REPORTS
+
+    if not REAL_REPORTS:
+        pytest.skip("real WCL fixtures not pulled from Git LFS")
+    return build_real(tmp_path_factory.mktemp("api_real"))
+
+
+@pytest.fixture(params=["synth", "real"])
+def dataset(request):
+    """Each test that takes ``dataset`` runs once per dataset."""
+    return request.getfixturevalue(f"{request.param}_dataset")
