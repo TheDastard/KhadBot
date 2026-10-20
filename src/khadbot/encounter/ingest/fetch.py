@@ -3,9 +3,9 @@ encounter/ingest/fetch.py
 
 Raw WCL page cache and the paginated fetcher.
 
-Every page WCL returns is written to disk as it arrives, so an interrupted ingest
+Every page WCL returns is written to the blob store as it arrives, so an interrupted ingest
 resumes from the last cached page and a finished one never touches the network again.
-Layout (rooted at ``$KHADBOT_DATA_DIR/raw``)::
+Keys, under ``raw/`` (``$KHADBOT_DATA_DIR/raw`` in the local store)::
 
     <report>/report.json
     <report>/<fight>/<dir_name>/<filter_hash>/page_000.json ...
@@ -21,8 +21,8 @@ import asyncio
 import hashlib
 import logging
 import os
+import re
 from collections.abc import Callable, Sequence
-from pathlib import Path
 from typing import Any
 
 import orjson
@@ -30,6 +30,7 @@ import orjson
 from khadbot.config import EncounterConfig
 from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
 from khadbot.encounter.models import FetchSpec, Pull
+from khadbot.storage import BlobStore, join_key, resolve_blobs
 from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient, WarcraftLogsRateLimitError
 
 logger = logging.getLogger(__name__)
@@ -128,43 +129,44 @@ def filter_hash(expression: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _atomic_write(path: Path, data: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(data)
-    os.replace(tmp, path)
+# The page objects directly inside a spec's directory; the path-based cache matched them with ``page_*.json``.
+_PAGE_NAME = re.compile(r"page_[^/]*\.json")
 
 
 class RawPageCache:
-    """On-disk cache of report metadata and raw event pages."""
+    """
+    Report metadata and raw event pages in a ``BlobStore``, under the ``raw/`` prefix by default.
 
-    def __init__(self, root: Path) -> None:
-        self.root = Path(root)
+    ``blobs`` may also be a directory laid out like the cache itself (a recorded fixture, or ``<data_dir>/raw``);
+    see ``storage.resolve_blobs``.
+    """
 
-    def _dir(self, code: str, fight: int, spec: FetchSpec) -> Path:
-        return self.root / code / str(fight) / spec.dir_name / filter_hash(spec.filter_expression)
+    def __init__(self, blobs: BlobStore | str | os.PathLike[str], prefix: str | None = None) -> None:
+        self.blobs, self.prefix = resolve_blobs(blobs, prefix, "raw")
+
+    def _dir(self, code: str, fight: int, spec: FetchSpec) -> str:
+        return join_key(self.prefix, code, str(fight), spec.dir_name, filter_hash(spec.filter_expression))
 
     def report_meta(self, code: str) -> dict | None:
-        path = self.root / code / "report.json"
-        return orjson.loads(path.read_bytes()) if path.exists() else None
+        data = self.blobs.get(join_key(self.prefix, code, "report.json"))
+        return orjson.loads(data) if data is not None else None
 
     def write_report_meta(self, code: str, data: dict) -> None:
-        _atomic_write(self.root / code / "report.json", orjson.dumps(data))
+        self.blobs.put(join_key(self.prefix, code, "report.json"), orjson.dumps(data))
 
     def pages(self, code: str, fight: int, spec: FetchSpec) -> list[dict]:
-        directory = self._dir(code, fight, spec)
-        if not directory.exists():
-            return []
-        return [orjson.loads(p.read_bytes()) for p in sorted(directory.glob("page_*.json"))]
+        directory = self._dir(code, fight, spec) + "/"
+        keys = [k for k in self.blobs.list(directory) if _PAGE_NAME.fullmatch(k[len(directory) :])]
+        return [orjson.loads(data) for k in keys if (data := self.blobs.get(k)) is not None]
 
     def write_page(self, code: str, fight: int, spec: FetchSpec, index: int, page: dict) -> None:
-        _atomic_write(self._dir(code, fight, spec) / f"page_{index:03d}.json", orjson.dumps(page))
+        self.blobs.put(f"{self._dir(code, fight, spec)}/page_{index:03d}.json", orjson.dumps(page))
 
     def is_complete(self, code: str, fight: int, spec: FetchSpec) -> bool:
-        return (self._dir(code, fight, spec) / "_complete").exists()
+        return self.blobs.exists(f"{self._dir(code, fight, spec)}/_complete")
 
     def mark_complete(self, code: str, fight: int, spec: FetchSpec) -> None:
-        _atomic_write(self._dir(code, fight, spec) / "_complete", b"")
+        self.blobs.put(f"{self._dir(code, fight, spec)}/_complete", b"")
 
 
 # ---------------------------------------------------------------------------

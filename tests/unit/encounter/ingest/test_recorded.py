@@ -56,5 +56,5 @@ async def test_ingest_recorded_is_offline_over_recorded_fights(tmp_path, monkeyp
     assert (code, fights) == ("REAL", [3, 12])
     assert kwargs["offline"] is True
     assert kwargs["store"] is store
-    assert kwargs["cache"].root == tmp_path
+    assert kwargs["cache"].blobs.root == tmp_path
     assert kwargs["defensive_spell_ids"] == RECORDED_BUFF_IDS

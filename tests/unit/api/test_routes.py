@@ -114,6 +114,12 @@ def test_unknown_report(client):
     assert_error(client.get("/v1/reports/NOPE/pulls/1/events?t_from_ms=0&t_to_ms=1000"), 404, "report_not_found")
 
 
+@pytest.mark.parametrize("code", ["bad:code", "bad*code", "bad|code"])
+def test_code_no_storage_key_can_hold_is_an_unknown_report(client, code):
+    for path in ("", "/night", "/pulls/1/digest"):
+        assert_error(client.get(f"/v1/reports/{code}{path}"), 404, "report_not_found")
+
+
 def test_unknown_pull(dataset, client):
     for path in ("digest", "timeline", "findings", "events?t_from_ms=0&t_to_ms=1000"):
         assert_error(client.get(f"/v1/reports/{dataset.code}/pulls/9999/{path}"), 404, "pull_not_found")
@@ -304,6 +310,7 @@ def test_unresolvable_refs(dataset, client):
         f"ev:{dataset.code}:{fight}:death:9999",
         f"ev:{dataset.code}:{fight}:mech:no_such_mechanic",
         "ev:NOPE:1:pull",
+        "ev:bad*code:1:pull",
     ):
         assert_error(evidence(client, ref), 404, "unresolvable_ref")
 

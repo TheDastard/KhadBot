@@ -17,6 +17,13 @@ Fetch, normalize and annotate write to disk. `PullRecords` and the digest are re
 keeps recent ones in memory), which is cheap while the annotation cache hits. Findings are the only persisted
 model output.
 
+The raw page cache, the event store and the annotation cache read and write whole objects through a `BlobStore`
+(`src/khadbot/storage/`), under keys equal to the paths below relative to `KHADBOT_DATA_DIR` (`raw/…`, `events/…`,
+`annotated/…`). `storage.default_blob_store()` picks the store; today it is always `LocalBlobStore` over the data
+directory, which reads and writes exactly the files the stages wrote before the seam existed. Every put is atomic (a
+reader sees the old object or the new one), and listings skip the `*.tmp` files an interrupted write leaves. The
+findings and checkpoint SQLite databases are not blobs and stay files under the data directory.
+
 ## Running the stages
 
 | Stage | REPL command | Entry point |

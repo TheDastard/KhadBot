@@ -1,17 +1,17 @@
 """
 encounter/annotate/cache.py
 
-Annotated frames cached under ``$KHADBOT_DATA_DIR/annotated/<report>/<fight>__<encfile_hash>.parquet``,
-with a JSON sidecar holding the phases, cutoff, the ``events_hash`` and ``positions_hash`` they were built
-from, ``ANNOTATION_VERSION`` and a hash of the pull fields annotation reads. ``annotate_pull`` annotates a
-stored pull through the cache.
+Annotated frames cached in the blob store at ``annotated/<report>/<fight>__<encfile_hash>.parquet`` (under
+``$KHADBOT_DATA_DIR`` in the local store), with a JSON sidecar holding the phases, cutoff, the ``events_hash`` and
+``positions_hash`` they were built from, ``ANNOTATION_VERSION`` and a hash of the pull fields annotation reads.
+``annotate_pull`` annotates a stored pull through the cache.
 """
 
 from __future__ import annotations
 
 import hashlib
+import io
 import os
-from pathlib import Path
 
 import orjson
 import polars as pl
@@ -21,6 +21,7 @@ from khadbot.encounter.annotate.pipeline import annotate
 from khadbot.encounter.config_files import EncounterFile, encfile_hash
 from khadbot.encounter.models import PhaseSpan, Pull
 from khadbot.encounter.store import EventStore, split_pull_key
+from khadbot.storage import BlobStore, join_key, resolve_blobs
 
 # ---------------------------------------------------------------------------
 # Cache
@@ -41,22 +42,29 @@ def pull_inputs_hash(pull: Pull) -> str:
 
 
 class AnnotationCache:
-    """Annotated frames on disk, keyed by pull and ``encfile_hash``; stale if events, positions or cutoff changed."""
+    """
+    Annotated frames in a ``BlobStore`` (under ``annotated/`` by default), keyed by pull and ``encfile_hash``;
+    stale if events, positions, cutoff or the pull metadata annotation reads changed.
 
-    def __init__(self, root: Path) -> None:
-        self.root = Path(root)
+    ``blobs`` may also be a directory laid out like the cache itself (``<data_dir>/annotated``); see
+    ``storage.resolve_blobs``.
+    """
 
-    def _paths(self, pull: Pull, enc_hash: str) -> tuple[Path, Path]:
-        base = self.root / pull.report_code / f"{pull.fight_id}__{enc_hash}"
-        return base.with_suffix(".parquet"), base.with_suffix(".json")
+    def __init__(self, blobs: BlobStore | str | os.PathLike[str], prefix: str | None = None) -> None:
+        self.blobs, self.prefix = resolve_blobs(blobs, prefix, "annotated")
+
+    def _keys(self, pull: Pull, enc_hash: str) -> tuple[str, str]:
+        base = join_key(self.prefix, pull.report_code, f"{pull.fight_id}__{enc_hash}")
+        return f"{base}.parquet", f"{base}.json"
 
     def get(
         self, pull: Pull, enc_hash: str, events_hash: str, cutoff_fraction: float, *, positions_hash: str | None
     ) -> Annotated | None:
-        frame_path, meta_path = self._paths(pull, enc_hash)
-        if not (frame_path.exists() and meta_path.exists()):
+        frame_key, meta_key = self._keys(pull, enc_hash)
+        meta_bytes = self.blobs.get(meta_key)
+        if meta_bytes is None:
             return None
-        meta = orjson.loads(meta_path.read_bytes())
+        meta = orjson.loads(meta_bytes)
         if (
             meta.get("events_hash") != events_hash
             or meta.get("positions_hash") != positions_hash
@@ -65,9 +73,11 @@ class AnnotationCache:
             or meta.get("pull_hash") != pull_inputs_hash(pull)
         ):
             return None
+        if (frame := self.blobs.get(frame_key)) is None:
+            return None
         return Annotated(
             pull=pull,
-            frame=pl.read_parquet(frame_path),
+            frame=pl.read_parquet(io.BytesIO(frame)),
             phases=[PhaseSpan.model_validate(p) for p in meta["phases"]],
             cutoff_ms=meta["cutoff_ms"],
             encfile_hash=enc_hash,
@@ -75,8 +85,7 @@ class AnnotationCache:
         )
 
     def put(self, a: Annotated, events_hash: str, cutoff_fraction: float, *, positions_hash: str | None) -> None:
-        frame_path, meta_path = self._paths(a.pull, a.encfile_hash)
-        frame_path.parent.mkdir(parents=True, exist_ok=True)
+        frame_key, meta_key = self._keys(a.pull, a.encfile_hash)
         meta = {
             "events_hash": events_hash,
             "positions_hash": positions_hash,
@@ -87,16 +96,11 @@ class AnnotationCache:
             "phases": [p.model_dump() for p in a.phases],
             "unmatched_phase": a.unmatched_phase,
         }
-        for path, write in (
-            (frame_path, lambda tmp: a.frame.write_parquet(tmp)),
-            (meta_path, lambda tmp: tmp.write_bytes(orjson.dumps(meta))),
-        ):
-            tmp = path.with_name(path.name + ".tmp")
-            try:
-                write(tmp)
-                os.replace(tmp, path)
-            finally:
-                tmp.unlink(missing_ok=True)
+        frame = io.BytesIO()
+        a.frame.write_parquet(frame)
+        # The frame goes first, so a sidecar never describes a frame that isn't in place yet.
+        self.blobs.put(frame_key, frame.getvalue())
+        self.blobs.put(meta_key, orjson.dumps(meta))
 
 
 def annotate_pull(

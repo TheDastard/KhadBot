@@ -35,7 +35,9 @@ from khadbot.encounter.config_files import WCL_DIFFICULTY, encfile_hash, load_en
 from khadbot.encounter.digest import PullRecords
 from khadbot.encounter.evidence import EncounterData, event_row, pull_summary
 from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import Pull, PullDigest, make_ref
+from khadbot.storage import InvalidKeyError
 
 PULL_CAP = 500  # pull summaries per group
 EVENT_ROW_CAP = 200
@@ -64,24 +66,25 @@ class ApiContext:
     data: EncounterData
     findings: FindingsStore
     data_dir: Path | None = None
+    raw: RawPageCache | None = None
     lock: RLock = field(default_factory=RLock)
 
     def title(self, code: str) -> str | None:
         """The report title from the cached report metadata (``raw/<code>/report.json``), if present."""
-        if self.data_dir is None:
-            return None
-        path = self.data_dir / "raw" / code / "report.json"
-        if not path.is_file():
+        if self.raw is None:
             return None
         try:
-            title = orjson.loads(path.read_bytes()).get("title")
-        except (orjson.JSONDecodeError, AttributeError):
+            title = (self.raw.report_meta(code) or {}).get("title")
+        except (orjson.JSONDecodeError, AttributeError, InvalidKeyError):
             return None
         return title if isinstance(title, str) else None
 
     def pulls(self, code: str) -> list[Pull]:
         """The report's stored pulls in time order. Raises ``report_not_found``."""
-        pulls = self.data.store.pulls(code)
+        try:
+            pulls = self.data.store.pulls(code)
+        except InvalidKeyError:  # a code no store key can hold, such as "..", was never ingested
+            pulls = []
         if not pulls:
             raise ApiError(404, "report_not_found", f"Report {code} has not been ingested.")
         return sorted(pulls, key=lambda p: (p.start_ms, p.fight_id))

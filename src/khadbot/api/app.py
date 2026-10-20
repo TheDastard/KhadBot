@@ -27,7 +27,9 @@ from khadbot.config import EncounterConfig
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
+from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
+from khadbot.storage import BlobStore, LocalBlobStore, default_blob_store
 
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
@@ -37,18 +39,23 @@ def create_app(
     findings: FindingsStore | None = None,
     *,
     data_dir: Path | str | None = None,
+    blobs: BlobStore | None = None,
     routers: Sequence[APIRouter] = (),
 ) -> FastAPI:
     """
     The dashboard API over ``data`` and ``findings``.
 
-    Without them, both are read from ``data_dir`` (default ``KHADBOT_DATA_DIR``) with the authored files under
-    ``config/``. Nothing is read from disk until a request arrives, so building the app for its OpenAPI document
-    needs no data. ``routers`` are mounted after the read router.
+    Without them, events, annotations and report metadata are read from ``blobs`` and findings from ``data_dir``
+    (default ``KHADBOT_DATA_DIR``), with the authored files under ``config/``. ``blobs`` defaults to a local store
+    over ``data_dir`` when that is given, and to ``storage.default_blob_store()`` otherwise. Nothing is read until a
+    request arrives, so building the app for its OpenAPI document needs no data. ``routers`` are mounted after the
+    read router.
     """
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
+    if blobs is None:
+        blobs = LocalBlobStore(root) if data_dir is not None else default_blob_store()
     if data is None:
-        data = EncounterData(ParquetEventStore(root / "events"), cache=AnnotationCache(root / "annotated"))
+        data = EncounterData(ParquetEventStore(blobs), cache=AnnotationCache(blobs))
     if findings is None:
         findings = SqliteFindingsStore(root / "khadbot.sqlite")
 
@@ -57,7 +64,7 @@ def create_app(
         version=API_VERSION,
         description="Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
     )
-    app.state.ctx = ApiContext(data=data, findings=findings, data_dir=root)
+    app.state.ctx = ApiContext(data=data, findings=findings, data_dir=root, raw=RawPageCache(blobs))
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
 
     @app.exception_handler(ApiError)
