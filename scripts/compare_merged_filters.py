@@ -10,18 +10,33 @@ On one recorded pull (default ``trMgApZCVYkv3jdq`` fight 26, 526 s) it fetches:
   hostility  one request per hostility, no ``dataType``, one combined ``filterExpression`` each;
   datatype   one request per data type and hostility, the Buffs filters of both cooldown files merged.
 
+Two more variants carry their own baseline, the requests they would replace, measured in the same run:
+
+  crossfight the small specs (``BATCHED_SPEC_KEYS``) for several pulls of the report: baseline one request per
+             spec per pull, through ``fetch_pull`` one pull at a time as ingest does; variant one request per spec
+             (per filter, so enemy Casts split by encounter) with every pull's fight ID, rows split back by their
+             ``fight`` field;
+  healonly   the Healing spec on the measured pull: baseline unfiltered; variant with ``--heal-filter``, which must
+             keep exactly the ``heal`` rows. The filter syntax for event type is not confirmed (docs/wcl-api.md
+             lists only ``ability.id IN (...)``), so there is no default and a probe request runs first.
+
 For each it reports points spent (``rateLimitData`` before and after, app token), requests, pages, bytes, events
 and wall time. Each merged variant's rows are assigned back to the baseline specs by row identity and run
 through the real ``normalize_pull``; the script reports whether the frames are identical to the baseline's.
+``healonly`` compares against the baseline's ``heal`` rows alone and also reports the position samples lost.
 
-A variant that sends an argument combination the API may refuse (no ``dataType``) first sends a one-second,
-small-limit probe request, so a rejection costs about one request, and the rejection message is reported.
+A variant that sends an argument combination the API may refuse (no ``dataType``, an unconfirmed filter) first
+sends a one-second, small-limit probe request, so a rejection costs about one request, and the rejection message
+is reported. ``--variant-first`` runs a paired variant before its baseline, so a repeat in the other order shows
+whether WCL-side caching favours whichever runs second.
 
 This script SPENDS WCL POINTS. It prints an estimate before each live step and waits for you to type ``yes``.
 It never prints a token. Needs WARCRAFTLOGS_CLIENT_ID / WARCRAFTLOGS_CLIENT_SECRET (read from the environment or
 the nearest ``.env``). Report metadata comes from the recorded fixture, so it costs nothing.
 
     uv run python scripts/compare_merged_filters.py [--code trMgApZCVYkv3jdq] [--fight 26] [--variants hostility,datatype]
+    uv run python scripts/compare_merged_filters.py --variants crossfight [--batch-fights encounter|all|3,5,8]
+    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter '<expression>'
 """
 
 from __future__ import annotations
@@ -45,7 +60,7 @@ from dotenv import load_dotenv
 
 from khadbot.config import EncounterConfig, get_config
 from khadbot.encounter.ingest.fetch import RawPageCache, fetch_pull, specs_for
-from khadbot.encounter.ingest.normalize import normalize_pull, parse_report_meta
+from khadbot.encounter.ingest.normalize import normalize_pull, normalize_pull_with_positions, parse_report_meta
 from khadbot.encounter.models import Actor, FetchSpec, Pull
 from khadbot.encounter.store import EVENT_SCHEMA
 from khadbot.tools.warcraftlogs._client import (
@@ -65,6 +80,23 @@ SAVING_THRESHOLD_PCT = 15.0
 # docs/wcl-api.md "Measured cost": a request costs about 2 points plus about 1 per extra page.
 POINTS_PER_REQUEST = 2
 POINTS_PER_EXTRA_PAGE = 1
+
+# Specs the crossfight variant batches: in the 2026-10-18 raw cache (62 pulls) Deaths, Buffs, Debuffs, Dispels,
+# Interrupts and Threat had exactly one page per pull, and enemy Casts are filtered to a few ability IDs.
+# ``Buffs:offensive`` is the second Buffs request; it stays its own stream so the same-type merge isn't mixed in.
+BATCHED_SPEC_KEYS = (
+    "Deaths",
+    "Buffs",
+    "Buffs:offensive",
+    "Debuffs",
+    "Dispels",
+    "Interrupts",
+    "Threat",
+    "Casts-Enemies",
+)
+
+# The Healing rows the analysis reads: death records sum ``heal`` rows in the death window (analysis/deaths.py).
+HEAL_TYPES = ("heal",)
 
 # ---------------------------------------------------------------------------
 # Query
@@ -131,6 +163,26 @@ class Stream:
     covers: tuple[str, ...] | None = None
 
 
+@dataclass(frozen=True)
+class Window:
+    """The fights and report-time span a request stream covers."""
+
+    fight_ids: tuple[int, ...]
+    start_ms: int
+    end_ms: int
+
+
+def window_of(pulls: Sequence[Pull]) -> Window:
+    """One window over ``pulls``: their fight IDs, from the first start to the last end."""
+    return Window(
+        tuple(sorted(p.fight_id for p in pulls)), min(p.start_ms for p in pulls), max(p.end_ms for p in pulls)
+    )
+
+
+def _window(target: Pull | Window) -> Window:
+    return target if isinstance(target, Window) else window_of([target])
+
+
 @dataclass
 class Variant:
     name: str
@@ -176,6 +228,7 @@ class VariantResult:
     extra_rows: int = 0  # merged rows no baseline spec contains
     missing_rows: int = 0  # baseline rows the merged stream lacks
     ambiguous_rows: int = 0  # merged rows several baseline specs contain
+    baseline: Metrics | None = None  # a paired variant's own baseline (crossfight, healonly)
 
 
 def count_pages(pages: Sequence[dict]) -> Metrics:
@@ -259,15 +312,73 @@ def build_variants(
     return {v.name: v for v in (hostility, datatype)}
 
 
+@dataclass
+class CrossFight:
+    """The crossfight variant: the pulls it covers, their batched specs (the baseline) and the batched streams."""
+
+    pulls: list[Pull]
+    specs_by_fight: dict[int, list[FetchSpec]]
+    streams: list[tuple[Stream, Window]]
+
+    @property
+    def baseline_requests(self) -> int:
+        return sum(len(specs) for specs in self.specs_by_fight.values())
+
+
+def build_crossfight(
+    pulls: Sequence[Pull], specs_by_fight: dict[int, list[FetchSpec]], keys: Sequence[str] = BATCHED_SPEC_KEYS
+) -> CrossFight:
+    """
+    One stream per batched spec and filter across ``pulls``. Specs whose filter differs between pulls (enemy Casts
+    of different encounters) get one stream per filter, each over the pulls that use it.
+    """
+    batched = {p.fight_id: [s for s in specs_by_fight[p.fight_id] if s.key in keys] for p in pulls}
+    groups: dict[tuple[str, str | None], tuple[FetchSpec, list[Pull]]] = {}
+    for pull in pulls:
+        for spec in batched[pull.fight_id]:
+            groups.setdefault((spec.key, spec.filter_expression), (spec, []))[1].append(pull)
+    per_key = Counter(key for key, _ in groups)
+    seen: Counter[str] = Counter()
+    streams = []
+    for (key, flt), (spec, group) in groups.items():
+        seen[key] += 1
+        label = f"{key} ({len(group)} fights)" + (f" #{seen[key]}" if per_key[key] > 1 else "")
+        streams.append((Stream(label, spec.data_type, spec.hostility, flt, (key,)), window_of(group)))
+    return CrossFight(list(pulls), batched, streams)
+
+
+def select_batch_pulls(pulls: Sequence[Pull], pull: Pull, choice: str) -> list[Pull]:
+    """
+    The pulls ``--batch-fights`` names: ``encounter`` (every pull of ``pull``'s encounter), ``all``, or fight IDs
+    separated by commas. Fewer than two pulls is an error, since there would be nothing to batch.
+    """
+    if choice == "encounter":
+        chosen = [p for p in pulls if p.encounter_id == pull.encounter_id]
+    elif choice == "all":
+        chosen = list(pulls)
+    else:
+        try:
+            ids = [int(part) for part in choice.split(",") if part.strip()]
+        except ValueError as exc:
+            raise SystemExit(f"--batch-fights: expected encounter, all or fight IDs, got {choice!r}") from exc
+        by_id = {p.fight_id: p for p in pulls}
+        if missing := [i for i in ids if i not in by_id]:
+            raise SystemExit(f"--batch-fights: fights {missing} are not in the report metadata")
+        chosen = [by_id[i] for i in dict.fromkeys(ids)]
+    if len(chosen) < 2:
+        raise SystemExit(f"--batch-fights {choice!r} selects {len(chosen)} pull(s); crossfight needs at least two")
+    return chosen
+
+
 # ---------------------------------------------------------------------------
 # Fetching a stream
 # ---------------------------------------------------------------------------
 
 
-def _variables(code: str, pull: Pull, stream: Stream, start: int, end: int, limit: int) -> dict[str, Any]:
+def _variables(code: str, window: Window, stream: Stream, start: int, end: int, limit: int) -> dict[str, Any]:
     return {
         "code": code,
-        "fightIDs": [pull.fight_id],
+        "fightIDs": list(window.fight_ids),
         "startTime": start,
         "endTime": end,
         "dataType": stream.data_type,
@@ -304,7 +415,7 @@ async def _one_request(
 async def fetch_stream(
     client: QueryClient,
     code: str,
-    pull: Pull,
+    target: Pull | Window,
     stream: Stream,
     *,
     page_limit: int,
@@ -312,11 +423,15 @@ async def fetch_stream(
     max_retries: int = 3,
     sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
 ) -> StreamResult:
-    """Follow ``nextPageTimestamp`` to the end, stopping at ``max_pages`` (reported as ``aborted``)."""
+    """
+    Follow ``nextPageTimestamp`` to the end, stopping at ``max_pages`` (reported as ``aborted``). ``target`` is one
+    pull, or a ``Window`` over several.
+    """
+    window = _window(target)
     pages: list[dict] = []
-    start = pull.start_ms
+    start = window.start_ms
     while True:
-        variables = _variables(code, pull, stream, start, pull.end_ms, page_limit)
+        variables = _variables(code, window, stream, start, window.end_ms, page_limit)
         page = await _one_request(client, code, variables, max_retries=max_retries, sleep=sleep)
         pages.append(page)
         nxt = page.get("nextPageTimestamp")
@@ -330,7 +445,12 @@ async def fetch_stream(
 
 
 async def probe_stream(
-    client: QueryClient, code: str, pull: Pull, stream: Stream, *, sleep: Callable[[float], Awaitable[Any]]
+    client: QueryClient,
+    code: str,
+    target: Pull | Window,
+    stream: Stream,
+    *,
+    sleep: Callable[[float], Awaitable[Any]],
 ) -> str | None:
     """
     One tiny request (first second of the pull, 5 events) with the stream's arguments.
@@ -338,7 +458,8 @@ async def probe_stream(
     Returns None when the API accepts them, else the API's error message. A rate limit is not a rejection and
     propagates.
     """
-    variables = _variables(code, pull, stream, pull.start_ms, min(pull.end_ms, pull.start_ms + 1_000), 5)
+    w = _window(target)
+    variables = _variables(code, w, stream, w.start_ms, min(w.end_ms, w.start_ms + 1_000), 5)
     try:
         await _one_request(client, code, variables, max_retries=3, sleep=sleep)
     except WarcraftLogsRateLimitError:
@@ -417,6 +538,48 @@ def compare_frames(baseline: pl.DataFrame, variant: pl.DataFrame) -> FrameCompar
     return FrameComparison(exact, relaxed, baseline.height, variant.height, note)
 
 
+def combine_comparisons(by_fight: dict[int, FrameComparison]) -> FrameComparison:
+    """One comparison over several pulls: identical only if every pull's frames are, with the differing fights named."""
+    differ = [f for f, c in by_fight.items() if not c.identical_ignoring_tie_order]
+    tie_order = [f for f, c in by_fight.items() if c.identical_ignoring_tie_order and not c.identical]
+    notes = []
+    if differ:
+        notes.append(f"rows differ on fights {differ}")
+    if tie_order:
+        notes.append(f"tie order differs on fights {tie_order}")
+    return FrameComparison(
+        all(c.identical for c in by_fight.values()),
+        not differ,
+        sum(c.rows_baseline for c in by_fight.values()),
+        sum(c.rows_variant for c in by_fight.values()),
+        "; ".join(notes),
+    )
+
+
+def split_by_fight(pages: Sequence[dict], fight_ids: Sequence[int]) -> tuple[dict[int, list[dict]], int]:
+    """
+    A multi-fight stream's rows per fight, from each row's ``fight`` field, and how many rows name none of
+    ``fight_ids`` (or no fight at all).
+    """
+    out: dict[int, list[dict]] = {f: [] for f in fight_ids}
+    stray = 0
+    for page in pages:
+        for event in page.get("data") or []:
+            rows = out.get(event.get("fight"))  # type: ignore[arg-type]
+            if rows is None:
+                stray += 1
+            else:
+                rows.append(event)
+    return out, stray
+
+
+def keep_types(pages: Sequence[dict], types: Sequence[str]) -> list[dict]:
+    """``pages`` with only the rows whose ``type`` is in ``types``, as one page."""
+    return [
+        {"data": [e for p in pages for e in p.get("data") or [] if e.get("type") in types], "nextPageTimestamp": None}
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Savings and estimates
 # ---------------------------------------------------------------------------
@@ -462,6 +625,30 @@ def variant_estimate(variant: Variant, max_pages: int) -> list[str]:
         f"{POINTS_PER_REQUEST} per request + {POINTS_PER_EXTRA_PAGE} per extra page). Expected: unknown."
     )
     return lines
+
+
+def crossfight_estimate(cross: CrossFight, max_pages: int) -> list[str]:
+    n = cross.baseline_requests
+    return [
+        f"Variant 'crossfight': {len(cross.streams)} batched specs over {len(cross.pulls)} pulls "
+        f"(fights {', '.join(str(p.fight_id) for p in cross.pulls)}).",
+        f"  Baseline: {n} requests, one per spec per pull, nearly all one page. By the documented model "
+        f"({POINTS_PER_REQUEST} per request) about {n * POINTS_PER_REQUEST} points; the model is a rule of thumb "
+        "and the cost of a one-page request is what this run measures.",
+        "  Variant: " + ", ".join(s.label for s, _ in cross.streams),
+        f"  Variant ceiling under --max-pages {max_pages}: {stream_cost_ceiling(len(cross.streams), max_pages)} "
+        "points. Expected: a page or a few per stream.",
+    ]
+
+
+def healonly_estimate(heal_filter: str, max_pages: int) -> list[str]:
+    return [
+        f"Variant 'healonly': the Healing spec unfiltered (baseline), then filtered with {heal_filter!r}.",
+        "  First a 1-second probe (about 2 points) to see whether the API accepts the filter.",
+        "  Baseline: on trMgApZCVYkv3jdq:26 Healing took 9 pages and 10 points (docs/wcl-api.md).",
+        f"  Variant ceiling under --max-pages {max_pages}: {stream_cost_ceiling(1, max_pages)} points. "
+        "Expected: fewer pages than the baseline if the filter works.",
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -511,19 +698,60 @@ async def run_comparison(
     specs: list[FetchSpec],
     variants: Sequence[Variant],
     *,
+    crossfight: CrossFight | None = None,
+    heal_filter: str | None = None,
+    variant_first: bool = False,
     confirm: Callable[[str], bool] = ask,
     out: Callable[[str], None] = print,
     max_pages: int = 60,
     sleep: Callable[[float], Awaitable[Any]] = asyncio.sleep,
 ) -> Comparison:
-    """Fetch the baseline, then each variant, asking before every live step."""
+    """
+    Fetch the baseline, then each variant, asking before every live step. ``heal_filter`` adds the healonly
+    variant and ``crossfight`` the crossfight variant; each measures its own baseline, so the shared baseline is
+    only fetched when ``variants`` is not empty. ``variant_first`` runs those two before their baselines.
+    """
     result = Comparison(code, pull.fight_id)
     page_limit = EncounterConfig().wcl_page_limit
+    paired = {"page_limit": page_limit, "max_pages": max_pages, "sleep": sleep, "variant_first": variant_first}
 
+    if variants:
+        await _run_pull_variants(
+            client, code, pull, actors, specs, variants, result,
+            confirm=confirm, out=out, page_limit=page_limit, max_pages=max_pages, sleep=sleep,
+        )  # fmt: skip
+    if heal_filter is not None:
+        healing = next(s for s in specs if s.data_type == "Healing")
+        result.variants.append(
+            await run_healonly(client, code, pull, actors, healing, heal_filter, confirm=confirm, out=out, **paired)
+        )
+    if crossfight is not None:
+        result.variants.append(
+            await run_crossfight(client, code, crossfight, actors, confirm=confirm, out=out, **paired)
+        )
+    return result
+
+
+async def _run_pull_variants(
+    client: QueryClient,
+    code: str,
+    pull: Pull,
+    actors: list[Actor],
+    specs: list[FetchSpec],
+    variants: Sequence[Variant],
+    result: Comparison,
+    *,
+    confirm: Callable[[str], bool],
+    out: Callable[[str], None],
+    page_limit: int,
+    max_pages: int,
+    sleep: Callable[[float], Awaitable[Any]],
+) -> None:
+    """The shared single-pull baseline and the variants measured against it, recorded into ``result``."""
     out("\n".join(baseline_estimate(len(specs))))
     if not confirm("Run the baseline?"):
         out("Stopped before the baseline.")
-        return result
+        return
 
     first = await read_points(client)
     second = await read_points(client)
@@ -553,7 +781,6 @@ async def run_comparison(
                     page_limit=page_limit, max_pages=max_pages, sleep=sleep, out=out,
                 )
             )  # fmt: skip
-    return result
 
 
 async def _run_variant(
@@ -612,6 +839,193 @@ async def _run_variant(
 
 
 # ---------------------------------------------------------------------------
+# Paired variants: each measures the requests it replaces as its own baseline
+# ---------------------------------------------------------------------------
+
+
+async def _paired(
+    client: QueryClient,
+    baseline: Callable[[], Awaitable[Any]],
+    variant: Callable[[], Awaitable[Any]],
+    *,
+    variant_first: bool,
+) -> tuple[tuple[Any, float, float | None], tuple[Any, float, float | None]]:
+    """Measure ``baseline`` and ``variant`` one after the other; returns (baseline, variant) measurements."""
+    if variant_first:
+        var = await _measured(client, variant)
+        return await _measured(client, baseline), var
+    base = await _measured(client, baseline)
+    return base, await _measured(client, variant)
+
+
+async def _gather_streams(
+    client: QueryClient,
+    code: str,
+    streams: Sequence[tuple[Stream, Pull | Window]],
+    *,
+    page_limit: int,
+    max_pages: int,
+    sleep: Callable[[float], Awaitable[Any]],
+) -> list[StreamResult]:
+    return list(
+        await asyncio.gather(
+            *(
+                fetch_stream(client, code, t, s, page_limit=page_limit, max_pages=max_pages, sleep=sleep)
+                for s, t in streams
+            )
+        )
+    )
+
+
+async def run_healonly(
+    client: QueryClient,
+    code: str,
+    pull: Pull,
+    actors: list[Actor],
+    healing: FetchSpec,
+    heal_filter: str,
+    *,
+    confirm: Callable[[str], bool],
+    out: Callable[[str], None],
+    page_limit: int,
+    max_pages: int,
+    sleep: Callable[[float], Awaitable[Any]],
+    variant_first: bool = False,
+) -> VariantResult:
+    """
+    The Healing spec unfiltered against the same spec with ``heal_filter``. The filter passes when its rows are
+    exactly the baseline's ``heal`` rows: the frames built from each are compared, and the report also says how
+    many Healing rows and position samples the filter drops.
+    """
+    out("\n" + "\n".join(healonly_estimate(heal_filter, max_pages)))
+    if not confirm("Run variant 'healonly' (probe, its baseline and the filtered fetch)?"):
+        return VariantResult("healonly", "declined")
+    base_stream = Stream("Healing", "Healing", healing.hostility, healing.filter_expression, (healing.key,))
+    var_stream = Stream("Healing (heal only)", "Healing", healing.hostility, heal_filter, (healing.key,))
+    rejection = await probe_stream(client, code, pull, var_stream, sleep=sleep)
+    if rejection is not None:
+        out(f"  REJECTED: {rejection}")
+        return VariantResult("healonly", "rejected", rejection)
+
+    fetch = {"page_limit": page_limit, "max_pages": max_pages, "sleep": sleep}
+    (base_res, base_s, base_pts), (var_res, var_s, var_pts) = await _paired(
+        client,
+        lambda: _gather_streams(client, code, [(base_stream, pull)], **fetch),
+        lambda: _gather_streams(client, code, [(var_stream, pull)], **fetch),
+        variant_first=variant_first,
+    )
+    (base,), (var,) = base_res, var_res
+    base_metrics, var_metrics = count_pages(base.pages), count_pages(var.pages)
+    base_metrics.requests, base_metrics.seconds, base_metrics.points = 1, base_s, base_pts
+    var_metrics.requests, var_metrics.seconds, var_metrics.points = 1, var_s, var_pts
+    if base.aborted or var.aborted:
+        out(f"  ABORTED: a stream reached the page cap ({max_pages}); frames not compared.")
+        return VariantResult("healonly", "aborted", f"page cap {max_pages} reached", var_metrics, baseline=base_metrics)
+
+    expected = keep_types(base.pages, HEAL_TYPES)
+    assignment = assign_events([(var_stream.covers, var.pages)], {healing.key: expected})
+    comparison = compare_frames(
+        normalize_pull(pull, actors, {healing.key: expected}), normalize_pull(pull, actors, assignment.pages_by_key)
+    )
+    kept = len(expected[0]["data"])
+    _, base_pos = normalize_pull_with_positions(pull, actors, {healing.key: base.pages})
+    _, var_pos = normalize_pull_with_positions(pull, actors, {healing.key: assignment.pages_by_key[healing.key]})
+    dropped = saving_pct(base_metrics.events, kept)
+    exact = assignment.extra == 0 and assignment.missing == 0 and comparison.identical
+    detail = (
+        f"filter returns exactly the heal rows: {exact}; "
+        f"kept {kept} of {base_metrics.events} Healing rows ({_fmt(dropped, '.0f')}% dropped); "
+        f"Healing position samples {base_pos.height} -> {var_pos.height}"
+    )
+    out(f"  {detail}; frames identical: {comparison.identical}")
+    return VariantResult(
+        "healonly", "ok", detail, var_metrics, comparison,
+        assignment.extra, assignment.missing, assignment.ambiguous, baseline=base_metrics,
+    )  # fmt: skip
+
+
+async def run_crossfight(
+    client: QueryClient,
+    code: str,
+    cross: CrossFight,
+    actors: list[Actor],
+    *,
+    confirm: Callable[[str], bool],
+    out: Callable[[str], None],
+    page_limit: int,
+    max_pages: int,
+    sleep: Callable[[float], Awaitable[Any]],
+    variant_first: bool = False,
+) -> VariantResult:
+    """
+    The batched specs fetched per pull (``fetch_pull``, one pull at a time) against one stream per spec over all
+    the pulls. The variant's rows are split by ``fight``, assigned to that pull's specs and normalized per pull.
+    """
+    out("\n" + "\n".join(crossfight_estimate(cross, max_pages)))
+    if not confirm("Run variant 'crossfight' (its baseline and the batched fetch)?"):
+        return VariantResult("crossfight", "declined")
+
+    with tempfile.TemporaryDirectory(prefix="khadbot-crossfight-") as tmp:
+        cache = RawPageCache(Path(tmp))
+
+        async def baseline() -> None:
+            for pull in cross.pulls:  # one pull at a time, as ingest_report does
+                await fetch_pull(client, cache, code, pull, cross.specs_by_fight[pull.fight_id])  # type: ignore[arg-type]
+
+        (_, base_s, base_pts), (results, var_s, var_pts) = await _paired(
+            client,
+            baseline,
+            lambda: _gather_streams(
+                client, code, cross.streams, page_limit=page_limit, max_pages=max_pages, sleep=sleep
+            ),
+            variant_first=variant_first,
+        )
+        base_by_fight = {
+            p.fight_id: {s.key: cache.pages(code, p.fight_id, s) for s in cross.specs_by_fight[p.fight_id]}
+            for p in cross.pulls
+        }
+
+    base_metrics = count_pages([pg for by_key in base_by_fight.values() for pages in by_key.values() for pg in pages])
+    base_metrics.requests, base_metrics.seconds, base_metrics.points = cross.baseline_requests, base_s, base_pts
+    var_metrics = count_pages([pg for r in results for pg in r.pages])
+    var_metrics.requests, var_metrics.seconds, var_metrics.points = len(cross.streams), var_s, var_pts
+    if any(r.aborted for r in results):
+        out(f"  ABORTED: a stream reached the page cap ({max_pages}); frames not compared.")
+        return VariantResult(
+            "crossfight", "aborted", f"page cap {max_pages} reached", var_metrics, baseline=base_metrics
+        )
+
+    split = [split_by_fight(r.pages, w.fight_ids) for (_, w), r in zip(cross.streams, results, strict=True)]
+    stray = sum(n for _, n in split)
+    extra = missing = ambiguous = 0
+    by_fight: dict[int, FrameComparison] = {}
+    for pull in cross.pulls:
+        f = pull.fight_id
+        streams = [
+            (s.covers, [{"data": rows[f], "nextPageTimestamp": None}])
+            for (s, w), (rows, _) in zip(cross.streams, split, strict=True)
+            if f in w.fight_ids
+        ]
+        assignment = assign_events(streams, base_by_fight[f])
+        extra, missing, ambiguous = (
+            extra + assignment.extra,
+            missing + assignment.missing,
+            ambiguous + assignment.ambiguous,
+        )
+        by_fight[f] = compare_frames(
+            normalize_pull(pull, actors, base_by_fight[f]), normalize_pull(pull, actors, assignment.pages_by_key)
+        )
+    comparison = combine_comparisons(by_fight)
+    notes = [f"{len(cross.pulls)} pulls", f"rows naming no requested fight: {stray}"]
+    notes += [f"{s.label} stopped advancing" for (s, _), r in zip(cross.streams, results, strict=True) if r.truncated]
+    out(f"  {var_metrics.pages} pages, {var_pts} points, {var_s:.1f} s; frames identical: {comparison.identical}")
+    return VariantResult(
+        "crossfight", "ok", "; ".join(notes), var_metrics, comparison,
+        extra + stray, missing, ambiguous, baseline=base_metrics,
+    )  # fmt: skip
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
@@ -629,18 +1043,26 @@ def render_report(result: Comparison, today: date | None = None) -> str:
         "| Run | Requests | Pages | Bytes | Events | Wall s | Points | Points saved | Time saved | Frames identical |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
-    if base is None:
+    if base is None and not any(v.baseline is not None for v in result.variants):
         return "\n".join(lines[:1] + ["", "No baseline was fetched."])
-    lines.append(
-        f"| baseline | {base.requests} | {base.pages} | {base.bytes} | {base.events} | {base.seconds:.1f} | "
-        f"{_fmt(base.points)} | | | |"
-    )
+
+    def metrics_row(label: str, m: Metrics) -> str:
+        return (
+            f"| {label} | {m.requests} | {m.pages} | {m.bytes} | {m.events} | {m.seconds:.1f} | {_fmt(m.points)} "
+            "| | | |"
+        )
+
+    if base is not None:
+        lines.append(metrics_row("baseline", base))
     for v in result.variants:
-        if v.metrics is None or v.status != "ok":
+        own = v.baseline or base
+        if v.baseline is not None:
+            lines.append(metrics_row(f"{v.name} baseline", v.baseline))
+        if v.metrics is None or v.status != "ok" or own is None:
             lines.append(f"| {v.name} | {v.status}: {v.detail or '-'} | | | | | | | | |")
             continue
         m = v.metrics
-        ps, ts = saving_pct(base.points, m.points), saving_pct(base.seconds, m.seconds)
+        ps, ts = saving_pct(own.points, m.points), saving_pct(own.seconds, m.seconds)
         c = v.comparison
         same = "unknown" if c is None else f"{c.identical} (ignoring tie order: {c.identical_ignoring_tie_order})"
         lines.append(
@@ -651,13 +1073,15 @@ def render_report(result: Comparison, today: date | None = None) -> str:
     if result.read_overhead is not None:
         lines.append(f"A back-to-back `rateLimitData` read moved the counter by {result.read_overhead:g} points.")
     for v in result.variants:
-        if v.status == "ok" and v.metrics is not None:
-            ps, ts = saving_pct(base.points, v.metrics.points), saving_pct(base.seconds, v.metrics.seconds)
+        own = v.baseline or base
+        if v.status == "ok" and v.metrics is not None and own is not None:
+            ps, ts = saving_pct(own.points, v.metrics.points), saving_pct(own.seconds, v.metrics.seconds)
             verdict = "meets" if meets_threshold(ps, ts) else "does not meet"
             lines.append(
                 f"- `{v.name}` {verdict} the {SAVING_THRESHOLD_PCT:g}% bar; rows no baseline spec holds: {v.extra_rows}, "
                 f"baseline rows missing: {v.missing_rows}, rows several specs hold: {v.ambiguous_rows}."
                 + (f" {v.comparison.note}." if v.comparison and v.comparison.note else "")
+                + (f" {v.detail}." if v.baseline is not None and v.detail else "")
             )
     return "\n".join(lines)
 
@@ -667,39 +1091,62 @@ def render_report(result: Comparison, today: date | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _load_pull(root: Path, code: str, fight: int) -> tuple[Pull, list[Actor]]:
+def _load_report(root: Path, code: str) -> tuple[list[Pull], list[Actor]]:
     meta = RawPageCache(root).report_meta(code)
     if meta is None:
         raise SystemExit(f"No report.json for {code} under {root} (git lfs pull?).")
-    pulls, actors = parse_report_meta(code, meta)
+    return parse_report_meta(code, meta)
+
+
+def _load_pull(root: Path, code: str, fight: int) -> tuple[Pull, list[Actor]]:
+    pulls, actors = _load_report(root, code)
     for pull in pulls:
         if pull.fight_id == fight:
             return pull, actors
     raise SystemExit(f"Fight {fight} is not in {code}'s report metadata.")
 
 
+PAIRED_VARIANTS = ("crossfight", "healonly")
+
+
 async def _amain(args: argparse.Namespace) -> int:
     from khadbot.encounter.commands import default_filter_kwargs
 
-    pull, actors = _load_pull(args.fixture_root, args.code, args.fight)
+    pulls, actors = _load_report(args.fixture_root, args.code)
+    pull, _ = _load_pull(args.fixture_root, args.code, args.fight)
     kwargs = default_filter_kwargs()
-    specs = specs_for(
-        kwargs["defensive_spell_ids"],
-        (kwargs["enemy_cast_ids"] or {}).get(pull.encounter_id),
-        kwargs["offensive_spell_ids"],
-    )
+
+    def specs_of(p: Pull) -> list[FetchSpec]:
+        return specs_for(
+            kwargs["defensive_spell_ids"],
+            (kwargs["enemy_cast_ids"] or {}).get(p.encounter_id),
+            kwargs["offensive_spell_ids"],
+        )
+
+    specs = specs_of(pull)
     available = build_variants(specs, friendly_filter=args.friendly_filter, enemy_filter=args.enemy_filter)
     names = [n.strip() for n in args.variants.split(",") if n.strip()]
-    unknown = [n for n in names if n not in available]
+    unknown = [n for n in names if n not in available and n not in PAIRED_VARIANTS]
     if unknown:
-        raise SystemExit(f"Unknown variant(s) {unknown}; choose from {sorted(available)}.")
+        raise SystemExit(f"Unknown variant(s) {unknown}; choose from {sorted([*available, *PAIRED_VARIANTS])}.")
+    if "healonly" in names and not args.heal_filter:
+        raise SystemExit(
+            "The healonly variant needs --heal-filter: the WCL filter syntax for event type is unconfirmed."
+        )
+    crossfight = None
+    if "crossfight" in names:
+        batch = select_batch_pulls(pulls, pull, args.batch_fights)
+        keys = [k.strip() for k in args.batch_specs.split(",") if k.strip()]
+        crossfight = build_crossfight(batch, {p.fight_id: specs_of(p) for p in batch}, keys)
 
     print(f"Pull {pull.pull_key}: {pull.duration_ms / 1000:.0f} s, {len(specs)} baseline requests.")
     wcl = get_config().warcraftlogs
     async with WarcraftLogsClient(wcl.client_id, wcl.client_secret) as client:
         result = await run_comparison(
-            client, args.code, pull, actors, specs, [available[n] for n in names], max_pages=args.max_pages
-        )
+            client, args.code, pull, actors, specs, [available[n] for n in names if n in available],
+            crossfight=crossfight, heal_filter=args.heal_filter if "healonly" in names else None,
+            variant_first=args.variant_first, max_pages=args.max_pages,
+        )  # fmt: skip
     print("\n" + render_report(result))
     return 0
 
@@ -711,7 +1158,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--fixture-root", type=Path, default=DEFAULT_FIXTURE_ROOT, help="Directory holding <code>/report.json"
     )
-    parser.add_argument("--variants", default="hostility,datatype", help="Comma-separated: hostility, datatype")
+    parser.add_argument(
+        "--variants",
+        default="hostility,datatype",
+        help="Comma-separated: hostility, datatype, crossfight, healonly",
+    )
+    parser.add_argument(
+        "--batch-fights",
+        default="encounter",
+        help="Pulls for crossfight: 'encounter' (every pull of --fight's encounter), 'all', or fight IDs '3,5,8'",
+    )
+    parser.add_argument(
+        "--batch-specs",
+        default=",".join(BATCHED_SPEC_KEYS),
+        help="Spec keys crossfight batches (default: the specs that were one page per pull)",
+    )
+    parser.add_argument(
+        "--heal-filter",
+        help="filterExpression for healonly that should keep only heal events; required, since the syntax is unconfirmed",
+    )
+    parser.add_argument(
+        "--variant-first", action="store_true", help="Run crossfight and healonly before their own baselines"
+    )
     parser.add_argument(
         "--friendly-filter", help="filterExpression for the Friendlies stream of 'hostility' (default: none)"
     )

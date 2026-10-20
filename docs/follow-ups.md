@@ -106,6 +106,18 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
     (above).
   - A merged request needs its pages' data type taken from the rows, and normalize, the truncation anomaly and
     the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
+- **Batch the small fetch specs across pulls.** Deaths, both Buffs requests, Debuffs, Dispels, Interrupts,
+  Threat and enemy Casts are one page per pull, so a night pays for 8 requests per pull to fetch a few kB each.
+  One request per spec with every pull's fight ID, split back by each row's `fight` field, would replace most of
+  them. Measure it first with `compare_merged_filters.py --variants crossfight` (`docs/wcl-api.md`). A first run
+  on six pulls (`--batch-fights 4,5,6,7,8,9`) costs far less than the 25-pull default. It helps ingest of a
+  finished report and backfills; live ingest fetches a pull or two per poll, so it gains little there. Still
+  open after the measurement: per-report resume markers and per-fight truncation.
+- **Fetch only heal rows from Healing.** Healing is the largest spec, and its `absorbed` and `removebuff` rows
+  (26% of its rows on `H7z1fqDXjRTFnbtg`) are read by no analysis; death records read only `heal` rows.
+  The filter syntax for event type isn't confirmed, so `compare_merged_filters.py --variants healonly` takes it
+  as `--heal-filter` and reports whether it returns exactly the heal rows, the points saved and the position
+  samples lost. Dropping those rows also takes shield absorbs away from the analyst's event queries.
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
