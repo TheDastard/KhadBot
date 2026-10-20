@@ -115,7 +115,8 @@ files and the friendly-damage registry are not used here.
 
 The cached frame is the whole event frame plus ten columns (`phase_id`, `mechanic_id`, `cluster_id`, `is_failure`,
 `blamed_id`, `window_id`, `window_occurrence`, `blame_state`, `blame_dist_yd`, `blame_pos_age_ms`), with a JSON
-sidecar for the phase spans, cutoff, unmatched phase and input hashes:
+sidecar for the phase spans, cutoff, unmatched phase, input hashes, `ANNOTATION_VERSION` and a hash of the pull
+metadata annotation reads (start, end, duration, kill, phase transitions, friendly player IDs):
 
 ```
 annotated/<report>/<fight>__<encfile_hash>.parquet
@@ -229,16 +230,19 @@ down from there. Changes to fetch filters take effect only when `ingest` runs ag
 | Defensive or offensive file: cast or aura IDs | yes | that file's Buffs spec | rebuilt (new `events_hash`) | rebuilt | miss |
 | Defensive or offensive file: anything else | no | none | kept | rebuilt | miss |
 | Utility file or friendly-damage registry | no | none | kept | rebuilt | miss |
-| A field added to the report query | `--refresh-meta` | `report.json` only | kept | rebuilt | hit |
-| `ANNOTATION_VERSION` or `EncounterConfig.cutoff_fraction` | no | none | rebuilt | rebuilt | hit |
-| Analysis or digest code | no | none | kept | rebuilt | hit |
+| A field added to the report query | `--refresh-meta` | `report.json` only | kept | rebuilt | miss (`pull_hash`) |
+| `--refresh-meta` changing pull start, end, duration, kill, phase transitions or friendly players | `--refresh-meta` | `report.json` only | rebuilt | rebuilt | miss (`pull_hash`) |
+| `ANNOTATION_VERSION` or `EncounterConfig.cutoff_fraction` | no | none | rebuilt | rebuilt | miss |
+| Analysis or digest code (bump `RECORDS_VERSION`) | no | none | kept | rebuilt | miss once bumped |
 | Prompt template, tool docstring or schema, verify rules | no | none | kept | kept | miss (`prompt_version`) |
 | Analyst graph logic | no | none | kept | kept | miss once `GRAPH_VERSION` is bumped |
 | Analyst model or depth | no | none | kept | kept | miss |
 
-The annotation cache is not keyed by pull metadata, and the findings key carries data and config hashes but no
-version for annotation, analysis or digest code or the cutoff fraction, so the rows marked "kept" or "hit" above
-can serve results built before the change.
+`ANNOTATION_VERSION`, `RECORDS_VERSION` (`digest.py`, hand-bumped when analysis or record-building code changes
+its output), the cutoff fraction and `pull_hash` (a hash of the whole stored `Pull`) are in
+`PullDigest.produced_from`, so they key the in-process records and the findings. The annotation sidecar keeps a
+narrower hash of only the pull fields annotation reads. The one gap left is a code change whose author forgot to
+bump a version constant.
 
 ## Cost and size
 

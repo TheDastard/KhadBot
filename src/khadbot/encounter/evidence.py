@@ -32,6 +32,7 @@ import polars as pl
 from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.mechanics import blame_reach_yd, mechanic_clusters
 from khadbot.encounter.annotate import AnnotationCache
+from khadbot.encounter.annotate.frame import ANNOTATION_VERSION
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     FriendlyDamageRegistry,
@@ -42,7 +43,13 @@ from khadbot.encounter.config_files import (
     load_encounter_view,
     load_friendly_damage,
 )
-from khadbot.encounter.digest import PullRecords, build_pull_records, default_annotation_cache
+from khadbot.encounter.digest import (
+    RECORDS_VERSION,
+    PullRecords,
+    build_pull_records,
+    default_annotation_cache,
+    pull_hash,
+)
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
 from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
 
@@ -213,9 +220,10 @@ class EncounterData:
     Read-only access to analysed pulls: records per pull, cached in-process, and ref resolution.
 
     The cache key is (pull_key, events_hash, positions_hash, encfile_hash, defensive_cooldowns_hash,
-    offensive_cooldowns_hash, utility_cooldowns_hash, friendly_damage_hash), so re-ingesting a pull or editing its
-    encounter file or a registry rebuilds the records on next use. Registries not passed in are reread from
-    ``config/`` on every lookup, like encounter files.
+    offensive_cooldowns_hash, utility_cooldowns_hash, friendly_damage_hash, ANNOTATION_VERSION, RECORDS_VERSION,
+    the cutoff fraction, pull_hash), so re-ingesting a pull, refreshing its metadata or editing its encounter
+    file or a registry rebuilds the records on next use. Registries not passed in are reread from ``config/`` on
+    every lookup, like encounter files.
     """
 
     def __init__(
@@ -274,6 +282,10 @@ class EncounterData:
             cooldowns_hash(offensive),
             cooldowns_hash(utility),
             friendly_damage_hash(friendly),
+            str(ANNOTATION_VERSION),
+            str(RECORDS_VERSION),
+            repr(EncounterConfig().cutoff_fraction if self.cutoff_fraction is None else self.cutoff_fraction),
+            pull_hash(pull),
         )
         if (hit := self._records.get(key)) is not None:
             self._records.move_to_end(key)

@@ -732,6 +732,28 @@ def test_cache_misses_after_annotation_version_change(synth_ingested, synth_enc,
     assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is None
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("start_ms", 1),
+        ("end_ms", 1),
+        ("duration_ms", 1),
+        ("kill", True),
+        ("phase_transitions", [(1, 5)]),
+        ("friendly_player_ids", [901]),
+    ],
+)
+def test_cache_misses_when_pull_metadata_changes(synth_ingested, synth_enc, tmp_path, field, value):
+    cache = AnnotationCache(tmp_path / "annotated")
+    first = annotate_pull("SYNTH01:1", synth_ingested, synth_enc, cache=cache)
+    ev_hash = synth_ingested.events_hash("SYNTH01:1")
+    pos_hash = synth_ingested.positions_hash("SYNTH01:1")
+    assert cache.get(first.pull, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is not None
+    changed = first.pull.model_copy(update={field: value})
+    assert getattr(changed, field) != getattr(first.pull, field)
+    assert cache.get(changed, first.encfile_hash, ev_hash, 0.5, positions_hash=pos_hash) is None
+
+
 def test_annotate_pull_unknown_pull(synth_ingested, synth_enc):
     with pytest.raises(KeyError, match="SYNTH01:99"):
         annotate_pull("SYNTH01:99", synth_ingested, synth_enc)

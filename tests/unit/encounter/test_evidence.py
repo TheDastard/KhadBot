@@ -264,6 +264,49 @@ def test_records_are_cached_until_events_change(synth_data, synth_ingested):
         synth_data.resolve("ev:SYNTH01:1:death:3")  # the 41 s death is gone
 
 
+def test_records_rebuild_when_a_version_or_the_cutoff_fraction_changes(synth_ingested, synth_enc_root, monkeypatch):
+    from khadbot.encounter import evidence
+
+    data = EncounterData(synth_ingested, enc_root=synth_enc_root)
+    first = data.records("SYNTH01:1")
+    assert data.records("SYNTH01:1") is first
+    produced = first.digest.produced_from
+    assert {produced["annotation_version"], produced["records_version"], produced["cutoff_fraction"]} <= set(
+        produced.values()
+    )
+
+    monkeypatch.setattr(evidence, "RECORDS_VERSION", evidence.RECORDS_VERSION + 1)
+    after_records = data.records("SYNTH01:1")
+    assert after_records is not first
+
+    monkeypatch.setattr(evidence, "ANNOTATION_VERSION", evidence.ANNOTATION_VERSION + 1)
+    after_annotation = data.records("SYNTH01:1")
+    assert after_annotation is not after_records
+
+    data.cutoff_fraction = 0.4
+    after_cutoff = data.records("SYNTH01:1")
+    assert after_cutoff is not after_annotation
+    assert after_cutoff.digest.produced_from["cutoff_fraction"] == "0.4"
+
+
+def test_records_and_findings_key_miss_when_the_stored_pull_changes(synth_ingested, synth_enc_root):
+    from khadbot.encounter.analyst.review_graph import pull_cache_key
+
+    data = EncounterData(synth_ingested, enc_root=synth_enc_root)
+    first = data.records("SYNTH01:1")
+    key = pull_cache_key(data, "SYNTH01:1", model_id="m", version="v", depth="standard")
+
+    # What a --refresh-meta does: rewrite the stored pull with a changed report-query field, same events.
+    pull = next(p for p in synth_ingested.pulls("SYNTH01") if p.fight_id == 1)
+    changed = pull.model_copy(update={"boss_hp_pct": 12.5})
+    synth_ingested.write_pull(changed, synth_ingested.events(pull.pull_key), synth_ingested.events_hash(pull.pull_key))
+
+    rebuilt = data.records("SYNTH01:1")
+    assert rebuilt is not first
+    assert rebuilt.digest.produced_from["pull_hash"] != first.digest.produced_from["pull_hash"]
+    assert pull_cache_key(data, "SYNTH01:1", model_id="m", version="v", depth="standard") != key
+
+
 def test_records_rebuild_when_a_registry_on_disk_changes(synth_ingested, synth_enc_root, tmp_path, monkeypatch):
     # Registries not passed in are reread from disk on every lookup, so an edit rebuilds the records.
     from khadbot.encounter import config_files

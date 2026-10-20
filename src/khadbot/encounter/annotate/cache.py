@@ -3,11 +3,13 @@ encounter/annotate/cache.py
 
 Annotated frames cached under ``$KHADBOT_DATA_DIR/annotated/<report>/<fight>__<encfile_hash>.parquet``,
 with a JSON sidecar holding the phases, cutoff, the ``events_hash`` and ``positions_hash`` they were built
-from and ``ANNOTATION_VERSION``. ``annotate_pull`` annotates a stored pull through the cache.
+from, ``ANNOTATION_VERSION`` and a hash of the pull fields annotation reads. ``annotate_pull`` annotates a
+stored pull through the cache.
 """
 
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 
@@ -23,6 +25,19 @@ from khadbot.encounter.store import EventStore, split_pull_key
 # ---------------------------------------------------------------------------
 # Cache
 # ---------------------------------------------------------------------------
+
+
+def pull_inputs_hash(pull: Pull) -> str:
+    """First 16 hex of SHA-256 over the ``Pull`` fields annotation reads, so changed pull metadata misses."""
+    payload = {
+        "start_ms": pull.start_ms,
+        "end_ms": pull.end_ms,
+        "duration_ms": pull.duration_ms,
+        "kill": pull.kill,
+        "phase_transitions": [list(t) for t in pull.phase_transitions],
+        "friendly_player_ids": sorted(pull.friendly_player_ids),
+    }
+    return hashlib.sha256(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
 
 
 class AnnotationCache:
@@ -47,6 +62,7 @@ class AnnotationCache:
             or meta.get("positions_hash") != positions_hash
             or meta.get("cutoff_fraction") != cutoff_fraction
             or meta.get("annotation_version") != ANNOTATION_VERSION
+            or meta.get("pull_hash") != pull_inputs_hash(pull)
         ):
             return None
         return Annotated(
@@ -66,6 +82,7 @@ class AnnotationCache:
             "positions_hash": positions_hash,
             "cutoff_fraction": cutoff_fraction,
             "annotation_version": ANNOTATION_VERSION,
+            "pull_hash": pull_inputs_hash(a.pull),
             "cutoff_ms": a.cutoff_ms,
             "phases": [p.model_dump() for p in a.phases],
             "unmatched_phase": a.unmatched_phase,

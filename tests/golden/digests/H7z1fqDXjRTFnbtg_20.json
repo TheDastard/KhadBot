@@ -1319,12 +1319,16 @@
   "outcome": "kill",
   "phase_reached": "p3",
   "produced_from": {
+    "annotation_version": "7",
+    "cutoff_fraction": "0.5",
     "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "1e5398dfceb0",
     "events_hash": "9e6c3040574ee897aaa46c920727e82f71c784a180a3eb4ff1783a388f7c3f3e",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "b94f0d59330c5501aba7e880d6a0ae91ee7c3f488105eb72dde775c0e1c6a933",
+    "pull_hash": "4e84c41650aec139",
+    "records_version": "1",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:20",

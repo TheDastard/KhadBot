@@ -22,7 +22,9 @@ from helpers.encounter.synth import (
 )
 
 from khadbot.agent.agent_config import ConfigurationError
+from khadbot.config import EncounterConfig
 from khadbot.encounter import digest as digest_mod
+from khadbot.encounter.annotate.frame import ANNOTATION_VERSION
 from khadbot.encounter.config_files import (
     cooldowns_hash,
     encfile_hash,
@@ -110,6 +112,10 @@ def test_wipe_summary(digest_of, synth_ingested, synth_defensive, synth_offensiv
         "offensive_cooldowns_hash": cooldowns_hash(synth_offensive),
         "utility_cooldowns_hash": cooldowns_hash(synth_utility),
         "friendly_damage_hash": friendly_damage_hash(load_friendly_damage()),
+        "annotation_version": str(ANNOTATION_VERSION),
+        "records_version": str(digest_mod.RECORDS_VERSION),
+        "cutoff_fraction": repr(EncounterConfig().cutoff_fraction),
+        "pull_hash": digest_mod.pull_hash(next(p for p in synth_ingested.pulls("SYNTH01") if p.fight_id == 1)),
     }
 
 
