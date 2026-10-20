@@ -1316,12 +1316,16 @@
   "outcome": "wipe",
   "phase_reached": "p3",
   "produced_from": {
+    "annotation_version": "7",
+    "cutoff_fraction": "0.5",
     "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "1e5398dfceb0",
     "events_hash": "beb4f5529aa7922491e4c218169c939ebbf10470efe0918cd0bb1015edfe9216",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "e2ba87617afb16bd6b2426fd15ea0cdd018c015847a2ea15d2b70273a8cc75d9",
+    "pull_hash": "d536447964cc6027",
+    "records_version": "1",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "trMgApZCVYkv3jdq:18",

@@ -11,10 +11,12 @@ can match them back to the records.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+import orjson
 import polars as pl
 
 from khadbot.config import EncounterConfig
@@ -24,6 +26,7 @@ from khadbot.encounter.analysis.deaths import death_records
 from khadbot.encounter.analysis.friendly_damage import UNCLASSIFIED, classified_hits, friendly_damage
 from khadbot.encounter.analysis.mechanics import mechanic_stats
 from khadbot.encounter.annotate import Annotated, AnnotationCache, annotate_pull, unmatched_phases
+from khadbot.encounter.annotate.frame import ANNOTATION_VERSION
 from khadbot.encounter.config_files import (
     CooldownRegistry,
     EncounterFile,
@@ -49,6 +52,11 @@ from khadbot.encounter.models import (
     make_ref,
 )
 from khadbot.encounter.store import EventStore, split_pull_key
+
+# Bump when analysis or record-building code changes what PullRecords or the digest hold for the same inputs
+# (anything under encounter/analysis/, build_pull_records, caps, record models). It joins ``produced_from``, so
+# the in-process records key and every cached finding miss. Annotation code has ANNOTATION_VERSION instead.
+RECORDS_VERSION = 1
 
 DEATH_CAP = 10
 MECHANIC_CAP = 8
@@ -195,6 +203,11 @@ def _capped(
     return sorted(kept, key=lambda c: (c.t_ms, c.ref))
 
 
+def pull_hash(pull: Pull) -> str:
+    """First 16 hex of SHA-256 over the whole stored ``Pull``, so any metadata refresh that changes it misses."""
+    return hashlib.sha256(orjson.dumps(pull.model_dump(mode="json"), option=orjson.OPT_SORT_KEYS)).hexdigest()[:16]
+
+
 def build_pull_records(
     pull_key: str,
     store: EventStore,
@@ -298,6 +311,10 @@ def build_pull_records(
             "offensive_cooldowns_hash": cooldowns_hash(offensive),
             "utility_cooldowns_hash": cooldowns_hash(utility),
             "friendly_damage_hash": friendly_damage_hash(friendly),
+            "annotation_version": str(ANNOTATION_VERSION),
+            "records_version": str(RECORDS_VERSION),
+            "cutoff_fraction": repr(fraction),
+            "pull_hash": pull_hash(pull),
         },
     )
     return PullRecords(

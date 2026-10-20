@@ -161,12 +161,16 @@
   "outcome": "kill",
   "phase_reached": "p2",
   "produced_from": {
+    "annotation_version": "7",
+    "cutoff_fraction": "0.5",
     "defensive_cooldowns_hash": "14ce0bdd3652",
     "encfile_hash": "d0bb9f7022f3",
     "events_hash": "722e88da3c160c7f64a3ec8445aa9bfa88806523a5bc6673c9461990be63f65d",
     "friendly_damage_hash": "9937b022415a",
     "offensive_cooldowns_hash": "bee16b79e5c1",
     "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
+    "pull_hash": "82035c6b73514e13",
+    "records_version": "1",
     "utility_cooldowns_hash": "ee9c7763e587"
   },
   "pull_key": "SYNTH01:2",
