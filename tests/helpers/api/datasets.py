@@ -34,7 +34,7 @@ from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.config_files import CooldownRegistry, load_cooldowns
 from khadbot.encounter.digest import PullRecords, build_digest, build_pull_records
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.findings import SqliteFindingsStore
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import PullDigest
@@ -97,7 +97,7 @@ def build_synth(root: Path) -> Dataset:
     }
     cache = AnnotationCache(root / "annotated")
     data = EncounterData(store, enc_root=enc_root, cache=cache, **registries)
-    app = create_app(data, FindingsStore(root / "khadbot.sqlite"), data_dir=root)
+    app = create_app(data, SqliteFindingsStore(root / "khadbot.sqlite"), data_dir=root)
     return Dataset("synth", TestClient(app), app.state.ctx, "SYNTH01", store, enc_root, registries, cache, root)
 
 

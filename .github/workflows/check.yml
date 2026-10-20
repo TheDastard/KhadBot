@@ -54,6 +54,38 @@ jobs:
       - run: uv sync --locked --extra dev
       - run: mise run check
 
+  # Tests that need Postgres (the `hosted` marker). They skip without DATABASE_URL, so the `check` job above
+  # runs them as skips; this job gives them a real database. The major version is pinned in docs/decisions.md.
+  hosted:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: khadbot
+          POSTGRES_PASSWORD: ci-placeholder
+          POSTGRES_DB: khadbot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U khadbot -d khadbot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+      DATABASE_URL: postgresql://khadbot:ci-placeholder@localhost:5432/khadbot
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - run: uv run pytest tests/integration/hosted -m hosted --no-cov
+
   real-fixtures:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

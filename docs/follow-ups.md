@@ -148,6 +148,9 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
   built from the old records. The annotation cache is likewise not keyed by pull metadata, so a `--refresh-meta`
   that changes phase transitions keeps the old phase spans. Decide which versions join each key (see "What
   invalidates what" in `docs/encounter-pipeline.md`).
+- **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
+  unless a store is passed, so a hosted deployment must pass `default_findings_store()` itself. The hosted API
+  should do that, and own the pool's lifecycle (`close_pool` on shutdown).
 - **Serving analysis to many views.** Dashboards and other readers use `PullRecords` through `EncounterData`,
   which rebuilds records per process and keeps a few in memory. Investigate how to serve many views and users at
   scale, for example persisting serialized records keyed by their `produced_from` hashes. A proposed hosted

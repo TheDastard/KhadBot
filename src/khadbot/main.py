@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000]]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | migrate]
 """
 
 from __future__ import annotations
@@ -108,6 +108,20 @@ def _run_serve(port: int) -> None:
     uvicorn.run(create_app(), host=SERVE_HOST, port=port)
 
 
+def _run_migrate() -> None:
+    from khadbot.db import migrate, open_pool
+
+    try:
+        pool = open_pool()
+    except OSError as exc:
+        sys.exit(str(exc))
+    try:
+        applied = migrate(pool)
+    finally:
+        pool.close()
+    print("Applied: " + ", ".join(applied) if applied else "Database schema is up to date.")
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -137,6 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve = sub.add_parser("serve", help=f"Serve the read-only dashboard API on {SERVE_HOST} (KHADBOT_DATA_DIR)")
     serve.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
+    sub.add_parser("migrate", help="Apply database migrations to DATABASE_URL (hosted mode)")
     return parser
 
 
@@ -157,6 +172,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_digest(args.code, args.fight, args.json, args.unregistered)
     elif command == "serve":
         _run_serve(args.port)
+    elif command == "migrate":
+        _run_migrate()
 
 
 if __name__ == "__main__":

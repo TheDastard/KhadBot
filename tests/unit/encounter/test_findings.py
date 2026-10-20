@@ -1,8 +1,8 @@
 """
 tests/unit/encounter/test_findings.py
 
-FindingsStore: round trip, schema created on first use, each cache-key input changes the key,
-flagging persists and hides findings from ``for_pull``.
+Findings cache key, plus the SQLite store: the shared contract (tests/helpers/encounter/findings_contract.py),
+schema created on first use, and persistence across handles.
 """
 
 from __future__ import annotations
@@ -11,8 +11,9 @@ import re
 
 import pytest
 from helpers.encounter.findings import make
+from helpers.encounter.findings_contract import FindingsStoreContract
 
-from khadbot.encounter.findings import FindingsStore, cache_key
+from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore, cache_key
 
 BASE = {
     "pull_key": "SYNTH01:1",
@@ -28,11 +29,6 @@ BASE = {
     "model_id": "model-a",
     "depth": "standard",
 }
-
-
-@pytest.fixture
-def store(tmp_path) -> FindingsStore:
-    return FindingsStore(tmp_path / "nested" / "khadbot.sqlite")
 
 
 # ---------------------------------------------------------------------------
@@ -72,58 +68,25 @@ def test_each_input_changes_the_key(field, value):
 # ---------------------------------------------------------------------------
 
 
-def test_missing_key_is_none(store):
+class TestSqliteFindingsStore(FindingsStoreContract):
+    @pytest.fixture
+    def store(self, tmp_path) -> SqliteFindingsStore:
+        return SqliteFindingsStore(tmp_path / "nested" / "khadbot.sqlite")
+
+    def test_creates_schema_and_parent_dir(self, store):
+        store.put(make())
+        assert store.db_path.exists()
+        assert SqliteFindingsStore(store.db_path).get("k1") == make()  # a fresh handle reads the same file
+
+    def test_flag_persists_across_handles(self, store):
+        store.put(make("aaaa0000-1", key="k1"))
+        store.put(make("bbbb0000-1", key="k2", minutes=1))
+        assert store.flag("aaaa0000-1") is True
+        reopened = SqliteFindingsStore(store.db_path)
+        assert reopened.get("k1").flagged is True
+        assert [pf.cache_key for pf in reopened.for_pull("SYNTH01:1")] == ["k2"]
+
+
+def test_sqlite_store_satisfies_the_protocol(tmp_path):
+    store: FindingsStore = SqliteFindingsStore(tmp_path / "f.sqlite")
     assert store.get("nope") is None
-    assert store.for_pull("SYNTH01:1") == []
-
-
-def test_round_trip_creates_schema_and_parent_dir(store):
-    pf = make()
-    store.put(pf)
-    assert store.db_path.exists()
-    assert store.get("k1") == pf
-    assert FindingsStore(store.db_path).get("k1") == pf  # a fresh handle reads the same file
-
-
-def test_put_replaces_same_key(store):
-    store.put(make("aaaa0000-1"))
-    store.put(make("bbbb0000-1"))
-    assert [f.id for f in store.get("k1").findings] == ["bbbb0000-1"]
-    assert len(store.for_pull("SYNTH01:1")) == 1
-
-
-def test_for_pull_filters_by_pull_and_orders_newest_first(store):
-    store.put(make(key="old", minutes=0))
-    store.put(make(key="new", minutes=5))
-    store.put(make(pull="SYNTH01:2", key="other"))
-    assert [pf.cache_key for pf in store.for_pull("SYNTH01:1")] == ["new", "old"]
-
-
-def test_flag_persists_and_hides_from_for_pull(store):
-    store.put(make("aaaa0000-1", key="k1"))
-    store.put(make("bbbb0000-1", key="k2", minutes=1))
-    assert store.flag("aaaa0000-1") is True
-
-    reopened = FindingsStore(store.db_path)
-    assert reopened.get("k1").flagged is True
-    assert reopened.get("k2").flagged is False
-    assert [pf.cache_key for pf in reopened.for_pull("SYNTH01:1")] == ["k2"]
-    assert {pf.cache_key for pf in reopened.for_pull("SYNTH01:1", include_flagged=True)} == {"k1", "k2"}
-
-
-def test_flag_unknown_finding_returns_false(store):
-    store.put(make())
-    assert store.flag("zzzz9999-9") is False
-    assert store.get("k1").flagged is False
-
-
-def test_flag_matches_ids_exactly(store):
-    store.put(make("aaaa0000-1"))
-    assert store.flag("aaaa0000") is False  # a substring of the stored text is not a finding ID
-
-
-def test_put_after_flag_clears_it(store):
-    store.put(make("aaaa0000-1"))
-    store.flag("aaaa0000-1")
-    store.put(make("cccc0000-1"))  # regenerated findings under the same key
-    assert store.get("k1").flagged is False

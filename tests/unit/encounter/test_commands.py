@@ -25,7 +25,7 @@ from khadbot.encounter.commands import (
     resolve_pull_key,
     review_command,
 )
-from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.findings import SqliteFindingsStore
 from khadbot.encounter.models import IngestResult
 
 
@@ -228,14 +228,14 @@ class TestReviewCommand:
 
     async def test_estimate_flag_returns_estimate_without_a_model_call(self, synth_data, tmp_path, fake):
         out = await review_command(
-            "--report SYNTH01 --estimate", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+            "--report SYNTH01 --estimate", data=synth_data, findings=SqliteFindingsStore(tmp_path / "f.sqlite")
         )
         assert out.startswith("Estimated cost for 2 pulls: about ")
         assert fake.calls == []
 
     async def test_prints_estimate_before_the_first_model_call(self, synth_data, tmp_path, fake, events):
         out = await review_command(
-            "--report SYNTH01 What repeated?", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+            "--report SYNTH01 What repeated?", data=synth_data, findings=SqliteFindingsStore(tmp_path / "f.sqlite")
         )
         assert events[0].startswith("print: [ui.muted]Estimated cost for 2 pulls")
         assert "model call" in events[1:]
@@ -244,12 +244,16 @@ class TestReviewCommand:
 
     async def test_fights_option_limits_pulls(self, synth_data, tmp_path, fake, events):
         out = await review_command(
-            "--report SYNTH01 --fights 1 --estimate", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite")
+            "--report SYNTH01 --fights 1 --estimate",
+            data=synth_data,
+            findings=SqliteFindingsStore(tmp_path / "f.sqlite"),
         )
         assert "for 1 pulls" in out
 
     async def test_unknown_report(self, synth_data, tmp_path):
-        out = await review_command("--report NOPE", data=synth_data, findings=FindingsStore(tmp_path / "f.sqlite"))
+        out = await review_command(
+            "--report NOPE", data=synth_data, findings=SqliteFindingsStore(tmp_path / "f.sqlite")
+        )
         assert "No pulls stored for `NOPE`" in out
 
     async def test_usage_errors(self, synth_data, tmp_path, monkeypatch):
