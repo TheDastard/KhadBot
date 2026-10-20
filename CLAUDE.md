@@ -124,3 +124,5 @@ Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Ta
 Commit rules are in `.claude/rules/git-commits.md`. In short: `[KB][<tag>] <Imperative summary>` with a lowercase system or module tag from that file, a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
 
 Each task gets its own branch and worktree off `main`; `main` stays linear and only fast-forwards to a branch whose CI is green, and the branch and worktree are deleted afterwards. Trivial doc and comment fixes may go straight to `main`. `/land` (`.claude/skills/land/`) runs the landing sequence. Details are under "Branches and merging" in the same rules file.
+
+Work split across subagents follows `.claude/rules/parallel-work.md`. In short: the orchestrator stays in the main checkout (a session inside a worktree pins its subagents there), creates each task's worktree itself with `git worktree add`, has each subagent work there by absolute path instead of `EnterWorktree`, and after landing removes every worktree and branch it created.
