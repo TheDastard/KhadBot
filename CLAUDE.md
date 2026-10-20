@@ -23,17 +23,20 @@ KhadBot has two modes. The user picks one explicitly with `/mode`; there is no L
 
 ```
 src/khadbot/
-  main.py            # entry point: cli, ingest, digest, serve subcommands
+  main.py            # entry point: cli, ingest, digest, serve, migrate subcommands
   session.py         # Mode, Session, run_turn()
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
-  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, CLI commands;
-                     # conversation and plan to come
+  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, records_store,
+                     # CLI commands; conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report, offline recorded ingest
     annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
     analysis/        # deaths, mechanics, cooldowns, aggro
     analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
+  storage/           # BlobStore protocol: local directory, S3-compatible bucket, zstd-compressing wrapper
+  db/                # hosted mode Postgres: pool, migration runner and migrations, findings store, read models
+  jobs/              # job specs and functions (ingest, process, review), progress, token resolution
   simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL
   tools/             # LangChain @tools and the shared WarcraftLogs client
@@ -53,7 +56,7 @@ docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
 ```
 
-Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events and per-pull position tables, annotations, and the findings and checkpoint SQLite databases.
+Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events and per-pull position tables, annotations, persisted pull records, and the findings and checkpoint SQLite databases. Hosted mode (`KHADBOT_MODE=hosted`, `KHADBOT_STORAGE=s3`) keeps the same objects in an S3-compatible bucket and findings and read models in Postgres.
 
 ## Design reference
 
