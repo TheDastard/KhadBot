@@ -288,12 +288,25 @@ class TestGetCharacterRaiderioTool:
         assert result["name"] == "Pyroblastus"
         assert result["mythic_plus_score"] > 0
 
-    @pytest.mark.parametrize("region", ["xx", "na", "EU ", "USA", "", "  "])
+    @pytest.mark.parametrize("region", ["xx", "na", "USA", "", "  "])
+    @respx.mock
     def test_invalid_region_returns_error_dict(self, region):
-        """Invalid regions must return an error dict — never raise."""
+        """Invalid regions must return an error dict — never raise, never reach the API."""
+        route = respx.route().mock(side_effect=AssertionError("invalid region must not reach the network"))
         result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": region})
         assert result.get("error") is True
         assert "region" in result["message"].lower()
+        assert not route.called
+
+    @pytest.mark.parametrize("region", ["EU ", " us", "Kr"])
+    @respx.mock
+    def test_region_is_trimmed_and_lowercased(self, region):
+        route = respx.get(f"{BASE_URL}/characters/profile").mock(
+            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
+        )
+        result = get_character_raiderio.invoke({"name": "Pyroblastus", "realm": "area-52", "region": region})
+        assert result.get("error") is not True
+        assert route.calls.last.request.url.params["region"] == region.strip().lower()
 
     @pytest.mark.parametrize("region", list(VALID_REGIONS))
     @respx.mock
