@@ -147,10 +147,6 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
 - **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
   unless a store is passed, so a hosted deployment must pass `default_findings_store()` itself. The hosted API
   should do that, and own the pool's lifecycle (`close_pool` on shutdown).
-- **Read-model projection is not wired into `ProcessPull`.** `jobs.run.read_model_projector()` is the hook: it
-  returns None in every mode until the read-model tables exist. When they do, return a projector over
-  `khadbot.db.read_models` for `DatabaseConfig().hosted` (it must be idempotent: `ProcessPull` calls it on repeat
-  runs too). Remove this item then.
 - **The CLI's `/review` does not use `ReviewPull`.** `/review` runs `ProcessPull` per pull and then the whole
   review graph, because the answer needs the cross-pull synthesis that `ReviewPull` leaves out. Reviewing each pull
   with `ReviewPull` first would call the model twice for a pull whose analysis is partial (those are not cached).

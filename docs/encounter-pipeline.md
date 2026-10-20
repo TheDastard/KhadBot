@@ -295,7 +295,8 @@ already has the same records hash and `READ_MODEL_VERSION`, deletes the pull's r
 them again. Projecting the same records twice writes nothing, and a re-ingest, a changed authored file or a
 `RECORDS_VERSION` bump (all of which change the records hash) replaces the pull's rows. A change to the projection
 itself bumps `READ_MODEL_VERSION` (`read_models.py`), which re-projects every pull the next time it is projected.
-The caller decides when to project; nothing projects on its own yet, so the tables hold what was last projected.
+In hosted mode the `ProcessPull` job projects each pull after it stores the records
+(`jobs.run.PostgresReadModelProjector`); the CLI in local mode never does.
 
 `api/night.py` builds the report detail and the night summary from per-pull inputs that a `ReadSource` supplies:
 `RecordsSource` reads records through `EncounterData` and findings from the findings store (local mode, the

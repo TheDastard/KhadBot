@@ -46,6 +46,7 @@ __all__ = [
     "JobError",
     "LocalTokenResolver",
     "ModelMismatchError",
+    "PostgresReadModelProjector",
     "ProcessPullResult",
     "ReadModelProjector",
     "ReviewPullResult",
@@ -119,16 +120,51 @@ class ReadModelProjector(Protocol):
     async def project(self, records: PullRecords) -> None: ...
 
 
+# (pool, records, report metadata) -> whether rows were written; ``khadbot.db.read_models.project_pull``.
+ReadModelWriter = Callable[[Any, PullRecords, dict | None], bool]
+
+
+class PostgresReadModelProjector:
+    """
+    Projects a pull's records into the Postgres read-model tables (``khadbot.db.read_models.project_pull``), with
+    the report's cached metadata from ``raw``. Idempotent because the writer is: the same records twice write
+    nothing. The pool is taken on first use, so building a projector opens no connection.
+    """
+
+    def __init__(
+        self,
+        raw: RawPageCache | None = None,
+        *,
+        pool: Callable[[], Any] | None = None,
+        write: ReadModelWriter | None = None,
+    ) -> None:
+        self._raw = raw
+        self._pool = pool
+        self._write = write
+
+    async def project(self, records: PullRecords) -> None:
+        if self._raw is None:
+            from khadbot.encounter.ingest.pipeline import default_cache
+
+            self._raw = default_cache()
+        if self._pool is None or self._write is None:
+            from khadbot.db import get_pool, project_pull  # local mode never imports the database code
+
+            self._pool = self._pool or get_pool
+            self._write = self._write or project_pull
+        raw, pool, write = self._raw, self._pool, self._write
+        meta = await asyncio.to_thread(raw.report_meta, records.pull.report_code)
+        await asyncio.to_thread(write, pool(), records, meta)
+
+
 def read_model_projector() -> ReadModelProjector | None:
     """
-    The projector ``ProcessPull`` calls after it stores a pull's records, or None when there is nothing to project.
-
-    Wiring point for the read-model tables: until they exist this returns None in every mode. Once they do, return
-    a projector over ``khadbot.db.read_models`` in the hosted branch below.
+    The projector ``ProcessPull`` calls after it stores a pull's records: the Postgres one in hosted mode, else
+    None (local mode has no read-model tables).
     """
     if not DatabaseConfig().hosted:
         return None
-    return None  # hosted: return the read-model projector here
+    return PostgresReadModelProjector()
 
 
 # ---------------------------------------------------------------------------
