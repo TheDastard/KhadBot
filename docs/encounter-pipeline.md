@@ -18,11 +18,14 @@ then from the records store, and builds and stores them only when neither has th
 with the records. Findings are the only persisted model output.
 
 The raw page cache, the event store, the annotation cache and the records store read and write whole objects through
-a `BlobStore` (`src/khadbot/storage/`), under keys equal to the paths below relative to `KHADBOT_DATA_DIR` (`raw/…`, `events/…`,
-`annotated/…`, `records/…`). `storage.default_blob_store()` picks the store; today it is always `LocalBlobStore` over the data
-directory, which reads and writes exactly the files the stages wrote before the seam existed. Every put is atomic (a
-reader sees the old object or the new one), and listings skip the `*.tmp` files an interrupted write leaves. The
-findings and checkpoint SQLite databases are not blobs and stay files under the data directory.
+a `BlobStore` (`src/khadbot/storage/`), under keys equal to the paths below relative to `KHADBOT_DATA_DIR` (`raw/…`,
+`events/…`, `annotated/…`, `records/…`). `storage.default_blob_store()` picks the store. By default it is
+`LocalBlobStore` over the data directory, which reads and writes exactly the files the stages wrote before the seam
+existed. With `KHADBOT_STORAGE=s3` it is an `S3BlobStore` over a bucket (`KHADBOT_S3_*`), and the objects under `raw/`
+are stored zstd-compressed with a `.zst` suffix (`raw/<report>/report.json.zst`, `.../page_000.json.zst`,
+`.../_complete.zst`); the stages still use the plain keys, and the other prefixes are stored as they are. Every put is
+atomic (a reader sees the old object or the new one), and local listings skip the `*.tmp` files an interrupted write
+leaves. The findings and checkpoint SQLite databases are not blobs and stay files under the data directory.
 
 ## Running the stages
 

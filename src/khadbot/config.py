@@ -29,6 +29,11 @@ class DeploymentMode(StrEnum):
     HOSTED = "hosted"  # Postgres (and object storage), chosen by KHADBOT_MODE=hosted
 
 
+class StorageBackend(StrEnum):
+    LOCAL = "local"  # blobs are files under KHADBOT_DATA_DIR
+    S3 = "s3"  # blobs are objects in an S3-compatible bucket (Cloudflare R2, MinIO)
+
+
 class VectorStore(StrEnum):
     CHROMA = "chroma"
     PGVECTOR = "pgvector"
@@ -117,6 +122,20 @@ class DatabaseConfig:
 
 
 @dataclass(frozen=True)
+class StorageConfig:
+    """
+    Where the encounter pipeline's blobs live (``KHADBOT_STORAGE``). S3 credentials are not here: boto3 reads the
+    standard ``AWS_*`` environment variables. Local mode ignores every ``KHADBOT_S3_*`` setting.
+    """
+
+    backend: StorageBackend = field(default_factory=lambda: StorageBackend(_optional("KHADBOT_STORAGE", "local")))
+    s3_bucket: str = field(default_factory=lambda: _optional("KHADBOT_S3_BUCKET"))
+    s3_prefix: str = field(default_factory=lambda: _optional("KHADBOT_S3_PREFIX"))
+    s3_endpoint: str = field(default_factory=lambda: _optional("KHADBOT_S3_ENDPOINT"))
+    s3_region: str = field(default_factory=lambda: _optional("KHADBOT_S3_REGION"))
+
+
+@dataclass(frozen=True)
 class SimCConfig:
     binary_path: str = field(default_factory=lambda: _optional("SIMC_BINARY_PATH", "simc"))
     timeout_seconds: int = field(default_factory=lambda: int(_optional("SIMC_TIMEOUT_SECONDS", "120")))
@@ -170,6 +189,7 @@ class AppConfig:
     simc: SimCConfig = field(default_factory=SimCConfig)
     encounter: EncounterConfig = field(default_factory=EncounterConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
+    storage: StorageConfig = field(default_factory=StorageConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)
