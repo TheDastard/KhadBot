@@ -1,9 +1,9 @@
 """
-scripts/build_fixture_data.py
+scripts/data/build_fixture_data.py
 
 Build a data directory from the recorded WCL fixtures, offline, for the dashboard (local demos, Playwright).
 
-    uv run python scripts/build_fixture_data.py --out .khadbot_fixture_data
+    uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data
     set KHADBOT_DATA_DIR=.khadbot_fixture_data && uv run python main.py serve
 
 Every recorded report under --fixtures (default: tests/fixtures/encounter/wcl, synthetic reports excluded) is
@@ -23,7 +23,7 @@ from pathlib import Path
 from khadbot.encounter.ingest import ingest_recorded, recorded_reports
 from khadbot.encounter.store import ParquetEventStore
 
-DEFAULT_FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "encounter" / "wcl"
+DEFAULT_FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "encounter" / "wcl"
 
 
 async def build(fixtures: Path, out: Path) -> int:

@@ -4,7 +4,7 @@
 # ones: haste, damage and stat buffs on the caster, one ally or the raid (Bloodlust, Avenging Wrath,
 # Power Infusion). Damage-window coverage and death-window defensives never read this file. Spell IDs,
 # names, `target`, `cooldown_s` and `duration_s` come from game client data (SimC tables for WoW build
-# 12.1.5.70448) via the review file of scripts/build_registries.py. Cooldowns the heuristic can't
+# 12.1.5.70448) via the review file of scripts/data/build_registries.py. Cooldowns the heuristic can't
 # classify take their values from their own spell data: Pillar of Frost and Dark Transformation (45 s
 # cooldowns, under the generator's 60 s minimum), and Breath of Sindragosa, Convoke the Spirits, Zenith
 # and the three warlock summons, whose effects are scripted. Summon Infernal's duration is null because

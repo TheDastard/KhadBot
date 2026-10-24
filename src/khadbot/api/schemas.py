@@ -3,7 +3,7 @@ api/schemas.py
 
 Response models of the dashboard API. They are the source of ``contracts/openapi.json``, from which the frontend's
 types are generated, so a field change here is a contract change: regenerate it with
-``uv run python scripts/gen_contracts.py``.
+``uv run python scripts/dev/gen_contracts.py``.
 
 Records the encounter pipeline already defines (``PullDigest``, ``PullFindings``) are returned as built. Times are
 fight-relative milliseconds, pulls are addressed by WCL fight ID, and every ``ref`` is an evidence ref

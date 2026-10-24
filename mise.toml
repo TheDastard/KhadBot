@@ -14,7 +14,7 @@ pnpm = "12"
 
 
 # ── Environment ─────────────────────────────────────────────────────────────
-# First-time setup is scripts/setup.ps1, which runs `install`. After that, `uv run` keeps .venv in sync with uv.lock,
+# First-time setup is scripts/dev/setup.ps1, which runs `install`. After that, `uv run` keeps .venv in sync with uv.lock,
 # so these are rarely needed by hand; the variants give a lighter environment.
 [tasks.install]
 description = "Install runtime, CLI and dev dependencies into .venv"
@@ -96,20 +96,20 @@ run = "uv run python main.py migrate"
 # ── Generated files ─────────────────────────────────────────────────────────
 [tasks."gen:contracts"]
 description = "Regenerate contracts/openapi.json from the API"
-run = "uv run python scripts/gen_contracts.py"
+run = "uv run python scripts/dev/gen_contracts.py"
 
 [tasks."gen:fixture-data"]
 description = "Build .khadbot_fixture_data from the recorded fixtures (offline)"
-run = "uv run python scripts/build_fixture_data.py --out .khadbot_fixture_data"
+run = "uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data"
 
 
 # ── Cleanup ─────────────────────────────────────────────────────────────────
 [tasks.clean]
 description = "Remove caches and build output (keeps .venv, .env and .khadbot_data/)"
-run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/clean.ps1"
 
 # Stops processes running from the venv (e.g. ruff.exe held open by the editor), then retries the delete.
 [tasks."clean:all"]
 description = "clean, then delete .venv (stops processes holding it open)"
 depends = ["clean"]
-run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 -Venv .venv"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/distclean.ps1 -Venv .venv"

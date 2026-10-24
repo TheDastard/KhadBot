@@ -1,11 +1,11 @@
-# scripts/distclean.ps1 — remove the project virtual environment robustly on Windows.
+# scripts/dev/distclean.ps1 — remove the project virtual environment robustly on Windows.
 #
 # Deleting .venv commonly fails because something launched from it still holds
 # a file open (ruff.exe / python.exe from the VSCode extensions, a pre-commit
 # hook, a stray `uv run`). This script stops those processes, retries the
 # delete, and reports exactly which files are still locked if it gives up.
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 [-Venv .venv]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/distclean.ps1 [-Venv .venv]
 
 param(
     [string]$Venv = ".venv",

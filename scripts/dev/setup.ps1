@@ -1,4 +1,4 @@
-# scripts/setup.ps1 — first-time setup for a KhadBot checkout on Windows.
+# scripts/dev/setup.ps1 — first-time setup for a KhadBot checkout on Windows.
 #
 # Installs what the project needs and wires it up, skipping anything already in place, so it is safe to re-run:
 #   1. Tools via winget: Git (with Git LFS), uv 0.13 or later, mise, and optionally the GitHub CLI.
@@ -14,7 +14,7 @@
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
 # anything (winget shows its own agreement prompts).
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 [-WithGitHubCli] [-SkipInstall]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-SkipInstall]
 #   -WithGitHubCli  also install the GitHub CLI (`gh`), which /land uses to watch CI when present
 #   -SkipInstall    only check and configure; don't install tools or dependencies
 

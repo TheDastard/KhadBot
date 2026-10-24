@@ -2,7 +2,7 @@
 tests/unit/api/test_app.py
 
 The app as a whole: the committed OpenAPI contract matches the API (regenerate with
-``uv run python scripts/gen_contracts.py``),
+``uv run python scripts/dev/gen_contracts.py``),
 ``RefKind`` is published and matches the ref grammar, every error response is documented as ``ErrorBody``, and
 ``create_app`` takes extra routers.
 """
@@ -27,7 +27,7 @@ CONTRACT = Path(__file__).resolve().parents[3] / "contracts" / "openapi.json"
 
 def test_committed_contract_matches_the_api():
     assert CONTRACT.read_text(encoding="utf-8") == openapi_document(), (
-        "contracts/openapi.json is out of date; run `uv run python scripts/gen_contracts.py`"
+        "contracts/openapi.json is out of date; run `uv run python scripts/dev/gen_contracts.py`"
     )
 
 

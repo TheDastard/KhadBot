@@ -92,7 +92,7 @@ investigations".
 ## Measured cost (2026-10-11)
 
 Recorded with `main.py ingest` (Buffs filtered to the 17 cooldown-registry IDs; enemy Casts unfiltered because
-no encounter file existed yet) and `scripts/spike_wcl_cost.py` (no filters).
+no encounter file existed yet) and `scripts/wcl/spike_wcl_cost.py` (no filters).
 
 | Report | Boss pulls | Points | Wall time | Raw pages | Events | Parquet |
 |---|---|---|---|---|---|---|
@@ -299,7 +299,7 @@ for a typed `yes` before every live step. Neither prints or writes a token. Run 
 holds `WARCRAFTLOGS_CLIENT_ID` and `WARCRAFTLOGS_CLIENT_SECRET` (a worktree finds the main checkout's `.env`). The
 results go in the two subsections below with the date and report code; the follow-ups are rewritten from them.
 
-**Whose budget a user-token request spends** (`scripts/probe_wcl_budget.py`). It signs you in to Warcraft Logs
+**Whose budget a user-token request spends** (`scripts/wcl/probe_wcl_budget.py`). It signs you in to Warcraft Logs
 with PKCE: your browser opens, and a listener on `http://localhost:8976/callback` catches the redirect (`--port`
 changes the port). Register that exact URL as a redirect URL on the WCL client first. The client is used without
 its secret unless you pass `--with-secret`, and WCL refuses the token exchange without it (HTTP 400,
@@ -307,9 +307,9 @@ its secret unless you pass `--with-secret`, and WCL refuses the token exchange w
 (twice each, to see what a read costs), fetches the current specs of the shortest recorded pull
 (`H7z1fqDXjRTFnbtg:10`, 37 s) with your token, reads both again and prints which counter moved.
 
-    uv run python scripts/probe_wcl_budget.py
+    uv run python scripts/wcl/probe_wcl_budget.py
 
-**Whether merging fetch filters pays** (`scripts/compare_merged_filters.py`). On `trMgApZCVYkv3jdq:26` (526 s;
+**Whether merging fetch filters pays** (`scripts/wcl/compare_merged_filters.py`). On `trMgApZCVYkv3jdq:26` (526 s;
 its metadata comes from the recorded `report.json`, so it costs nothing) it fetches the current specs through
 `fetch_pull`, then two merged variants: `hostility` (one request per hostility, no `dataType`, so it first sends
 a one-second probe to see whether the API accepts that) and `datatype` (one request per data type and hostility,
@@ -319,7 +319,7 @@ through the real `normalize_pull`). `--max-pages` caps any stream. `--variants` 
 `--friendly-filter` and `--enemy-filter` replace the `hostility` variant's filters; only the
 `ability.id IN (...)` form is known to work (see Events above), so the default Friendlies request is unfiltered.
 
-    uv run python scripts/compare_merged_filters.py
+    uv run python scripts/wcl/compare_merged_filters.py
 
 Two more variants measure their own baseline, the requests they would replace, so they can run without the
 single-pull baseline:
@@ -338,8 +338,8 @@ single-pull baseline:
 `--variant-first` runs these two before their baselines. Run each order once to see whether WCL-side caching
 favours whichever goes second.
 
-    uv run python scripts/compare_merged_filters.py --variants crossfight --batch-fights 4,5,6,7,8,9
-    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter 'type = "heal"'
+    uv run python scripts/wcl/compare_merged_filters.py --variants crossfight --batch-fights 4,5,6,7,8,9
+    uv run python scripts/wcl/compare_merged_filters.py --variants healonly --heal-filter 'type = "heal"'
 
 ### Budget probe results
 
@@ -378,7 +378,7 @@ own budget. A second account's token settles it.
 
 ### Cross-fight and heal-only results
 
-2026-10-20, `trMgApZCVYkv3jdq`, app token, `scripts/compare_merged_filters.py`. Each variant measured its own
+2026-10-20, `trMgApZCVYkv3jdq`, app token, `scripts/wcl/compare_merged_filters.py`. Each variant measured its own
 baseline in the same run, and every run normalized to frames identical to its baseline's.
 
 **Cross-fight batching** (`--variants crossfight`): the eight small specs (Deaths, both Buffs requests, Debuffs,

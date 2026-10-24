@@ -5,7 +5,7 @@ Offline ingest of recorded WCL raw pages: a directory laid out like the raw page
 (``<root>/<code>/report.json`` and ``<root>/<code>/<fight>/...``) where only some fights have pages.
 
 The recorded test fixtures under ``tests/fixtures/encounter/wcl/`` use this, and so does
-``scripts/build_fixture_data.py``, which builds the data directory the dashboard is developed and tested against.
+``scripts/data/build_fixture_data.py``, which builds the data directory the dashboard is developed and tested against.
 Their pages live in Git LFS: a checkout without ``git lfs pull`` has pointer files instead, so such a report
 counts as absent.
 """

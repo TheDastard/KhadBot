@@ -1,7 +1,7 @@
 """
 tests/unit/scripts/test_compare_merged_filters.py
 
-scripts/compare_merged_filters.py: filter merging, variant building, paging, row assignment, frame comparison and
+scripts/wcl/compare_merged_filters.py: filter merging, variant building, paging, row assignment, frame comparison and
 the whole comparison against a stub WCL client that serves the synthetic SYNTH01 pages. No network.
 """
 
@@ -23,7 +23,7 @@ from khadbot.encounter.ingest.fetch import RawPageCache, specs_for
 from khadbot.encounter.ingest.normalize import normalize_pull, parse_report_meta
 from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsRateLimitError
 
-cmf = load_script("compare_merged_filters")
+cmf = load_script("wcl", "compare_merged_filters")
 
 SYNTH_ROOT = FIXTURES / "wcl"
 

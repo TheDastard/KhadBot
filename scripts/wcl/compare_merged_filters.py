@@ -1,5 +1,5 @@
 """
-scripts/compare_merged_filters.py
+scripts/wcl/compare_merged_filters.py
 
 Measure whether merging WCL fetch requests saves points or time, and whether the merged rows normalize to the
 same event frame as today's fetch.
@@ -34,9 +34,9 @@ This script SPENDS WCL POINTS. It prints an estimate before each live step and w
 It never prints a token. Needs WARCRAFTLOGS_CLIENT_ID / WARCRAFTLOGS_CLIENT_SECRET (read from the environment or
 the nearest ``.env``). Report metadata comes from the recorded fixture, so it costs nothing.
 
-    uv run python scripts/compare_merged_filters.py [--code trMgApZCVYkv3jdq] [--fight 26] [--variants hostility,datatype]
-    uv run python scripts/compare_merged_filters.py --variants crossfight [--batch-fights encounter|all|3,5,8]
-    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter '<expression>'
+    uv run python scripts/wcl/compare_merged_filters.py [--code trMgApZCVYkv3jdq] [--fight 26] [--variants hostility,datatype]
+    uv run python scripts/wcl/compare_merged_filters.py --variants crossfight [--batch-fights encounter|all|3,5,8]
+    uv run python scripts/wcl/compare_merged_filters.py --variants healonly --heal-filter '<expression>'
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ from khadbot.wcl.client import (
     WarcraftLogsRateLimitError,
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "encounter" / "wcl"
 DEFAULT_CODE = "trMgApZCVYkv3jdq"
 DEFAULT_FIGHT = 26

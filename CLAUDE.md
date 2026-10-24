@@ -71,7 +71,7 @@ Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `m
 the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
 `install:cli`); name new tasks the same way.
 
-A new machine or clone runs `scripts/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`). After that
+A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`). After that
 `uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
 `mise trust`.
 
@@ -85,8 +85,8 @@ A new machine or clone runs `scripts/setup.ps1` once (tools, PATH, LFS, dependen
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
 | Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
-| Remove caches and build output | `mise run clean` | `scripts/clean.ps1` |
-| Same, then delete `.venv` | `mise run clean:all` | `scripts/clean.ps1`, then `scripts/distclean.ps1` |
+| Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
+| Same, then delete `.venv` | `mise run clean:all` | `scripts/dev/clean.ps1`, then `scripts/dev/distclean.ps1` |
 
 Add `--no-cov` to pytest for faster local runs; coverage is on by default in `addopts`.
 
@@ -98,7 +98,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 - **Python** is 3.14 in `.venv`, pinned by `.python-version`; `requires-python = ">=3.12,<3.15"`; ruff and mypy target 3.12. Don't use syntax newer than 3.12.
 - **uv owns `.venv`.** Don't add Python to `mise.toml`; mise only pins Node and pnpm and runs tasks.
 - **Package name** is `khadbot`, all lowercase, on disk and in git. Windows ignores case but Linux and CI don't, so never create a differently cased path.
-- **Git hooks are shared by every worktree.** `pre-commit install` writes the path of the Python that ran it into `.git/hooks`, so run it only from the main checkout; installed from a worktree, the hooks break for everyone once that worktree is removed. `scripts/setup.ps1` installs them from the main checkout and only checks them in a worktree.
+- **Git hooks are shared by every worktree.** `pre-commit install` writes the path of the Python that ran it into `.git/hooks`, so run it only from the main checkout; installed from a worktree, the hooks break for everyone once that worktree is removed. `scripts/dev/setup.ps1` installs them from the main checkout and only checks them in a worktree.
 - **Worktrees have no `.env`.** Tests still pass in one because `load_dotenv` walks up to the main checkout's `.env`; CI has none and sets placeholder WCL credentials instead. Never copy `.env` into a worktree.
 - **CI action tags.** Some actions publish no major-version tag (`astral-sh/setup-uv@v10` doesn't resolve); pin those to a full release. A job failing at "Set up job" usually means an action reference didn't resolve.
 
@@ -118,7 +118,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 
 ## Game data
 
-Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, the user, or (for player spells) game client data via `scripts/build_registries.py`. If a value is unknown, use `null` with `verified: false`, or ask.
+Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Take them from recorded fixtures, existing config, the user, or (for player spells) game client data via `scripts/data/build_registries.py`. If a value is unknown, use `null` with `verified: false`, or ask.
 
 ## Git
 

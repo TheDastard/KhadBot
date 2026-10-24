@@ -1,7 +1,7 @@
 """
 tests/unit/scripts/test_probe_wcl_budget.py
 
-scripts/probe_wcl_budget.py: PKCE sign-in pieces, the redirect listener, token handling (a token must never reach
+scripts/wcl/probe_wcl_budget.py: PKCE sign-in pieces, the redirect listener, token handling (a token must never reach
 output), the budget verdict and the whole probe against a stub client. No call leaves this machine.
 """
 
@@ -20,7 +20,7 @@ from khadbot.encounter.ingest.fetch import specs_for
 from khadbot.encounter.models import Pull
 from khadbot.wcl.client import RATE_LIMIT_QUERY, TOKEN_URL
 
-pb = load_script("probe_wcl_budget")
+pb = load_script("wcl", "probe_wcl_budget")
 
 TOKEN = "ACCESS-TOKEN-VALUE-1234"
 CODE = "AUTH-CODE-VALUE-5678"

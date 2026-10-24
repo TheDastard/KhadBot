@@ -3,7 +3,7 @@ tests/helpers/encounter/real_fixtures.py
 
 The recorded WCL fixtures under tests/fixtures/encounter/wcl/<code>/ (every report directory except SYNTH01): which reports
 are usable, which fights have pages, and an offline ingest of those fights. The logic lives in
-``khadbot.encounter.ingest`` (``recorded.py``), which ``scripts/build_fixture_data.py`` shares.
+``khadbot.encounter.ingest`` (``recorded.py``), which ``scripts/data/build_fixture_data.py`` shares.
 
 The pages live in Git LFS. A checkout without ``git lfs pull`` (or with ``GIT_LFS_SKIP_SMUDGE=1``) has pointer files
 instead, so such a report counts as absent and the tests that need it skip.

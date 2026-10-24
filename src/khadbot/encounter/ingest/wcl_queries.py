@@ -4,7 +4,7 @@ encounter/ingest/wcl_queries.py
 GraphQL for encounter ingest: one report-metadata query and one paged events query.
 
 Field names marked UNCERTAIN have not been confirmed against the live schema; the
-cost-measurement run (scripts/spike_wcl_cost.py) verifies them by introspection.
+cost-measurement run (scripts/wcl/spike_wcl_cost.py) verifies them by introspection.
 """
 
 GET_REPORT_META = """

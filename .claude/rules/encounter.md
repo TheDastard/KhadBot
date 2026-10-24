@@ -8,7 +8,7 @@ paths:
   - "tests/**/encounter/**"
   - "tests/golden/**"
   - "tests/eval/**"
-  - "scripts/record_wcl_fixture.py"
+  - "scripts/data/record_wcl_fixture.py"
   - "docs/decisions.md"
 ---
 
@@ -38,7 +38,7 @@ Contracts (models, file formats, refs, verify rules) are defined in section 6 of
 
 ## Game data
 
-- Spell IDs, mechanic tagging and cooldown values come from recorded fixtures or a human. Player spell IDs, cooldowns and durations may also come from game client data (`scripts/build_registries.py`), entered with `verified: false`. Unknown values are `null` with `verified: false`.
+- Spell IDs, mechanic tagging and cooldown values come from recorded fixtures or a human. Player spell IDs, cooldowns and durations may also come from game client data (`scripts/data/build_registries.py`), entered with `verified: false`. Unknown values are `null` with `verified: false`.
 - The synthetic fixture uses fake spell IDs from 900001 upward and says so in its README.
 - Don't copy curated tagging from Wipefest (AGPL-3.0) or WoWAnalyzer into encounter files.
 - If a task needs data only a person can provide (real WCL fixtures, an authored encounter file, cooldown durations, golden-question labels, eval thresholds), stop and say what is missing. Don't fabricate it.
