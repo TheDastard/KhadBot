@@ -47,6 +47,7 @@ src/khadbot/
   storage/           # BlobStore protocol: local directory, S3-compatible bucket, zstd-compressing wrapper
   db/                # hosted mode Postgres: pool, migration runner and migrations, findings store, read models
   jobs/              # job specs and functions (ingest, process, review), progress, token resolution
+  auth/              # hosted sign-in: WCL OAuth routes, sessions, encrypted WCL tokens, report access (can_read)
   wcl/               # the shared WarcraftLogs client
   simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL

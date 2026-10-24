@@ -50,6 +50,7 @@ Rest of the app:
 | `simc` | SimC generated client data: codes, parser and fetch (`simc/`) |
 | `db` | Postgres for hosted mode (`src/khadbot/db/`): connection pool, migrations, SQL-backed stores, the `migrate` subcommand |
 | `jobs` | Job specs and job functions, and the queue wiring that runs them (`src/khadbot/jobs/`) |
+| `auth` | Hosted sign-in with Warcraft Logs, sessions, stored WCL tokens and report access (`src/khadbot/auth/`), and its migration |
 | `storage` | Blob stores the pipeline's caches and event store write through, and their factory (`storage/`) |
 | `api` | The dashboard API (`src/khadbot/api/`), its `serve` subcommand and the generated `contracts/` |
 | `web` | The dashboard frontend (`apps/web/`) |

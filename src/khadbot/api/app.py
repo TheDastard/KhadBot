@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -30,6 +31,9 @@ from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.storage import BlobStore, LocalBlobStore
 
+if TYPE_CHECKING:
+    from khadbot.auth.service import AuthService
+
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 
@@ -41,6 +45,7 @@ def create_app(
     blobs: BlobStore | None = None,
     routers: Sequence[APIRouter] = (),
     read_source: ReadSource | None = None,
+    auth: AuthService | None = None,
 ) -> FastAPI:
     """
     The dashboard API over ``data`` and ``findings``.
@@ -50,7 +55,8 @@ def create_app(
     over ``data_dir`` when that is given, and to ``wiring.blob_store()`` otherwise. Nothing is read until a
     request arrives, so building the app for its OpenAPI document needs no data. ``routers`` are mounted after the
     read router. ``read_source`` serves the report detail and night summary (``night.SqlSource`` reads the read-model
-    tables); without it they are built from ``data``'s records.
+    tables); without it they are built from ``data``'s records. ``auth`` (hosted: ``wiring.auth_service()``) mounts the
+    sign-in routes (``/v1/auth/*``, ``/v1/me``) and their dependencies; local mode passes none and has no sign-in.
     """
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
     if blobs is None:
@@ -80,6 +86,10 @@ def create_app(
         return JSONResponse(status_code=422, content={"code": "bad_request", "message": problems})
 
     app.include_router(router)
+    if auth is not None:
+        from khadbot.auth.routes import mount  # hosted only: loads the crypto library
+
+        mount(app, auth)
     for extra in routers:
         app.include_router(extra)
     return app

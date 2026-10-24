@@ -13,8 +13,9 @@ Nothing below it reads the mode: the engine takes a store as an argument and nev
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from khadbot.config import DatabaseConfig, EncounterConfig
+from khadbot.config import AuthConfig, DatabaseConfig, EncounterConfig, WarcraftLogsConfig
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
@@ -23,6 +24,11 @@ from khadbot.encounter.records_store import ReadModelProjector, RecordsStore
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.errors import ConfigurationError, missing_group_message
 from khadbot.storage import BlobStore, default_blob_store
+
+if TYPE_CHECKING:
+    from khadbot.auth.access import ReportAccess
+    from khadbot.auth.service import AuthService
+    from khadbot.auth.tokens import WclTokens
 
 # ---------------------------------------------------------------------------
 # Blob-backed stores
@@ -90,8 +96,51 @@ def read_model_projector() -> ReadModelProjector | None:
     return PostgresReadModelProjector(raw_factory=raw_cache)
 
 
+# ---------------------------------------------------------------------------
+# Sign-in and report access (hosted only)
+# ---------------------------------------------------------------------------
+
+
+def auth_service() -> AuthService | None:
+    """
+    Hosted mode's sign-in service over the Postgres auth tables (``AuthConfig``, the WCL client credentials and
+    ``KHADBOT_TOKEN_KEYS``); None in local mode, which has no sign-in. Building it opens the pool, no WCL call.
+
+    Raises:
+        ConfigurationError: The ``hosted`` group is missing, or the sign-in settings are incomplete.
+    """
+    if not DatabaseConfig().hosted:
+        return None
+    try:
+        from khadbot.auth.pg import PostgresAuthStore  # hosted libraries load only on this path
+        from khadbot.auth.service import AuthService
+        from khadbot.db import get_pool
+    except ImportError as exc:
+        raise ConfigurationError(missing_group_message("hosted", "Hosted sign-in")) from exc
+    try:
+        wcl = WarcraftLogsConfig()
+    except OSError as exc:
+        raise ConfigurationError(f"Hosted sign-in needs the WCL client credentials: {exc}") from None
+    return AuthService(
+        PostgresAuthStore(get_pool()), AuthConfig(), client_id=wcl.client_id, client_secret=wcl.client_secret
+    )
+
+
+def user_tokens() -> WclTokens | None:
+    """What a job's user token resolver draws on: signed-in users' WCL tokens. None in local mode."""
+    service = auth_service()
+    return service.tokens if service is not None else None
+
+
+def report_access() -> ReportAccess | None:
+    """The access checker every report route uses in hosted mode (``can_read``); None in local mode."""
+    service = auth_service()
+    return service.access if service is not None else None
+
+
 __all__ = [
     "annotation_cache",
+    "auth_service",
     "blob_store",
     "encounter_data",
     "event_store",
@@ -99,4 +148,6 @@ __all__ = [
     "raw_cache",
     "read_model_projector",
     "records_store",
+    "report_access",
+    "user_tokens",
 ]

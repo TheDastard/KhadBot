@@ -829,6 +829,7 @@ cli = [
 ]
 dev = [
     { name = "boto3" },
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "import-linter" },
     { name = "ipython" },
@@ -855,6 +856,7 @@ dev = [
 ]
 hosted = [
     { name = "boto3" },
+    { name = "cryptography" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
     { name = "zstandard" },
@@ -868,6 +870,7 @@ providers = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", marker = "extra == 'hosted'", specifier = ">=1.43.115" },
+    { name = "cryptography", marker = "extra == 'hosted'", specifier = ">=50.0.2" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.143.3" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },

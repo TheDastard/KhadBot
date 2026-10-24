@@ -27,6 +27,8 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 ## API
 
 - Every report route checks that the caller may read the report. A report the caller cannot read answers 404, never 403, so the API never confirms that a private report exists.
+- Report routes get the caller from `auth.routes.optional_user` or `current_user` and check with `ReportAccess.require_readable` (`wiring.report_access()`); never write a second access check.
+- State-changing routes depend on `auth.routes.require_csrf` (the `X-KhadBot-CSRF: 1` header plus an `Origin` check). Cookies stay HttpOnly and SameSite=Lax, and Secure everywhere but plain-HTTP localhost.
 
 ## Dependencies and layers
 
