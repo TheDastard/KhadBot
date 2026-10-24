@@ -199,10 +199,18 @@ class TestBuildAgentExecutor:
         passed_names = {t.name for t in captured["tools"]}
         assert "undeclared_extra_tool" not in passed_names
 
-    def test_no_persona_prompt_excludes_guardrail(self, agent_config, assembler):
+    def test_no_persona_prompt_excludes_guardrail(self, agent_config, assembler, monkeypatch):
+        import khadbot.config as config
+
+        # persona=None falls back to KHADBOT_PERSONA, which a local .env may set.
+        monkeypatch.delenv("KHADBOT_PERSONA", raising=False)
+        config.reset_config()
         captured, _, side_effect = self._capture_create_agent()
-        with patch("khadbot.agent.coach.create_agent", side_effect=side_effect):
-            build_agent_executor(persona=None, config=agent_config, assembler=assembler)
+        try:
+            with patch("khadbot.agent.coach.create_agent", side_effect=side_effect):
+                build_agent_executor(persona=None, config=agent_config, assembler=assembler)
+        finally:
+            config.reset_config()
         assert "PERSONA SCOPE" not in captured["system_prompt"].upper()
 
     def test_persona_prompt_includes_guardrail(self, agent_config, assembler):
