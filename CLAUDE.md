@@ -78,7 +78,8 @@ A new machine or clone runs `scripts/setup.ps1` once (tools, PATH, LFS, dependen
 | Task | mise | uv |
 |---|---|---|
 | Install everything | `mise run install` | `uv sync --extra dev` |
-| Lint + typecheck + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run pytest tests/unit` |
+| Lint + typecheck + layer rule + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run lint-imports && uv run pytest tests/unit` |
+| Layer rule only | `mise run lint:imports` | `uv run lint-imports` |
 | Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
 | Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |

@@ -72,6 +72,9 @@ dev = [
     "ipython>=8.0.0",           # nicer REPL for debugging agent traces
     "pre-commit>=4.5.0",        # pre-commit hooks
     "types-pyyaml>=6.0.0",      # mypy stubs for yaml
+
+    # --- Architecture ---
+    "import-linter>=2.15",      # layer rule (AD13): lint-imports in mise run check
 ]
 
 [project.scripts]
@@ -175,3 +178,26 @@ line-ending = "auto"
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
+
+# Layer rule: each layer imports only the layers below it. Layers are listed top to bottom; `|` marks siblings that
+# must not import each other, `:` siblings that may. Entry points sit on top, then services, the composition root,
+# the Postgres adapters, the encounter engine, the integrations, and the foundation. The coach's LangChain tools
+# (`tools`) sit just under `agent`.
+[tool.importlinter]
+root_package = "khadbot"
+
+[[tool.importlinter.contracts]]
+name = "Python layers"
+type = "layers"
+containers = ["khadbot"]
+layers = [
+    "main",
+    "api | cli",
+    "jobs | agent",
+    "tools",
+    "wiring",
+    "db",
+    "encounter",
+    "wcl | simc",
+    "config : errors : storage : llm_factory",
+]
