@@ -4,13 +4,13 @@ version = "0.1.0"
 description = "KhadBot — Agentic WoW Assistant"
 requires-python = ">=3.12,<3.15"
 dependencies = [
+    # Core: what local ingest, digest and the analyst need. Everything else is an optional group below, so
+    # `uv sync --no-dev --extra cli` runs the local pipeline.
+
     # --- LangChain / agent framework ---
     "langchain>=0.3.0",
     "langchain-core>=0.3.0",      # base runnables, tools, message types
     "langchain-anthropic>=0.3.0", # Claude Sonnet provider
-    "langchain-openai>=0.2.0",    # OpenAI provider + embeddings
-    "langchain-groq>=1.1.2",      # Groq provider (fast free-tier inference)
-    "langchain-ollama>=1.0.1",    # Ollama provider (local models)
     "langgraph>=0.2.0",           # graph orchestration; used in production phase
 
     # --- Data validation ---
@@ -27,16 +27,6 @@ dependencies = [
     "orjson>=3.10",               # fast JSON for raw WCL pages and event hashing
     "pyyaml>=6.0",                # agent / encounter / registry config files
     "python-dotenv>=1.0.0",       # load .env (imported by agent/coach.py)
-
-    # --- Dashboard API ---
-    "fastapi>=0.143.3",           # read-only dashboard API (src/khadbot/api/), OpenAPI contract
-    "uvicorn>=0.54.0",            # ASGI server for `main.py serve`
-
-    # --- Hosted mode (Postgres) ---
-    "psycopg[binary]>=3.3.6",     # PostgreSQL driver; the binary extra avoids needing libpq on the host
-    "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
-    "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, MinIO) for hosted blobs
-    "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
 ]
 
 [project.optional-dependencies]
@@ -46,7 +36,31 @@ cli = [
     "prompt_toolkit>=3.0.0",      # REPL input: history, async prompt, keyboard handling
 ]
 
+api = [
+    # --- Dashboard API ---
+    "fastapi>=0.143.3",           # read-only dashboard API (src/khadbot/api/), OpenAPI contract
+    "uvicorn>=0.54.0",            # ASGI server for `main.py serve`
+]
+
+hosted = [
+    # --- Hosted mode: Postgres and object storage ---
+    "psycopg[binary]>=3.3.6",     # PostgreSQL driver; the binary extra avoids needing libpq on the host
+    "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
+    "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, MinIO) for hosted blobs
+    "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
+]
+
+providers = [
+    # --- Non-Anthropic LLM providers (llm_factory imports each only when it is selected) ---
+    "langchain-openai>=0.2.0",    # OpenAI provider
+    "langchain-groq>=1.1.2",      # Groq provider (fast free-tier inference)
+    "langchain-ollama>=1.0.1",    # Ollama provider (local models)
+]
+
 dev = [
+    # --- Every optional group, so a dev environment runs the whole app and its tests ---
+    "khadbot[cli,api,hosted,providers]",
+
     # --- Core test runner ---
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",   # async support for LangChain async calls
@@ -61,10 +75,6 @@ dev = [
     "ruff>=0.4.0",              # fast linter + formatter; replaces flake8 + black
     "mypy>=1.10.0",             # static type checking
 
-    # --- CLI ---
-    "rich>=13.7.0",             # terminal rendering: panels, tables, live tool panel, markdown output
-    "prompt_toolkit>=3.0.0",    # REPL input: history, async prompt, keyboard handling
-
     # --- LangSmith ---
     "langsmith>=0.1.0",         # trace URL construction, eval dataset management
 
@@ -74,7 +84,7 @@ dev = [
     "types-pyyaml>=6.0.0",      # mypy stubs for yaml
 
     # --- Architecture ---
-    "import-linter>=2.15",      # layer rule (AD13): lint-imports in mise run check
+    "import-linter>=2.15",      # layer rule: lint-imports in mise run check
 ]
 
 [project.scripts]

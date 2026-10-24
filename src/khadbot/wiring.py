@@ -21,6 +21,7 @@ from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.records_store import ReadModelProjector, RecordsStore
 from khadbot.encounter.store import ParquetEventStore
+from khadbot.errors import ConfigurationError, missing_group_message
 from khadbot.storage import BlobStore, default_blob_store
 
 # ---------------------------------------------------------------------------
@@ -67,8 +68,10 @@ def encounter_data(blobs: BlobStore | None = None) -> EncounterData:
 def findings_store() -> FindingsStore:
     """Postgres in hosted mode (``KHADBOT_MODE=hosted``), else the SQLite file under ``KHADBOT_DATA_DIR``."""
     if DatabaseConfig().hosted:
-        from khadbot.db import PostgresFindingsStore, get_pool  # hosted libraries load only on this path
-
+        try:
+            from khadbot.db import PostgresFindingsStore, get_pool  # hosted libraries load only on this path
+        except ImportError as exc:
+            raise ConfigurationError(missing_group_message("hosted", "Hosted mode")) from exc
         return PostgresFindingsStore(get_pool())
     return SqliteFindingsStore(Path(EncounterConfig().data_dir) / "khadbot.sqlite")
 
@@ -80,8 +83,10 @@ def read_model_projector() -> ReadModelProjector | None:
     """
     if not DatabaseConfig().hosted:
         return None
-    from khadbot.db import PostgresReadModelProjector
-
+    try:
+        from khadbot.db import PostgresReadModelProjector
+    except ImportError as exc:
+        raise ConfigurationError(missing_group_message("hosted", "Hosted mode")) from exc
     return PostgresReadModelProjector(raw_factory=raw_cache)
 
 

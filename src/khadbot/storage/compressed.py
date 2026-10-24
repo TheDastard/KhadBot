@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import builtins
 from collections.abc import Iterable
+from typing import Any
 
-import zstandard
-
+from khadbot.errors import missing_group_message
 from khadbot.storage.blob import BlobStore, validate_key, validate_prefix
 
 # ---------------------------------------------------------------------------
@@ -21,6 +21,16 @@ from khadbot.storage.blob import BlobStore, validate_key, validate_prefix
 # ---------------------------------------------------------------------------
 
 ZST_SUFFIX = ".zst"
+
+
+def _zstd() -> Any:
+    """The ``zstandard`` module, imported when a compressed store is first used (it is in the hosted group)."""
+    try:
+        import zstandard
+    except ImportError as exc:
+        raise ImportError(missing_group_message("hosted", "Compressed object storage")) from exc
+    return zstandard
+
 
 # Level 9 gives 27% smaller objects than zstd's default level 3 on the recorded raw pages for about 4x the CPU
 # (58 MB/s against 253 MB/s), which is still far faster than WCL delivers pages. Decompression speed does not depend
@@ -55,13 +65,13 @@ class CompressedBlobStore:
             return self.inner.get(key)
         data = self.inner.get(key + ZST_SUFFIX)
         # A fresh decompressor per call: zstandard's objects are not safe to share between threads.
-        return None if data is None else zstandard.ZstdDecompressor().decompress(data)
+        return None if data is None else _zstd().ZstdDecompressor().decompress(data)
 
     def put(self, key: str, data: bytes) -> None:
         if not self._compressed(validate_key(key)):
             self.inner.put(key, data)
             return
-        self.inner.put(key + ZST_SUFFIX, zstandard.ZstdCompressor(level=self.level).compress(data))
+        self.inner.put(key + ZST_SUFFIX, _zstd().ZstdCompressor(level=self.level).compress(data))
 
     def exists(self, key: str) -> bool:
         return self.inner.exists(key + ZST_SUFFIX if self._compressed(validate_key(key)) else key)

@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 
 from khadbot.config import EncounterConfig, StorageBackend, StorageConfig
+from khadbot.errors import ConfigurationError, missing_group_message
 from khadbot.storage.blob import TMP_SUFFIX, BlobStore, InvalidKeyError, join_key, validate_key, validate_prefix
 from khadbot.storage.compressed import ZST_SUFFIX, CompressedBlobStore
 from khadbot.storage.local import LocalBlobStore, atomic_write
@@ -31,7 +32,10 @@ def s3_blob_store(config: StorageConfig) -> BlobStore:
     """The configured bucket as an ``S3BlobStore``, with ``raw/`` compressed."""
     if not config.s3_bucket:
         raise ValueError("KHADBOT_STORAGE=s3 needs KHADBOT_S3_BUCKET")
-    from khadbot.storage.s3 import S3BlobStore  # boto3 is only imported when object storage is used
+    try:
+        from khadbot.storage.s3 import S3BlobStore  # boto3 is only imported when object storage is used
+    except ImportError as exc:
+        raise ConfigurationError(missing_group_message("hosted", "KHADBOT_STORAGE=s3")) from exc
 
     inner = S3BlobStore(
         config.s3_bucket,
@@ -49,6 +53,7 @@ def default_blob_store() -> BlobStore:
 
     Raises:
         ValueError: ``KHADBOT_STORAGE=s3`` without ``KHADBOT_S3_BUCKET``.
+        ConfigurationError: ``KHADBOT_STORAGE=s3`` without the ``hosted`` dependency group installed.
     """
     config = StorageConfig()
     if config.backend is StorageBackend.S3:
