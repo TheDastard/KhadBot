@@ -249,7 +249,7 @@ def load_agent_config(
         agent_name:   Stem of the agent YAML file. Default: "coach".
         config_root:  Config directory root. Default: project_root/config/.
                       Pass an explicit path in tests to use fixture files.
-        tools:        Live TOOLS list from src/tools/__init__.py. When provided,
+        tools:        Live TOOLS list from agent/tools/__init__.py. When provided,
                       declared tool names are cross-referenced against Python
                       implementations. Pass None to skip (unit tests).
 
@@ -290,6 +290,6 @@ def get_agent_config(agent_name: str = "coach") -> AgentConfig:
     Cached AgentConfig for the given agent name. Loads on first call.
     Bypass with load_agent_config(config_root=...) in tests.
     """
-    from khadbot.tools import TOOLS
+    from khadbot.agent.tools import TOOLS
 
     return load_agent_config(agent_name=agent_name, tools=TOOLS)

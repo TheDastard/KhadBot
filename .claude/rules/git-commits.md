@@ -44,8 +44,8 @@ Rest of the app:
 | `cli` | Rich + prompt_toolkit REPL |
 | `llm` | `llm_factory.py` and model/provider selection |
 | `app-config` | `config.py`, `.env.example`, environment variables |
-| `agent-tools` | LangChain tools shared by the agent's modes (`tools/`, other than `tools/warcraftlogs/`) |
-| `wcl-client` | Shared WarcraftLogs client (`wcl/`) and coach WCL tools (`tools/warcraftlogs/`) |
+| `agent-tools` | The agent's LangChain tools and their registry (`agent/tools/`) |
+| `wcl-client` | Shared WarcraftLogs client (`wcl/`) |
 | `rag` | Retrieval and guide data |
 | `simc` | SimC generated client data: codes, parser and fetch (`simc/`) |
 | `db` | Postgres for hosted mode (`src/khadbot/db/`): connection pool, migrations, SQL-backed stores, the `migrate` subcommand |

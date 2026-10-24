@@ -1,5 +1,5 @@
 """
-tests/unit/tools/warcraftlogs/test_client_rate_limit.py
+tests/unit/wcl/test_client_rate_limit.py
 
 Rate-limit handling in WarcraftLogsClient: 429s, GraphQL rate-limit errors and
 the rate_limit() helper. HTTP is mocked with respx.

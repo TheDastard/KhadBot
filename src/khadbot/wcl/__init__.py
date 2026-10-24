@@ -1,7 +1,7 @@
 """
 wcl/__init__.py
 
-The shared WarcraftLogs API client. The coach's WCL tools (tools/warcraftlogs/) and encounter ingest both use it.
+The shared WarcraftLogs API client. Encounter ingest uses it; agent tools never call WCL directly.
 """
 
 from __future__ import annotations
