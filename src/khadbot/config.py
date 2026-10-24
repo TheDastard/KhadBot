@@ -138,6 +138,64 @@ class StorageConfig:
     s3_region: str = field(default_factory=lambda: _optional("KHADBOT_S3_REGION"))
 
 
+def _csv(key: str, default: str = "") -> tuple[str, ...]:
+    return tuple(part.strip() for part in _optional(key, default).split(",") if part.strip())
+
+
+_LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")
+
+
+@dataclass(frozen=True)
+class AuthConfig:
+    """
+    Hosted-mode sign-in with Warcraft Logs, sessions and report access. Local mode has no sign-in and ignores these.
+    The WCL client ID and secret are ``WarcraftLogsConfig``'s; the WCL client must list ``redirect_uri`` exactly.
+    """
+
+    # Where WCL sends the browser back: this API's /v1/auth/callback, as registered on the WCL client.
+    redirect_uri: str = field(
+        default_factory=lambda: _optional("KHADBOT_WCL_REDIRECT_URI", "http://localhost:8000/v1/auth/callback")
+    )
+    # Where a signed-in browser lands: the web app's URL (or a path on this host). A login's ``next`` path is appended.
+    post_login_url: str = field(default_factory=lambda: _optional("KHADBOT_POST_LOGIN_URL", "/"))
+    # Browser origins allowed to make state-changing requests (the web app). The API's own origin is always allowed.
+    web_origins: tuple[str, ...] = field(
+        default_factory=lambda: _csv("KHADBOT_WEB_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    )
+    # Fernet keys for the stored WCL tokens, newest first; older keys only decrypt (rotation). Secret.
+    token_keys: tuple[str, ...] = field(default_factory=lambda: _csv("KHADBOT_TOKEN_KEYS"), repr=False)
+    # OAuth scopes sent to WCL's authorize page; empty sends none, as the recorded sign-in did.
+    wcl_scope: str = field(default_factory=lambda: _optional("KHADBOT_WCL_SCOPE"))
+    session_idle_hours: float = field(default_factory=lambda: float(_optional("KHADBOT_SESSION_IDLE_HOURS", "336")))
+    session_max_days: float = field(default_factory=lambda: float(_optional("KHADBOT_SESSION_MAX_DAYS", "30")))
+    login_timeout_s: int = 600  # how long a started sign-in may take before its state expires
+    # How long a cached report-access answer stands before WCL is asked again: readable, then not readable.
+    access_recheck_s: int = field(default_factory=lambda: int(_optional("KHADBOT_ACCESS_RECHECK_S", "3600")))
+    access_denied_recheck_s: int = field(
+        default_factory=lambda: int(_optional("KHADBOT_ACCESS_DENIED_RECHECK_S", "300"))
+    )
+
+    @property
+    def cookie_secure(self) -> bool:
+        """Cookies are ``Secure`` unless the API itself is served on plain-HTTP localhost."""
+        return not is_local_http(self.redirect_uri)
+
+    @property
+    def api_origin(self) -> str:
+        """The scheme and host of ``redirect_uri``: this API's own origin."""
+        scheme, _, rest = self.redirect_uri.partition("://")
+        return f"{scheme}://{rest.split('/', 1)[0]}"
+
+
+def is_local_http(url: str) -> bool:
+    """Whether ``url`` is plain HTTP on this machine (localhost, 127.0.0.1 or [::1]): the only place Secure cookies may be off."""
+    if not url.startswith("http://"):
+        return False
+    host = url[len("http://") :].split("/", 1)[0]
+    host = host.rsplit(":", 1)[0] if not host.startswith("[") else host.split("]", 1)[0] + "]"
+    return host in _LOCAL_HOSTS
+
+
 @dataclass(frozen=True)
 class SimCConfig:
     binary_path: str = field(default_factory=lambda: _optional("SIMC_BINARY_PATH", "simc"))
@@ -193,6 +251,7 @@ class AppConfig:
     encounter: EncounterConfig = field(default_factory=EncounterConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)

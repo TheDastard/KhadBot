@@ -48,6 +48,7 @@ hosted = [
     "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
     "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, SeaweedFS) for hosted blobs
     "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
+    "cryptography>=50.0.2",       # Fernet / MultiFernet encryption of stored WCL tokens (sign-in)
 ]
 
 providers = [
@@ -191,7 +192,8 @@ ignore_missing_imports = true
 
 # Layer rule: each layer imports only the layers below it. Layers are listed top to bottom; `|` marks siblings that
 # must not import each other, `:` siblings that may. Entry points sit on top, then services, the composition root,
-# the Postgres adapters, the encounter engine, the integrations, and the foundation.
+# sign-in and report access (`auth`, below `wiring` because the composition root builds it), the Postgres adapters,
+# the encounter engine, the integrations, and the foundation.
 [tool.importlinter]
 root_package = "khadbot"
 
@@ -204,6 +206,7 @@ layers = [
     "api | cli",
     "jobs | agent",
     "wiring",
+    "auth",
     "db",
     "encounter",
     "wcl | simc",
