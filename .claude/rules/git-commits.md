@@ -53,6 +53,7 @@ Rest of the app:
 | `storage` | Blob stores the pipeline's caches and event store write through, and their factory (`storage/`) |
 | `api` | The dashboard API (`src/khadbot/api/`), its `serve` subcommand and the generated `contracts/` |
 | `web` | The dashboard frontend (`apps/web/`) |
+| `deploy` | Container image, compose stack and platform files (`deploy/`, `.dockerignore`), the `stack:` tasks and `docs/hosting.md` |
 | `api-client` | The generated API client every TypeScript app uses (`packages/`) |
 
 Repo-wide:
