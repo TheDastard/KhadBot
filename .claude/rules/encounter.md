@@ -20,7 +20,8 @@ Contracts (models, file formats, refs, verify rules) are defined in section 6 of
 
 - Mode is chosen by the user with `/mode`. No LLM router.
 - Event store: polars + parquet, one file per pull, behind the `EventStore` protocol. Analysis code depends on the protocol, never on polars I/O directly.
-- All runtime data lives under `KHADBOT_DATA_DIR`. Findings and plans go in SQLite via stdlib `sqlite3`; conversation checkpoints via `langgraph-checkpoint-sqlite`.
+- Stores are arguments: the engine takes a `BlobStore`, an `EventStore` and a `FindingsStore` and never picks one or reads `KHADBOT_MODE`. `khadbot/wiring.py` builds them for the mode.
+- Local mode keeps all runtime data under `KHADBOT_DATA_DIR`: blobs as files, findings and plans in SQLite via stdlib `sqlite3`, conversation checkpoints via `langgraph-checkpoint-sqlite`. Hosted mode keeps the blobs in an S3-compatible bucket and findings and read models in Postgres (`.claude/rules/hosted.md`).
 - LLMs come from `llm_factory.get_llm(role="analyst" | "conversation")`, called through the module attribute.
 - The analyst ends by calling a `submit_report` tool. Don't use `with_structured_output`.
 - `prompt_version` hashes prompts, tool docstrings and argument schemas, and `VERIFY_RULES_VERSION`. `GRAPH_VERSION` is bumped by hand when analyst logic changes. Both feed the findings cache key.
