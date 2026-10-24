@@ -52,7 +52,8 @@ Rest of the app:
 | `jobs` | Job specs and job functions, and the queue wiring that runs them (`src/khadbot/jobs/`) |
 | `storage` | Blob stores the pipeline's caches and event store write through, and their factory (`storage/`) |
 | `api` | The dashboard API (`src/khadbot/api/`), its `serve` subcommand and the generated `contracts/` |
-| `web` | The dashboard frontend (`web/`) |
+| `web` | The dashboard frontend (`apps/web/`) |
+| `api-client` | The generated API client every TypeScript app uses (`packages/`) |
 
 Repo-wide:
 

@@ -17,6 +17,13 @@ KhadBot has two modes. The user picks one explicitly with `/mode`; there is no L
 
   A raid plan can optionally be parsed, confirmed by the user, and scored against pulls.
 
+KhadBot runs in one of two deployment modes, chosen by configuration and unrelated to `/mode`:
+
+- **Local mode** (the default) is the CLI on one machine. It needs no Postgres, object storage or Docker: blobs are files under `KHADBOT_DATA_DIR`, findings are SQLite, there is no auth.
+- **Hosted mode** (`KHADBOT_MODE=hosted`, with `DATABASE_URL` and the `KHADBOT_S3_*` settings) keeps findings and read models in Postgres and blobs in an S3-compatible bucket.
+
+Every store has a local and a hosted implementation behind one interface, and `khadbot/wiring.py`, the composition root, picks them. Nothing below the entry points reads the mode.
+
 `session.py` holds the `Session` (mode, thread ID, persona) and `run_turn()`, which sends each message to the right mode. The CLI is UI only: it calls `run_turn` and registered command handlers.
 
 ## Layout
@@ -24,12 +31,14 @@ KhadBot has two modes. The user picks one explicitly with `/mode`; there is no L
 ```
 src/khadbot/
   main.py            # entry point: cli, ingest, digest, serve, migrate subcommands
+  wiring.py          # composition root: builds the stores for local or hosted mode
+  errors.py          # exceptions more than one layer raises or catches (ConfigurationError)
   session.py         # Mode, Session, run_turn()
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
-  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, records_store,
-                     # CLI commands; conversation and plan to come
+  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, records_store;
+                     # conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report, offline recorded ingest
     annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
     analysis/        # deaths, mechanics, cooldowns, aggro
@@ -37,9 +46,10 @@ src/khadbot/
   storage/           # BlobStore protocol: local directory, S3-compatible bucket, zstd-compressing wrapper
   db/                # hosted mode Postgres: pool, migration runner and migrations, findings store, read models
   jobs/              # job specs and functions (ingest, process, review), progress, token resolution
+  wcl/               # the shared WarcraftLogs client
   simc/              # SimC generated client data: effect codes, table parser, pinned download
-  cli/               # Rich + prompt_toolkit REPL
-  tools/             # LangChain @tools and the shared WarcraftLogs client
+  cli/               # Rich + prompt_toolkit REPL; commands/ holds the slash-command handlers per mode
+  tools/             # the coach's LangChain @tools
   api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary
 config/
   agents/            # coach.yaml, encounter.yaml
@@ -48,8 +58,11 @@ config/
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
 contracts/           # openapi.json generated from the API (the frontend's types come from it)
-scripts/             # setup, WCL fixture recorder, registry generator (build_registries.py), fixture data builder,
-                     # contract generator, clean and distclean
+scripts/             # dev/ (setup, clean, distclean, contract generator), data/ (fixture data builder, WCL fixture
+                     # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
+apps/                # TypeScript apps (pnpm workspace): web/ now; desktop/ and discord/ later. Not created yet
+packages/            # api-client/: the client generated from contracts/openapi.json. Not created yet
+deploy/              # container and platform files. Not created yet
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates
@@ -104,6 +117,8 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 
 ## Code conventions
 
+- Layers: each package imports only the packages below it, enforced by `import-linter` (`mise run lint:imports`, part of `mise run check`) with no exceptions listed. From the top: `main`; `api` and `cli`; `jobs` and `agent`; `tools`; `wiring`; `db`; `encounter`; `wcl` and `simc`; then `config`, `errors`, `storage` and `llm_factory`. `encounter` defines the interfaces `db` implements; only `wiring` and the entry points choose between local and hosted. A new top-level package is added to the contract in `pyproject.toml` in the same commit.
+- Optional dependency groups: core holds what local ingest, digest and the analyst need; `cli`, `api` (FastAPI, uvicorn), `hosted` (Postgres, S3, zstd) and `providers` (OpenAI, Groq, Ollama) are extras, and `dev` includes them all. Import an optional library only on the path that needs it, and when it is missing raise an error that names the group (`errors.missing_group_message`). Add one with `uv add --optional <group>`.
 - Every module starts with a docstring naming its path and purpose, then `from __future__ import annotations`.
 - Separate sections with `# ----` banner comments, as existing modules do.
 - Google-style docstrings. Ruff line length 120, double quotes.
