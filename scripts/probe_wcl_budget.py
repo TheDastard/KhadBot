@@ -420,7 +420,7 @@ def ask(question: str) -> bool:
 
 
 async def _amain(args: argparse.Namespace) -> int:
-    from khadbot.encounter.commands import default_filter_kwargs
+    from khadbot.jobs import default_filter_kwargs
 
     code, fight = (args.code, args.fight) if args.code and args.fight else choose_small_pull(args.fixture_root)
     meta = RawPageCache(args.fixture_root).report_meta(code)

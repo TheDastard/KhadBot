@@ -1,5 +1,5 @@
 """
-tests/unit/encounter/test_commands.py
+tests/unit/cli/commands/test_encounter_commands.py
 
 /ingest argument parsing, result formatting, and the command handler wired to a patched ingest_report;
 /digest, /pulls and /review against SYNTH01 ingested into a temp store.
@@ -12,9 +12,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from helpers.encounter.synth import add_friendly_damage
 
-from khadbot.encounter import commands
-from khadbot.encounter.annotate import AnnotationCache
-from khadbot.encounter.commands import (
+from khadbot.cli.commands import encounter as commands
+from khadbot.cli.commands.encounter import (
     UsageError,
     digest_command,
     format_ingest_result,
@@ -25,6 +24,7 @@ from khadbot.encounter.commands import (
     resolve_pull_key,
     review_command,
 )
+from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.findings import SqliteFindingsStore
 from khadbot.encounter.models import IngestResult
 
