@@ -23,7 +23,7 @@ from khadbot.encounter.ingest.fetch import (
 )
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.storage import LocalBlobStore
-from khadbot.tools.warcraftlogs._client import WarcraftLogsRateLimitError
+from khadbot.wcl.client import WarcraftLogsRateLimitError
 
 CODE = "ABC123"
 EMPTY_PAGE = {"data": [], "nextPageTimestamp": None}

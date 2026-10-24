@@ -18,7 +18,7 @@ from khadbot.encounter.ingest.fetch import FETCHED_WITH_KEY, RawPageCache, UserT
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.storage import LocalBlobStore
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.wcl.client import (
     GRAPHQL_CLIENT_URL,
     GRAPHQL_USER_URL,
     RATE_LIMIT_QUERY,

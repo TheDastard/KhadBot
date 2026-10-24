@@ -21,7 +21,7 @@ from helpers.scripts import load_script
 
 from khadbot.encounter.ingest.fetch import RawPageCache, specs_for
 from khadbot.encounter.ingest.normalize import normalize_pull, parse_report_meta
-from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsRateLimitError
+from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsRateLimitError
 
 cmf = load_script("compare_merged_filters")
 

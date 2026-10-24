@@ -63,7 +63,7 @@ from khadbot.encounter.ingest.fetch import RawPageCache, fetch_pull, specs_for
 from khadbot.encounter.ingest.normalize import normalize_pull, normalize_pull_with_positions, parse_report_meta
 from khadbot.encounter.models import Actor, FetchSpec, Pull
 from khadbot.encounter.store import EVENT_SCHEMA
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.wcl.client import (
     WarcraftLogsAPIError,
     WarcraftLogsClient,
     WarcraftLogsRateLimitError,

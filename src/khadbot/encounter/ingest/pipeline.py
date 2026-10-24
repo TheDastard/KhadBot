@@ -38,7 +38,7 @@ from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.models import IngestResult, Pull
 from khadbot.encounter.store import EventStore, ParquetEventStore, positions_hash
 from khadbot.storage import default_blob_store
-from khadbot.tools.warcraftlogs._client import WarcraftLogsAPIError, WarcraftLogsClient
+from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsClient
 
 logger = logging.getLogger(__name__)
 

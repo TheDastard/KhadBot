@@ -66,11 +66,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from khadbot.tools.warcraftlogs._client import (
-    WarcraftLogsAPIError,
-    WarcraftLogsAuthError,
-    WarcraftLogsPrivateReportError,
-)
 from khadbot.tools.warcraftlogs.character import (
     _difficulty_label,
     _format_report_fight_list,
@@ -79,6 +74,11 @@ from khadbot.tools.warcraftlogs.character import (
     _slugify_realm,
     fetch_character_reports,
     find_character_reports,
+)
+from khadbot.wcl.client import (
+    WarcraftLogsAPIError,
+    WarcraftLogsAuthError,
+    WarcraftLogsPrivateReportError,
 )
 
 # ---------------------------------------------------------------------------

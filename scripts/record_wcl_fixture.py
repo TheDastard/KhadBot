@@ -23,7 +23,7 @@ from khadbot.config import get_config
 from khadbot.encounter.ingest.fetch import RawPageCache, fetch_pull, specs_for
 from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.ingest.pipeline import _report_meta
-from khadbot.tools.warcraftlogs._client import WarcraftLogsClient
+from khadbot.wcl.client import WarcraftLogsClient
 
 
 def _ids(text: str | None) -> list[int] | None:

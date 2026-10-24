@@ -31,7 +31,7 @@ from khadbot.config import EncounterConfig
 from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.storage import BlobStore, join_key, resolve_blobs
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.wcl.client import (
     WarcraftLogsAPIError,
     WarcraftLogsClient,
     WarcraftLogsRateLimitError,
