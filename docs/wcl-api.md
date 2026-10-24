@@ -17,6 +17,20 @@ Reference reports (public, Heroic Ula'tek progression, zone The Venomous Abyss):
 - Client-credentials token from `https://www.warcraftlogs.com/oauth/token`; queries go to `/api/v2/client`.
   Private reports need a user token and `/api/v2/user`.
 - The app's budget is **3,600 points per hour** (`rateLimitData { limitPerHour pointsSpentThisHour pointsResetIn }`).
+- User sign-in (`wcl/oauth.py`) is the OAuth 2.0 authorization code grant with PKCE:
+  - The authorize page is `https://www.warcraftlogs.com/oauth/authorize`, with `client_id`, `redirect_uri`,
+    `response_type=code`, `code_challenge`, `code_challenge_method=S256` and `state`. Reading reports needs no
+    `scope`; `KHADBOT_WCL_SCOPE` sends one if a later use needs it.
+  - The code is exchanged at the token URL with `grant_type=authorization_code`, `code`, `code_verifier`,
+    `redirect_uri`, `client_id` and the client secret. WCL treats the client as confidential and refuses the
+    exchange without the secret (HTTP 400, `invalid_request`). The response carries a refresh token alongside the
+    access token.
+  - Access tokens are renewed with the standard `refresh_token` grant. WCL doesn't document whether a refresh
+    returns a new refresh token, so keep the old one when the response has none.
+  - The signed-in user is `userData { currentUser { id name } }`, which works on the user endpoint only.
+  - The refresh grant and `currentUser` haven't been exercised against WCL yet (see `docs/follow-ups.md`).
+- Whether a token can read a report: `reportData { report(code) { startTime } }`. A null report or a GraphQL error
+  means it can't; a network failure, an HTTP error or a rate limit leaves the answer unknown.
 
 ## Report metadata (`report.fights`, `report.masterData`)
 
