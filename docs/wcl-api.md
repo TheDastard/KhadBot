@@ -65,6 +65,12 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
   events carry them across all 62 recorded pulls; the rest have none, so code must tolerate missing HP.
 - Events also carry fields KhadBot ignores (`classResources`, `buffs`, `attackPower`, ...). They make raw pages
   large: a 10-minute pull is about 60 MB of compact JSON, mostly Healing.
+- **Healing holds more than `heal` rows.** Across the seven recorded fixture pulls it also has `absorbed` rows
+  (81,667: a shield absorbing a hit, named by the shield's spell), `removebuff` rows (14,075, mostly absorb
+  shields ending, such as Anti-Magic Shell 48707), a few `removedebuff` rows, and `damage` rows from health
+  redistribution (279: Tempered in Battle 469704, Spirit Link). Filtering Healing by `type` therefore drops
+  data other code reads: redistribution damage counts as friendly damage and as hits in death windows, and a
+  shield's `removebuff` may be its only aura row when Buffs doesn't request that spell.
 
 Checked on the 47 Heroic Ula'tek pulls (2026-10-16); the encounter details are in `docs/decisions.md`, "Log
 investigations".

@@ -118,12 +118,23 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
     for resume, and the truncation anomaly has to be attributed per fight.
   - It helps ingest of a finished report and backfills. Live ingest fetches a pull or two per poll, so it gains
     little there.
-- **Fetch only heal rows from Healing.** Healing is the largest spec, and its `absorbed` and `removebuff` rows are
-  read by no analysis; death records read only `heal` rows. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26`
-  (`docs/wcl-api.md`, "Cross-fight and heal-only results"): the filter `type = "heal"` returns exactly the heal
-  rows, drops 28% of Healing rows and 16% of its bytes, saves 2 of 10 points, and loses 73 of 58,902 position
-  samples. Open: whether to give up shield absorbs in the analyst's event queries. If so, set the filter in
-  `build_filter`; the filter hash changes, so only Healing is refetched.
+- **Filter Healing to fewer row types.** Healing is the largest spec. `type = "heal"` saved 2 of 10 points on
+  `trMgApZCVYkv3jdq:26` (2026-10-20, `docs/wcl-api.md`, "Cross-fight and heal-only results"), but Healing carries
+  rows other code reads (`docs/wcl-api.md`, "Events"). Rebuilding the seven recorded fixture pulls' records
+  without non-heal Healing rows (2026-10-24) cost friendly damage its whole `redistribution` class (30 to 40% of
+  friendly damage on four pulls), took a Tempered in Battle top hit and 6 to 8% of window damage from two deaths
+  on `QkVa6GHRK8yfrTbw:14`, lost 73 position samples, and dropped Anti-Magic Shell from two deaths' active
+  defensives on `H7z1fqDXjRTFnbtg:20`. That last one is a fixture artifact: the recorded Buffs filter doesn't
+  request 48707, and live ingest does. Healing stays unfiltered for now. The candidate is
+  `type in ("heal", "damage")`, which kept every record and position sample apart from that fixture case, and
+  gives up only `absorbed` and `removebuff` rows: the analyst could no longer name the shield that absorbed a hit,
+  though DamageTaken still gives the absorbed amount. Before setting it in `build_filter`:
+  - Probe it live with `scripts/compare_merged_filters.py --variants healonly --heal-filter`, for the `in (...)`
+    form and its point cost.
+  - Pin recorded ingest to unfiltered Healing, as it pins the Buffs filter (`RECORDED_BUFF_IDS`), or the new
+    filter hash sends it to a Healing directory the fixtures don't have.
+  - Check a live pull that an absorb-shield defensive such as Anti-Magic Shell still shows as active from Buffs
+    rows alone.
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
