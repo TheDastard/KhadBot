@@ -108,16 +108,21 @@ plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
     the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
 - **Batch the small fetch specs across pulls.** Deaths, both Buffs requests, Debuffs, Dispels, Interrupts,
   Threat and enemy Casts are one page per pull, so a night pays for 8 requests per pull to fetch a few kB each.
-  One request per spec with every pull's fight ID, split back by each row's `fight` field, would replace most of
-  them. Measure it first with `compare_merged_filters.py --variants crossfight` (`docs/wcl-api.md`). A first run
-  on six pulls (`--batch-fights 4,5,6,7,8,9`) costs far less than the 25-pull default. It helps ingest of a
-  finished report and backfills; live ingest fetches a pull or two per poll, so it gains little there. Still
-  open after the measurement: per-report resume markers and per-fight truncation.
-- **Fetch only heal rows from Healing.** Healing is the largest spec, and its `absorbed` and `removebuff` rows
-  (26% of its rows on `H7z1fqDXjRTFnbtg`) are read by no analysis; death records read only `heal` rows.
-  The filter syntax for event type isn't confirmed, so `compare_merged_filters.py --variants healonly` takes it
-  as `--heal-filter` and reports whether it returns exactly the heal rows, the points saved and the position
-  samples lost. Dropping those rows also takes shield absorbs away from the analyst's event queries.
+  Measured 2026-10-20 on `trMgApZCVYkv3jdq` (`docs/wcl-api.md`, "Cross-fight and heal-only results"): one request
+  per spec with six pulls' fight IDs, split back by each row's `fight` field, gave identical frames and cost 9
+  and 18.57 points (two runs, one in each order) against 49 per pull, a 62 to 82% saving. A one-page request
+  costs about 1 point. Before building it into ingest:
+  - Measure a whole 25-pull night. Six pulls needed one page per stream; a night needs more.
+  - The raw cache and its `_complete` markers are per pull and spec. A batched fetch needs a per-report marker
+    for resume, and the truncation anomaly has to be attributed per fight.
+  - It helps ingest of a finished report and backfills. Live ingest fetches a pull or two per poll, so it gains
+    little there.
+- **Fetch only heal rows from Healing.** Healing is the largest spec, and its `absorbed` and `removebuff` rows are
+  read by no analysis; death records read only `heal` rows. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26`
+  (`docs/wcl-api.md`, "Cross-fight and heal-only results"): the filter `type = "heal"` returns exactly the heal
+  rows, drops 28% of Healing rows and 16% of its bytes, saves 2 of 10 points, and loses 73 of 58,902 position
+  samples. Open: whether to give up shield absorbs in the analyst's event queries. If so, set the filter in
+  `build_filter`; the filter hash changes, so only Healing is refetched.
 
 - **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
   ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly

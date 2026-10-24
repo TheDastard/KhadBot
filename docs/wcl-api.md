@@ -53,9 +53,9 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
   `Dispels`, `Healing`), `hostilityType` (`Friendlies`, `Enemies`), `fightIDs`, `startTime`, `endTime`,
   `filterExpression`, `includeResources`, `limit`.
 - Paged: follow `nextPageTimestamp` until it is null. A long pull needs up to 9 pages for Buffs or Healing.
-- Filter syntax confirmed: `ability.id IN (633,1022,...)` (comma-separated, no spaces). Used for friendly Buffs
+- Filter syntax confirmed: `ability.id IN (633,1022,...)` (comma-separated, no spaces), used for friendly Buffs
   (one request per cooldown file: defensive and offensive registry IDs) and enemy Casts (encounter-file ability
-  IDs).
+  IDs); and `type = "heal"` on Healing, not used by ingest yet (2026-10-20, "Cross-fight and heal-only results").
 
 - **Deaths rows name no ability or source.** Every recorded `death` row has `abilityGameID: 0` and `sourceID: -1`;
   the killing blow is in `killingAbilityGameID` and the killer in `killerID`, for example
@@ -97,7 +97,8 @@ no encounter file existed yet) and `scripts/spike_wcl_cost.py` (no filters).
 - About **14 points per pull** with the default filters, so a full night is a tenth of the hourly budget.
 - A request costs about 2 points, plus roughly 1 point per extra page. Unfiltered Buffs on a 526 s pull
   (`trMgApZCVYkv3jdq:26`) took 9 pages, 82.7k events and 10 points; Healing on the same pull took 9 pages,
-  89.7k events, 10 points and 37 MB.
+  89.7k events, 10 points and 37 MB. A one-page request of a small spec costs about 1 point instead: 48 cost 49
+  (2026-10-20, "Cross-fight and heal-only results").
 - No data type was truncated in any pull.
 - Local processing (parse, normalize, store) of the whole 25-pull night from cached pages: **18.4 s** on the dev
   machine, under the 30 s budget. Peak traced memory was about 400 MB, bounded by the largest pull because
@@ -325,14 +326,14 @@ single-pull baseline:
   or a list such as `4,5,6,7,8,9`.
 - `healonly` fetches Healing unfiltered, then with `--heal-filter`, and checks that the filtered rows are exactly
   the baseline's `heal` rows. It also reports how many rows and position samples the filter drops. The filter
-  syntax for event type is not confirmed, so there is no default; a one-second probe runs first, and a rejected
+  has no default; `type = "heal"` is the one confirmed so far. A one-second probe runs first, so a rejected
   filter costs about one request.
 
 `--variant-first` runs these two before their baselines. Run each order once to see whether WCL-side caching
 favours whichever goes second.
 
     uv run python scripts/compare_merged_filters.py --variants crossfight --batch-fights 4,5,6,7,8,9
-    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter "<expression>"
+    uv run python scripts/compare_merged_filters.py --variants healonly --heal-filter 'type = "heal"'
 
 ### Budget probe results
 
@@ -368,3 +369,42 @@ own budget. A second account's token settles it.
   rows. It saved 13.6% of points (21 against 24.31), under the 15% bar: about one request's cost.
 - **The 58% time saving is not trustworthy yet.** It ran straight after the baseline fetched the same pull, so
   WCL-side caching may explain part of it. One run each, no repeats.
+
+### Cross-fight and heal-only results
+
+2026-10-20, `trMgApZCVYkv3jdq`, app token, `scripts/compare_merged_filters.py`. Each variant measured its own
+baseline in the same run, and every run normalized to frames identical to its baseline's.
+
+**Cross-fight batching** (`--variants crossfight`): the eight small specs (Deaths, both Buffs requests, Debuffs,
+Dispels, Interrupts, Threat, enemy Casts) fetched per pull through `fetch_pull`, against one request per spec
+with all six pulls' fight IDs. Run twice on different pulls, once in each order.
+
+| Run | Fights | Order | Requests | Pages | Events | Wall s | Points | Points saved | Time saved |
+|---|---|---|---|---|---|---|---|---|---|
+| baseline | 4–9 | first | 48 | 48 | 11244 | 7.0 | 49 | | |
+| crossfight | 4–9 | second | 8 | 8 | 11244 | 0.5 | 9 | 82% | 93% |
+| baseline | 10–15 | second | 48 | 48 | 11258 | 6.0 | 49 | | |
+| crossfight | 10–15 | first | 8 | 8 | 11258 | 1.5 | 18.57 | 62% | 76% |
+
+- **Batching keeps the rows.** In both runs every batched row named a requested fight, and assigned back to its
+  pull's specs it gave 0 unassigned, 0 missing and 0 ambiguous rows. Each pull's frame matched exactly.
+- **A one-page request costs about 1 point**, not the 2 the measured-cost rule of thumb above gives: 48
+  one-page requests cost 49 points in both runs.
+- **The batched fetch saves 62 to 82% of the small specs' points.** It cost 9 points when it ran second and 18.57
+  when it ran first, while the per-pull baseline cost 49 in either order. WCL-side caching seems to favour
+  whichever fetch runs second; the 62% from the variant-first run is the conservative figure.
+- Not measured: a whole 25-pull night. Six pulls needed one page per stream; a night needs more pages per
+  stream, so its saving is an estimate until measured.
+
+**Heal-only Healing** (`--variants healonly --heal-filter 'type = "heal"'`) on `trMgApZCVYkv3jdq:26` (526 s):
+
+| Run | Requests | Pages | Bytes | Events | Wall s | Points | Points saved | Time saved |
+|---|---|---|---|---|---|---|---|---|
+| healonly baseline | 1 | 9 | 38857494 | 89685 | 7.7 | 10 | | |
+| healonly | 1 | 7 | 32713657 | 64555 | 6.5 | 8 | 20% | 15% |
+
+- **`type = "heal"` is a valid filter expression** and returns exactly the baseline's `heal` rows: 0 extra and 0
+  missing rows, identical frames. That confirms the `type = "<event type>"` form for this one value.
+- It drops 28% of Healing rows (the `absorbed`, `removebuff` and other rows) and 16% of its bytes, and saves 2
+  of 10 points on this pull. Only 73 of 58,902 Healing position samples are lost.
+- One run, with the variant second.
