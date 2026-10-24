@@ -229,6 +229,7 @@ class VariantResult:
     missing_rows: int = 0  # baseline rows the merged stream lacks
     ambiguous_rows: int = 0  # merged rows several baseline specs contain
     baseline: Metrics | None = None  # a paired variant's own baseline (crossfight, healonly)
+    fight_ids: tuple[int, ...] | None = None  # the fights it covered, when not the measured pull (crossfight)
 
 
 def count_pages(pages: Sequence[dict]) -> Metrics:
@@ -992,7 +993,12 @@ async def run_crossfight(
     if any(r.aborted for r in results):
         out(f"  ABORTED: a stream reached the page cap ({max_pages}); frames not compared.")
         return VariantResult(
-            "crossfight", "aborted", f"page cap {max_pages} reached", var_metrics, baseline=base_metrics
+            "crossfight",
+            "aborted",
+            f"page cap {max_pages} reached",
+            var_metrics,
+            baseline=base_metrics,
+            fight_ids=tuple(p.fight_id for p in cross.pulls),
         )
 
     split = [split_by_fight(r.pages, w.fight_ids) for (_, w), r in zip(cross.streams, results, strict=True)]
@@ -1021,7 +1027,7 @@ async def run_crossfight(
     out(f"  {var_metrics.pages} pages, {var_pts} points, {var_s:.1f} s; frames identical: {comparison.identical}")
     return VariantResult(
         "crossfight", "ok", "; ".join(notes), var_metrics, comparison,
-        extra + stray, missing, ambiguous, baseline=base_metrics,
+        extra + stray, missing, ambiguous, baseline=base_metrics, fight_ids=tuple(p.fight_id for p in cross.pulls),
     )  # fmt: skip
 
 
@@ -1034,11 +1040,26 @@ def _fmt(value: float | None, spec: str = "g") -> str:
     return "unknown" if value is None else format(value, spec)
 
 
+def report_scope(result: Comparison) -> str:
+    """
+    What the runs measured, for the report heading: the measured pull when the shared baseline or a single-pull
+    variant ran, and the fights of each variant that covered others (crossfight).
+    """
+    single = result.baseline is not None or any(v.fight_ids is None and v.status != "declined" for v in result.variants)
+    parts = [f"`{result.code}:{result.fight}`"] if single else []
+    parts += [
+        f"{v.name} on `{result.code}` fights {', '.join(str(f) for f in v.fight_ids)}"
+        for v in result.variants
+        if v.fight_ids
+    ]
+    return "; ".join(parts) or f"`{result.code}:{result.fight}`"
+
+
 def render_report(result: Comparison, today: date | None = None) -> str:
     """The markdown block to paste into docs/wcl-api.md."""
     base = result.baseline
     lines = [
-        f"### Merged-filter measurement ({(today or date.today()).isoformat()}, `{result.code}:{result.fight}`)",
+        f"### Merged-filter measurement ({(today or date.today()).isoformat()}, {report_scope(result)})",
         "",
         "| Run | Requests | Pages | Bytes | Events | Wall s | Points | Points saved | Time saved | Frames identical |",
         "|---|---|---|---|---|---|---|---|---|---|",

@@ -512,6 +512,21 @@ async def test_run_crossfight_matches_per_pull_baseline(synth_stub):
     report = cmf.render_report(result)
     assert "| crossfight baseline |" in report and "| crossfight |" in report and "No baseline" not in report
     assert "meets the 15% bar" in report  # half the stub's points
+    heading = report.splitlines()[0]
+    assert "crossfight on `SYNTH01` fights 1, 2" in heading and "`SYNTH01:1`" not in heading
+    assert v.fight_ids == (1, 2)
+
+
+def test_report_scope_names_what_each_run_measured():
+    m = cmf.Metrics()
+    cross = cmf.VariantResult("crossfight", "ok", metrics=m, baseline=m, fight_ids=(4, 5))
+    heal = cmf.VariantResult("healonly", "ok", metrics=m, baseline=m)
+    declined = cmf.VariantResult("crossfight", "declined")
+    scope = cmf.report_scope
+    assert scope(cmf.Comparison("C", 26, variants=[cross])) == "crossfight on `C` fights 4, 5"
+    assert scope(cmf.Comparison("C", 26, variants=[heal, cross])) == "`C:26`; crossfight on `C` fights 4, 5"
+    assert scope(cmf.Comparison("C", 26, baseline=m, variants=[cross])) == "`C:26`; crossfight on `C` fights 4, 5"
+    assert scope(cmf.Comparison("C", 26, variants=[declined])) == "`C:26`"
 
 
 async def test_run_crossfight_counts_rows_from_unrequested_fights(synth_stub):
