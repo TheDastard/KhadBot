@@ -86,6 +86,24 @@ jobs:
       - run: uv sync --locked --extra dev
       - run: uv run pytest tests/integration/hosted -m hosted --no-cov
 
+  # A core-plus-cli install, with none of the api, hosted or providers groups: the local pipeline must run on it.
+  # The smoke script imports khadbot.main, ingests the recorded synthetic report offline and prints a digest.
+  core:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked --no-dev --extra cli
+      - run: uv run --no-sync python -c "import khadbot.main"
+      - run: uv run --no-sync python scripts/dev/core_smoke.py
+
   real-fixtures:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
