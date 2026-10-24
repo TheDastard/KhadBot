@@ -61,7 +61,7 @@ def _ingest(code: str, store: ParquetEventStore) -> None:
             "enemy_cast_ids": SYNTH_ENEMY_CAST_IDS,
         }
     else:
-        from khadbot.encounter.commands import default_filter_kwargs
+        from khadbot.jobs import default_filter_kwargs
 
         filters = default_filter_kwargs()
     result = asyncio.run(

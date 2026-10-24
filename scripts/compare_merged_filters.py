@@ -1131,7 +1131,7 @@ PAIRED_VARIANTS = ("crossfight", "healonly")
 
 
 async def _amain(args: argparse.Namespace) -> int:
-    from khadbot.encounter.commands import default_filter_kwargs
+    from khadbot.jobs import default_filter_kwargs
 
     pulls, actors = _load_report(args.fixture_root, args.code)
     pull, _ = _load_pull(args.fixture_root, args.code, args.fight)

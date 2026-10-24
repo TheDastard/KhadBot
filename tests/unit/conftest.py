@@ -1,7 +1,7 @@
 """
-tests/unit/encounter/conftest.py
+tests/unit/conftest.py
 
-Shared fixtures for encounter unit tests: the synthetic SYNTH01 raw cache copied into tmp_path,
+Shared fixtures for the encounter and CLI command unit tests: the synthetic SYNTH01 raw cache copied into tmp_path,
 plus the filter inputs its pages were recorded with.
 """
 

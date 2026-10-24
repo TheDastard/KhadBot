@@ -39,7 +39,7 @@ def _run_cli() -> None:
 
         return result["answer"]
 
-    from khadbot.encounter.commands import digest_command, ingest_command, pulls_command, review_command
+    from khadbot.cli.commands.encounter import digest_command, ingest_command, pulls_command, review_command
 
     commands = {
         "/ingest": ingest_command,
@@ -54,7 +54,7 @@ def _run_ingest(code: str, fights: str | None, offline: bool, refresh_meta: bool
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.encounter.commands import format_ingest_result, parse_fights
+    from khadbot.cli.commands.encounter import format_ingest_result, parse_fights
     from khadbot.jobs import IngestReport, JobContext, LineProgress, run_ingest_report
 
     console = Console()
@@ -71,7 +71,7 @@ def _run_digest(code: str, fight: int, as_json: bool, unregistered: bool) -> Non
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.encounter.commands import format_unregistered, pull_digest
+    from khadbot.cli.commands.encounter import format_unregistered, pull_digest
     from khadbot.encounter.digest import render_digest
 
     pull_key = f"{code}:{fight}"
@@ -148,7 +148,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
     if command == "ingest" and args.refresh_meta and args.offline:
-        from khadbot.encounter.commands import REFRESH_OFFLINE_ERROR
+        from khadbot.cli.commands.encounter import REFRESH_OFFLINE_ERROR
 
         parser.error(REFRESH_OFFLINE_ERROR)
 

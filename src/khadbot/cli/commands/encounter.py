@@ -1,5 +1,5 @@
 """
-encounter/commands.py
+cli/commands/encounter.py
 
 CLI command handlers for encounter review. Each handler takes the text after the command
 and returns markdown to render (or None). They are registered with ``run_cli(commands=...)``.
@@ -37,9 +37,6 @@ from khadbot.jobs import (
     Progress,
     run_ingest_report,
     run_process_pull,
-)
-from khadbot.jobs import (
-    default_filter_kwargs as default_filter_kwargs,  # re-exported for the eval harness
 )
 
 # Report code of the last successful /ingest in this process; /digest and /pulls default to it.
