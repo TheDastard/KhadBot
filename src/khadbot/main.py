@@ -16,6 +16,8 @@ from collections.abc import Sequence
 
 from langchain_core.messages import AIMessage, HumanMessage
 
+from khadbot.errors import missing_group_message
+
 SERVE_HOST = "127.0.0.1"
 
 # ---------------------------------------------------------------------------
@@ -88,16 +90,22 @@ def _run_digest(code: str, fight: int, as_json: bool, unregistered: bool) -> Non
 
 
 def _run_serve(port: int) -> None:
-    import uvicorn
+    try:
+        import uvicorn
 
-    from khadbot.api import create_app
+        from khadbot.api import create_app
+    except ImportError as exc:
+        sys.exit(missing_group_message("api", "serve") + f"\n({exc})")
 
     # Local only: WCL credentials stay in the server's environment, and nothing is exposed beyond this machine.
     uvicorn.run(create_app(), host=SERVE_HOST, port=port)
 
 
 def _run_migrate() -> None:
-    from khadbot.db import migrate, open_pool
+    try:
+        from khadbot.db import migrate, open_pool
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "migrate") + f"\n({exc})")
 
     try:
         pool = open_pool()

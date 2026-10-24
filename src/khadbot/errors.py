@@ -8,6 +8,19 @@ entry points can share them without importing each other.
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
+# Optional dependency groups
+# ---------------------------------------------------------------------------
+
+
+def missing_group_message(group: str, needed_for: str) -> str:
+    """The error text for a feature whose optional libraries are not installed: names the group to install."""
+    return (
+        f"{needed_for} needs the '{group}' dependency group, which is not installed. "
+        f"Install it with: uv sync --extra {group}  (or pip install 'khadbot[{group}]')"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 

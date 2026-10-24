@@ -12,6 +12,7 @@ from dataclasses import replace
 from langchain_core.language_models import BaseChatModel
 
 from khadbot.config import get_config
+from khadbot.errors import missing_group_message
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,8 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
                 api_key=llm_cfg.openai_api_key,
                 temperature=llm_cfg.temperature,
             )
+        except ImportError as e:
+            raise LLMProviderError(missing_group_message("providers", "The openai provider")) from e
         except Exception as e:
             raise LLMProviderError(f"Failed to initialize OpenAI client for model '{llm_cfg.openai_model}': {e}") from e
 
@@ -125,6 +128,8 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
                 temperature=llm_cfg.temperature,
             )
             return llm
+        except ImportError as e:
+            raise LLMProviderError(missing_group_message("providers", "The groq provider")) from e
         except Exception as e:
             raise LLMProviderError(f"Failed to initialize Groq client for model '{llm_cfg.groq_model}': {e}") from e
 
@@ -140,6 +145,8 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
                 temperature=llm_cfg.temperature,
                 reasoning=False,  # disable Qwen3 thinking mode
             )
+        except ImportError as e:
+            raise LLMProviderError(missing_group_message("providers", "The ollama provider")) from e
         except Exception as e:
             raise LLMProviderError(f"Failed to initialize Ollama client for model '{llm_cfg.ollama_model}': {e}") from e
 

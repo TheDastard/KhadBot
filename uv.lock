@@ -805,41 +805,43 @@ name = "khadbot"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "boto3" },
-    { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-core" },
-    { name = "langchain-groq" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
     { name = "langgraph" },
     { name = "orjson" },
     { name = "polars" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "psycopg-pool" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
-    { name = "uvicorn" },
-    { name = "zstandard" },
 ]
 
 [package.optional-dependencies]
+api = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
+]
 cli = [
     { name = "prompt-toolkit" },
     { name = "rich" },
 ]
 dev = [
+    { name = "boto3" },
+    { name = "fastapi" },
     { name = "import-linter" },
     { name = "ipython" },
+    { name = "langchain-groq" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
     { name = "langsmith" },
     { name = "moto", extra = ["s3"] },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "prompt-toolkit" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -848,22 +850,36 @@ dev = [
     { name = "rich" },
     { name = "ruff" },
     { name = "types-pyyaml" },
+    { name = "uvicorn" },
+    { name = "zstandard" },
+]
+hosted = [
+    { name = "boto3" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
+    { name = "zstandard" },
+]
+providers = [
+    { name = "langchain-groq" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = ">=1.43.115" },
-    { name = "fastapi", specifier = ">=0.143.3" },
+    { name = "boto3", marker = "extra == 'hosted'", specifier = ">=1.43.115" },
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.143.3" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "jinja2" },
+    { name = "khadbot", extras = ["cli", "api", "hosted", "providers"], marker = "extra == 'dev'" },
     { name = "langchain", specifier = ">=0.3.0" },
     { name = "langchain-anthropic", specifier = ">=0.3.0" },
     { name = "langchain-core", specifier = ">=0.3.0" },
-    { name = "langchain-groq", specifier = ">=1.1.2" },
-    { name = "langchain-ollama", specifier = ">=1.0.1" },
-    { name = "langchain-openai", specifier = ">=0.2.0" },
+    { name = "langchain-groq", marker = "extra == 'providers'", specifier = ">=1.1.2" },
+    { name = "langchain-ollama", marker = "extra == 'providers'", specifier = ">=1.0.1" },
+    { name = "langchain-openai", marker = "extra == 'providers'", specifier = ">=0.2.0" },
     { name = "langgraph", specifier = ">=0.2.0" },
     { name = "langsmith", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "moto", extras = ["s3"], marker = "extra == 'dev'", specifier = ">=5.2.4" },
@@ -872,9 +888,8 @@ requires-dist = [
     { name = "polars", specifier = ">=1.20" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5.0" },
     { name = "prompt-toolkit", marker = "extra == 'cli'", specifier = ">=3.0.0" },
-    { name = "prompt-toolkit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
-    { name = "psycopg-pool", specifier = ">=3.3.3" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'hosted'", specifier = ">=3.3.6" },
+    { name = "psycopg-pool", marker = "extra == 'hosted'", specifier = ">=3.3.3" },
     { name = "pydantic", specifier = ">=2.12.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
@@ -884,13 +899,12 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "rich", marker = "extra == 'cli'", specifier = ">=13.7.0" },
-    { name = "rich", marker = "extra == 'dev'", specifier = ">=13.7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "uvicorn", specifier = ">=0.54.0" },
-    { name = "zstandard", specifier = ">=0.25.0" },
+    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.54.0" },
+    { name = "zstandard", marker = "extra == 'hosted'", specifier = ">=0.25.0" },
 ]
-provides-extras = ["cli", "dev"]
+provides-extras = ["cli", "api", "hosted", "providers", "dev"]
 
 [[package]]
 name = "langchain"
