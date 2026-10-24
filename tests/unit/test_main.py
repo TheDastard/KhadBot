@@ -94,6 +94,38 @@ class TestServeSubcommand:
         assert app.state.ctx.data_dir == tmp_path
 
 
+class TestApiSubcommand:
+    def test_defaults_bind_every_interface_on_8000(self):
+        with patch("khadbot.main._run_api") as run:
+            main(["api"])
+        run.assert_called_once_with("0.0.0.0", 8000)
+
+    def test_host_and_port(self):
+        with patch("khadbot.main._run_api") as run:
+            main(["api", "--host", "127.0.0.1", "--port", "8123"])
+        run.assert_called_once_with("127.0.0.1", 8123)
+
+    def test_local_mode_serves_the_data_directory(self, tmp_path, monkeypatch):
+        from khadbot.main import _run_api
+
+        monkeypatch.setenv("KHADBOT_DATA_DIR", str(tmp_path))
+        monkeypatch.delenv("KHADBOT_MODE", raising=False)
+        with patch("uvicorn.run") as run:
+            _run_api("0.0.0.0", 8123)
+        assert run.call_args.kwargs == {"host": "0.0.0.0", "port": 8123}
+        assert run.call_args.args[0].state.ctx.read_source is None
+
+    def test_hosted_mode_without_a_database_url_exits_with_the_reason(self, monkeypatch):
+        from khadbot.main import _run_api
+
+        monkeypatch.setenv("KHADBOT_MODE", "hosted")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        with patch("uvicorn.run") as run, pytest.raises(SystemExit) as exc:
+            _run_api("0.0.0.0", 8123)
+        assert "DATABASE_URL" in str(exc.value)
+        run.assert_not_called()
+
+
 class TestMigrateSubcommand:
     def test_dispatches(self):
         with patch("khadbot.main._run_migrate") as run:
