@@ -610,14 +610,21 @@ class TestBuildAgentExecutorPersonaWiring:
 
         assert thrall_prompt != khadgar_prompt
 
-    def test_no_persona_excludes_guardrail(self):
+    def test_no_persona_excludes_guardrail(self, monkeypatch):
+        import khadbot.config as config
         from khadbot.agent.coach import build_agent_executor
 
-        build_agent_executor(
-            persona=None,
-            config=self._agent_config,
-            assembler=self._assembler,
-        )
+        # persona=None falls back to KHADBOT_PERSONA, which a local .env may set.
+        monkeypatch.delenv("KHADBOT_PERSONA", raising=False)
+        config.reset_config()
+        try:
+            build_agent_executor(
+                persona=None,
+                config=self._agent_config,
+                assembler=self._assembler,
+            )
+        finally:
+            config.reset_config()
         assert "PERSONA SCOPE" not in self._get_system_prompt().upper()
 
 
