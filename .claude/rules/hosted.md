@@ -33,3 +33,10 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 - Hosted libraries (`psycopg`, `psycopg_pool`, `boto3`, `zstandard`, the queue and crypto libraries) live in the `hosted` group and are imported only on the hosted path that needs them. A missing group raises an error that names it (`errors.missing_group_message`).
 - Only `khadbot/wiring.py` and the entry points read the mode. Code below them takes a store as an argument. The layer contract in `pyproject.toml` enforces the imports.
 - Unit tests use no Postgres, S3 or Docker. Tests that need them live in `tests/integration/hosted/` under the `hosted` marker.
+
+## Containers (`deploy/`)
+
+- The image is built from the repository root with `deploy/Dockerfile`. `.dockerignore` excludes everything by default, so a new file reaches the image only through a `COPY` line and an allow entry; never add `.env`, `.khadbot_data*` or `.git`.
+- No secret is baked into an image or written in a compose file. `deploy/stack.env` holds throwaway local values only (the local S3 store is SeaweedFS; production uses Cloudflare R2); real deployments set the same variable names on the platform.
+- The stack never mounts `.khadbot_data`; hosted mode keeps its data in Postgres and the bucket. The image runs as a non-root user.
+- A new environment variable goes in `.env.example`, in `docs/hosting.md` under its component, and in `stack.env` when the local stack needs it.
