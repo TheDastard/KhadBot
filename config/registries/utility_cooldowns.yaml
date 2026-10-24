@@ -5,7 +5,7 @@
 # stuns, incapacitates, knockbacks, grips, roots and slows (Capacitor Totem, Ring of Peace). The encounter
 # digest lists their casts; no Buffs or Debuffs request fetches their auras, and nothing reads their
 # cooldowns or durations. Spell IDs, names, `target`, `role`, `cooldown_s` and `duration_s` come from game
-# client data (SimC tables for WoW build 12.1.5.70448) via the review file of scripts/build_registries.py,
+# client data (SimC tables for WoW build 12.1.5.70448) via the review file of scripts/data/build_registries.py,
 # with a 30 s cooldown floor. Cooldowns and durations are base values before talents. Every entry is
 # unverified until a person checks it in game.
 #

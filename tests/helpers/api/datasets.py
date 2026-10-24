@@ -5,7 +5,7 @@ Datasets the API tests run against, each served by ``create_app`` through FastAP
 
 - ``synth``: the synthetic SYNTH01 report with its own encounter file and cooldown registries. Always available.
 - ``real``: the recorded fixture reports, ingested offline into a data directory the way
-  ``scripts/build_fixture_data.py`` builds one. Needs the Git LFS pages.
+  ``scripts/data/build_fixture_data.py`` builds one. Needs the Git LFS pages.
 """
 
 from __future__ import annotations

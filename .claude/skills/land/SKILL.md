@@ -94,7 +94,7 @@ it sees that old run, before GitHub has registered `main`'s. Tell the user if it
 
 1. Stop anything still running from the worktree's `.venv` and delete it. On Windows a process holding a file open
    makes `git worktree remove` fail halfway:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 -Venv <worktree>/.venv`
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/distclean.ps1 -Venv <worktree>/.venv`
    (this also stops a CI watcher started from that venv, so finish step 5 first).
 2. From the main checkout:
    ```bash

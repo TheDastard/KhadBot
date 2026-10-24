@@ -4,7 +4,7 @@
 # absorbs, immunities and healing cooldowns (Power Infusion is in offensive_cooldowns.yaml, Innervate in
 # utility_cooldowns.yaml). Damage-window coverage and death-window defensives read only this file.
 # Spell IDs, names, `target`, `cooldown_s` and `duration_s` come from game client data (SimC tables for
-# WoW build 12.1.5.70448) via the review file of scripts/build_registries.py; Aura Mastery, which the
+# WoW build 12.1.5.70448) via the review file of scripts/data/build_registries.py; Aura Mastery, which the
 # data can't classify, was ported from the old MAJOR_COOLDOWN_IDS list. Cooldowns and durations are base
 # values before talents. Every entry is unverified until a person checks it in game; analysis lists used,
 # unverified cooldowns as digest anomalies.

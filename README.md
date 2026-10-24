@@ -13,7 +13,7 @@ KhadBot has two modes, chosen explicitly by the user with `/mode`:
 
 ## Requirements
 
-Windows is the primary platform. `scripts/setup.ps1` installs and configures everything below (see [Setup](#setup));
+Windows is the primary platform. `scripts/dev/setup.ps1` installs and configures everything below (see [Setup](#setup));
 this section is what it does, for reference or a manual install.
 
 | Tool | Why | Install |
@@ -29,7 +29,7 @@ Python to `mise.toml`.
 
 ### One-time mise setup
 
-Add `%LOCALAPPDATA%\mise\shims` to your user `PATH` (`scripts/setup.ps1` does this), so `node` and `pnpm` resolve in
+Add `%LOCALAPPDATA%\mise\shims` to your user `PATH` (`scripts/dev/setup.ps1` does this), so `node` and `pnpm` resolve in
 every shell, including editors and tools that don't run your shell profile. `mise run` finds them without it.
 
 The project's `mise.toml` needs no `mise trust`: tool pins and tasks work in an untrusted checkout, so every worktree
@@ -43,7 +43,7 @@ git clone <repo-url> KhadBot
 cd KhadBot
 
 # 2. Install the tools and dependencies (add -WithGitHubCli for gh)
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1
 
 # 3. Configure your LLM provider and API keys in .env (the script creates it from .env.example)
 # Set LLM_PROVIDER, the matching API key, and WARCRAFTLOGS_CLIENT_ID/SECRET
@@ -130,7 +130,7 @@ KhadBot/
 │   ├── registries/        # cooldown and friendly-damage registries
 │   ├── personas/          # khadgar, thrall, xalatath
 │   └── templates/         # Jinja prompt template
-├── scripts/               # setup.ps1, clean.ps1, distclean.ps1, WarcraftLogs fixture recording
+├── scripts/               # dev/ (setup, clean, contracts), data/ (fixtures, registries), wcl/ (WCL probes)
 ├── tests/                 # unit/, integration/, eval/, fixtures/, golden/
 ├── main.py                # CLI entrypoint (mise run cli)
 ├── mise.toml              # Node and pnpm versions, project tasks

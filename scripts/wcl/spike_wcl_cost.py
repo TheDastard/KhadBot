@@ -1,5 +1,5 @@
 """
-scripts/spike_wcl_cost.py
+scripts/wcl/spike_wcl_cost.py
 
 Measure what ingesting a report costs. Prints a markdown table for the
 write-up: per pull and data type, WCL points spent, wall time, pages, events; then json vs orjson
@@ -8,7 +8,7 @@ parse time and peak memory while normalizing.
 Needs WARCRAFTLOGS_CLIENT_ID / WARCRAFTLOGS_CLIENT_SECRET. Uses a throwaway cache directory so
 every request really hits the network.
 
-    uv run python scripts/spike_wcl_cost.py <code> [--fights 3,4]
+    uv run python scripts/wcl/spike_wcl_cost.py <code> [--fights 3,4]
 """
 
 from __future__ import annotations

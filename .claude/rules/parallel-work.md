@@ -45,7 +45,7 @@ After `main` is pushed and its CI is green, the orchestrator removes every workt
 task's and the integration branch's. Leave worktrees you didn't create alone.
 
 1. Stop each worktree's processes and delete its `.venv`, or `git worktree remove` fails halfway on Windows:
-   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/distclean.ps1 -Venv <worktree>/.venv`.
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/distclean.ps1 -Venv <worktree>/.venv`.
 2. `git worktree remove --force <worktree>` for each one, then `git worktree prune`.
 3. Delete the branches. A task branch that was rebased during integration is not an ancestor of `main`, so
    `git branch -d` refuses it. Run `git cherry -v refs/heads/main <branch>` first: every commit must show `-`

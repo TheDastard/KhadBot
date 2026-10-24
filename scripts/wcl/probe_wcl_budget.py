@@ -1,5 +1,5 @@
 """
-scripts/probe_wcl_budget.py
+scripts/wcl/probe_wcl_budget.py
 
 Find out whose WCL budget a request made with a user token spends: the user's or the app's.
 
@@ -20,7 +20,7 @@ Setup: register the redirect URL printed by ``--help`` on your WCL client (https
 Needs WARCRAFTLOGS_CLIENT_ID and WARCRAFTLOGS_CLIENT_SECRET (environment or nearest ``.env``). The client is used
 with PKCE and no secret is sent unless you pass ``--with-secret`` (needed if the client is not registered public).
 
-    uv run python scripts/probe_wcl_budget.py [--port 8976] [--code H7z1fqDXjRTFnbtg --fight 10]
+    uv run python scripts/wcl/probe_wcl_budget.py [--port 8976] [--code H7z1fqDXjRTFnbtg --fight 10]
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ from khadbot.encounter.ingest.recorded import recorded_fights, recorded_reports
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.wcl.client import RATE_LIMIT_QUERY, TOKEN_URL, WarcraftLogsClient
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "encounter" / "wcl"
 DEFAULT_PORT = 8976
 CALLBACK_PATH = "/callback"

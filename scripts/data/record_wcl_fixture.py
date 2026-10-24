@@ -1,12 +1,12 @@
 """
-scripts/record_wcl_fixture.py
+scripts/data/record_wcl_fixture.py
 
 Record the raw WCL pages for a report into a fixture directory.
 
 Needs WARCRAFTLOGS_CLIENT_ID / WARCRAFTLOGS_CLIENT_SECRET in the environment (or .env).
 
-    uv run python scripts/record_wcl_fixture.py <code> [--fights 3,4] --out tests/fixtures/encounter/wcl
-    uv run python scripts/record_wcl_fixture.py <code> --defensive-ids 1,2 --offensive-ids 5,6 --encounter-ids 3,4 --out tests/fixtures/encounter/wcl
+    uv run python scripts/data/record_wcl_fixture.py <code> [--fights 3,4] --out tests/fixtures/encounter/wcl
+    uv run python scripts/data/record_wcl_fixture.py <code> --defensive-ids 1,2 --offensive-ids 5,6 --encounter-ids 3,4 --out tests/fixtures/encounter/wcl
 
 The output is a RawPageCache rooted at --out, so it can be used directly for offline ingest.
 """

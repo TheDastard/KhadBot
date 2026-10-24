@@ -1,8 +1,8 @@
-# scripts/clean.ps1 — remove caches and build output.
+# scripts/dev/clean.ps1 — remove caches and build output.
 #
-# Never touches .venv, .env or .khadbot_data/ (scripts/distclean.ps1 removes the venv).
+# Never touches .venv, .env or .khadbot_data/ (scripts/dev/distclean.ps1 removes the venv).
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean.ps1
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/clean.ps1
 
 $ErrorActionPreference = "Stop"
 
