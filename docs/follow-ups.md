@@ -9,8 +9,9 @@ file's header comment points to.
 
 ## Encounter system
 
-The next track is the digest dashboard; the conversation agent and everything that needs it are deferred. Work
-plan: https://claude.ai/artifact/UwgEKmEL1sh1DM47AyPsUh
+The current track is the hosted service: hosted backend first, then the web dashboard and the agents on the web.
+Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "Hosted architecture" in
+`docs/decisions.md`).
 
 ### Data and ingest
 

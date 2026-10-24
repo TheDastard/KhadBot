@@ -806,6 +806,73 @@ Measured on all 62 recorded pulls, read from `KHADBOT_DATA_DIR` without writing 
 - **Digest size.** Rendered digests across the 62 pulls are 439 to 2,225 tokens with the new SELF DAMAGE
   section, inside the 3k ceiling.
 
+## Dashboard design
+
+Design canvas: <https://claude.ai/artifact/GJLAo3qYdKq24Ro79bN7cr> (2026-10-16). The web dashboard builds to it;
+where it differs from the earlier mock-up (<https://claude.ai/artifact/G1iKa64er6fXayAvcwy3Pi>), the canvas wins.
+Its "Spec and questions" page holds the full token table, the component inventory and the open questions.
+
+- **Screens.** Reports list with the ingest form and its empty state; ingest running, done, cancelled, and the
+  ingest and data errors; the night overview (two sections, with and without cached findings, plus a coverage
+  `none` section); the pull investigation (header with cutoff note and full switch, timeline with every layer, a
+  selected death, a brushed event window, the main column, the death moment); the context panel for every ref
+  kind; keyboard focus and status labels. Each is drawn in light and dark at 1440 and 390 wide; on phone the
+  pull rail is a collapsible selector and the panel a bottom sheet.
+- **Example data.** Every number, name and ref comes from the recorded fixture pulls, ingested offline. The
+  overview uses `H7z1fqDXjRTFnbtg` (Ula'tek Heroic fights 10, 15, 20 and Nymrissa Wavecaller Mythic fight 23); the
+  pull page uses fight 15. Killing abilities are shown as the death-record fix will report them
+  (`killingAbilityGameID`). Cached findings, job progress and error states are not in the fixtures and are marked
+  illustrative.
+- **Tokens.** The mock-up's palette kept, as CSS variables for both themes: ground `#eef0f3` / `#0f1520`, cards
+  `#ffffff` / `#171f2d`, text `#1b2230` / `#e9e5d9`, clay highlight `#b8541a` / `#f0975a`, teal links and evidence
+  `#17737a` / `#62c1c8`, plus ok, warn and bad with tints. Muted text and warn were darkened in light
+  (`#5a6374`, `#8a5700`) for 4.5:1 contrast. Type: Source Serif 4 for headings, IBM Plex Sans for text, IBM Plex
+  Mono for refs and codes. Spacing on a 4 px step; radius 6 for controls, 10 for cards, full for chips.
+- **Components.** shadcn/ui throughout: Card (KPI tiles, sections, findings), Badge (status, evidence chips as
+  links), Tooltip (coverage badge), Table, Progress (health bars, ingest rows), Switch (show everything), Alert
+  (errors, coverage none), Collapsible (phone rail), ResizablePanelGroup (context panel), Drawer (phone bottom
+  sheet), Skeleton (loading), Input/Label/Button (ingest form), DropdownMenu (theme). The trend strip is a small
+  custom component; the timeline is visx.
+- **Changes from the mock-up.** A night is a whole report with one section per encounter and difficulty, and the
+  rail groups pulls the same way. KPIs are the deterministic aggregates (best pull, most common first death, most
+  failed mechanic, kills and wipes) with evidence chips, replacing ones that needed findings or a raid plan. The
+  briefing is templated and labelled "Generated from the digests". The trend highlights pulls whose first death
+  matches the most common one. "Fix these first" became cached findings cards, shown only when findings exist.
+  The chat column and the plan tab are gone. Every status carries a word as well as a colour.
+- **Open questions for review** (listed on the canvas): ties for the most common first death, which every
+  multi-pull fixture section has; the best-pull line on a kill; display names for mechanics, phases and window
+  cooldowns, which the API shapes carry only as IDs; "Melee" without its attacker; the label for `boss_pct`;
+  grouping `cooldown_unverified` anomalies; what a rail click opens; the theme control; the panel width;
+  encounter names in ingest progress; placeholders for later features; the stale-finding wording.
+
+## Hosted architecture
+
+Architecture: <https://claude.ai/artifact/PGYBvboaxK93jt6fo6eU3B> (why and how KhadBot becomes a hosted service).
+Work plan: <https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv> (session-sized tasks; its section 2 holds the full
+text of each decision below, under the IDs in the "Plan" column). Settled 2026-10-20. Rows D31 to D36 record how
+the storage, records, Postgres and job decisions were built.
+
+The work plan changes the architecture page's phases: the first hosted phase is the backend only and ends in a
+load-tested, security-reviewed staging deploy, and the dashboard screens open the phase after it. Staging deploys on
+every push to `main` and, by hand, from any pushed branch, so later work is checked on staging before it lands.
+
+| # | Plan | Decision | Choice | Why | Date |
+|---|------|----------|--------|-----|------|
+| D37 | AD1 | Languages | The engine (ingest, annotate, analysis, analyst, agents) and the API stay Python. Front ends are TypeScript: the Next.js web app (client-rendered data views, TanStack Query, shadcn/ui, visx, types generated from `contracts/openapi.json`), later Electron and a Discord bot. Rust through PyO3 only if normalize's CPU shows up on the bill | polars already does the heavy work in Rust, so a rewrite buys little; the front ends need the TypeScript ecosystem | 2026-10-20 |
+| D38 | AD2 | Two modes | Local mode (the CLI: filesystem blobs, SQLite findings, no auth, no Docker) keeps working. Hosted mode is chosen by configuration (`KHADBOT_MODE=hosted`, `DATABASE_URL`, the S3 settings). Every new interface has both implementations; unit tests run against the local one | The CLI is the development loop and must not need services | 2026-10-20 |
+| D39 | AD3 | Object storage | A `BlobStore` protocol over keys that mirror the paths under `KHADBOT_DATA_DIR` (`raw/…`, `events/…`, `annotated/…`, `records/…`). Hosted mode uses any S3-compatible store through `boto3`: Cloudflare R2 in production, MinIO locally. Raw pages are zstd-compressed in hosted mode only | An existing data directory keeps working unchanged; S3-compatible keeps the provider swappable | 2026-10-20 |
+| D40 | AD4 | Database | PostgreSQL through psycopg 3 and `psycopg_pool`, no ORM. Schema changes are numbered SQL files in `src/khadbot/db/migrations/`, applied by `main.py migrate` and recorded in `schema_migrations` under an advisory lock | Few tables and plain SQL; numbered files merge predictably across parallel branches | 2026-10-20 |
+| D41 | AD5 | Job queue | `procrastinate` on the same Postgres, with queues `ingest`, `process`, `review` and `watch`. A KhadBot-owned `jobs` table holds user-facing state and per-pull progress, which reaches clients through `NOTIFY` and server-sent events. No Redis. If `procrastinate` fails the warnings-as-errors suite or can't express a needed rule, the queue work stops and reports instead of swapping libraries | One stateful service to run; job state lives next to the data it describes | 2026-10-20 |
+| D42 | AD6 | Sign-in | Warcraft Logs OAuth (authorization code with PKCE). Sessions are an opaque ID in an HttpOnly, Secure, SameSite=Lax cookie backed by a `sessions` table. WCL refresh tokens are encrypted at rest with Fernet (MultiFernet for rotation), the key from the environment. Job payloads carry a user ID, never a token | Every user already has a WCL account, and their token is what proves they may read a private report | 2026-10-20 |
+| D43 | AD7 | WCL budget | A job a signed-in user starts fetches with that user's token. Everything else (users not signed in, background backfills) draws from the app's hourly points through one bucket with per-user and per-guild allowances; guild is the WCL guild from report metadata | Spreads the point cost across users where WCL allows it. The probes in `docs/wcl-api.md` found the app's and the owning account's user counters move together (one pool); whether another account's token has its own budget is still unmeasured, so until it is, user tokens count against the app bucket and the allowances carry the load | 2026-10-20 |
+| D44 | AD8 | Report access | A report is readable if WCL lets the user's token read it, or if it's public (readable with the app token). Results are cached in `report_access` with a check time. Unreadable reports answer 404, never 403 | WCL owns the privacy rules; a 404 doesn't confirm a private report exists | 2026-10-20 |
+| D45 | AD9 | Read models | `PullRecords` persist as JSON blobs keyed by their `produced_from` hashes and `RECORDS_VERSION`; small per-pull Postgres tables back the night, report and progression views; events stay in parquet | Views need cheap filters and aggregates; full detail stays in one place | 2026-10-20 |
+| D46 | AD10 | Tests | Unit tests need no network, Docker or Postgres. Tests that need Postgres or MinIO live in `tests/integration/hosted/` under a `hosted` marker, skip without `DATABASE_URL` or the S3 settings, and run in a CI job with service containers | The unit suite stays fast and runs anywhere; hosted code still runs against real services in CI | 2026-10-20 |
+| D47 | AD11 | Packages | New sub-packages `storage/`, `db/`, `jobs/` (job specs and functions, queue wiring, WCL budget), `auth/` (WCL OAuth, sessions, tokens) and `api/`. Each adds its commit tag to `.claude/rules/git-commits.md` in its first commit | One package per concern keeps hosted-only code out of the engine | 2026-10-20 |
+| D48 | AD12 | Models for the work | Sonnet runs each task by default; Opus runs the riskiest ones (the blob seam, read models, sign-in and access, the WCL budget manager, the security review, the conversation agent service and the final docs sync), and the timeline moves to Opus if its Sonnet attempt stalls | Spend the stronger model where a mistake corrupts data or leaks access | 2026-10-20 |
+| D49 | AD13 | Python layers | Each layer imports only the layers below it, enforced by `import-linter` in `mise run check`. Top to bottom: entry points (`api`, `cli`, `main`); services (`jobs`, `auth`, `agent` with the coach's `tools/`, the conversation agent); adapters (`db`); engine (`encounter`, holding the interfaces `db` implements); integrations (`wcl`, the shared WarcraftLogs client moved out of `tools/warcraftlogs`, and `simc`); foundation (`config`, `errors`, `storage`, `llm_factory`). One composition root, `khadbot/wiring.py`, picks local or hosted implementations; nothing below the entry points reads the mode | `encounter` imports `jobs`, `cli`, `db` and `agent` today, so hosted code would leak into the engine without a rule a check enforces | 2026-10-20 |
+| D50 | AD14 | Repo shape | One repository. Python stays in `src/khadbot/` with optional dependency groups `cli`, `api` (FastAPI, uvicorn), `hosted` (Postgres, S3, queue, crypto), `providers` (OpenAI, Groq, Ollama) and `dev`, which includes the others. TypeScript lives in a pnpm workspace at the root: `apps/web`, later `apps/desktop` and `apps/discord`, and `packages/api-client`, generated from `contracts/openapi.json`. Container and platform files in `deploy/`. `scripts/` splits into `dev/`, `data/` and `wcl/` | Contract changes and the code that uses them land in one commit; each install pulls only what its mode needs | 2026-10-20 |
+
 ## Open follow-ups
 
 Moved to `docs/follow-ups.md` (2026-10-11), which tracks open work for the encounter system and for each
