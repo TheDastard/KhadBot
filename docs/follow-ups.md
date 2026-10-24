@@ -176,7 +176,7 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   3. Add the encounter-file block, the rule, the digest section and a `kill:<id>` ref.
   4. Author the Ula'tek entry: the Venomous Heart (game ID 267460) during `rage_of_the_shackled`.
 - **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
-  unless a store is passed, so a hosted deployment must pass `default_findings_store()` itself. The hosted API
+  unless a store is passed, so a hosted deployment must pass `wiring.findings_store()` itself. The hosted API
   should do that, and own the pool's lifecycle (`close_pool` on shutdown).
 - **The CLI's `/review` does not use `ReviewPull`.** `/review` runs `ProcessPull` per pull and then the whole
   review graph, because the answer needs the cross-pull synthesis that `ReviewPull` leaves out. Reviewing each pull

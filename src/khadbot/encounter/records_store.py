@@ -17,6 +17,7 @@ import hashlib
 import logging
 import os
 from collections.abc import Mapping
+from typing import Protocol
 
 import orjson
 from pydantic import BaseModel, ValidationError
@@ -30,7 +31,18 @@ from khadbot.storage import BlobStore, join_key, resolve_blobs
 
 log = logging.getLogger(__name__)
 
-__all__ = ["RecordsStore", "StoredRecords", "records_hash"]
+__all__ = ["ReadModelProjector", "RecordsStore", "StoredRecords", "records_hash"]
+
+# ---------------------------------------------------------------------------
+# Read-model projection hook
+# ---------------------------------------------------------------------------
+
+
+class ReadModelProjector(Protocol):
+    """Writes one pull's read-model rows (hosted mode). Must be idempotent: the same records twice change nothing."""
+
+    async def project(self, records: PullRecords) -> None: ...
+
 
 # ---------------------------------------------------------------------------
 # Blob format

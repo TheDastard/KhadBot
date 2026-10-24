@@ -14,11 +14,11 @@ import shlex
 from typing import NoReturn
 from uuid import uuid4
 
+from khadbot import wiring
 from khadbot.encounter.analyst import ReviewEstimate, estimate_review_cost, review
-from khadbot.encounter.digest import build_digest, default_annotation_cache, render_digest
+from khadbot.encounter.digest import build_digest, render_digest
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.findings import FindingsStore, default_findings_store
-from khadbot.encounter.ingest import default_store
+from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.models import (
     AnalysisReport,
     AnalysisRequest,
@@ -190,8 +190,8 @@ async def pull_digest(pull_key: str, *, unregistered: bool = False, store: Event
     cache). ``unregistered`` widens the authoring lists past what the job's records hold, so it builds directly.
     Raises ``KeyError`` for a pull that is not ingested.
     """
-    store = store or default_store()
-    cache = default_annotation_cache()
+    store = store or wiring.event_store()
+    cache = wiring.annotation_cache()
     if unregistered:
         return build_digest(pull_key, store, cache=cache, unregistered_cap=UNREGISTERED_LIMIT)
     data = EncounterData(store, cache=cache)
@@ -251,7 +251,7 @@ async def pulls_command(arg: str, *, store: EventStore | None = None) -> str:
         return f"**No report ingested in this session; pass a report code.**\n\n{PULLS_USAGE}"
     if len(parts) > 1:
         return f"**{PULLS_USAGE}**"
-    return format_pulls(code, (store or default_store()).pulls(code))
+    return format_pulls(code, (store or wiring.event_store()).pulls(code))
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +305,7 @@ async def review_command(arg: str, *, data: EncounterData | None = None, finding
             raise UsageError("No report ingested in this session; pass a report code.")
     except UsageError as exc:
         return f"**{exc}**"
-    data = data or EncounterData.from_config()
+    data = data or wiring.encounter_data()
     pulls = [p.pull_key for p in data.store.pulls(code) if fights is None or p.fight_id in fights]
     if not pulls:
         return f"No pulls stored for `{code}`."
@@ -322,4 +322,4 @@ async def review_command(arg: str, *, data: EncounterData | None = None, finding
     req = AnalysisRequest(
         request_id=uuid4().hex, question=" ".join(words) or DEFAULT_REVIEW_QUESTION, pulls=pulls, depth=ns.depth
     )
-    return format_review(await review(req, store=data, findings=findings or default_findings_store()))
+    return format_review(await review(req, store=data, findings=findings or wiring.findings_store()))

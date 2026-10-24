@@ -27,15 +27,15 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from khadbot.config import DatabaseConfig
+from khadbot import wiring
 from khadbot.encounter.analyst import ModelMismatchError, review_pull
 from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_cooldowns
-from khadbot.encounter.digest import PullRecords
 from khadbot.encounter.evidence import EncounterData
-from khadbot.encounter.findings import FindingsStore, default_findings_store
+from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.ingest import ingest_report
 from khadbot.encounter.ingest.fetch import RawPageCache, TokenProvider
 from khadbot.encounter.models import IngestResult, PullFindings
+from khadbot.encounter.records_store import ReadModelProjector
 from khadbot.encounter.store import EventStore
 from khadbot.jobs.progress import NullProgress, Progress
 from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull
@@ -46,15 +46,12 @@ __all__ = [
     "JobError",
     "LocalTokenResolver",
     "ModelMismatchError",
-    "PostgresReadModelProjector",
     "ProcessPullResult",
-    "ReadModelProjector",
     "ReviewPullResult",
     "TokenResolver",
     "UserAuthUnavailableError",
     "default_filter_kwargs",
     "process_specs_for",
-    "read_model_projector",
     "run_ingest_report",
     "run_job",
     "run_process_pull",
@@ -110,64 +107,6 @@ class LocalTokenResolver:
 
 
 # ---------------------------------------------------------------------------
-# Read-model projection hook
-# ---------------------------------------------------------------------------
-
-
-class ReadModelProjector(Protocol):
-    """Writes one pull's read-model rows (hosted mode). Must be idempotent: the same records twice change nothing."""
-
-    async def project(self, records: PullRecords) -> None: ...
-
-
-# (pool, records, report metadata) -> whether rows were written; ``khadbot.db.read_models.project_pull``.
-ReadModelWriter = Callable[[Any, PullRecords, dict | None], bool]
-
-
-class PostgresReadModelProjector:
-    """
-    Projects a pull's records into the Postgres read-model tables (``khadbot.db.read_models.project_pull``), with
-    the report's cached metadata from ``raw``. Idempotent because the writer is: the same records twice write
-    nothing. The pool is taken on first use, so building a projector opens no connection.
-    """
-
-    def __init__(
-        self,
-        raw: RawPageCache | None = None,
-        *,
-        pool: Callable[[], Any] | None = None,
-        write: ReadModelWriter | None = None,
-    ) -> None:
-        self._raw = raw
-        self._pool = pool
-        self._write = write
-
-    async def project(self, records: PullRecords) -> None:
-        if self._raw is None:
-            from khadbot.encounter.ingest.pipeline import default_cache
-
-            self._raw = default_cache()
-        if self._pool is None or self._write is None:
-            from khadbot.db import get_pool, project_pull  # local mode never imports the database code
-
-            self._pool = self._pool or get_pool
-            self._write = self._write or project_pull
-        raw, pool, write = self._raw, self._pool, self._write
-        meta = await asyncio.to_thread(raw.report_meta, records.pull.report_code)
-        await asyncio.to_thread(write, pool(), records, meta)
-
-
-def read_model_projector() -> ReadModelProjector | None:
-    """
-    The projector ``ProcessPull`` calls after it stores a pull's records: the Postgres one in hosted mode, else
-    None (local mode has no read-model tables).
-    """
-    if not DatabaseConfig().hosted:
-        return None
-    return PostgresReadModelProjector()
-
-
-# ---------------------------------------------------------------------------
 # Context
 # ---------------------------------------------------------------------------
 
@@ -190,22 +129,32 @@ class JobContext:
     """
 
     data: EncounterData | None = None  # records, annotation cache and event store the analysis reads
-    store: EventStore | None = None  # where ingest writes; None is the default event store
-    cache: RawPageCache | None = None  # where ingest reads and writes raw pages; None is the default cache
+    store: EventStore | None = None  # where ingest writes; None is the wired event store
+    cache: RawPageCache | None = None  # where ingest reads and writes raw pages; None is the wired cache
     findings: FindingsStore | None = None
     client: WarcraftLogsClient | None = None  # None: ingest opens one from the app credentials when it needs WCL
     filters: Callable[[], Mapping[str, Any]] = default_filter_kwargs
     resolver: TokenResolver = field(default_factory=LocalTokenResolver)
-    projector: ReadModelProjector | None = field(default_factory=read_model_projector)
+    projector: ReadModelProjector | None = field(default_factory=wiring.read_model_projector)
 
     def encounter_data(self) -> EncounterData:
         if self.data is None:
-            self.data = EncounterData.from_config()
+            self.data = wiring.encounter_data()
         return self.data
+
+    def event_store(self) -> EventStore:
+        if self.store is None:
+            self.store = wiring.event_store()
+        return self.store
+
+    def raw_cache(self) -> RawPageCache:
+        if self.cache is None:
+            self.cache = wiring.raw_cache()
+        return self.cache
 
     def findings_store(self) -> FindingsStore:
         if self.findings is None:
-            self.findings = default_findings_store()
+            self.findings = wiring.findings_store()
         return self.findings
 
 
@@ -229,8 +178,8 @@ async def run_ingest_report(
     result = await ingest_report(
         spec.code,
         spec.fights,
-        store=ctx.store,
-        cache=ctx.cache,
+        store=ctx.event_store(),
+        cache=ctx.raw_cache(),
         client=ctx.client,
         offline=spec.offline,
         refresh_meta=spec.refresh_meta,

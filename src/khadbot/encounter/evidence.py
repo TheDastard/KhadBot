@@ -42,8 +42,7 @@ from khadbot.encounter.config_files import (
 from khadbot.encounter.digest import PullRecords, build_pull_records, records_inputs
 from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
 from khadbot.encounter.records_store import RecordsStore
-from khadbot.encounter.store import EventStore, ParquetEventStore, split_pull_key
-from khadbot.storage import default_blob_store
+from khadbot.encounter.store import EventStore, split_pull_key
 
 __all__ = [
     "ClaimNumber",
@@ -245,12 +244,6 @@ class EncounterData:
         self.cutoff_fraction = cutoff_fraction
         self._max_cached = max_cached
         self._records: OrderedDict[tuple[str, ...], PullRecords] = OrderedDict()
-
-    @classmethod
-    def from_config(cls) -> EncounterData:
-        """Store, annotation cache and records store in the default blob store, authored files from ``config/``."""
-        blobs = default_blob_store()
-        return cls(ParquetEventStore(blobs), cache=AnnotationCache(blobs), records_store=RecordsStore(blobs))
 
     def pull(self, pull_key: str) -> Pull | None:
         try:

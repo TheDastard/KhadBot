@@ -120,8 +120,8 @@ class TestIngestRemembersReport:
 @pytest.fixture
 def local_store(synth_ingested, tmp_path, monkeypatch):
     """Point the command handlers at the ingested SYNTH01 store and a temp annotation cache."""
-    monkeypatch.setattr(commands, "default_store", lambda: synth_ingested)
-    monkeypatch.setattr(commands, "default_annotation_cache", lambda: AnnotationCache(tmp_path / "annotated"))
+    monkeypatch.setattr(commands.wiring, "event_store", lambda: synth_ingested)
+    monkeypatch.setattr(commands.wiring, "annotation_cache", lambda: AnnotationCache(tmp_path / "annotated"))
     monkeypatch.setattr(commands, "_last_report", "SYNTH01")
     return synth_ingested
 

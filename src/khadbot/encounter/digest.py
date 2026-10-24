@@ -53,7 +53,6 @@ from khadbot.encounter.models import (
     make_ref,
 )
 from khadbot.encounter.store import EventStore, split_pull_key
-from khadbot.storage import default_blob_store
 
 # Bump when analysis or record-building code changes what PullRecords or the digest hold for the same inputs
 # (anything under encounter/analysis/, build_pull_records, caps, record models). It joins ``produced_from``, so
@@ -75,11 +74,6 @@ FULL_COVERAGE_MAX_PCT = 10.0  # unregistered share of friendly damage taken belo
 
 # Data types every real pull has rows for; zero rows means the fetch is missing, not that nothing happened.
 REQUIRED_DATA_TYPES = ("DamageTaken", "Casts", "Healing")
-
-
-def default_annotation_cache() -> AnnotationCache:
-    """The annotation cache in the default blob store (``annotated/`` under ``KHADBOT_DATA_DIR`` locally)."""
-    return AnnotationCache(default_blob_store())
 
 
 # ---------------------------------------------------------------------------
