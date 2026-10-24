@@ -25,6 +25,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# ── Banner ──────────────────────────────────────────────────────────────────
+Write-Host @'
+$$\   $$\ $$\                       $$\ $$$$$$$\             $$\
+$$ | $$  |$$ |                      $$ |$$  __$$\            $$ |
+$$ |$$  / $$$$$$$\   $$$$$$\   $$$$$$$ |$$ |  $$ | $$$$$$\ $$$$$$\
+$$$$$  /  $$  __$$\  \____$$\ $$  __$$ |$$$$$$$\ |$$  __$$\\_$$  _|
+$$  $$<   $$ |  $$ | $$$$$$$ |$$ /  $$ |$$  __$$\ $$ /  $$ | $$ |
+$$ |\$$\  $$ |  $$ |$$  __$$ |$$ |  $$ |$$ |  $$ |$$ |  $$ | $$ |$$\
+$$ | \$$\ $$ |  $$ |\$$$$$$$ |\$$$$$$$ |$$$$$$$  |\$$$$$$  | \$$$$  |
+\__|  \__|\__|  \__| \_______| \_______|\_______/  \______/   \____/
+'@ -ForegroundColor Cyan
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 $script:Problems = @()
 
@@ -81,7 +93,7 @@ if (Has uv) {
     else { uv self update; Did "updated uv" }
 } else { Install-WingetPackage "astral-sh.uv" "uv" }
 
-if (Has mise) { Ok "mise $(((mise --version) -split ' ')[0])" } else { Install-WingetPackage "jdx.mise" "mise" }
+if (Has mise) { Ok "mise $(((mise version --quiet) -split ' ')[0])" } else { Install-WingetPackage "jdx.mise" "mise" }
 
 if ($WithGitHubCli) {
     if (Has gh) { Ok ((gh --version) | Select-Object -First 1) } else { Install-WingetPackage "GitHub.cli" "GitHub CLI" }
@@ -135,6 +147,9 @@ try {
         if (Test-Path .venv) { Ok ".venv exists" } else { Problem ".venv is missing (run: mise run install)" }
     } else {
         mise install
+        # On a fresh machine the shims folder doesn't exist until mise has installed something, so the earlier
+        # Add-SessionPath skipped it; add it now so node and pnpm resolve in this run.
+        Add-SessionPath $shims
         if ($LASTEXITCODE -ne 0) { Problem "mise install failed" } else { Ok "Node $(node --version), pnpm $(pnpm --version)" }
         mise run install
         if ($LASTEXITCODE -ne 0) { Problem "mise run install failed" } else { Ok "$(uv run python --version) in .venv" }
