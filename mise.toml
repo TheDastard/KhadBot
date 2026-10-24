@@ -37,8 +37,8 @@ run = "uv run python main.py cli"
 
 # ── Testing ─────────────────────────────────────────────────────────────────
 [tasks.check]
-description = "Lint, typecheck and unit tests: the gate for every commit"
-run = ["uv run ruff check src tests scripts", "uv run mypy src", "uv run pytest tests/unit"]
+description = "Lint, typecheck, layer rule and unit tests: the gate for every commit"
+run = ["uv run ruff check src tests scripts", "uv run mypy src", "uv run lint-imports", "uv run pytest tests/unit"]
 
 [tasks.test]
 description = "Run all tests"
@@ -75,6 +75,10 @@ run = ["uv run ruff format src tests scripts", "uv run ruff check --fix src test
 [tasks.typecheck]
 description = "Type-check with mypy"
 run = "uv run mypy src"
+
+[tasks."lint:imports"]
+description = "Check the Python layer rule with import-linter"
+run = "uv run lint-imports"
 
 
 # ── Dashboard API ───────────────────────────────────────────────────────────
