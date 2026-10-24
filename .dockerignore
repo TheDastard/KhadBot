@@ -1,0 +1,14 @@
+# The build context is the repository root (deploy/Dockerfile is the file). Everything is excluded by default and
+# the image gets only what its COPY lines name, so .env, .khadbot_data*, .git, the venv and the tests never enter it.
+*
+
+!pyproject.toml
+!uv.lock
+!.python-version
+!main.py
+!src/
+!config/
+!scripts/data/seed_stack.py
+
+**/__pycache__
+**/*.pyc

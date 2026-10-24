@@ -93,6 +93,32 @@ description = "Apply database migrations to DATABASE_URL (hosted mode)"
 run = "uv run python main.py migrate"
 
 
+# ── Local hosted stack (needs Docker; deploy/README.md) ─────────────────────
+[tasks."stack:up"]
+description = "Build the image and start the local hosted stack: Postgres, SeaweedFS, migrate, API (127.0.0.1:8000)"
+run = "docker compose -f deploy/compose.yaml up --build --detach"
+
+[tasks."stack:seed"]
+description = "Load the recorded fixture reports into the running stack (offline; no WCL calls)"
+run = "docker compose -f deploy/compose.yaml --profile seed run --rm seed"
+
+[tasks."stack:smoke"]
+description = "Check the running, seeded stack: health, report list and a night summary"
+run = "uv run python scripts/dev/stack_smoke.py"
+
+[tasks."stack:logs"]
+description = "Follow the stack's logs"
+run = "docker compose -f deploy/compose.yaml logs --follow --tail 100"
+
+[tasks."stack:down"]
+description = "Stop the stack and keep its data volumes"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile worker down"
+
+[tasks."stack:reset"]
+description = "Stop the stack and delete its data volumes (database and bucket)"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile worker down --volumes"
+
+
 # ── Generated files ─────────────────────────────────────────────────────────
 [tasks."gen:contracts"]
 description = "Regenerate contracts/openapi.json from the API"

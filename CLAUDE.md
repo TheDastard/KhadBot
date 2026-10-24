@@ -63,7 +63,7 @@ scripts/             # dev/ (setup, clean, distclean, contract generator), data/
                      # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
 apps/                # TypeScript apps (pnpm workspace): web/ now; desktop/ and discord/ later. Not created yet
 packages/            # api-client/: the client generated from contracts/openapi.json. Not created yet
-deploy/              # container and platform files. Not created yet
+deploy/              # Dockerfile, compose stack and its env file; docs/hosting.md describes running and configuring them
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates

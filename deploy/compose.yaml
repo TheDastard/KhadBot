@@ -1,0 +1,128 @@
+# Local hosted-mode stack: Postgres, SeaweedFS (S3-compatible storage), a migrate step, the API and a worker, all reading
+# deploy/stack.env. Run it with `mise run stack:up`; see deploy/README.md and docs/hosting.md.
+#
+# Everything listens on 127.0.0.1 only. The stack stores its data in named volumes, never in a host directory: the
+# local .khadbot_data directory is not mounted and plays no part here.
+
+name: khadbot
+
+x-khadbot: &khadbot
+  # The build context is the repository root; .dockerignore keeps .env and local data out of it.
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  image: khadbot:local
+  env_file: stack.env
+  restart: "no"
+
+services:
+  postgres:
+    image: postgres:17
+    env_file: stack.env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # SeaweedFS in one container (master, volume server, filer and S3 gateway) as the local S3 store; production uses
+  # Cloudflare R2. The S3 identity is written from the same two variables KhadBot's boto3 client reads.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    env_file: stack.env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /etc/seaweedfs
+        printf '{"identities":[{"name":"khadbot","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","List","Tagging","Write"]}]}' "$${AWS_ACCESS_KEY_ID}" "$${AWS_SECRET_ACCESS_KEY}" > /etc/seaweedfs/config.json
+        exec weed server -dir=/data -s3 -s3.config /etc/seaweedfs/config.json
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - seaweedfsdata:/data
+
+  # Creates the bucket named by KHADBOT_S3_BUCKET once the S3 gateway answers, then exits. It uses the KhadBot image
+  # and boto3, so it needs no SeaweedFS tooling.
+  createbucket:
+    <<: *khadbot
+    entrypoint: ["python", "-c"]
+    command:
+      - |
+        import os, time
+        from khadbot.storage.s3 import make_client
+        client = make_client(endpoint_url=os.environ["KHADBOT_S3_ENDPOINT"], region=os.environ["KHADBOT_S3_REGION"])
+        bucket = os.environ["KHADBOT_S3_BUCKET"]
+        deadline = time.monotonic() + 120
+        while True:
+            try:
+                client.create_bucket(Bucket=bucket)
+                break
+            except Exception as exc:
+                code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
+                    break
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(1)
+        print("bucket ready:", bucket)
+    depends_on:
+      - seaweedfs
+
+  # Applies the database migrations, then exits. The API and the worker start after it succeeds.
+  migrate:
+    <<: *khadbot
+    command: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *khadbot
+    command: ["api"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      createbucket:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # The job queue worker. Its `worker` subcommand arrives with the queue, so the service is behind a profile until
+  # then: `docker compose --profile worker up` once it exists.
+  worker:
+    <<: *khadbot
+    command: ["worker"]
+    profiles: ["worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      createbucket:
+        condition: service_completed_successfully
+
+  # Loads the recorded fixture reports through the pipeline into the stack (offline: no WCL calls). The fixtures and
+  # the helper they need are mounted read-only from the repository. Run with `mise run stack:seed`.
+  seed:
+    <<: *khadbot
+    entrypoint: ["python", "scripts/data/seed_stack.py"]
+    profiles: ["seed"]
+    volumes:
+      - ../tests/fixtures:/app/tests/fixtures:ro
+      - ../tests/helpers:/app/tests/helpers:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      createbucket:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  seaweedfsdata:
