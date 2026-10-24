@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | migrate]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate]
 """
 
 from __future__ import annotations
@@ -16,9 +16,10 @@ from collections.abc import Sequence
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from khadbot.errors import missing_group_message
+from khadbot.errors import ConfigurationError, missing_group_message
 
 SERVE_HOST = "127.0.0.1"
+API_HOST = "0.0.0.0"  # the container binds every interface; the published port decides who can reach it
 
 # ---------------------------------------------------------------------------
 # Subcommands
@@ -101,6 +102,32 @@ def _run_serve(port: int) -> None:
     uvicorn.run(create_app(), host=SERVE_HOST, port=port)
 
 
+def _run_api(host: str, port: int) -> None:
+    try:
+        import uvicorn
+
+        from khadbot import wiring
+        from khadbot.api import create_app
+        from khadbot.config import DatabaseConfig
+    except ImportError as exc:
+        sys.exit(missing_group_message("api", "api") + f"\n({exc})")
+
+    # Stores come from the composition root: with KHADBOT_MODE=hosted the findings and the night summary read Postgres.
+    try:
+        read_source = None
+        if DatabaseConfig().hosted:
+            try:
+                from khadbot.api.night import SqlSource
+                from khadbot.db import get_pool
+            except ImportError as exc:
+                sys.exit(missing_group_message("hosted", "api in hosted mode") + f"\n({exc})")
+            read_source = SqlSource(get_pool())
+        app = create_app(findings=wiring.findings_store(), read_source=read_source)
+    except (ConfigurationError, OSError, ValueError) as exc:
+        sys.exit(str(exc))
+    uvicorn.run(app, host=host, port=port)
+
+
 def _run_migrate() -> None:
     try:
         from khadbot.db import migrate, open_pool
@@ -147,6 +174,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve = sub.add_parser("serve", help=f"Serve the read-only dashboard API on {SERVE_HOST} (KHADBOT_DATA_DIR)")
     serve.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
+    api = sub.add_parser(
+        "api", help="Serve the dashboard API from the configured stores (the container's command; binds all interfaces)"
+    )
+    api.add_argument("--host", default=API_HOST, help=f"Interface to bind (default: {API_HOST})")
+    api.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
     sub.add_parser("migrate", help="Apply database migrations to DATABASE_URL (hosted mode)")
     return parser
 
@@ -168,6 +200,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_digest(args.code, args.fight, args.json, args.unregistered)
     elif command == "serve":
         _run_serve(args.port)
+    elif command == "api":
+        _run_api(args.host, args.port)
     elif command == "migrate":
         _run_migrate()
 
