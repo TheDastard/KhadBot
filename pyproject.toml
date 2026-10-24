@@ -46,7 +46,7 @@ hosted = [
     # --- Hosted mode: Postgres and object storage ---
     "psycopg[binary]>=3.3.6",     # PostgreSQL driver; the binary extra avoids needing libpq on the host
     "psycopg-pool>=3.3.3",        # connection pool for the hosted findings store and migrations
-    "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, MinIO) for hosted blobs
+    "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, SeaweedFS) for hosted blobs
     "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
 ]
 

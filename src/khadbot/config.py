@@ -31,7 +31,7 @@ class DeploymentMode(StrEnum):
 
 class StorageBackend(StrEnum):
     LOCAL = "local"  # blobs are files under KHADBOT_DATA_DIR
-    S3 = "s3"  # blobs are objects in an S3-compatible bucket (Cloudflare R2, MinIO)
+    S3 = "s3"  # blobs are objects in an S3-compatible bucket (Cloudflare R2, SeaweedFS)
 
 
 class VectorStore(StrEnum):

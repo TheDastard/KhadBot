@@ -1,11 +1,11 @@
 """
 tests/integration/hosted/test_blob_s3.py
 
-The ``BlobStore`` contract against a real S3-compatible service (MinIO locally, R2 in production): the S3 store and
+The ``BlobStore`` contract against a real S3-compatible service (SeaweedFS locally, R2 in production): the S3 store and
 the compressing wrapper over it. Skipped unless ``KHADBOT_S3_BUCKET`` is set; credentials come from the standard
 ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` variables, and ``KHADBOT_S3_ENDPOINT`` and ``KHADBOT_S3_REGION``
 apply as they do in the app. The bucket must already exist. Each test works under its own key prefix and deletes
-what it wrote, so the bucket can be shared. CI has no MinIO service yet, so nothing runs this automatically.
+what it wrote, so the bucket can be shared. CI has no S3 service yet, so nothing runs this automatically.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from khadbot.storage.s3 import S3BlobStore
 @pytest.fixture(scope="module")
 def s3_config() -> StorageConfig:
     if not os.environ.get("KHADBOT_S3_BUCKET"):
-        pytest.skip("KHADBOT_S3_BUCKET is not set; these tests need an S3-compatible service such as MinIO")
+        pytest.skip("KHADBOT_S3_BUCKET is not set; these tests need an S3-compatible service such as SeaweedFS")
     return StorageConfig()
 
 
