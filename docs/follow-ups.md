@@ -243,6 +243,13 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic
   detail with its cluster rows, the event row) and make the response a union keyed on `kind`.
 
+## Agent
+
+- **Agent tools over cached data.** The coach's live-API tools were removed (decision D53), so the coach has none.
+  New tools go in `agent/tools/` and read data offline pipelines have fetched and cached (character profiles,
+  report and encounter data, sims, guides), never an external API. Each needs its pipeline and cache first.
+  Bring back the coach's tool routing, argument and tool-error integration tests with them.
+
 ## Encounters
 
 ### Ula'tek (3492), Heroic

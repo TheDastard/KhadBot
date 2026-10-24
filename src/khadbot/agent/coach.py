@@ -24,7 +24,7 @@ from langchain_core.messages import HumanMessage
 from khadbot.agent.agent_config import AgentConfig, PersonaConfig, get_agent_config
 from khadbot.agent.personas import get_persona
 from khadbot.agent.prompt_assembler import PromptAssembler, get_assembler
-from khadbot.tools import TOOLS
+from khadbot.agent.tools import TOOLS
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def resolve_tools(declared_names: list[str], available_tools: list) -> list:
 
     Args:
         declared_names: Tool names from AgentConfig.tools.
-        available_tools: Full TOOLS list from src/tools/__init__.py.
+        available_tools: Full TOOLS list from agent/tools/__init__.py.
 
     Returns:
         Ordered list of tool objects matching the declared names.

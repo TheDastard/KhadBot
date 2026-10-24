@@ -184,14 +184,11 @@ class TestOffensiveRegistry:
 
 
 class TestRegistry:
-    def test_default_registry_keeps_legacy_ids_still_in_game(self):
-        from khadbot.tools.warcraftlogs.encounter import MAJOR_COOLDOWN_IDS
-
+    def test_default_registry_leaves_out_ids_that_moved_or_left_the_game(self):
         reg = load_cooldowns("defensive")
         assert DEFAULT_DEFENSIVE_COOLDOWNS_PATH.exists()
         # Ancestral Protection Totem is gone from the game data; Tiger's Lust and Innervate are utility.
         dropped = {207399, 116841, 29166}
-        assert set(MAJOR_COOLDOWN_IDS) - dropped <= set(reg.spell_ids())
         assert not dropped & set(reg.spell_ids())
         # Ported names corrected from the game data.
         assert [reg.get(i).name for i in (357170, 374227, 97462)] == ["Time Dilation", "Zephyr", "Rallying Cry"]

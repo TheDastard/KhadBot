@@ -37,6 +37,7 @@ src/khadbot/
   config.py          # frozen dataclasses read from env; get_config() / reset_config()
   llm_factory.py     # get_llm(provider=None, *, role=None)
   agent/             # coach agent, agent/persona YAML loading, prompt assembly
+    tools/           # the agent's tool registry (empty until tools over cached data return)
   encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, records_store;
                      # conversation and plan to come
     ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report, offline recorded ingest
@@ -48,8 +49,8 @@ src/khadbot/
   jobs/              # job specs and functions (ingest, process, review), progress, token resolution
   wcl/               # the shared WarcraftLogs client
   simc/              # SimC generated client data: effect codes, table parser, pinned download
-  cli/               # Rich + prompt_toolkit REPL; commands/ holds the slash-command handlers per mode
-  tools/             # the coach's LangChain @tools
+  cli/               # Rich + prompt_toolkit REPL
+    commands/        # slash-command handlers per mode
   api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary
 config/
   agents/            # coach.yaml, encounter.yaml
@@ -117,7 +118,7 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 
 ## Code conventions
 
-- Layers: each package imports only the packages below it, enforced by `import-linter` (`mise run lint:imports`, part of `mise run check`) with no exceptions listed. From the top: `main`; `api` and `cli`; `jobs` and `agent`; `tools`; `wiring`; `db`; `encounter`; `wcl` and `simc`; then `config`, `errors`, `storage` and `llm_factory`. `encounter` defines the interfaces `db` implements; only `wiring` and the entry points choose between local and hosted. A new top-level package is added to the contract in `pyproject.toml` in the same commit.
+- Layers: each package imports only the packages below it, enforced by `import-linter` (`mise run lint:imports`, part of `mise run check`) with no exceptions listed. From the top: `main`; `api` and `cli`; `jobs` and `agent`; `wiring`; `db`; `encounter`; `wcl` and `simc`; then `config`, `errors`, `storage` and `llm_factory`. `encounter` defines the interfaces `db` implements; only `wiring` and the entry points choose between local and hosted. A new top-level package is added to the contract in `pyproject.toml` in the same commit.
 - Optional dependency groups: core holds what local ingest, digest and the analyst need; `cli`, `api` (FastAPI, uvicorn), `hosted` (Postgres, S3, zstd) and `providers` (OpenAI, Groq, Ollama) are extras, and `dev` includes them all. Import an optional library only on the path that needs it, and when it is missing raise an error that names the group (`errors.missing_group_message`). Add one with `uv add --optional <group>`.
 - Every module starts with a docstring naming its path and purpose, then `from __future__ import annotations`.
 - Separate sections with `# ----` banner comments, as existing modules do.

@@ -117,10 +117,9 @@ Pre-commit hooks (ruff, whitespace, YAML) are configured in `.pre-commit-config.
 ```
 KhadBot/
 ├── src/khadbot/
-│   ├── agent/             # coach agent: YAML-driven config, prompt assembly, personas
+│   ├── agent/             # coach agent: YAML-driven config, prompt assembly, personas, tool registry
 │   ├── encounter/         # encounter review: ingest, store, annotate, digest, analyst, findings, plans
 │   ├── cli/               # Rich + prompt_toolkit REPL
-│   ├── tools/             # LangChain tools: Raider.IO, WarcraftLogs, SimC, guide RAG
 │   ├── session.py         # mode dispatch (coach | encounter)
 │   ├── config.py          # frozen dataclass config read from the environment
 │   └── llm_factory.py     # provider factory (anthropic | openai | groq | ollama), role-aware

@@ -7,7 +7,6 @@ Fixtures here are automatically discovered by pytest — no imports needed.
 Fixture groups:
   - Agent config / assembler — used by unit and integration agent tests
   - CLI console              — used by unit and integration CLI tests
-  - Raider.IO HTTP mocks     — used by tool-level unit tests (test_raiderio.py etc.)
   - Encounter datasets       — used by the API, read-model and hosted read-model tests
 """
 
@@ -17,10 +16,7 @@ import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import httpx
 import pytest
-import respx as _respx
-from fixtures.raiderio_payloads import CHARACTER_NOT_FOUND_BODY, MAGE_PROFILE_RAW
 from rich.console import Console
 
 from khadbot.agent.agent_config import AgentConfig, load_agent_config
@@ -190,55 +186,6 @@ def mock_cli_console() -> Console:
     sys.modules["cli.console"] = mock_module
 
     yield test_console
-
-
-# ---------------------------------------------------------------------------
-# Raider.IO HTTP fixtures
-# ---------------------------------------------------------------------------
-# Shared across:
-#   tests/unit/tools/test_raiderio.py
-
-
-@pytest.fixture
-def mock_raiderio_success():
-    """
-    Mocks the Raider.IO profile endpoint with a 200 response.
-
-    Usage:
-        def test_something(mock_raiderio_success):
-            with mock_raiderio_success:
-                result = ...
-    """
-    with _respx.mock:
-        _respx.get("https://raider.io/api/v1/characters/profile").mock(
-            return_value=httpx.Response(200, json=MAGE_PROFILE_RAW)
-        )
-        yield
-
-
-@pytest.fixture
-def mock_raiderio_not_found():
-    """Mocks Raider.IO returning 404."""
-    with _respx.mock:
-        _respx.get("https://raider.io/api/v1/characters/profile").mock(
-            return_value=httpx.Response(404, json=CHARACTER_NOT_FOUND_BODY)
-        )
-        yield
-
-
-@pytest.fixture
-def mock_raiderio_server_error():
-    """Mocks Raider.IO returning 500."""
-    with _respx.mock:
-        _respx.get("https://raider.io/api/v1/characters/profile").mock(
-            return_value=httpx.Response(500, json={"message": "Internal Server Error"})
-        )
-        yield
-
-
-@pytest.fixture
-def mage_profile_raw():
-    return MAGE_PROFILE_RAW.copy()
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ tests/unit/agent/test_coach_agent.py
 Unit tests for coach.py.
 
 Scope: what coach.py is directly responsible for —
-  - The real TOOLS list (registry completeness, no duplicates, descriptions present)
+  - The TOOLS registry (no duplicates, descriptions present, the coach YAML resolves against it)
   - resolve_tools() (filtering, ordering, unknown name handling)
   - System prompt assembly via PromptAssembler (base content, guardrail placement)
   - build_agent_executor() wiring (correct tools, prompt, and LLM passed to
@@ -13,7 +13,9 @@ Scope: what coach.py is directly responsible for —
 Not in scope here:
   - Tool routing, argument passing, error handling, multi-turn context —
     these require a running agent loop and belong in integration tests.
-  - Tool implementations — each tool has its own unit test file.
+  - Tool implementations — each tool has its own unit test file. The registry
+    is empty until tools over locally cached data return, so the filtering and
+    wiring tests below use stand-in tools named after the fixture YAML's.
 
 No LLM inference. No network calls. No agent invocation.
 """
@@ -24,10 +26,31 @@ import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 
+from khadbot.agent.agent_config import load_agent_config
 from khadbot.agent.coach import build_agent_executor, resolve_tools
-from khadbot.tools import TOOLS
+from khadbot.agent.tools import TOOLS
 
-# config_root, agent_config, assembler fixtures come from tests/fixtures/conftest.py
+# config_root, agent_config, assembler fixtures come from tests/conftest.py
+
+
+def _stand_in_tool(name: str) -> MagicMock:
+    t = MagicMock()
+    t.name = name
+    t.description = f"Stand-in for {name}."
+    return t
+
+
+# Named after the tools the fixture agent YAML declares (tests/conftest.py).
+FAKE_TOOLS = [
+    _stand_in_tool(name)
+    for name in (
+        "get_character_raiderio",
+        "get_warcraftlogs_report",
+        "get_wipefest_insights",
+        "run_simc",
+        "search_guide_rag",
+    )
+]
 
 
 # ===========================================================================
@@ -38,13 +61,10 @@ from khadbot.tools import TOOLS
 class TestToolRegistry:
     """The global TOOLS list is the source of truth for available tools."""
 
-    def test_all_tools_registered(self):
-        tool_names = {t.name for t in TOOLS}
-        assert "get_character_raiderio" in tool_names
-        assert "get_warcraftlogs_report" in tool_names
-        assert "get_wipefest_insights" in tool_names
-        assert "run_simc" in tool_names
-        assert "search_guide_rag" in tool_names
+    def test_coach_yaml_resolves_against_registry(self):
+        # Every tool the shipped coach YAML declares must exist in TOOLS; a missing one raises at load.
+        cfg = load_agent_config(agent_name="coach", tools=TOOLS)
+        assert {t.name for t in resolve_tools(cfg.tools, TOOLS)} == set(cfg.tools)
 
     def test_no_duplicate_tool_names(self):
         names = [t.name for t in TOOLS]
@@ -61,38 +81,38 @@ class TestToolRegistry:
 
 
 class TestResolveTools:
-    """resolve_tools() filters the global TOOLS list to the declared subset."""
+    """resolve_tools() filters an available tool list to the declared subset."""
 
     def test_filters_to_declared_subset(self):
-        result = resolve_tools(["get_character_raiderio", "run_simc"], TOOLS)
+        result = resolve_tools(["get_character_raiderio", "run_simc"], FAKE_TOOLS)
         assert {t.name for t in result} == {"get_character_raiderio", "run_simc"}
 
     def test_excludes_undeclared_tools(self):
-        result = resolve_tools(["run_simc"], TOOLS)
+        result = resolve_tools(["run_simc"], FAKE_TOOLS)
         names = {t.name for t in result}
         assert "get_character_raiderio" not in names
         assert "search_guide_rag" not in names
 
     def test_preserves_declaration_order(self):
-        result = resolve_tools(["run_simc", "get_character_raiderio"], TOOLS)
+        result = resolve_tools(["run_simc", "get_character_raiderio"], FAKE_TOOLS)
         assert [t.name for t in result] == ["run_simc", "get_character_raiderio"]
 
     def test_unknown_name_warns_and_skips(self, caplog):
         import logging
 
         with caplog.at_level(logging.WARNING):
-            result = resolve_tools(["get_character_raiderio", "nonexistent_tool"], TOOLS)
+            result = resolve_tools(["get_character_raiderio", "nonexistent_tool"], FAKE_TOOLS)
         assert len(result) == 1
         assert result[0].name == "get_character_raiderio"
         assert "nonexistent_tool" in caplog.text
 
     def test_empty_declared_list_returns_empty(self):
-        assert resolve_tools([], TOOLS) == []
+        assert resolve_tools([], FAKE_TOOLS) == []
 
     def test_all_tools_declared_returns_all(self):
-        all_names = [t.name for t in TOOLS]
-        result = resolve_tools(all_names, TOOLS)
-        assert len(result) == len(TOOLS)
+        all_names = [t.name for t in FAKE_TOOLS]
+        result = resolve_tools(all_names, FAKE_TOOLS)
+        assert len(result) == len(FAKE_TOOLS)
 
 
 # ===========================================================================
@@ -152,9 +172,10 @@ class TestBuildAgentExecutor:
 
     @pytest.fixture(autouse=True)
     def _patch_llm(self, monkeypatch):
-        """Provide a no-op LLM for all tests in this class."""
+        """Provide a no-op LLM and the stand-in tools for all tests in this class."""
         self.fake_llm = GenericFakeChatModel(messages=iter([AIMessage(content="Hello")]))
         monkeypatch.setattr("khadbot.llm_factory.get_llm", lambda: self.fake_llm)
+        monkeypatch.setattr("khadbot.agent.coach.TOOLS", FAKE_TOOLS)
 
     def _capture_create_agent(self) -> tuple[dict, MagicMock]:
         """
@@ -193,7 +214,7 @@ class TestBuildAgentExecutor:
         extra_tool.name = "undeclared_extra_tool"
         with (
             patch("khadbot.agent.coach.create_agent", side_effect=side_effect),
-            patch("khadbot.agent.coach.TOOLS", [*TOOLS, extra_tool]),
+            patch("khadbot.agent.coach.TOOLS", [*FAKE_TOOLS, extra_tool]),
         ):
             build_agent_executor(config=agent_config, assembler=assembler)
         passed_names = {t.name for t in captured["tools"]}
