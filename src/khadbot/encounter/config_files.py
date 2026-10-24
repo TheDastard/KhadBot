@@ -37,7 +37,7 @@ from pydantic import (
     model_validator,
 )
 
-from khadbot.agent.agent_config import ConfigurationError
+from khadbot.errors import ConfigurationError
 
 _CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
 DEFAULT_DEFENSIVE_COOLDOWNS_PATH = _CONFIG_ROOT / "registries" / "defensive_cooldowns.yaml"

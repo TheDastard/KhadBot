@@ -21,7 +21,6 @@ from helpers.encounter.synth import (
     install_synth_encounter,
 )
 
-from khadbot.agent.agent_config import ConfigurationError
 from khadbot.config import EncounterConfig
 from khadbot.encounter import digest as digest_mod
 from khadbot.encounter.annotate.frame import ANNOTATION_VERSION
@@ -37,6 +36,7 @@ from khadbot.encounter.config_files import (
 from khadbot.encounter.digest import build_digest, build_pull_records, estimate_tokens, render_digest
 from khadbot.encounter.ingest.normalize import events_hash
 from khadbot.encounter.models import CooldownUse, LateCooldown
+from khadbot.errors import ConfigurationError
 
 
 @pytest.fixture

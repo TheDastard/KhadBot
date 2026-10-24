@@ -22,7 +22,6 @@ from helpers.encounter.synth import (
     install_synth_encounter,
 )
 
-from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.config_files import (
     DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
     DEFAULT_FRIENDLY_DAMAGE_PATH,
@@ -43,6 +42,7 @@ from khadbot.encounter.config_files import (
     parse_friendly_damage,
     slugify,
 )
+from khadbot.errors import ConfigurationError
 
 
 @pytest.fixture

@@ -37,24 +37,12 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+# ConfigurationError moved to khadbot.errors; re-exported here so existing imports keep working.
+from khadbot.errors import ConfigurationError  # noqa: F401
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_CONFIG_ROOT = Path(__file__).parent.parent.parent.parent / "config"
-
-
-# ---------------------------------------------------------------------------
-# ConfigurationError
-# ---------------------------------------------------------------------------
-
-
-class ConfigurationError(Exception):
-    """
-    Raised when a config file fails schema validation, a declared persona
-    file is missing, or a tool name has no Python implementation.
-    Surfaced at startup — misconfigurations fail before the first request.
-    """
-
-    pass
 
 
 # ---------------------------------------------------------------------------

@@ -14,7 +14,6 @@ import shlex
 from typing import NoReturn
 from uuid import uuid4
 
-from khadbot.agent.agent_config import ConfigurationError
 from khadbot.encounter.analyst import ReviewEstimate, estimate_review_cost, review
 from khadbot.encounter.digest import build_digest, default_annotation_cache, render_digest
 from khadbot.encounter.evidence import EncounterData
@@ -29,6 +28,7 @@ from khadbot.encounter.models import (
     UnregisteredAbility,
 )
 from khadbot.encounter.store import EventStore
+from khadbot.errors import ConfigurationError
 from khadbot.jobs import (
     IngestReport,
     JobContext,
