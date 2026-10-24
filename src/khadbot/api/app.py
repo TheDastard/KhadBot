@@ -20,18 +20,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from khadbot import wiring
 from khadbot.api.night import ReadSource
 from khadbot.api.routes import router
 from khadbot.api.schemas import API_VERSION
 from khadbot.api.views import ApiContext, ApiError
 from khadbot.config import EncounterConfig
-from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
-from khadbot.encounter.ingest.fetch import RawPageCache
-from khadbot.encounter.records_store import RecordsStore
-from khadbot.encounter.store import ParquetEventStore
-from khadbot.storage import BlobStore, LocalBlobStore, default_blob_store
+from khadbot.storage import BlobStore, LocalBlobStore
 
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
@@ -50,16 +47,16 @@ def create_app(
 
     Without them, events, annotations and report metadata are read from ``blobs`` and findings from ``data_dir``
     (default ``KHADBOT_DATA_DIR``), with the authored files under ``config/``. ``blobs`` defaults to a local store
-    over ``data_dir`` when that is given, and to ``storage.default_blob_store()`` otherwise. Nothing is read until a
+    over ``data_dir`` when that is given, and to ``wiring.blob_store()`` otherwise. Nothing is read until a
     request arrives, so building the app for its OpenAPI document needs no data. ``routers`` are mounted after the
     read router. ``read_source`` serves the report detail and night summary (``night.SqlSource`` reads the read-model
     tables); without it they are built from ``data``'s records.
     """
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
     if blobs is None:
-        blobs = LocalBlobStore(root) if data_dir is not None else default_blob_store()
+        blobs = LocalBlobStore(root) if data_dir is not None else wiring.blob_store()
     if data is None:
-        data = EncounterData(ParquetEventStore(blobs), cache=AnnotationCache(blobs), records_store=RecordsStore(blobs))
+        data = wiring.encounter_data(blobs)
     if findings is None:
         findings = SqliteFindingsStore(root / "khadbot.sqlite")
 
@@ -69,7 +66,7 @@ def create_app(
         description="Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
     )
     app.state.ctx = ApiContext(
-        data=data, findings=findings, data_dir=root, raw=RawPageCache(blobs), read_source=read_source
+        data=data, findings=findings, data_dir=root, raw=wiring.raw_cache(blobs), read_source=read_source
     )
     app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
 

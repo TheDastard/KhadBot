@@ -6,8 +6,8 @@ the depth misses the cache instead of serving stale findings.
 
 ``FindingsStore`` is the interface. ``SqliteFindingsStore`` is local mode's implementation: stdlib ``sqlite3``
 with one short-lived connection per call, so it is safe to share between concurrent analyst runs, and its table
-is created on first use. Hosted mode uses ``khadbot.db.PostgresFindingsStore``; ``default_findings_store``
-picks by ``KHADBOT_MODE``.
+is created on first use. Hosted mode uses ``khadbot.db.PostgresFindingsStore``; ``khadbot.wiring`` picks
+between them.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ from typing import Protocol
 
 import orjson
 
-from khadbot.config import DatabaseConfig, EncounterConfig
 from khadbot.encounter.models import Depth, PullFindings
 
 # ---------------------------------------------------------------------------
@@ -167,12 +166,3 @@ def _load(raw: str, flagged: int) -> PullFindings:
 def now() -> datetime:
     """Timestamp for new rows (UTC, timezone-aware)."""
     return datetime.now(UTC)
-
-
-def default_findings_store() -> FindingsStore:
-    """Postgres in hosted mode (``KHADBOT_MODE=hosted``), else the SQLite file under ``KHADBOT_DATA_DIR``."""
-    if DatabaseConfig().hosted:
-        from khadbot.db import PostgresFindingsStore, get_pool
-
-        return PostgresFindingsStore(get_pool())
-    return SqliteFindingsStore(Path(EncounterConfig().data_dir) / "khadbot.sqlite")

@@ -12,6 +12,8 @@ import pytest
 from helpers.encounter.review_fakes import respond
 from helpers.fake_llm import ReactiveFakeModel
 
+from khadbot import wiring
+from khadbot.db import PostgresReadModelProjector
 from khadbot.encounter.ingest.fetch import MissingFixtureError
 from khadbot.encounter.models import IngestResult
 from khadbot.jobs import (
@@ -20,14 +22,12 @@ from khadbot.jobs import (
     JobContext,
     LocalTokenResolver,
     ModelMismatchError,
-    PostgresReadModelProjector,
     ProcessPull,
     RecordingProgress,
     ReviewPull,
     UserAuth,
     UserAuthUnavailableError,
     process_specs_for,
-    read_model_projector,
     run_ingest_report,
     run_job,
     run_process_pull,
@@ -194,12 +194,12 @@ class TestProcessPull:
 class TestReadModelHook:
     def test_no_projector_in_local_mode(self, monkeypatch):
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
-        assert read_model_projector() is None
+        assert wiring.read_model_projector() is None
 
     def test_hosted_mode_projects_into_postgres_without_connecting_yet(self, monkeypatch):
         monkeypatch.setenv("KHADBOT_MODE", "hosted")
         monkeypatch.delenv("DATABASE_URL", raising=False)
-        assert isinstance(read_model_projector(), PostgresReadModelProjector)  # no pool opened to build it
+        assert isinstance(wiring.read_model_projector(), PostgresReadModelProjector)  # no pool opened to build it
 
     async def test_hosted_process_pull_calls_the_writer(self, make_data, raw_cache, monkeypatch):
         """ProcessPull in hosted mode hands the records and the report metadata to the read-model writer."""
@@ -211,7 +211,7 @@ class TestReadModelHook:
             calls.append((p, records.pull.pull_key, meta))
             return len(calls) == 1  # the real writer writes once, then finds the rows current
 
-        default = read_model_projector()
+        default = wiring.read_model_projector()
         assert isinstance(default, PostgresReadModelProjector)
         projector = PostgresReadModelProjector(raw_cache, pool=lambda: pool, write=write)
         ctx = JobContext(data=make_data(), projector=projector)

@@ -9,7 +9,7 @@ offline ingest of recorded pages (test fixtures, the dashboard's fixture data di
 
 from __future__ import annotations
 
-from khadbot.encounter.ingest.pipeline import default_store, ingest_report
+from khadbot.encounter.ingest.pipeline import ingest_report
 from khadbot.encounter.ingest.recorded import (
     RECORDED_BUFF_IDS,
     ingest_recorded,
@@ -19,7 +19,6 @@ from khadbot.encounter.ingest.recorded import (
 
 __all__ = [
     "RECORDED_BUFF_IDS",
-    "default_store",
     "ingest_recorded",
     "ingest_report",
     "recorded_fights",

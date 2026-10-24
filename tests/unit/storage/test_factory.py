@@ -18,12 +18,12 @@ import zstandard
 from helpers.encounter.real_fixtures import REAL_REPORTS, WCL_FIXTURES, fixture_fights
 from helpers.storage.s3 import BUCKET, REGION, moto_s3_store, stored_keys
 
+from khadbot import wiring
 from khadbot.config import StorageBackend, StorageConfig
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.config_files import load_cooldowns
-from khadbot.encounter.digest import build_digest, default_annotation_cache
+from khadbot.encounter.digest import build_digest
 from khadbot.encounter.ingest import RECORDED_BUFF_IDS, ingest_report
-from khadbot.encounter.ingest.pipeline import default_cache, default_store
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.storage import CompressedBlobStore, LocalBlobStore, default_blob_store
 from khadbot.storage.s3 import S3BlobStore
@@ -114,9 +114,9 @@ def test_s3_needs_a_bucket(monkeypatch):
 
 
 def test_the_default_factories_follow_the_setting(moto_s3, s3_env):
-    assert isinstance(default_cache().blobs, CompressedBlobStore)
-    assert isinstance(default_store().blobs, CompressedBlobStore)
-    assert isinstance(default_annotation_cache().blobs, CompressedBlobStore)
+    assert isinstance(wiring.raw_cache().blobs, CompressedBlobStore)
+    assert isinstance(wiring.event_store().blobs, CompressedBlobStore)
+    assert isinstance(wiring.annotation_cache().blobs, CompressedBlobStore)
 
 
 # ---------------------------------------------------------------------------
@@ -144,15 +144,15 @@ def test_offline_ingest_and_digest_through_s3(moto_s3, s3_env):
         ingest_report(
             SMALL_REPORT,
             fights,
-            store=default_store(),
-            cache=default_cache(),
+            store=wiring.event_store(),
+            cache=wiring.raw_cache(),
             offline=True,
             defensive_spell_ids=RECORDED_BUFF_IDS,
         )
     )
     assert not result.failed, result.failed
 
-    store, cache = default_store(), default_annotation_cache()
+    store, cache = wiring.event_store(), wiring.annotation_cache()
     assert isinstance(store, ParquetEventStore) and isinstance(cache, AnnotationCache)
     registry = load_cooldowns("defensive")
     digests = [build_digest(f"{SMALL_REPORT}:{fight}", store, defensive=registry, cache=cache) for fight in fights]

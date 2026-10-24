@@ -36,21 +36,10 @@ from khadbot.encounter.ingest.normalize import (
 )
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.models import IngestResult, Pull
-from khadbot.encounter.store import EventStore, ParquetEventStore, positions_hash
-from khadbot.storage import default_blob_store
+from khadbot.encounter.store import EventStore, positions_hash
 from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsClient
 
 logger = logging.getLogger(__name__)
-
-
-def default_cache() -> RawPageCache:
-    """The raw page cache in the default blob store (``raw/`` under ``KHADBOT_DATA_DIR`` locally)."""
-    return RawPageCache(default_blob_store())
-
-
-def default_store() -> ParquetEventStore:
-    """The event store in the default blob store (``events/`` under ``KHADBOT_DATA_DIR`` locally)."""
-    return ParquetEventStore(default_blob_store())
 
 
 async def _report_meta(
@@ -89,8 +78,8 @@ async def ingest_report(
     code: str,
     fight_ids: list[int] | None = None,
     *,
-    store: EventStore | None = None,
-    cache: RawPageCache | None = None,
+    store: EventStore,
+    cache: RawPageCache,
     offline: bool = False,
     progress: ProgressFn | None = None,
     client: WarcraftLogsClient | None = None,
@@ -117,9 +106,6 @@ async def ingest_report(
     """
     if refresh_meta and offline:
         raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
-    store = store or default_store()
-    cache = cache or default_cache()
-
     async with contextlib.AsyncExitStack() as stack:
         if client is None and not offline:
             wcl = get_config().warcraftlogs

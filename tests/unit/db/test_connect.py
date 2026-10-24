@@ -1,17 +1,17 @@
 """
 tests/unit/db/test_connect.py
 
-Pool construction and the mode switch in default_findings_store. No Postgres: ConnectionPool is replaced.
+Pool construction and the mode switch in wiring.findings_store. No Postgres: ConnectionPool is replaced.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from khadbot import wiring
 from khadbot.config import DatabaseConfig, DeploymentMode, reset_config
 from khadbot.db import PostgresFindingsStore, connect
-from khadbot.encounter import findings
-from khadbot.encounter.findings import SqliteFindingsStore, default_findings_store
+from khadbot.encounter.findings import SqliteFindingsStore
 
 
 class FakePool:
@@ -105,7 +105,7 @@ def test_get_pool_is_shared_until_closed(monkeypatch):
 
 def test_default_store_is_sqlite_in_local_mode(monkeypatch, tmp_path):
     monkeypatch.setenv("KHADBOT_DATA_DIR", str(tmp_path))
-    store = default_findings_store()
+    store = wiring.findings_store()
     assert isinstance(store, SqliteFindingsStore)
     assert store.db_path == tmp_path / "khadbot.sqlite"
     assert FakePool.instances == []  # local mode never touches the database
@@ -114,6 +114,6 @@ def test_default_store_is_sqlite_in_local_mode(monkeypatch, tmp_path):
 def test_default_store_is_postgres_in_hosted_mode(monkeypatch):
     monkeypatch.setenv("KHADBOT_MODE", "hosted")
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:fake@db/x")
-    store = findings.default_findings_store()
+    store = wiring.findings_store()
     assert isinstance(store, PostgresFindingsStore)
     assert len(FakePool.instances) == 1
