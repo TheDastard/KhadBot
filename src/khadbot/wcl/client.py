@@ -1,5 +1,7 @@
 """
-WarcraftLogs API client.
+wcl/client.py
+
+WarcraftLogs API client, shared by the coach tools and encounter ingest.
 
 Handles two OAuth flows:
 

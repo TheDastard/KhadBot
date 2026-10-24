@@ -52,12 +52,6 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from khadbot.tools.warcraftlogs._client import (
-    WarcraftLogsAPIError,
-    WarcraftLogsAuthError,
-    WarcraftLogsClient,
-    WarcraftLogsPrivateReportError,
-)
 from khadbot.tools.warcraftlogs._queries import (
     GET_AVOIDABLE_DAMAGE,
     GET_COOLDOWN_CASTS,
@@ -65,6 +59,12 @@ from khadbot.tools.warcraftlogs._queries import (
     GET_DEATHS,
     GET_HEALING_TABLE,
     GET_REPORT_FIGHTS,
+)
+from khadbot.wcl.client import (
+    WarcraftLogsAPIError,
+    WarcraftLogsAuthError,
+    WarcraftLogsClient,
+    WarcraftLogsPrivateReportError,
 )
 
 logger = logging.getLogger(__name__)

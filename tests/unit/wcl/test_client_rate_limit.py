@@ -9,7 +9,7 @@ import httpx
 import pytest
 import respx
 
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.wcl.client import (
     GRAPHQL_CLIENT_URL,
     TOKEN_URL,
     WarcraftLogsAPIError,

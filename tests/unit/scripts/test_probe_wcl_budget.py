@@ -18,7 +18,7 @@ from helpers.scripts import load_script
 
 from khadbot.encounter.ingest.fetch import specs_for
 from khadbot.encounter.models import Pull
-from khadbot.tools.warcraftlogs._client import RATE_LIMIT_QUERY, TOKEN_URL
+from khadbot.wcl.client import RATE_LIMIT_QUERY, TOKEN_URL
 
 pb = load_script("probe_wcl_budget")
 

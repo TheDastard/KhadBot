@@ -43,13 +43,13 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.tools.warcraftlogs._queries import GET_CHARACTER_REPORTS
+from khadbot.wcl.client import (
     WarcraftLogsAPIError,
     WarcraftLogsAuthError,
     WarcraftLogsClient,
     WarcraftLogsPrivateReportError,
 )
-from khadbot.tools.warcraftlogs._queries import GET_CHARACTER_REPORTS
 
 logger = logging.getLogger(__name__)
 

@@ -50,7 +50,7 @@ from khadbot.encounter.ingest.fetch import RawPageCache, fetch_pull, specs_for
 from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.ingest.recorded import recorded_fights, recorded_reports
 from khadbot.encounter.models import FetchSpec, Pull
-from khadbot.tools.warcraftlogs._client import RATE_LIMIT_QUERY, TOKEN_URL, WarcraftLogsClient
+from khadbot.wcl.client import RATE_LIMIT_QUERY, TOKEN_URL, WarcraftLogsClient
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "encounter" / "wcl"

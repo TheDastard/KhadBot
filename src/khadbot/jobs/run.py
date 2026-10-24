@@ -39,7 +39,7 @@ from khadbot.encounter.models import IngestResult, PullFindings
 from khadbot.encounter.store import EventStore
 from khadbot.jobs.progress import NullProgress, Progress
 from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull
-from khadbot.tools.warcraftlogs._client import WarcraftLogsClient
+from khadbot.wcl.client import WarcraftLogsClient
 
 __all__ = [
     "JobContext",

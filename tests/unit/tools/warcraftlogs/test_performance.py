@@ -51,7 +51,14 @@ import httpx
 import pytest
 import respx
 
-from khadbot.tools.warcraftlogs._client import (
+from khadbot.tools.warcraftlogs.performance import (
+    _find_actor,
+    _format_summary,
+    _summarise_casts,
+    fetch_report_summary,
+    get_warcraftlogs_report,
+)
+from khadbot.wcl.client import (
     GRAPHQL_CLIENT_URL,
     GRAPHQL_USER_URL,
     TOKEN_URL,
@@ -59,13 +66,6 @@ from khadbot.tools.warcraftlogs._client import (
     WarcraftLogsAuthError,
     WarcraftLogsClient,
     WarcraftLogsPrivateReportError,
-)
-from khadbot.tools.warcraftlogs.performance import (
-    _find_actor,
-    _format_summary,
-    _summarise_casts,
-    fetch_report_summary,
-    get_warcraftlogs_report,
 )
 
 # ---------------------------------------------------------------------------

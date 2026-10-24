@@ -72,11 +72,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from khadbot.tools.warcraftlogs._client import (
-    WarcraftLogsAPIError,
-    WarcraftLogsAuthError,
-    WarcraftLogsPrivateReportError,
-)
 from khadbot.tools.warcraftlogs.encounter import (
     AVOIDABLE_SPELL_IDS,
     MAJOR_COOLDOWN_IDS,
@@ -93,6 +88,11 @@ from khadbot.tools.warcraftlogs.encounter import (
     _format_encounter,
     fetch_encounter_events,
     get_encounter_analysis,
+)
+from khadbot.wcl.client import (
+    WarcraftLogsAPIError,
+    WarcraftLogsAuthError,
+    WarcraftLogsPrivateReportError,
 )
 
 # ---------------------------------------------------------------------------
