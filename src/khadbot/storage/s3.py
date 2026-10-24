@@ -1,7 +1,7 @@
 """
 storage/s3.py
 
-``S3BlobStore``: a ``BlobStore`` over one bucket of an S3-compatible service (Cloudflare R2 in production, MinIO
+``S3BlobStore``: a ``BlobStore`` over one bucket of an S3-compatible service (Cloudflare R2 in production, SeaweedFS
 locally) through ``boto3``. Keys are the same ``/``-separated keys the local store uses, placed under an optional
 key prefix in the bucket. Credentials are not part of the configuration: boto3 finds them the standard way
 (``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` in the environment, a profile, or an instance role).
@@ -28,7 +28,7 @@ _MISSING_CODES = frozenset({"NoSuchKey", "404", "NotFound"})
 
 def make_client(*, endpoint_url: str | None = None, region: str | None = None) -> Any:
     """
-    A boto3 S3 client. With a custom endpoint (MinIO, R2) it uses path-style addressing, which both accept and
+    A boto3 S3 client. With a custom endpoint (SeaweedFS, R2) it uses path-style addressing, which both accept and
     which needs no DNS entry per bucket; retries are botocore's ``standard`` mode.
     """
     config = Config(
