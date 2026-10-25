@@ -17,6 +17,7 @@ from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
 from khadbot.api import create_app, openapi_document
+from khadbot.api.app import hosted_documentation_app
 from khadbot.api.schemas import RefKind
 from khadbot.encounter import evidence
 from khadbot.encounter.analyst.verify import check_finding
@@ -32,7 +33,7 @@ def test_committed_contract_matches_the_api():
 
 
 def test_contract_is_independent_of_the_data_directory(tmp_path):
-    assert openapi_document(create_app(data_dir=tmp_path)) == openapi_document()
+    assert openapi_document(hosted_documentation_app(tmp_path)) == openapi_document()
 
 
 def test_ref_kinds_match_the_ref_grammar():
@@ -53,10 +54,12 @@ def test_every_error_response_uses_the_error_body():
                     assert schema == {"$ref": "#/components/schemas/ErrorBody"}, (path, status)
 
 
-def test_every_path_is_versioned_and_read_only():
+def test_every_path_is_versioned_and_local_mode_is_read_only():
     doc = orjson.loads(CONTRACT.read_bytes())
     assert all(path.startswith("/v1/") for path in doc["paths"])
-    assert {method for ops in doc["paths"].values() for method in ops} == {"get"}
+    # The contract is the hosted API's. Local mode (no sign-in, no jobs) stays read-only.
+    local = create_app(data_dir=Path(".")).openapi()
+    assert {method for ops in local["paths"].values() for method in ops} == {"get"}
 
 
 def test_extra_routers_are_mounted(tmp_path):

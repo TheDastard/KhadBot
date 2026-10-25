@@ -296,6 +296,14 @@ def is_local_http(url: str) -> bool:
 
 
 @dataclass(frozen=True)
+class ApiConfig:
+    """Hosted API settings that are not sign-in (``AuthConfig``) or queue (``QueueConfig``) settings."""
+
+    # How often an idle job event stream sends a comment line, and re-reads the job in case a notification was lost.
+    sse_keepalive_s: float = field(default_factory=lambda: float(_optional("KHADBOT_SSE_KEEPALIVE_S", "15")))
+
+
+@dataclass(frozen=True)
 class SimCConfig:
     binary_path: str = field(default_factory=lambda: _optional("SIMC_BINARY_PATH", "simc"))
     timeout_seconds: int = field(default_factory=lambda: int(_optional("SIMC_TIMEOUT_SECONDS", "120")))

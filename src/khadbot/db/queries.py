@@ -29,12 +29,16 @@ __all__ = [
     "NightProgress",
     "Progression",
     "ReportRows",
+    "UserReportGroup",
+    "UserReportRow",
+    "UserReports",
     "backfill_pull_keys",
     "findings_hashes",
     "progression",
     "report",
     "referenced_records_keys",
     "report_rows",
+    "user_reports",
 ]
 
 
@@ -108,6 +112,69 @@ def findings_hashes(conn: Connection[Any], pull_keys: Sequence[str]) -> list[Fin
             """,
             (list(pull_keys),),
         ).fetchall()
+
+
+# ---------------------------------------------------------------------------
+# A user's reports
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class UserReportRow:
+    code: str
+    title: str | None
+    start_time_ms: int | None
+
+
+@dataclass(frozen=True)
+class UserReportGroup:
+    """One encounter and difficulty of a listed report, with its pull count."""
+
+    report_code: str
+    encounter_id: int
+    encounter_name: str
+    difficulty: int | None
+    pulls: int
+
+
+@dataclass(frozen=True)
+class UserReports:
+    total: int  # every report the user has, not just the ``limit`` newest
+    reports: list[UserReportRow]  # newest report start first
+    groups: list[UserReportGroup]  # of the listed reports, in the order first pulled
+
+
+_USER_REPORTS: LiteralString = (
+    "SELECT code FROM ("
+    "SELECT report_code AS code FROM report_access WHERE user_id = %(user)s AND readable "
+    "UNION SELECT report_code FROM jobs WHERE requested_by = %(user)s AND kind = 'ingest'"
+    ") mine"
+)
+
+
+def user_reports(conn: Connection[Any], user_id: str, limit: int) -> UserReports:
+    """
+    The reports ``user_id`` has opened (a cached "readable" access answer) or ingested (a job they requested), that
+    have a ``reports`` row (at least one pull was projected), newest report start first.
+    """
+    params = {"user": user_id, "limit": limit}
+    total = conn.execute("SELECT count(*) FROM reports WHERE code IN (" + _USER_REPORTS + ")", params).fetchone()
+    with conn.cursor(row_factory=class_row(UserReportRow)) as cur:
+        reports = cur.execute(
+            "SELECT code, title, start_time_ms FROM reports WHERE code IN (" + _USER_REPORTS + ") "
+            "ORDER BY start_time_ms DESC NULLS LAST, code DESC LIMIT %(limit)s",
+            params,
+        ).fetchall()
+    groups: list[UserReportGroup] = []
+    if reports:
+        with conn.cursor(row_factory=class_row(UserReportGroup)) as cur:
+            groups = cur.execute(
+                "SELECT report_code, encounter_id, max(encounter_name) AS encounter_name, difficulty, "
+                "count(*)::int AS pulls FROM pulls WHERE report_code = ANY(%s) "
+                "GROUP BY report_code, encounter_id, difficulty ORDER BY report_code, min(start_ms), encounter_id",
+                ([r.code for r in reports],),
+            ).fetchall()
+    return UserReports(int(total[0]) if total else 0, reports, groups)
 
 
 # ---------------------------------------------------------------------------
