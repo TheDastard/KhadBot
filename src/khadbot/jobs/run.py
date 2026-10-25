@@ -7,7 +7,7 @@ calls them directly; the queue calls them through ``run_job``.
 
 Everything a job needs beyond its spec comes from a ``JobContext``: the stores, the WCL client and the token
 resolver. A spec never holds a token; ``TokenResolver`` turns its ``auth`` into a WCL token provider when the job
-runs. Local mode resolves app auth only.
+runs: in hosted mode ``UserTokenResolver`` loads a signed-in user's own token; local mode resolves app auth only.
 
 Progress sequence per job (pull-level events carry the pull key; job-level events carry None):
 
@@ -28,6 +28,7 @@ from typing import Any, Protocol
 from pydantic import BaseModel
 
 from khadbot import wiring
+from khadbot.auth.errors import WclSignInRequiredError, WclUnavailableError
 from khadbot.encounter.analyst import ModelMismatchError, review_pull
 from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_cooldowns
 from khadbot.encounter.evidence import EncounterData
@@ -38,7 +39,7 @@ from khadbot.encounter.models import IngestResult, PullFindings
 from khadbot.encounter.records_store import ReadModelProjector
 from khadbot.encounter.store import EventStore
 from khadbot.jobs.progress import NullProgress, Progress
-from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull
+from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull, UserAuth
 from khadbot.wcl.client import WarcraftLogsClient
 
 __all__ = [
@@ -50,7 +51,10 @@ __all__ = [
     "ReviewPullResult",
     "TokenResolver",
     "UserAuthUnavailableError",
+    "UserTokenResolver",
+    "UserTokenSource",
     "default_filter_kwargs",
+    "default_token_resolver",
     "process_specs_for",
     "run_ingest_report",
     "run_job",
@@ -106,6 +110,72 @@ class LocalTokenResolver:
         )
 
 
+class UserTokenSource(Protocol):
+    """Signed-in users' WCL access tokens (``auth.tokens.WclTokens``): loaded and refreshed when asked."""
+
+    async def access_token(self, user_id: str, *, force_refresh: bool = False) -> str: ...
+
+
+class UserTokenResolver:
+    """
+    Resolves ``UserAuth`` to the user's own WCL token, loaded (and refreshed if expired) on every request ingest
+    makes, so a long job never runs on a stale token and the token never sits in the job's payload.
+
+    Args:
+        tokens: Builds the token source on first use. None from it means this deployment has no signed-in
+            users, as in local mode. App auth never calls it.
+    """
+
+    def __init__(self, tokens: Callable[[], UserTokenSource | None]) -> None:
+        self._factory = tokens
+        self._source: UserTokenSource | None = None
+
+    def _tokens(self, auth: UserAuth) -> UserTokenSource:
+        if self._source is None:
+            self._source = self._factory()
+        if self._source is None:
+            raise UserAuthUnavailableError(
+                f"Cannot fetch as user '{auth.user_id}': local mode has no signed-in users. Use app auth."
+            )
+        return self._source
+
+    async def provider_for(self, auth: Auth) -> TokenProvider | None:
+        """
+        None for app auth; for user auth, a provider that returns the user's current access token.
+
+        Raises:
+            UserAuthUnavailableError: The user has no usable WCL sign-in (never signed in, or it was revoked), or
+                this deployment has no signed-in users. Raised before the job does any work.
+            JobError: WCL could not renew the sign-in just now; the job can be retried.
+        """
+        if isinstance(auth, AppAuth):
+            return None
+        source = self._tokens(auth)
+        user_id = auth.user_id
+        await _user_token(source, user_id)  # fail before any work when the sign-in is unusable
+
+        async def provider() -> str:
+            return await _user_token(source, user_id)
+
+        return provider
+
+
+async def _user_token(source: UserTokenSource, user_id: str) -> str:
+    try:
+        return await source.access_token(user_id)
+    except WclSignInRequiredError:
+        raise UserAuthUnavailableError(
+            f"User '{user_id}' has no usable Warcraft Logs sign-in; they need to sign in again."
+        ) from None
+    except WclUnavailableError:
+        raise JobError("Warcraft Logs could not renew the user's sign-in just now; retry the job later.") from None
+
+
+def default_token_resolver() -> TokenResolver:
+    """The configured resolver: users' own tokens in hosted mode (built on the first ``UserAuth``), else app only."""
+    return UserTokenResolver(wiring.user_tokens)
+
+
 # ---------------------------------------------------------------------------
 # Context
 # ---------------------------------------------------------------------------
@@ -134,7 +204,7 @@ class JobContext:
     findings: FindingsStore | None = None
     client: WarcraftLogsClient | None = None  # None: ingest opens one from the app credentials when it needs WCL
     filters: Callable[[], Mapping[str, Any]] = default_filter_kwargs
-    resolver: TokenResolver = field(default_factory=LocalTokenResolver)
+    resolver: TokenResolver = field(default_factory=lambda: default_token_resolver())
     projector: ReadModelProjector | None = field(default_factory=wiring.read_model_projector)
 
     def encounter_data(self) -> EncounterData:

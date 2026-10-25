@@ -88,9 +88,18 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   2. Done: `ingest_report` and `fetch_pull` take a `token_provider` and send every request to `/api/v2/user` with
      it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. Whether the user's
      budget pays is still step 1's question; with no provider, ingest uses the app token as before.
-  3. Data fetched with a user token can include private reports. The hosted store must record which users may
-     read a report, so cached pages and records never reach a user whose own token can't see it. WoWAnalyzer
-     adds the WCL user ID to the cache key of signed-in requests for the same reason.
+  3. Built, not yet wired into routes: `auth.access.ReportAccess.can_read` decides per user whether a report is
+     readable (their token, or the app token for public reports) and caches it in `report_access`; jobs fetch on
+     the user's token through `jobs.UserTokenResolver`. Still open: the hosted API must call `require_readable`
+     on every report and pull route (including evidence refs and job streams) and mount the sign-in routes with
+     CORS that allows credentials, `POST` and the `X-KhadBot-CSRF` header for the web origins.
+- **Sign-in details to confirm on the first hosted sign-in.** The refresh grant and the `currentUser` query are
+  from WCL's documentation, not a recorded response (`docs/wcl-api.md`, Access); whether a refresh rotates the
+  refresh token, and the error text for a private or missing report, are unknown. An ingest job retried after a
+  401 re-reads the stored token rather than forcing a refresh, so a token WCL revokes before its stated expiry
+  fails that job until its expiry passes or the user signs in again. Expired `sessions` and `oauth_states` rows
+  are deleted only when met (a lookup or the next sign-in); a periodic cleanup belongs with the retention job.
+  `WclTokens.rotate_keys` re-encrypts stored tokens after a new key is added, but no command runs it yet.
 - **Rate-limit users on the app budget.** Requests without a user token (users not signed in to WCL,
   Discord-only users, background jobs) share the app's hourly points. Not built: a global points bucket kept in
   step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected
