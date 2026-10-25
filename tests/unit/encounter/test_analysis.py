@@ -182,6 +182,86 @@ class TestDeathsEdgeCases:
         (d,) = death_records(a, ACTORS, friendly=FRIENDLY)
         assert d.window_self_damage == 0
 
+    @staticmethod
+    def _heal(t, target, amount, hp_pct=None):
+        return {"t_ms": t, "type": "heal", "source_id": 2, "target_id": target, "amount": amount, "hp_pct": hp_pct}
+
+    def _two_lives(self, shuffled=False):
+        """
+        One actor dying at 15 000 and again at 40 000 (window 10 s), with rows on and either side of every bound:
+        life start 15 000 (excluded), first lower bound 5 000 and second lower bound 30 000 (included), each death's
+        own time (included) and one ms after it (excluded). ``shuffled`` swaps rows so ``t_ms`` is not
+        monotonic in ``seq`` order, which a real pull never is.
+        """
+        rows = [
+            _hit(4_999, 1, 1_000),  # just below the first lower bound
+            _hit(5_000, 1, 2_000),  # at the first lower bound
+            self._heal(8_000, 1, 700, hp_pct=95.0),
+            _hit(15_000, 1, 4_000, 0.0, ability=200),  # at the first death's time, and the second life's start
+            _death(15_000, 1, ability=200),
+            self._heal(15_001, 1, 300, hp_pct=96.0),  # first row of the second life, before its window
+            _hit(29_999, 1, 8_000),  # just below the second lower bound
+            _hit(30_000, 1, 16_000),  # at the second lower bound
+            _hit(40_000, 1, 32_000, 0.0, ability=300),  # at the second death's time
+            _death(40_000, 1, ability=300),
+            _hit(40_001, 1, 64_000),  # after the second death
+        ]
+        if shuffled:
+            rows[0], rows[1] = rows[1], rows[0]
+            rows[6], rows[7] = rows[7], rows[6]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        times = a.frame.filter(pl.col("target_id") == 1)["t_ms"]
+        assert times.is_sorted() is not shuffled  # which path death_records takes
+        return a
+
+    @pytest.mark.parametrize("shuffled", [False, True], ids=["time-sorted", "not-time-sorted"])
+    def test_window_and_life_bounds_are_exact(self, shuffled):
+        first, second = death_records(self._two_lives(shuffled), ACTORS)
+        # Rows at the death's time and at the lower bound count; one ms outside either does not.
+        assert (first.window_damage, first.window_healing, first.time_to_die_ms) == (6_000, 700, 7_000)
+        assert [h.ability_id for h in first.top_hits] == [200, 100]
+        assert first.killing_ability_id == 200
+        # Rows at the previous death's time are out of the second life; rows in the life but before the window
+        # count only towards time to die.
+        assert (second.window_damage, second.window_healing) == (48_000, 0)
+        assert second.time_to_die_ms == 24_999
+        assert [(h.t_ms, h.amount) for h in second.top_hits] == [(40_000, 32_000), (30_000, 16_000)]
+        assert second.killing_ability_id == 300
+
+    def test_null_amounts_count_as_zero_in_sums_and_hit_order(self):
+        rows = [
+            _hit(1_000, 1, None),
+            _hit(2_000, 1, 5),
+            _hit(3_000, 1, None),
+            _hit(4_000, 1, 5),
+            _hit(5_000, 1, 9, 0.0),
+            _death(5_000, 1),
+        ]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS)
+        assert d.window_damage == 19
+        # Largest first, equal amounts in time order, and a null amount shown as 0.
+        assert [(h.t_ms, h.amount) for h in d.top_hits] == [(5_000, 9), (2_000, 5), (4_000, 5), (1_000, 0), (3_000, 0)]
+
+    def test_actors_interleaved_in_time_do_not_share_rows(self):
+        rows = [
+            _hit(1_000, 1, 100, 95.0),
+            _hit(1_500, 3, 10, 95.0),
+            _hit(2_000, 1, 200, 0.0),
+            _death(2_000, 1),
+            _hit(2_500, 3, 20),
+            self._heal(3_000, 1, 5, hp_pct=92.0),
+            _hit(3_500, 3, 40, 0.0),
+            _death(3_500, 3),
+            _hit(4_000, 1, 400, 0.0),
+            _death(4_000, 1),
+        ]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        tank, alpha, tank_again = death_records(a, ACTORS)
+        assert (tank.name, tank.window_damage, tank.window_healing, tank.time_to_die_ms) == ("Tank", 300, 0, 1_000)
+        assert (alpha.name, alpha.window_damage, alpha.window_healing, alpha.time_to_die_ms) == ("Alpha", 70, 0, 2_000)
+        assert (tank_again.window_damage, tank_again.window_healing, tank_again.time_to_die_ms) == (400, 5, 1_000)
+
 
 # ===========================================================================
 # Friendly damage
