@@ -105,11 +105,26 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **Job queue gaps.** (1) A worker that dies without shutting down (killed, out of memory) leaves its job rows
   `running` and the procrastinate job `doing`: nothing marks them failed or retries them. procrastinate records
   worker heartbeats and can list stalled jobs (`JobManager.get_stalled_jobs`); a periodic task should fail the
-  `jobs` row and requeue the job. (2) The `watch` queue has no tasks. (3) `jobs` rows are never deleted; retention
-  should prune finished ones and procrastinate's (`builtin:remove_old_jobs`). (4) No test runs a fixture report through the
+  `jobs` row and requeue the job. (2) `jobs` rows are never deleted; retention
+  should prune finished ones and procrastinate's (`builtin:remove_old_jobs`). (3) No test runs a fixture report through the
   compose stack's worker, because the worker uses the configured filters and encounter files and SYNTH01 needs its
   own; the stack smoke test checks a typed failure instead, and the hosted tests ingest SYNTH01 through a worker with
   its stores injected. Letting a test point the worker at fixture filters and an encounter directory would close it.
+- **Live watch gaps.** The watch (`jobs/watch.py`, decision D64) is built; what it doesn't do yet:
+  - The points per poll are not measured. The estimate is 1 point (`KHADBOT_WATCH_POLL_POINTS`), from the
+    documented cost of a small query; the metadata query also lists every actor and ability, so it may cost more.
+    `uv run python scripts/wcl/measure_watch_poll.py --code <public report> --polls 3` measures it (about 20 points;
+    it asks for a typed `yes` first). Record the result in `docs/wcl-api.md` and set the default.
+  - Whether WCL lists a fight that is still in progress is unverified. The watch ignores a fight whose end is not
+    after its start; if WCL lists a running fight with an end time in the future, its pull would be fetched
+    early and its raw pages cached as complete. Check on a live report, and if so also wait for a poll in which the
+    fight's end is unchanged.
+  - A watch ends when its user's sign-in does; it does not fall back to the app token, so a public report of a
+    user who signed out stops being followed. Notifying the user (the web app's live screen reads the watch)
+    is left to that screen.
+  - A watch started on a report that already has fights ingests all of them at once, as live. A long night
+    linked late therefore spends its points from the headroom. Linking could skip fights that ended before
+    the watch started if that proves a problem.
 - **WCL budget gaps.** The budget manager (`jobs/budget.py`, `jobs/budget_store.py`, decision D61) is built;
   what it doesn't do yet:
   - A job's measured spend is the change in `pointsSpentThisHour` across its run, so with two jobs fetching at once
