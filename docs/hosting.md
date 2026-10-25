@@ -98,3 +98,37 @@ The seed runs the job functions in-process rather than queueing them: SYNTH01 ne
 ### CI
 
 The `stack` job in `.github/workflows/check.yml` builds the image (nothing is pushed), starts the stack, seeds `SYNTH01`, runs the smoke script and then the queue smoke test against the stack's worker. It is the only place the image is built on every push.
+
+## Retention
+
+What hosted mode keeps, and what removes the rest:
+
+| Prefix | Kept | Removed by |
+|---|---|---|
+| `raw/` (raw WCL pages, zstd) | 14 days | the bucket's lifecycle rule |
+| `annotated/` | 90 days | the bucket's lifecycle rule |
+| `events/` (parquet) | always | nothing: every pull is re-processed from these |
+| `records/` | while a read-model row references it, and for at least 30 days after it was written | the worker's cleanup job |
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_RETENTION_RAW_DAYS` | Days before `raw/` objects expire (default 14). Read by `scripts/data/apply_bucket_lifecycle.py`. |
+| `KHADBOT_RETENTION_ANNOTATED_DAYS` | Days before `annotated/` objects expire (default 90). Same script. |
+| `KHADBOT_RECORDS_MIN_AGE_DAYS` | A records object younger than this is never removed by the cleanup job (default 30). |
+| `KHADBOT_RECORDS_CLEANUP_CRON` | When a worker queues the cleanup job, cron in UTC (default `17 3 * * *`). Empty turns the schedule off. |
+
+### Bucket lifecycle rules
+
+`scripts/data/apply_bucket_lifecycle.py` is in the image and reads the same `KHADBOT_S3_*` and `AWS_*` variables as the API:
+
+    docker compose -f deploy/compose.yaml run --rm --entrypoint python worker scripts/data/apply_bucket_lifecycle.py --dry-run
+    python scripts/data/apply_bucket_lifecycle.py            # on a platform shell, with the bucket's environment
+
+It writes two enabled rules with ids `khadbot-expire-raw` and `khadbot-expire-annotated`, whose prefixes begin with `KHADBOT_S3_PREFIX` when one is set. A `PutBucketLifecycleConfiguration` replaces the bucket's whole configuration, so the script keeps every rule whose id does not start `khadbot-`, replaces its own, then reads the configuration back and exits 1 if a rule is missing, disabled or different. Run it again after changing a retention variable. The unit tests run it against moto; it has not been run against R2 or SeaweedFS from a development machine, so run it with `--dry-run` and then for real on staging and check the exit code.
+
+What each provider supports (as documented; facts and sources):
+
+- **Cloudflare R2: prefix expiration is supported.** A rule may name a prefix and delete objects after a number of days; the S3 calls `PutBucketLifecycleConfiguration`, `GetBucketLifecycleConfiguration` and `DeleteBucketLifecycle` are the way to manage rules. Objects are "typically removed ... within 24 hours" of their expiry, not at the instant, and a rule applied to a bucket that already holds old objects takes up to a day or more to remove them. The limit is 1000 rules per bucket. R2 lists the checksum-algorithm headers as unsupported on `PutBucketLifecycleConfiguration`, which is why the script only sends checksums where the API requires one. The API token needs the `Workers R2 Storage Write` permission. Sources: https://developers.cloudflare.com/r2/buckets/object-lifecycles/ and https://developers.cloudflare.com/r2/api/s3/api/
+- **SeaweedFS 4.48 (the local stack): the gateway accepts prefix expiration rules, but the stack does not enforce them.** The S3 gateway implements `PutBucketLifecycleConfiguration`, `GetBucketLifecycleConfiguration` and `DeleteBucketLifecycle`; `Filter.Prefix` and `Expiration.Days` are supported (minimum 1 day), transition rules are rejected with `NotImplemented`, and expiry "is not event-time accurate" (budget up to a day). Rules are enforced by an S3 lifecycle worker, a scheduled job run through SeaweedFS's admin and worker processes (`weed/worker/tasks/s3_lifecycle` at tag 4.48), or by an opt-in TTL fast path enabled in `weed shell` (`s3.bucket.lifecycle.fastpath -name <bucket> -enable`, non-versioned buckets, rules with a prefix and `Expiration.Days`). `deploy/compose.yaml` runs `weed server -s3` alone, with neither, so in the local stack the rules are stored and read back but nothing expires. Locally, delete old objects yourself (`mise run stack:reset`) or enable the fast path. Sources: https://github.com/seaweedfs/seaweedfs/wiki/S3-Lifecycle, https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API, https://github.com/seaweedfs/seaweedfs/wiki/S3-API-FAQ, and the source at tag 4.48: https://github.com/seaweedfs/seaweedfs/blob/4.48/weed/s3api/s3lifecycle/DESIGN.md and https://github.com/seaweedfs/seaweedfs/blob/4.48/weed/worker/tasks/s3_lifecycle/handler.go
+
+Both providers expire `raw/` and `annotated/` only by age; neither knows whether a pull still needs its raw pages. A pull whose raw pages expired is re-processed from its stored events (`python main.py backfill`), never refetched, so it costs no WCL points. Re-ingesting it would be a new fetch.

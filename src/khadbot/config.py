@@ -282,6 +282,22 @@ class AppConfig:
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
 
 
+@dataclass(frozen=True)
+class RetentionConfig:
+    """
+    How long hosted mode keeps what it stores. The bucket's lifecycle rules (``scripts/data/apply_bucket_lifecycle.py``)
+    expire ``raw/`` and ``annotated/`` objects; ``events/`` and ``records/`` are not expired. The worker's cleanup job
+    deletes records no read-model row references once they are older than ``records_min_age_days``. Local mode keeps
+    everything and ignores these.
+    """
+
+    raw_days: int = field(default_factory=lambda: int(_optional("KHADBOT_RETENTION_RAW_DAYS", "14")))
+    annotated_days: int = field(default_factory=lambda: int(_optional("KHADBOT_RETENTION_ANNOTATED_DAYS", "90")))
+    records_min_age_days: int = field(default_factory=lambda: int(_optional("KHADBOT_RECORDS_MIN_AGE_DAYS", "30")))
+    # When a worker queues the cleanup (cron, UTC, five fields). Empty turns the schedule off.
+    cleanup_cron: str = field(default_factory=lambda: _optional("KHADBOT_RECORDS_CLEANUP_CRON", "17 3 * * *").strip())
+
+
 # ---------------------------------------------------------------------------
 # Module-level singleton — import this everywhere else in the codebase.
 # Instantiation is deferred: importing config.py does NOT read env vars.
