@@ -14,7 +14,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from khadbot.errors import missing_group_message
-from khadbot.storage.blob import BlobStore, validate_key, validate_prefix
+from khadbot.storage.blob import BlobInfo, BlobStore, validate_key, validate_prefix
 
 # ---------------------------------------------------------------------------
 # Store
@@ -87,6 +87,19 @@ class CompressedBlobStore:
             if stored.startswith(prefix):
                 keys.append(stored)
         return sorted(keys)
+
+    def list_info(self, prefix: str = "") -> builtins.list[BlobInfo]:
+        validate_prefix(prefix)
+        infos: builtins.list[BlobInfo] = []
+        for info in self.inner.list_info(prefix):
+            key = info.key
+            if self._compressed(key):
+                if not key.endswith(ZST_SUFFIX):
+                    continue
+                key = key.removesuffix(ZST_SUFFIX)
+            if key.startswith(prefix):
+                infos.append(BlobInfo(key, info.modified, info.size))
+        return sorted(infos, key=lambda i: i.key)
 
     def delete(self, key: str) -> None:
         self.inner.delete(key + ZST_SUFFIX if self._compressed(validate_key(key)) else key)
