@@ -13,9 +13,10 @@ import os
 import time
 import uuid
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
-from khadbot.storage.blob import TMP_SUFFIX, validate_key, validate_prefix
+from khadbot.storage.blob import TMP_SUFFIX, BlobInfo, validate_key, validate_prefix
 
 # ---------------------------------------------------------------------------
 # Atomic write
@@ -116,6 +117,16 @@ class LocalBlobStore:
                 elif key.startswith(prefix) and not entry.name.endswith(TMP_SUFFIX):
                     keys.append(key)
         return sorted(keys)
+
+    def list_info(self, prefix: str = "") -> builtins.list[BlobInfo]:
+        infos: builtins.list[BlobInfo] = []
+        for key in self.list(prefix):
+            try:
+                stat = self.path(key).stat()
+            except FileNotFoundError:  # deleted since the listing
+                continue
+            infos.append(BlobInfo(key, datetime.fromtimestamp(stat.st_mtime, tz=UTC), stat.st_size))
+        return infos
 
     def delete(self, key: str) -> None:
         self.path(key).unlink(missing_ok=True)

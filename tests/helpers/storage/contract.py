@@ -10,6 +10,8 @@ an integration suite can run the same class against a real service.
 from __future__ import annotations
 
 import threading
+import time
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -136,6 +138,29 @@ class BlobStoreContract:
         blobs.put("raw/ABC/report.json", b"{}")
         assert blobs.list("events/") == []
         assert blobs.list("raw/ABC/report.json/") == []
+
+    def test_list_info_matches_list_and_dates_each_object(self, blobs: BlobStore):
+        before = datetime.now(UTC) - timedelta(minutes=5)
+        keys = ["raw/ABC/report.json", "records/ABC/1__abc.json", "events/ABC/1.parquet"]
+        for key in keys:
+            blobs.put(key, b"payload")
+        after = datetime.now(UTC) + timedelta(minutes=5)
+
+        infos = blobs.list_info()
+        assert [i.key for i in infos] == blobs.list() == sorted(keys)
+        for info in infos:
+            assert info.modified.tzinfo is not None
+            assert before <= info.modified <= after
+            assert info.size > 0
+        assert [i.key for i in blobs.list_info("records/")] == ["records/ABC/1__abc.json"]
+        assert blobs.list_info("missing/") == []
+
+    def test_list_info_sees_an_overwrite_as_newer(self, blobs: BlobStore):
+        blobs.put("records/ABC/1__a.json", b"one")
+        first = blobs.list_info("records/")[0].modified
+        time.sleep(1.1)  # S3 timestamps have one-second resolution
+        blobs.put("records/ABC/1__a.json", b"two")
+        assert blobs.list_info("records/")[0].modified > first
 
     # --- delete --------------------------------------------------------------
 

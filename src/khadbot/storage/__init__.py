@@ -14,7 +14,15 @@ from pathlib import Path
 
 from khadbot.config import EncounterConfig, StorageBackend, StorageConfig
 from khadbot.errors import ConfigurationError, missing_group_message
-from khadbot.storage.blob import TMP_SUFFIX, BlobStore, InvalidKeyError, join_key, validate_key, validate_prefix
+from khadbot.storage.blob import (
+    TMP_SUFFIX,
+    BlobInfo,
+    BlobStore,
+    InvalidKeyError,
+    join_key,
+    validate_key,
+    validate_prefix,
+)
 from khadbot.storage.compressed import ZST_SUFFIX, CompressedBlobStore
 from khadbot.storage.local import LocalBlobStore, atomic_write
 
@@ -81,6 +89,7 @@ __all__ = [
     "COMPRESSED_PREFIXES",
     "TMP_SUFFIX",
     "ZST_SUFFIX",
+    "BlobInfo",
     "BlobStore",
     "CompressedBlobStore",
     "InvalidKeyError",

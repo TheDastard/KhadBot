@@ -10,13 +10,14 @@ key prefix in the bucket. Credentials are not part of the configuration: boto3 f
 from __future__ import annotations
 
 import builtins
+from datetime import UTC
 from typing import Any
 
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from khadbot.storage.blob import join_key, validate_key, validate_prefix
+from khadbot.storage.blob import BlobInfo, join_key, validate_key, validate_prefix
 
 # ---------------------------------------------------------------------------
 # Client
@@ -108,6 +109,18 @@ class S3BlobStore:
         for page in paginator.paginate(Bucket=self.bucket, Prefix=base + prefix):
             keys.extend(obj["Key"][len(base) :] for obj in page.get("Contents", ()))
         return sorted(keys)
+
+    def list_info(self, prefix: str = "") -> builtins.list[BlobInfo]:
+        validate_prefix(prefix)
+        base = f"{self.prefix}/" if self.prefix else ""
+        paginator = self._client.get_paginator("list_objects_v2")
+        infos: builtins.list[BlobInfo] = []
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=base + prefix):
+            infos.extend(
+                BlobInfo(obj["Key"][len(base) :], obj["LastModified"].astimezone(UTC), obj["Size"])
+                for obj in page.get("Contents", ())
+            )
+        return sorted(infos, key=lambda info: info.key)
 
     def delete(self, key: str) -> None:
         self._client.delete_object(Bucket=self.bucket, Key=self._full(key))

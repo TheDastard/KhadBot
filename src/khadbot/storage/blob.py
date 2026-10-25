@@ -11,6 +11,8 @@ store over an existing data directory reads it unchanged and an object store hol
 from __future__ import annotations
 
 import builtins
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 
 # ---------------------------------------------------------------------------
@@ -77,6 +79,15 @@ def join_key(*parts: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class BlobInfo:
+    """One stored object: its key, when it was last written (timezone-aware, UTC) and its stored size in bytes."""
+
+    key: str
+    modified: datetime
+    size: int
+
+
 @runtime_checkable
 class BlobStore(Protocol):
     """
@@ -102,9 +113,13 @@ class BlobStore(Protocol):
         """Sorted keys starting with ``prefix``. A prefix ending in ``/`` lists that directory, recursively."""
         ...
 
+    def list_info(self, prefix: str = "") -> builtins.list[BlobInfo]:
+        """``list`` with each object's last-write time and size (retention decides what to remove by age)."""
+        ...
+
     def delete(self, key: str) -> None:
         """Remove the object at ``key`` if there is one."""
         ...
 
 
-__all__ = ["TMP_SUFFIX", "BlobStore", "InvalidKeyError", "join_key", "validate_key", "validate_prefix"]
+__all__ = ["TMP_SUFFIX", "BlobInfo", "BlobStore", "InvalidKeyError", "join_key", "validate_key", "validate_prefix"]
