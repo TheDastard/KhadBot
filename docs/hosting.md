@@ -24,7 +24,7 @@ Secrets are supplied by the platform's environment, never by the image, a compos
 
 | Variable | Meaning |
 |---|---|
-| `KHADBOT_MODE` | `hosted` to read findings and the night summary from Postgres. Unset or `local` serves a local data directory. |
+| `KHADBOT_MODE` | `hosted` for the hosted API: sign-in, report access checks, ingest jobs, findings and the night summary from Postgres. Unset or `local` serves a local data directory with no sign-in. |
 | `DATABASE_URL` | Postgres connection URL. Required in hosted mode. |
 | `KHADBOT_DB_POOL_MIN`, `KHADBOT_DB_POOL_MAX` | Connection pool bounds (defaults 1 and 10). |
 | `KHADBOT_STORAGE` | `s3` for the bucket (events, annotations, records and raw pages). `local` keeps files under `KHADBOT_DATA_DIR`. |
@@ -35,7 +35,14 @@ Secrets are supplied by the platform's environment, never by the image, a compos
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Bucket credentials, read by boto3 itself. |
 | `KHADBOT_DATA_DIR` | Scratch directory (the image sets `/var/lib/khadbot`). Not used for data in hosted mode. |
 
-The API makes no WCL calls and needs no WCL credentials.
+In hosted mode the API also reads the sign-in settings (`WARCRAFTLOGS_CLIENT_ID`, `WARCRAFTLOGS_CLIENT_SECRET`, `KHADBOT_TOKEN_KEYS`, `KHADBOT_WCL_REDIRECT_URI`, `KHADBOT_POST_LOGIN_URL`, `KHADBOT_WEB_ORIGINS` and the session and access settings in `.env.example`) and refuses to start without the client credentials and a token key. It calls WCL only to check whether a user may read a report (cached in `report_access`) and to sign users in; it never fetches events. It queues ingests on the job queue and never runs them.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WEB_ORIGINS` | The web app's origins. CORS allows exactly these, with credentials, `GET`, `POST`, `DELETE` and the `Content-Type`, `X-KhadBot-CSRF` and `Last-Event-ID` headers; state-changing routes also refuse a browser `Origin` outside this list. |
+| `KHADBOT_SSE_KEEPALIVE_S` | How often an idle job event stream sends a comment line and re-reads the job (default 15). Keep it under your proxy's idle timeout. |
+
+The routes: every report, pull, timeline, events, findings and evidence route answers 404 `report_not_found` unless the caller (signed in or not) can read the report; `GET /v1/reports` lists the signed-in user's own reports; `POST /v1/reports` queues an ingest, `GET /v1/jobs/{id}`, `GET /v1/jobs/{id}/events` (server-sent events) and `POST /v1/jobs/{id}/cancel` follow and cancel it, for the user who started it only. On Windows the hosted API runs on a selector event loop (psycopg's async connections need it). A proxy in front of the API must not buffer `text/event-stream` responses (the API sends `X-Accel-Buffering: no`).
 
 ### Migrate (`khadbot migrate`)
 
@@ -68,7 +75,7 @@ The WCL budget (`khadbot.jobs.budget`, state in the `wcl_budget` row). A worker 
 | `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` | A signed-in user's own pool on the `new` scheme; unset until it is measured. |
 | `KHADBOT_BUDGET_RESERVATION_TTL_S` | A reservation no job settled (a worker died) is dropped after this long (default 7200). |
 
-Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API does not call it yet.
+Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API calls it for the ingest routes.
 
 ### Seed (`scripts/data/seed_stack.py`)
 
@@ -87,7 +94,7 @@ Needs Docker with Compose. From the repository root:
 
     mise run stack:up       # build the image; start Postgres, SeaweedFS, the migrate step and the API
     mise run stack:seed     # load the recorded fixture reports (offline, no WCL calls)
-    mise run stack:smoke    # health, the report list and a night summary
+    mise run stack:smoke    # health, a signed-out 404, then the report list and a night summary as the smoke user
     mise run stack:queue-smoke  # queue a job and check the worker finishes it
     mise run stack:logs
     mise run stack:down     # stop, keep the data volumes
@@ -96,6 +103,8 @@ Needs Docker with Compose. From the repository root:
 Everything listens on 127.0.0.1: the API on 8000, Postgres on 5432 and the SeaweedFS S3 endpoint on 8333. The data lives in named Docker volumes; the local `.khadbot_data` directory is never mounted.
 
 ### Seeding
+
+The seed also provisions a smoke user whose session cookie value is `KHADBOT_STACK_SMOKE_SESSION` (set only in `deploy/stack.env`) with a cached "readable" answer for each seeded report, so `stack:smoke` can read them without a Warcraft Logs sign-in, and caches each report as not public, so a signed-out visitor gets 404 without asking WCL. The readable answers stand for an hour (`KHADBOT_ACCESS_RECHECK_S`) and the not-public ones for 5 minutes (`KHADBOT_ACCESS_DENIED_RECHECK_S`); the stack's placeholder WCL credentials cannot renew either, so a visitor's request after that gets 503, and the routes answer 503 for everyone once the hour is up. Seed again to reset them.
 
 `stack:seed` runs `scripts/data/seed_stack.py` in the image with the fixtures mounted read-only from the repository. For each report it ingests the pulls offline into the bucket, stores the report metadata, then runs the same process job the queue runs: annotate, build and store the records, project the read-model tables. A second run changes nothing.
 
