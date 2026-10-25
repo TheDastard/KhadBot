@@ -96,20 +96,30 @@ services:
       timeout: 5s
       retries: 12
 
-  # The job queue worker. Its `worker` subcommand arrives with the queue, so the service is behind a profile until
-  # then: `docker compose --profile worker up` once it exists.
+  # The job queue worker: takes ingest, process and review jobs (KHADBOT_WORKER_QUEUES) from the same Postgres the API
+  # writes them to. It needs no WCL credentials until a job fetches from WCL; stack.env holds none.
   worker:
     <<: *khadbot
     command: ["worker"]
-    profiles: ["worker"]
     depends_on:
       migrate:
         condition: service_completed_successfully
       createbucket:
         condition: service_completed_successfully
 
+  # Queues a job and checks the running worker finishes it (scripts/dev/queue_smoke.py), then exits.
+  # Run with `mise run stack:queue-smoke`.
+  queue-smoke:
+    <<: *khadbot
+    entrypoint: ["python", "scripts/dev/queue_smoke.py"]
+    profiles: ["smoke"]
+    depends_on:
+      - worker
+
   # Loads the recorded fixture reports through the pipeline into the stack (offline: no WCL calls). The fixtures and
-  # the helper they need are mounted read-only from the repository. Run with `mise run stack:seed`.
+  # the helper they need are mounted read-only from the repository. Run with `mise run stack:seed`. The seed runs the
+  # job functions directly, not through the queue: SYNTH01 needs its own filters, encounter file and registries,
+  # which a worker built from the configuration does not have.
   seed:
     <<: *khadbot
     entrypoint: ["python", "scripts/data/seed_stack.py"]

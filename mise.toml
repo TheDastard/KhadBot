@@ -106,17 +106,21 @@ run = "docker compose -f deploy/compose.yaml --profile seed run --rm seed"
 description = "Check the running, seeded stack: health, report list and a night summary"
 run = "uv run python scripts/dev/stack_smoke.py"
 
+[tasks."stack:queue-smoke"]
+description = "Queue a job on the running stack and check the worker finishes it"
+run = "docker compose -f deploy/compose.yaml --profile smoke run --rm queue-smoke"
+
 [tasks."stack:logs"]
 description = "Follow the stack's logs"
 run = "docker compose -f deploy/compose.yaml logs --follow --tail 100"
 
 [tasks."stack:down"]
 description = "Stop the stack and keep its data volumes"
-run = "docker compose -f deploy/compose.yaml --profile seed --profile worker down"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down"
 
 [tasks."stack:reset"]
 description = "Stop the stack and delete its data volumes (database and bucket)"
-run = "docker compose -f deploy/compose.yaml --profile seed --profile worker down --volumes"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes"
 
 
 # ── Generated files ─────────────────────────────────────────────────────────
