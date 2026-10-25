@@ -368,10 +368,11 @@ registries): 1.66 MB of `records/` against 23.2 MB of `annotated/` and 29.4 MB o
 | Load from the records store | about 0.19 s | 3.9 s |
 
 With the cooldown files and registry passed in rather than read from `config/`, the fixture pulls take about 240 ms
-to build and 39 ms to load. The rest of a load is YAML parsing of the authored files, which every lookup repeats
-(about 115 ms for the four registry files and tens of ms for the encounter file); parsing the blob itself takes
-about 1.3 ms. With the annotation cache cold, a load still re-annotates the frame, so it saves only the analysis
-step; the annotation cache is part of what a second process needs to find.
+to build and 39 ms to load. The rest of a load was YAML parsing of the authored files, which every lookup used to
+repeat (about 115 ms for the four registry files and tens of ms for the encounter file); parsing the blob itself
+takes about 1.3 ms. Lookups now check each file with one `stat` and reparse it only after it changed (D58). With
+the annotation cache cold, a load still re-annotates the frame, so it saves only the analysis step; the annotation
+cache is part of what a second process needs to find.
 
 `mise run clean` never touches `KHADBOT_DATA_DIR`. Deleting `raw/` means the next ingest refetches from WCL; deleting
 `events/`, `annotated/` or `records/` only costs local recomputation (an offline re-ingest rebuilds `events/` from `raw/`).
