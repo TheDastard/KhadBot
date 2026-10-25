@@ -139,3 +139,20 @@ class TestMigrateSubcommand:
         with pytest.raises(SystemExit) as exc:
             _run_migrate()
         assert "DATABASE_URL" in str(exc.value)
+
+
+class TestWorkerSubcommand:
+    def test_parses_args(self):
+        with patch("khadbot.main._run_worker") as run:
+            main(["worker", "--queues", "ingest,process", "--concurrency", "3"])
+        run.assert_called_once_with("ingest,process", 3)
+
+    def test_defaults(self):
+        with patch("khadbot.main._run_worker") as run:
+            main(["worker"])
+        run.assert_called_once_with(None, None)
+
+    def test_refuses_to_run_in_local_mode(self, monkeypatch):
+        monkeypatch.delenv("KHADBOT_MODE", raising=False)
+        with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
+            main(["worker"])

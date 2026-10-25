@@ -48,6 +48,7 @@ __all__ = [
     "LocalTokenResolver",
     "ModelMismatchError",
     "ProcessPullResult",
+    "TransientJobError",
     "ReviewPullResult",
     "TokenResolver",
     "UserAuthUnavailableError",
@@ -69,6 +70,10 @@ __all__ = [
 
 class JobError(Exception):
     """A job could not run; the message is safe to show the user."""
+
+
+class TransientJobError(JobError):
+    """A job failed for a reason that may pass (a sign-in that could not be renewed just now); the queue retries it."""
 
 
 class UserAuthUnavailableError(JobError):
@@ -168,7 +173,9 @@ async def _user_token(source: UserTokenSource, user_id: str) -> str:
             f"User '{user_id}' has no usable Warcraft Logs sign-in; they need to sign in again."
         ) from None
     except WclUnavailableError:
-        raise JobError("Warcraft Logs could not renew the user's sign-in just now; retry the job later.") from None
+        raise TransientJobError(
+            "Warcraft Logs could not renew the user's sign-in just now; retry the job later."
+        ) from None
 
 
 def default_token_resolver() -> TokenResolver:

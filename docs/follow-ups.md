@@ -102,6 +102,15 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   fails that job until its expiry passes or the user signs in again. Expired `sessions` and `oauth_states` rows
   are deleted only when met (a lookup or the next sign-in); a periodic cleanup belongs with the retention job.
   `WclTokens.rotate_keys` re-encrypts stored tokens after a new key is added, but no command runs it yet.
+- **Job queue gaps.** (1) A worker that dies without shutting down (killed, out of memory) leaves its job rows
+  `running` and the procrastinate job `doing`: nothing marks them failed or retries them. procrastinate records
+  worker heartbeats and can list stalled jobs (`JobManager.get_stalled_jobs`); a periodic task should fail the
+  `jobs` row and requeue the job. (2) `waiting_budget` is in the state check but nothing sets it; the budget
+  manager will. (3) The `watch` queue has no tasks. (4) `jobs` rows are never deleted; retention should prune
+  finished ones and procrastinate's (`builtin:remove_old_jobs`). (5) No test runs a fixture report through the
+  compose stack's worker, because the worker uses the configured filters and encounter files and SYNTH01 needs its
+  own; the stack smoke test checks a typed failure instead, and the hosted tests ingest SYNTH01 through a worker with
+  its stores injected. Letting a test point the worker at fixture filters and an encounter directory would close it.
 - **Rate-limit users on the app budget.** Requests without a user token (users not signed in to WCL,
   Discord-only users, background jobs) share the app's hourly points. Not built: a global points bucket kept in
   step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected

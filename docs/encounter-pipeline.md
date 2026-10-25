@@ -61,6 +61,16 @@ and writes nothing. A spec holds `AppAuth` or `UserAuth(user_id)`, never a token
 resolves it to ingest's `token_provider` at run time, and local mode resolves `AppAuth` only. `/digest` runs
 `ProcessPull` without a records store, and `/review` runs it for each pull before the analyst reads them.
 
+In hosted mode the queue (`jobs/queue.py`, run by `main.py worker`) runs the same functions. It adds no stage and
+changes what none of them stores, reads or invalidates; it changes when they run:
+
+- An ingest job queues a `ProcessPull` for every pull it wrote *and* every pull it found unchanged. Processing an
+  already processed pull finds the annotation and records stored and writes nothing, and queueing the unchanged ones
+  as well means a pull written by an ingest that was cancelled before it queued its process jobs is processed by the
+  next run.
+- A running ingest can be cancelled. It stops right after the page it is writing to the raw page cache, so the pages
+  and pulls written so far stay and the next ingest resumes from the cache like any interrupted one.
+
 ## 1. Fetch: raw page cache
 
 `encounter/ingest/fetch.py` pages through WCL's `events` query once per fetch spec (a data type, a hostility and an

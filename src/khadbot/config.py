@@ -142,6 +142,29 @@ def _csv(key: str, default: str = "") -> tuple[str, ...]:
     return tuple(part.strip() for part in _optional(key, default).split(",") if part.strip())
 
 
+@dataclass(frozen=True)
+class QueueConfig:
+    """
+    The hosted job queue's worker settings. ``queues`` are the queues a worker takes jobs from, so one deployment can
+    run an ingest worker and a review worker apart. Local mode has no queue and ignores these.
+    """
+
+    queues: tuple[str, ...] = field(default_factory=lambda: _csv("KHADBOT_WORKER_QUEUES", "ingest,process,review"))
+    concurrency: int = field(default_factory=lambda: int(_optional("KHADBOT_WORKER_CONCURRENCY", "2")))
+    # A job that fails on a WCL rate limit or a network error runs again up to ``max_retries`` times, waiting
+    # ``retry_backoff_s ** attempt`` seconds before each (3, 9, 27, ... with the default).
+    max_retries: int = field(default_factory=lambda: int(_optional("KHADBOT_JOB_MAX_RETRIES", "5")))
+    retry_backoff_s: int = field(default_factory=lambda: int(_optional("KHADBOT_JOB_RETRY_BACKOFF_S", "3")))
+    # How often a running job writes its progress and checks whether it was cancelled.
+    progress_interval_s: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_JOB_PROGRESS_INTERVAL_S", "0.5"))
+    )
+    # How long a stopping worker waits for running jobs before interrupting them, in seconds.
+    shutdown_timeout_s: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_WORKER_SHUTDOWN_TIMEOUT_S", "60"))
+    )
+
+
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 
 
@@ -252,6 +275,7 @@ class AppConfig:
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    queue: QueueConfig = field(default_factory=QueueConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)
