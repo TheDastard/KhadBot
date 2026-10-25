@@ -2567,6 +2567,163 @@
         "title": "UnregisteredAbility",
         "type": "object"
       },
+      "WatchStatus": {
+        "description": "A live report watch.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the latest poll failed, or why the watch stopped on an error",
+            "title": "Error"
+          },
+          "expires_at": {
+            "description": "When the watch stops whatever happens (its maximum length)",
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fights_found": {
+            "description": "Boss fights the watch has handed to ingest",
+            "title": "Fights Found",
+            "type": "integer"
+          },
+          "ingests": {
+            "description": "Ingest jobs the watch queued; they are ordinary jobs under GET /v1/jobs/{id}",
+            "title": "Ingests",
+            "type": "integer"
+          },
+          "last_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest ingest job that covers a new fight",
+            "title": "Last Job Id"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "next_poll_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the next poll is due; null once stopped",
+            "title": "Next Poll At"
+          },
+          "points_spent": {
+            "description": "Points the polls reserved from the budget (the ingests count on their jobs)",
+            "title": "Points Spent",
+            "type": "number"
+          },
+          "poll_interval_s": {
+            "title": "Poll Interval S",
+            "type": "number"
+          },
+          "polls": {
+            "description": "Metadata reads that reached Warcraft Logs",
+            "title": "Polls",
+            "type": "integer"
+          },
+          "polls_skipped": {
+            "description": "Polls skipped because the WCL budget had no points for them",
+            "title": "Polls Skipped",
+            "type": "integer"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "stopped"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "user",
+                  "quiet",
+                  "max_length",
+                  "sign_in",
+                  "report_unavailable",
+                  "errors"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why a stopped watch stopped; null while it is active",
+            "title": "Stop Reason"
+          },
+          "stops_by": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest the watch runs to if no new boss fight turns up (the quiet period), capped by its maximum length; null once stopped",
+            "title": "Stops By"
+          }
+        },
+        "required": [
+          "report_code",
+          "state",
+          "started_at",
+          "last_polled_at",
+          "next_poll_at",
+          "stops_by",
+          "expires_at",
+          "poll_interval_s",
+          "polls",
+          "polls_skipped",
+          "fights_found",
+          "ingests",
+          "last_job_id",
+          "points_spent"
+        ],
+        "title": "WatchStatus",
+        "type": "object"
+      },
       "WindowCoverage": {
         "properties": {
           "covered": {
@@ -3950,6 +4107,261 @@
         "summary": "Get Timeline",
         "tags": [
           "pulls"
+        ]
+      }
+    },
+    "/v1/reports/{code}/watch": {
+      "delete": {
+        "description": "Stop your watch of the report. Ingests it already queued carry on. A watch that already stopped is returned as it is.",
+        "operationId": "stop_watch_v1_reports__code__watch_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A report you cannot read, or no watch of yours (report_not_found, watch_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Stop Watch",
+        "tags": [
+          "watch"
+        ]
+      },
+      "get": {
+        "description": "Your watch of the report: the active one, else the latest that stopped.",
+        "operationId": "get_watch_v1_reports__code__watch_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A report you cannot read, or no watch of yours (report_not_found, watch_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Get Watch",
+        "tags": [
+          "watch"
+        ]
+      },
+      "post": {
+        "description": "Watch a report that is still being logged. The watch polls its metadata on your own Warcraft Logs token and\ningests each new boss fight, until you stop it, no boss fight turns up for a while, or it reaches its maximum length.",
+        "operationId": "start_watch_v1_reports__code__watch_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchStatus"
+                }
+              }
+            },
+            "description": "You already watch this report"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A report you cannot read, or no watch of yours (report_not_found, watch_not_found)"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "You have no Warcraft Logs sign-in to poll with (wcl_sign_in_required), or someone else is watching this report (watch_in_progress)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Start Watch",
+        "tags": [
+          "watch"
         ]
       }
     }

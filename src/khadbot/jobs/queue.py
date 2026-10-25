@@ -16,6 +16,8 @@ Rules the queue keeps:
 - Only WCL rate limits, network errors and a sign-in that could not be renewed are retried, with backoff. Anything
   else fails the job once with a typed code.
 - A backfill's process jobs are queued at a lower priority than every other job (``enqueue_backfill``), once per pull.
+- A live report watch (``jobs/watch.py``) polls on the ``watch`` queue: one task run is one poll, and it queues the
+  next one. The ingests it queues carry ``live``, which lets them use the budget's headroom.
 - The records cleanup (``jobs/retention.py``) runs on the ``process`` queue on a schedule any worker registers.
 - Cancelling a queued job drops it; cancelling a running one stops it at the next page boundary.
 - With a WCL budget (``jobs/budget_store.py``), an online ingest reserves its estimated points when a worker picks it
@@ -41,7 +43,7 @@ from procrastinate import exceptions as procrastinate_exceptions
 from procrastinate.retry import RetryStrategy
 from pydantic import TypeAdapter
 
-from khadbot.config import DatabaseConfig, QueueConfig, RetentionConfig
+from khadbot.config import DatabaseConfig, QueueConfig, RetentionConfig, WatchConfig
 from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.models import IngestResult
 from khadbot.jobs import budget as budget_policy
@@ -53,6 +55,8 @@ from khadbot.jobs.retention import CleanupResult, CleanupSources, cleanup_record
 from khadbot.jobs.run import JobContext, TransientJobError, default_token_resolver, run_job
 from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, PostgresJobBackend
+from khadbot.jobs.watch import WatchService
+from khadbot.jobs.watch_store import MemoryWatchBackend, PostgresWatchBackend, WatchRecord, WatchStore
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
@@ -65,6 +69,8 @@ _SPEC: TypeAdapter[JobSpec] = TypeAdapter(JobSpec)
 
 QUEUE_NAMES = {JobKind.INGEST: "ingest", JobKind.PROCESS: "process", JobKind.REVIEW: "review"}
 CLEANUP_TASK = "khadbot.cleanup_records"
+WATCH_QUEUE = "watch"
+WATCH_TASK = "khadbot.watch_report"
 TASK_NAMES = {
     JobKind.INGEST: "khadbot.ingest_report",
     JobKind.PROCESS: "khadbot.process_pull",
@@ -118,6 +124,8 @@ class JobQueue:
         context_factory: Builds the ``JobContext`` one job runs against. The default builds it from the configuration;
             tests pass a factory that returns fixture stores and a stub WCL client.
         budget: The WCL budget online ingests reserve points from; None runs every job without one.
+        watches: The ``watches`` table; None keeps watches in memory (unit tests).
+        watch_config: Poll interval, quiet period and maximum length of a live report watch.
     """
 
     def __init__(
@@ -130,6 +138,8 @@ class JobQueue:
         retention: RetentionConfig | None = None,
         cleanup: CleanupSources | None = None,
         budget: BudgetManager | None = None,
+        watches: WatchStore | None = None,
+        watch_config: WatchConfig | None = None,
     ) -> None:
         self.store = store
         self.budget = budget
@@ -144,6 +154,7 @@ class JobQueue:
         for kind in JobKind:
             self._register(kind, retry)
         self._register_cleanup(retention or RetentionConfig(), cleanup or CleanupSources())
+        self.watches = self._register_watch(watches or WatchStore(MemoryWatchBackend()), watch_config or WatchConfig())
 
     def _register(self, kind: JobKind, retry: RetryStrategy) -> None:
         async def run(context: procrastinate.JobContext, job_id: str) -> None:
@@ -161,6 +172,41 @@ class JobQueue:
         task = self.app.task(name=CLEANUP_TASK, queue=QUEUE_NAMES[JobKind.PROCESS], queueing_lock=CLEANUP_TASK)(run)
         if retention.cleanup_cron:
             self.app.periodic(cron=retention.cleanup_cron)(task)
+
+    def _register_watch(self, store: WatchStore, config: WatchConfig) -> WatchService:
+        """The live report watch: its task (one poll per run) and the service the API starts and stops watches with."""
+        service = WatchService(
+            store,
+            enqueue=lambda spec, user_id: self.enqueue(spec, requested_by=user_id),
+            schedule=self._schedule_poll,
+            cancel_poll=self._cancel_poll,
+            config=config,
+            context_factory=self._context_factory,
+            budget=self.budget,
+            wake=self._wake,
+        )
+
+        async def run(watch_id: str) -> None:
+            await service.poll(watch_id)
+
+        self.app.task(name=WATCH_TASK, queue=WATCH_QUEUE)(run)
+        return service
+
+    async def _schedule_poll(self, watch: WatchRecord, at: datetime | None) -> int:
+        """Queue the watch's next poll at ``at`` (None: now). One poll waits per watch; one report polls at a time."""
+        deferrer = self.app.tasks[WATCH_TASK].configure(
+            lock=f"watch:{watch.report_code}", queueing_lock=f"watch:{watch.id}", schedule_at=at
+        )
+        try:
+            return int(await deferrer.defer_async(watch_id=watch.id))
+        except procrastinate_exceptions.AlreadyEnqueued:
+            # A poll that did not come from the queue (or a lost reply) left one waiting: this one supersedes it.
+            if watch.queue_job_id is not None:
+                await self._cancel_poll(watch.queue_job_id)
+            return int(await deferrer.defer_async(watch_id=watch.id))
+
+    async def _cancel_poll(self, queue_job_id: int) -> None:
+        await self.app.job_manager.cancel_job_by_id_async(queue_job_id)
 
     # -- enqueue and cancel ---------------------------------------------------
 
@@ -496,6 +542,7 @@ def build_queue(
     retention: RetentionConfig | None = None,
     cleanup: CleanupSources | None = None,
     budget: BudgetManager | None = None,
+    watch_config: WatchConfig | None = None,
 ) -> JobQueue:
     """
     The queue on the configured Postgres. The ``jobs`` table uses the process-wide pool; procrastinate keeps its own
@@ -515,6 +562,8 @@ def build_queue(
         retention=retention,
         cleanup=cleanup,
         budget=budget,
+        watches=WatchStore(PostgresWatchBackend(pool or get_pool())),
+        watch_config=watch_config,
     )
 
 

@@ -260,6 +260,27 @@ whom. `hostilityType` picks the direction.
 - Taunt spell IDs seen so far: Taunt 355 (warrior), Growl 6795 (druid), Dark Command 56222 (death knight) and
   Challenging Shout 1161 (area taunt, no single target).
 
+## Live watch polls
+
+A live report watch (`jobs/watch.py`) sends the report metadata query (`GET_REPORT_META`) every
+`KHADBOT_WATCH_POLL_INTERVAL_S` seconds (180 by default), so a 6-hour night is at most 120 polls.
+
+- **Not measured yet.** The budget reserves 1 point per poll (`KHADBOT_WATCH_POLL_POINTS`). The only documented figures
+  are that a request costs at least 1 point, a `rateLimitData` read costs 1 and a one-page request of a small events
+  spec costs about 1 ("Measured cost" above). The metadata query returns `masterData` actors and abilities, which are
+  large for a raid, so it may cost more than 1; a watch's polls are then 120 times that.
+- Estimate: 1 to 3 points a poll, so 120 to 360 points over the longest watch (3% to 10% of an hour's 3,600), against
+  about 180 points for the ingest of a 25-pull night.
+- To measure it (this spends WCL points, about 20: it prints the estimate and waits for a typed `yes`), on a public
+  report:
+
+      uv run python scripts/wcl/measure_watch_poll.py --code <report code> --polls 3
+
+  It reads `rateLimitData` twice to find a read's own cost, then before and after each metadata query. Record the report
+  code, the date and the per-poll cost here, then set `KHADBOT_WATCH_POLL_POINTS` if it differs. It uses the app token;
+  on the current limits a user's token spends the same pool. On the new limits the metadata query is user-eligible
+  report data, so a user-token poll would spend the user's own points first.
+
 ## Instances and positions
 
 - **`sourceInstance` / `targetInstance`** number NPCs that share one actor ID (both Weakened Doomscales are one

@@ -54,7 +54,7 @@ Reads everything the API does, plus the WCL credentials once jobs fetch from WCL
 
 | Variable | Meaning |
 |---|---|
-| `KHADBOT_WORKER_QUEUES` | Queues to take jobs from (default `ingest,process,review`). Run an ingest worker and a review worker apart by giving each its own list. |
+| `KHADBOT_WORKER_QUEUES` | Queues to take jobs from (default `ingest,process,review,watch`). Run an ingest worker and a review worker apart by giving each its own list. |
 | `KHADBOT_WORKER_CONCURRENCY` | Jobs run at once per worker (default 2). |
 | `KHADBOT_WORKER_SHUTDOWN_TIMEOUT_S` | How long a stopping worker waits for running jobs before interrupting them (default 60). An interrupted job is marked `failed` with the code `interrupted`; request it again and it resumes from the raw page cache. |
 | `KHADBOT_JOB_MAX_RETRIES` | Retries after a WCL rate limit, a WCL network error or a sign-in that could not be renewed (default 5). Other failures are not retried. |
@@ -76,6 +76,20 @@ The WCL budget (`khadbot.jobs.budget`, state in the `wcl_budget` row). A worker 
 | `KHADBOT_BUDGET_RESERVATION_TTL_S` | A reservation no job settled (a worker died) is dropped after this long (default 7200). |
 
 Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API calls it for the ingest routes.
+
+### Live report watch
+
+A signed-in user can watch a report that is still being logged (`POST /v1/reports/{code}/watch`; `GET` shows the watch and `DELETE` stops it). The watch polls the report's metadata on the user's own WCL token and queues an ingest of each new boss fight (`docs/decisions.md`, D64). It runs on the `watch` queue, which workers take jobs from by default; a worker started with `--queues` or `KHADBOT_WORKER_QUEUES` must list `watch` to run polls. Settings, all optional:
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WATCH_POLL_INTERVAL_S` | Seconds between metadata reads of a watched report (default 180). |
+| `KHADBOT_WATCH_QUIET_PERIOD_S` | A watch stops when no new boss fight turned up for this long (default 2700). |
+| `KHADBOT_WATCH_MAX_LENGTH_S` | A watch stops after this long in all (default 21600). |
+| `KHADBOT_WATCH_POLL_POINTS` | Points one poll reserves from the WCL budget (default 1, not measured yet; `docs/wcl-api.md`, "Live watch polls"). Never below 1. |
+| `KHADBOT_WATCH_MAX_FAILURES` | A watch stops after this many failed polls in a row (default 5). |
+
+Polls and the ingests a watch queues are live requests to the WCL budget, which may use the headroom (`KHADBOT_BUDGET_HEADROOM_SHARE`). A poll the budget has no points for is skipped; the watch shows it in `polls_skipped`. Watches are rows in the `watches` table (migration 0007), one active per report.
 
 ### Seed (`scripts/data/seed_stack.py`)
 

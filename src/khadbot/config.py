@@ -149,7 +149,9 @@ class QueueConfig:
     run an ingest worker and a review worker apart. Local mode has no queue and ignores these.
     """
 
-    queues: tuple[str, ...] = field(default_factory=lambda: _csv("KHADBOT_WORKER_QUEUES", "ingest,process,review"))
+    queues: tuple[str, ...] = field(
+        default_factory=lambda: _csv("KHADBOT_WORKER_QUEUES", "ingest,process,review,watch")
+    )
     concurrency: int = field(default_factory=lambda: int(_optional("KHADBOT_WORKER_CONCURRENCY", "2")))
     # A job that fails on a WCL rate limit or a network error runs again up to ``max_retries`` times, waiting
     # ``retry_backoff_s ** attempt`` seconds before each (3, 9, 27, ... with the default).
@@ -239,6 +241,31 @@ class BudgetConfig:
     def documented_limit_per_hour(self) -> float:
         """The scheme's application points per hour before a subscription, used until the first ``rateLimitData``."""
         return 3600.0 if self.scheme is WclLimitScheme.CURRENT else 1000.0
+
+
+@dataclass(frozen=True)
+class WatchConfig:
+    """
+    Live report watches (``jobs/watch.py``): how often a watch reads the report's metadata, when it gives up and what
+    one read is assumed to cost the WCL budget. Local mode has no watches.
+    """
+
+    # Seconds between metadata reads of a watched report.
+    poll_interval_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_POLL_INTERVAL_S", "180")))
+    # A watch stops after this long with no new boss fight, and after this long in all.
+    quiet_period_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_QUIET_PERIOD_S", "2700")))
+    max_length_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_MAX_LENGTH_S", "21600")))
+    # Points one metadata read reserves from the budget. docs/wcl-api.md has no measurement of this query yet; WCL
+    # charges every request at least 1 point.
+    poll_points: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_POLL_POINTS", "1")))
+    # A watch stops after this many failed reads in a row.
+    max_failures: int = field(default_factory=lambda: int(_optional("KHADBOT_WATCH_MAX_FAILURES", "5")))
+
+    def __post_init__(self) -> None:
+        if min(self.poll_interval_s, self.quiet_period_s, self.max_length_s) <= 0 or self.max_failures < 1:
+            raise ValueError("WatchConfig's intervals and failure limit must be positive.")
+        if self.poll_points < 1:
+            raise ValueError("WatchConfig.poll_points must be at least 1: WCL charges every request at least 1 point.")
 
 
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")
