@@ -10,6 +10,7 @@
 !config/
 !scripts/data/seed_stack.py
 !scripts/dev/queue_smoke.py
+!scripts/data/apply_bucket_lifecycle.py
 
 **/__pycache__
 **/*.pyc
