@@ -5,8 +5,10 @@ The FastAPI application: ``create_app`` wires the read router to an ``ApiContext
 store, data directory) and maps errors to one ``{code, message}`` body.
 
 Local mode (``create_app()`` with no ``auth``) is the dashboard API as it has always been: GET only, no sign-in, and
-CORS for the local dev origins. Hosted mode is ``create_app(auth=..., jobs=..., reports=...)``, built by ``main.py api``
-from the composition root:
+CORS for the local dev origins (``CORS_ORIGINS``). It serves the read routes and cached findings, on 127.0.0.1
+(``main.py serve``); the hosted-only routes below are not mounted there and answer 404 like any unknown route.
+
+Hosted mode is ``create_app(auth=..., jobs=..., reports=...)``, built by ``main.py api`` from the composition root:
 
 - ``auth`` mounts the sign-in routes (``/v1/auth/*``, ``/v1/me``), and every report route then checks that the caller
   may read the report (``deps.readable_report``; an unreadable report answers 404);
@@ -14,6 +16,11 @@ from the composition root:
 - ``reports`` (``deps.ReportDirectory``) answers ``GET /v1/reports`` with the signed-in user's reports;
 - CORS allows the web origins (``KHADBOT_WEB_ORIGINS``) with credentials, ``GET``, ``POST`` and ``DELETE``, and the
   ``Content-Type``, ``X-KhadBot-CSRF`` and ``Last-Event-ID`` request headers, never a wildcard.
+
+``GET /v1/health`` reports ``mode`` and ``features`` (``schemas.Features``). ``mode`` is the label the caller gives
+(``main.py serve`` says ``local``; ``main.py api`` and the documentation app say ``hosted``); nothing infers it from what
+is mounted, and clients never branch on it. ``features`` is what is mounted: each area sets its flag where it mounts
+its routes.
 
 More routers plug in through ``create_app``'s ``routers`` argument, so serving and the generated contract stay in one
 place. ``openapi_document`` renders the contract committed as ``contracts/openapi.json``: the hosted API, with every
@@ -27,7 +34,7 @@ from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -38,7 +45,7 @@ from khadbot import wiring
 from khadbot.api.deps import ReportDirectory
 from khadbot.api.night import ReadSource
 from khadbot.api.routes import router
-from khadbot.api.schemas import API_VERSION
+from khadbot.api.schemas import API_VERSION, Features
 from khadbot.api.views import ApiContext, ApiError
 from khadbot.config import AuthConfig, EncounterConfig
 from khadbot.encounter.evidence import EncounterData
@@ -57,6 +64,7 @@ def create_app(
     data: EncounterData | None = None,
     findings: FindingsStore | None = None,
     *,
+    mode: Literal["local", "hosted"],
     data_dir: Path | str | None = None,
     blobs: BlobStore | None = None,
     routers: Sequence[APIRouter] = (),
@@ -80,9 +88,16 @@ def create_app(
     ``auth``) mounts the ingest routes and is opened and closed with the app. ``reports`` supplies ``GET /v1/reports``
     for signed-in users; without it every ingested report is listed, which is right only without sign-in.
 
+    ``mode`` is what ``GET /v1/health`` reports, given by the entry point: ``local`` for ``main.py serve`` (and the
+    API's tests), ``hosted`` for ``main.py api`` in hosted mode and the documentation app. It is a label for people
+    and logs; the web app reads ``features``, never ``mode``.
+
     Raises:
-        ValueError: ``jobs`` or ``reports`` without ``auth``: only the hosted API has users to own them.
+        ValueError: ``jobs`` or ``reports`` without ``auth``: only the hosted API has users to own them; or ``mode``
+            that disagrees with ``auth`` (a hosted API has sign-in, a local one has none).
     """
+    if (mode == "hosted") != (auth is not None):
+        raise ValueError(f"mode {mode!r} does not fit auth={'given' if auth is not None else 'missing'}")
     if auth is None and (jobs is not None or reports is not None):
         raise ValueError("jobs and reports belong to the hosted API: pass auth with them")
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
@@ -128,25 +143,35 @@ def create_app(
         problems = "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())
         return JSONResponse(status_code=422, content={"code": "bad_request", "message": problems})
 
+    # What /v1/health offers is what is mounted here: each optional area sets its flag where it mounts its routes, so
+    # a test app or a partial deploy reports itself correctly. An area added later sets its own flag the same way.
+    # The mode is not among them: the caller names it.
+    offered: dict[str, bool] = {}
     app.include_router(router)
     if auth is not None:
         from khadbot.auth.routes import mount  # hosted only: loads the crypto library
 
         mount(app, auth)
+        offered["sign_in"] = True
     if jobs is not None:
         from khadbot.api.jobs import router as jobs_router  # hosted only: loads the queue library
 
         app.state.jobs = jobs
         app.include_router(jobs_router)
+        offered["ingest_jobs"] = True
         from khadbot.api.watch import router as watch_router  # live report watch routes, hosted only
 
         app.include_router(watch_router)
+        offered["live_watch"] = True
     for extra in routers:
         app.include_router(extra)
     if auth is not None:  # the WCL budget router (api/budget.py): GET /v1/budget, hosted only
         from khadbot.api.budget import router as budget_router
 
         app.include_router(budget_router)
+        offered["budget"] = True
+    app.state.mode = mode
+    app.state.features = Features(**offered)
     return app
 
 
@@ -180,7 +205,9 @@ def hosted_documentation_app(data_dir: Path | str = ".") -> FastAPI:
     config = replace(AuthConfig(), token_keys=())
     stand_in: Any = type("DocumentationService", (), {"config": config})()
     queue: Any = type("DocumentationQueue", (), {})()
-    return create_app(data_dir=data_dir, auth=cast("AuthService", stand_in), jobs=cast("JobQueue", queue))
+    return create_app(
+        data_dir=data_dir, mode="hosted", auth=cast("AuthService", stand_in), jobs=cast("JobQueue", queue)
+    )
 
 
 def openapi_document(app: FastAPI | None = None) -> str:

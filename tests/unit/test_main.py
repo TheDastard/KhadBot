@@ -92,6 +92,7 @@ class TestServeSubcommand:
         app = run.call_args.args[0]
         assert run.call_args.kwargs == {"host": "127.0.0.1", "port": 8123}
         assert app.state.ctx.data_dir == tmp_path
+        assert app.state.mode == "local"
 
 
 class TestApiSubcommand:
@@ -118,6 +119,7 @@ class TestApiSubcommand:
             "log_config": None,
         }  # uvicorn logs via the root handler
         assert run.call_args.args[0].state.ctx.read_source is None
+        assert run.call_args.args[0].state.mode == "local"  # no hosted settings: the read routes only
 
     def test_hosted_mode_without_a_database_url_exits_with_the_reason(self, monkeypatch):
         from khadbot.main import _run_api
@@ -128,6 +130,23 @@ class TestApiSubcommand:
             _run_api("0.0.0.0", 8123)
         assert "DATABASE_URL" in str(exc.value)
         run.assert_not_called()
+
+    def test_hosted_mode_builds_the_app_labelled_hosted(self, monkeypatch):
+        """With the hosted settings given, ``api`` passes ``mode="hosted"``; the services it builds are stubbed out."""
+        from khadbot.main import _run_api
+
+        monkeypatch.setenv("KHADBOT_MODE", "hosted")
+        monkeypatch.setenv("DATABASE_URL", "postgresql://fake:fake@localhost/fake")
+        with (
+            patch("khadbot.db.get_pool"),
+            patch("khadbot.jobs.queue.build_queue"),
+            patch("khadbot.wiring.auth_service"),
+            patch("khadbot.wiring.findings_store"),
+            patch("khadbot.api.create_app", side_effect=ValueError("stop here")) as create,
+            pytest.raises(SystemExit),
+        ):
+            _run_api("0.0.0.0", 8123)
+        assert create.call_args.kwargs["mode"] == "hosted"
 
 
 class TestMigrateSubcommand:

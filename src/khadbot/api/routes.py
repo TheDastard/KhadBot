@@ -68,9 +68,17 @@ router = APIRouter(
 
 
 @router.get("/health", response_model=Health, tags=["meta"])
-def health(ctx: Ctx) -> Health:
-    """Status, the data directory in use and the API version."""
-    return Health(data_dir=str(ctx.data_dir) if ctx.data_dir is not None else "")
+def health(ctx: Ctx, request: Request) -> Health:
+    """
+    Status, the data directory in use, the API version, and what this server offers: ``mode`` and one ``features``
+    flag per optional area, true only when that area's routes are mounted. Clients branch on ``features``.
+    """
+    app = request.app
+    return Health(
+        data_dir=str(ctx.data_dir) if ctx.data_dir is not None else "",
+        mode=app.state.mode,
+        features=app.state.features,
+    )
 
 
 @router.get("/reports", response_model=ReportList, tags=["reports"])

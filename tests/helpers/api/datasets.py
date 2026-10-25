@@ -97,7 +97,7 @@ def build_synth(root: Path) -> Dataset:
     }
     cache = AnnotationCache(root / "annotated")
     data = EncounterData(store, enc_root=enc_root, cache=cache, **registries)
-    app = create_app(data, SqliteFindingsStore(root / "khadbot.sqlite"), data_dir=root)
+    app = create_app(data, SqliteFindingsStore(root / "khadbot.sqlite"), mode="local", data_dir=root)
     return Dataset("synth", TestClient(app), app.state.ctx, "SYNTH01", store, enc_root, registries, cache, root)
 
 
@@ -108,6 +108,6 @@ def build_real(root: Path) -> Dataset:
         shutil.copyfile(WCL_FIXTURES / code / "report.json", root / "raw" / code / "report.json")
         result = asyncio.run(ingest_fixture(code, store))
         assert not result.failed, result.failed
-    app = create_app(data_dir=root)
+    app = create_app(mode="local", data_dir=root)
     ctx: ApiContext = app.state.ctx
     return Dataset("real", TestClient(app), ctx, MULTI_GROUP_REPORT, store, None, {}, ctx.data.cache, root)

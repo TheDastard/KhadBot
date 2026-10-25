@@ -42,7 +42,9 @@ def assert_error(response, status: int, code: str) -> None:
 
 def test_health(dataset, client):
     body = client.get("/v1/health").json()
-    assert body == {"status": "ok", "data_dir": str(dataset.data_dir), "api_version": "1.0.0"}
+    assert body["data_dir"] == str(dataset.data_dir)
+    assert (body["status"], body["api_version"], body["mode"]) == ("ok", "1.0.0", "local")
+    assert not any(body["features"].values())
 
 
 def test_reports_lists_every_stored_report_with_groups(dataset, client):
@@ -67,7 +69,7 @@ def test_reports_empty_data_directory(tmp_path):
 
     from khadbot.api import create_app
 
-    body = TestClient(create_app(data_dir=tmp_path)).get("/v1/reports").json()
+    body = TestClient(create_app(mode="local", data_dir=tmp_path)).get("/v1/reports").json()
     assert body == {"reports": [], "truncated": False, "total": 0}
     assert not (tmp_path / "khadbot.sqlite").exists()  # reading never creates the findings database
 

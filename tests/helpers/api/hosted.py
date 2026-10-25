@@ -135,6 +135,7 @@ def build_harness(tmp_path: Path, service: AuthService, wcl, store, clock) -> Ha
     app = create_app(
         env.context.data,
         SqliteFindingsStore(tmp_path / "findings.sqlite"),
+        mode="hosted",
         data_dir=tmp_path,
         blobs=LocalBlobStore(tmp_path / "blobs"),
         auth=service,

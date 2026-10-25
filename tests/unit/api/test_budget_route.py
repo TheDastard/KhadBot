@@ -38,7 +38,7 @@ class FakeAuth:
 
 
 def client_for(tmp_path, manager: BudgetManager, *, signed_in: bool = True, has_tokens: bool = True) -> TestClient:
-    app = create_app(data_dir=tmp_path, auth=FakeAuth(has_tokens))  # type: ignore[arg-type]
+    app = create_app(mode="hosted", data_dir=tmp_path, auth=FakeAuth(has_tokens))  # type: ignore[arg-type]
     app.state.budget = manager
     app.dependency_overrides[optional_user] = lambda: USER if signed_in else None
     if signed_in:
@@ -52,7 +52,7 @@ def manager(**cfg) -> tuple[BudgetManager, MovableClock]:
 
 
 def test_local_mode_has_no_budget_route(tmp_path):
-    assert TestClient(create_app(data_dir=tmp_path)).get("/v1/budget").status_code == 404
+    assert TestClient(create_app(mode="local", data_dir=tmp_path)).get("/v1/budget").status_code == 404
 
 
 def test_a_visitor_gets_401(tmp_path):
