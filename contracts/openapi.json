@@ -733,6 +733,49 @@
         "title": "Evidence",
         "type": "object"
       },
+      "Features": {
+        "description": "The optional areas of the API and whether this server offers each. A flag is true only when the area's routes are\nmounted, so a client that hides what is off never links to a route that answers 404.",
+        "properties": {
+          "budget": {
+            "default": false,
+            "description": "The WCL point budget: /v1/budget",
+            "title": "Budget",
+            "type": "boolean"
+          },
+          "chat": {
+            "default": false,
+            "description": "Chat with the conversation agent",
+            "title": "Chat",
+            "type": "boolean"
+          },
+          "ingest_jobs": {
+            "default": false,
+            "description": "Ingest jobs and their event streams: POST /v1/reports and /v1/jobs/*",
+            "title": "Ingest Jobs",
+            "type": "boolean"
+          },
+          "live_watch": {
+            "default": false,
+            "description": "Live report watch",
+            "title": "Live Watch",
+            "type": "boolean"
+          },
+          "reviews": {
+            "default": false,
+            "description": "Pull reviews on the queue",
+            "title": "Reviews",
+            "type": "boolean"
+          },
+          "sign_in": {
+            "default": false,
+            "description": "Warcraft Logs sign-in: /v1/auth/* and /v1/me",
+            "title": "Sign In",
+            "type": "boolean"
+          }
+        },
+        "title": "Features",
+        "type": "object"
+      },
       "Finding": {
         "properties": {
           "claim": {
@@ -960,6 +1003,7 @@
         "type": "object"
       },
       "Health": {
+        "description": "Status, the data directory and what this server offers. ``mode`` is the entry point's label: ``local`` for\n``main.py serve`` (read routes over a data directory, no sign-in) and ``hosted`` for the hosted API. It is shown to\npeople; clients branch on ``features``, never on ``mode``.",
         "properties": {
           "api_version": {
             "default": "1.0.0",
@@ -968,6 +1012,18 @@
           },
           "data_dir": {
             "title": "Data Dir",
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
+          "mode": {
+            "default": "local",
+            "enum": [
+              "local",
+              "hosted"
+            ],
+            "title": "Mode",
             "type": "string"
           },
           "status": {
@@ -3136,7 +3192,7 @@
     },
     "/v1/health": {
       "get": {
-        "description": "Status, the data directory in use and the API version.",
+        "description": "Status, the data directory in use, the API version, and what this server offers: ``mode`` and one ``features``\nflag per optional area, true only when that area's routes are mounted. Clients branch on ``features``.",
         "operationId": "health_v1_health_get",
         "responses": {
           "200": {

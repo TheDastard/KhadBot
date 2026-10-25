@@ -99,7 +99,7 @@ def _run_serve(port: int) -> None:
         sys.exit(missing_group_message("api", "serve") + f"\n({exc})")
 
     # Local only: WCL credentials stay in the server's environment, and nothing is exposed beyond this machine.
-    uvicorn.run(create_app(), host=SERVE_HOST, port=port)
+    uvicorn.run(create_app(mode="local"), host=SERVE_HOST, port=port)
 
 
 def _run_api(host: str, port: int) -> None:
@@ -126,6 +126,7 @@ def _run_api(host: str, port: int) -> None:
                 sys.exit(missing_group_message("hosted", "api in hosted mode") + f"\n({exc})")
             pool = get_pool()
             app = create_app(
+                mode="hosted",
                 findings=wiring.findings_store(),
                 read_source=SqlSource(pool),
                 auth=wiring.auth_service(),
@@ -133,7 +134,7 @@ def _run_api(host: str, port: int) -> None:
                 reports=SqlReportDirectory(pool),
             )
         else:
-            app = create_app(findings=wiring.findings_store())
+            app = create_app(mode="local", findings=wiring.findings_store())  # no hosted settings: the read routes only
     except (ConfigurationError, OSError, ValueError) as exc:
         sys.exit(str(exc))
     if hosted and sys.platform == "win32":

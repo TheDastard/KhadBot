@@ -77,7 +77,11 @@ def test_app_serves_from_the_given_source(synth_dataset, monkeypatch):
     InMemoryQueries(project_reports(synth_dataset.ctx.data, synth_dataset.ctx.raw, ["SYNTH01"])).install(monkeypatch)
     source = SqlSource(NO_POOL)
     app = create_app(
-        synth_dataset.ctx.data, synth_dataset.ctx.findings, data_dir=synth_dataset.data_dir, read_source=source
+        synth_dataset.ctx.data,
+        synth_dataset.ctx.findings,
+        mode="local",
+        data_dir=synth_dataset.data_dir,
+        read_source=source,
     )
     assert read_source(app.state.ctx) is source
     assert isinstance(read_source(synth_dataset.ctx), RecordsSource)  # local mode's default

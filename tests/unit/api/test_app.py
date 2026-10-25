@@ -58,7 +58,7 @@ def test_every_path_is_versioned_and_local_mode_is_read_only():
     doc = orjson.loads(CONTRACT.read_bytes())
     assert all(path.startswith("/v1/") for path in doc["paths"])
     # The contract is the hosted API's. Local mode (no sign-in, no jobs) stays read-only.
-    local = create_app(data_dir=Path(".")).openapi()
+    local = create_app(mode="local", data_dir=Path(".")).openapi()
     assert {method for ops in local["paths"].values() for method in ops} == {"get"}
 
 
@@ -69,7 +69,7 @@ def test_extra_routers_are_mounted(tmp_path):
     def _extra() -> dict:
         return {"ok": True}
 
-    client = TestClient(create_app(data_dir=tmp_path, routers=[extra]))
+    client = TestClient(create_app(mode="local", data_dir=tmp_path, routers=[extra]))
     assert client.get("/v1/extra").json() == {"ok": True}
     assert client.get("/v1/health").status_code == 200
 

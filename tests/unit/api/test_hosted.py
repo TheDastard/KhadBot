@@ -153,7 +153,7 @@ class TestCorsAndCsrf:
         assert resp.headers["access-control-allow-credentials"] == "true"
 
     def test_local_mode_cors_is_unchanged(self, tmp_path):
-        client = TestClient(create_app(data_dir=tmp_path))
+        client = TestClient(create_app(mode="local", data_dir=tmp_path))
         resp = client.options(
             "/v1/reports", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"}
         )
@@ -316,7 +316,7 @@ class TestIngestRoutes:
 class TestHostedApp:
     def test_jobs_need_auth(self, tmp_path):
         with pytest.raises(ValueError, match="hosted API"):
-            create_app(data_dir=tmp_path, jobs=object())  # type: ignore[arg-type]
+            create_app(mode="local", data_dir=tmp_path, jobs=object())  # type: ignore[arg-type]
 
     def test_the_contract_holds_every_hosted_route(self):
         from khadbot.api.app import hosted_documentation_app
@@ -326,6 +326,6 @@ class TestHostedApp:
         assert {"/v1/jobs/{job_id}", "/v1/jobs/{job_id}/events", "/v1/jobs/{job_id}/cancel", "/v1/me"} <= set(paths)
 
     def test_local_mode_has_no_job_routes(self, tmp_path):
-        client = TestClient(create_app(data_dir=tmp_path))
+        client = TestClient(create_app(mode="local", data_dir=tmp_path))
         assert client.post("/v1/reports", json={"source": CODE}).status_code == 405
         assert client.get("/v1/jobs/x").status_code == 404
