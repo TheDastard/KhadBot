@@ -92,6 +92,10 @@ def create_app(
         mount(app, auth)
     for extra in routers:
         app.include_router(extra)
+    if auth is not None:  # the WCL budget router (api/budget.py): GET /v1/budget, hosted only
+        from khadbot.api.budget import router as budget_router
+
+        app.include_router(budget_router)
     return app
 
 
