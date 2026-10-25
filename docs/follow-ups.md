@@ -227,6 +227,13 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   needs the guild.
 - **Read-model rows of removed pulls stay.** The writer replaces one pull's rows at a time; a fight that drops
   out of a report on re-ingest, or a deleted report, keeps its rows until something deletes them (retention).
+- **Retention gaps.** The records cleanup, the bucket rules and the backfill cover blobs only. Still open: the
+  expired `sessions` and `oauth_states` rows, finished `jobs` rows and procrastinate's finished jobs
+  (`builtin:remove_old_jobs`), and the read-model rows above. After `raw/` expires, `ingest --offline` and
+  `--refresh-meta` of that report can no longer run; only a fetch from WCL (which spends points) rebuilds events. The
+  lifecycle script and the cleanup have run only against moto and unit fakes: run the script against R2 on staging.
+  A backfill selects every projected pull of the encounter, including pulls that are already current (processing
+  them writes nothing); selecting only stale ones needs the current records hash per pull.
 - **Authored files are re-parsed on every records lookup.** `EncounterData.records` reads the cooldown files, the
   friendly-damage registry and the encounter file from `config/` each time the in-process cache misses (about
   115 ms for the registries, tens of ms for the encounter file), which is most of a stored read (about 190 ms a
@@ -236,8 +243,6 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   through the annotation cache (re-annotating if it is missing), even for a caller that wants only the digest or
   deaths. Make `PullRecords.annotated` lazy if a view needs records without frames, before the read-model tables
   do it.
-- **Stale record blobs are never deleted.** A changed input writes a new `records/` key and leaves the old blob.
-  A retention pass should delete blobs whose hash no current pull would produce.
 
 - **No S3 service in CI.** The S3 blob store is covered in CI only by the moto-backed unit tests. The
   `tests/integration/hosted/test_blob_s3.py` suite runs the same contract against a real S3-compatible service

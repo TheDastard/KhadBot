@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker | backfill --encounter ID]
 """
 
 from __future__ import annotations
@@ -165,6 +165,45 @@ def _run_worker(queues: str | None, concurrency: int | None) -> None:
         sys.exit(str(exc))
 
 
+def _run_backfill(encounter: int, difficulty: int | None, since: str | None, dry_run: bool) -> None:
+    from khadbot import wiring
+    from khadbot.config import DatabaseConfig
+
+    if not DatabaseConfig().hosted:
+        sys.exit("Backfill queues hosted jobs: set KHADBOT_MODE=hosted and DATABASE_URL (and the S3 settings).")
+    try:
+        from khadbot.jobs.backfill import parse_since, run_backfill
+        from khadbot.jobs.queue import build_queue
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "backfill") + f"\n({exc})")
+    try:
+        since_ms = parse_since(since) if since else None
+    except ValueError:
+        sys.exit(f"--since must be a date such as 2026-10-01, not {since!r}")
+
+    async def run() -> None:
+        index = wiring.read_model_index()
+        assert index is not None  # hosted, checked above
+        queue = build_queue()
+        async with queue.open():
+            result = await run_backfill(
+                queue, index, encounter_id=encounter, difficulty=difficulty, since_ms=since_ms, dry_run=dry_run
+            )
+        if dry_run:
+            print(f"{len(result.matched)} pulls match; nothing queued (dry run).")
+        else:
+            print(
+                f"{len(result.matched)} pulls match: {len(result.enqueued)} queued, "
+                f"{len(result.already_queued)} already queued. No WCL points are spent."
+            )
+
+    try:
+        # psycopg's async connections need the selector event loop, which Windows does not use by default.
+        asyncio.run(run(), loop_factory=asyncio.SelectorEventLoop)
+    except (ConfigurationError, OSError) as exc:
+        sys.exit(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -203,6 +242,14 @@ def build_parser() -> argparse.ArgumentParser:
     worker = sub.add_parser("worker", help="Run the job queue worker (hosted mode)")
     worker.add_argument("--queues", help="Comma-separated queues to take jobs from (default: KHADBOT_WORKER_QUEUES)")
     worker.add_argument("--concurrency", type=int, help="Jobs to run at once (default: KHADBOT_WORKER_CONCURRENCY)")
+    backfill = sub.add_parser(
+        "backfill",
+        help="Queue low-priority process jobs for an encounter's stored pulls (hosted mode; never spends WCL points)",
+    )
+    backfill.add_argument("--encounter", type=int, required=True, help="WCL encounter ID")
+    backfill.add_argument("--difficulty", type=int, help="Only this difficulty (default: all)")
+    backfill.add_argument("--since", help="Only reports that started on or after this date (UTC), e.g. 2026-10-01")
+    backfill.add_argument("--dry-run", action="store_true", help="Count the matching pulls; queue nothing")
     return parser
 
 
@@ -229,6 +276,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_migrate()
     elif command == "worker":
         _run_worker(args.queues, args.concurrency)
+    elif command == "backfill":
+        _run_backfill(args.encounter, args.difficulty, args.since, args.dry_run)
 
 
 if __name__ == "__main__":

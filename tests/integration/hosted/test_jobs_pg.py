@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 import psycopg
 import pytest
 from helpers.jobs.store_contract import (  # noqa: F401 - collected here
+    TestActiveProcess,
     TestCancel,
     TestChildren,
     TestClaimIngest,

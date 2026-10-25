@@ -141,6 +141,8 @@ class JobTx(Protocol):
 
     def active_ingests(self, report_code: str) -> list[JobRecord]: ...
 
+    def active_process(self, report_code: str) -> list[JobRecord]: ...
+
     def children(self, parent_id: str) -> list[JobRecord]: ...
 
 
@@ -387,6 +389,10 @@ class JobStore:
     async def active_ingests(self, report: str) -> list[JobRecord]:
         return await self._run(lambda tx: tx.active_ingests(report), report=report)
 
+    async def active_process(self, report: str) -> list[JobRecord]:
+        """The queued or running process jobs of one report's pulls."""
+        return await self._run(lambda tx: tx.active_process(report), report=report)
+
     async def get(self, job_id: str) -> JobRecord | None:
         return await self._run(lambda tx: tx.load(job_id), job_id=job_id)
 
@@ -520,6 +526,14 @@ class _MemoryTx:
         ]
         return sorted(rows, key=lambda r: r.created_at)
 
+    def active_process(self, report_code: str) -> list[JobRecord]:
+        rows = [
+            r
+            for r in self._backend.rows.values()
+            if r.kind is JobKind.PROCESS and r.report_code == report_code and r.active
+        ]
+        return sorted(rows, key=lambda r: r.created_at)
+
     def children(self, parent_id: str) -> list[JobRecord]:
         rows = [r for r in self._backend.rows.values() if r.parent_id == parent_id]
         return sorted(rows, key=lambda r: r.created_at)
@@ -537,6 +551,10 @@ _COLUMNS: LiteralString = (
 _SELECT_ONE: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE id = %s"
 _SELECT_ACTIVE_INGESTS: LiteralString = (
     "SELECT " + _COLUMNS + " FROM jobs WHERE kind = 'ingest' AND report_code = %s "
+    "AND state IN ('queued', 'running', 'waiting_budget') ORDER BY created_at"
+)
+_SELECT_ACTIVE_PROCESS: LiteralString = (
+    "SELECT " + _COLUMNS + " FROM jobs WHERE kind = 'process' AND report_code = %s "
     "AND state IN ('queued', 'running', 'waiting_budget') ORDER BY created_at"
 )
 _SELECT_CHILDREN: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE parent_id = %s ORDER BY created_at"
@@ -627,6 +645,9 @@ class _PostgresTx:
 
     def active_ingests(self, report_code: str) -> list[JobRecord]:
         return self._rows(_SELECT_ACTIVE_INGESTS, (report_code,))
+
+    def active_process(self, report_code: str) -> list[JobRecord]:
+        return self._rows(_SELECT_ACTIVE_PROCESS, (report_code,))
 
     def children(self, parent_id: str) -> list[JobRecord]:
         return self._rows(_SELECT_CHILDREN, (parent_id,))

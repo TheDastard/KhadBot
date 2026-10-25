@@ -31,7 +31,7 @@ from khadbot.storage import BlobStore, join_key, resolve_blobs
 
 log = logging.getLogger(__name__)
 
-__all__ = ["ReadModelProjector", "RecordsStore", "StoredRecords", "records_hash"]
+__all__ = ["ReadModelIndex", "ReadModelProjector", "RecordsStore", "StoredRecords", "records_hash"]
 
 # ---------------------------------------------------------------------------
 # Read-model projection hook
@@ -42,6 +42,19 @@ class ReadModelProjector(Protocol):
     """Writes one pull's read-model rows (hosted mode). Must be idempotent: the same records twice change nothing."""
 
     async def project(self, records: PullRecords) -> None: ...
+
+
+class ReadModelIndex(Protocol):
+    """What retention and backfill ask of the read-model tables (hosted mode). Both are plain reads."""
+
+    def pull_keys(self, encounter_id: int, difficulty: int | None = None, since_ms: int | None = None) -> list[str]:
+        """Projected pulls of an encounter, oldest night first; optionally one difficulty, and only reports that
+        started at or after ``since_ms``."""
+        ...
+
+    def records_keys(self) -> set[str]:
+        """Every records blob key a read-model row points at."""
+        ...
 
 
 # ---------------------------------------------------------------------------
