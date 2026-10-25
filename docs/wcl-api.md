@@ -61,6 +61,10 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
   the killing blow is in `killingAbilityGameID` and the killer in `killerID`, for example
   `{"type":"death","sourceID":-1,"targetID":10,"abilityGameID":0,"killerID":233,"killingAbilityGameID":1301122}`.
   Normalize fills `ability_id` and `source_id` from those two fields.
+- **One request can cover many fights.** `fightIDs` takes a list, and every row's `fight` field names the fight
+  it belongs to, so a multi-fight stream splits back into per-fight rows. With 25 fights no row named a fight that
+  wasn't requested. Such a request can be slow: one 25-fight request took longer than the client's 30 s timeout,
+  and the same request succeeded on a retry (2026-10-24, "Cross-fight and heal-only results").
 - `includeResources: true` adds `hitPoints` / `maxHitPoints` to events. About 85 to 90% of friendly `damage`
   events carry them across all 62 recorded pulls; the rest have none, so code must tolerate missing HP.
 - Events also carry fields KhadBot ignores (`classResources`, `buffs`, `attackPower`, ...). They make raw pages
@@ -399,8 +403,20 @@ with all six pulls' fight IDs. Run twice on different pulls, once in each order.
 - **The batched fetch saves 62 to 82% of the small specs' points.** It cost 9 points when it ran second and 18.57
   when it ran first, while the per-pull baseline cost 49 in either order. WCL-side caching seems to favour
   whichever fetch runs second; the 62% from the variant-first run is the conservative figure.
-- Not measured: a whole 25-pull night. Six pulls needed one page per stream; a night needs more pages per
-  stream, so its saving is an estimate until measured.
+
+**Whole night, 2026-10-24** (`--variants crossfight --batch-fights encounter --variant-first`): all 25 pulls of
+`trMgApZCVYkv3jdq`'s encounter (fights 4 to 28), the batched fetch first.
+
+| Run | Fights | Order | Requests | Pages | Bytes | Events | Wall s | Points | Points saved | Time saved |
+|---|---|---|---|---|---|---|---|---|---|---|
+| baseline | 4–28 | second | 200 | 200 | 8120915 | 57816 | 26.7 | 201 | | |
+| crossfight | 4–28 | first | 8 | 11 | 8114293 | 57816 | 3.0 | 28.91 | 86% | 89% |
+
+- **The saving holds over a whole night**, even with the batched fetch first: 28.91 points against 201, about 8
+  points per pull down to about 1.2. The eight streams took 11 pages between them.
+- Frames were identical for every pull, with 0 unassigned, 0 missing, 0 ambiguous and 0 stray rows.
+- The first attempt failed: one batched request didn't answer within the client's 30 s timeout, and the client
+  raised a network error that nothing retries. The points it spent went unrecorded. The rerun above succeeded.
 
 **Heal-only Healing** (`--variants healonly --heal-filter 'type = "heal"'`) on `trMgApZCVYkv3jdq:26` (526 s):
 

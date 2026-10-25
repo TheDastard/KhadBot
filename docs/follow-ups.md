@@ -109,13 +109,14 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
     the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
 - **Batch the small fetch specs across pulls.** Deaths, both Buffs requests, Debuffs, Dispels, Interrupts,
   Threat and enemy Casts are one page per pull, so a night pays for 8 requests per pull to fetch a few kB each.
-  Measured 2026-10-20 on `trMgApZCVYkv3jdq` (`docs/wcl-api.md`, "Cross-fight and heal-only results"): one request
-  per spec with six pulls' fight IDs, split back by each row's `fight` field, gave identical frames and cost 9
-  and 18.57 points (two runs, one in each order) against 49 per pull, a 62 to 82% saving. A one-page request
-  costs about 1 point. Before building it into ingest:
-  - Measure a whole 25-pull night. Six pulls needed one page per stream; a night needs more.
+  Measured on `trMgApZCVYkv3jdq` (`docs/wcl-api.md`, "Cross-fight and heal-only results"): one request per spec
+  with the pulls' fight IDs, split back by each row's `fight` field, gave identical frames. Over six pulls it cost
+  9 and 18.57 points against 49 (2026-10-20); over the whole 25-pull night, batched fetch first, 28.91 against
+  201, an 86% saving (2026-10-24). That is about half a night's points. Before building it into ingest:
   - The raw cache and its `_complete` markers are per pull and spec. A batched fetch needs a per-report marker
     for resume, and the truncation anomaly has to be attributed per fight.
+  - A 25-fight request once outlasted the client's 30 s timeout, and the fetcher retries only rate limits. Retry
+    network errors, or cap the fights per request.
   - It helps ingest of a finished report and backfills. Live ingest fetches a pull or two per poll, so it gains
     little there.
 - **Filter Healing to fewer row types.** Healing is the largest spec. `type = "heal"` saved 2 of 10 points on
