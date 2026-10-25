@@ -16,8 +16,9 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
-from khadbot.auth.routes import Auth, AuthErrorBody, CurrentUser
+from khadbot.auth.routes import Auth, CurrentUser
 from khadbot.config import WclLimitScheme
+from khadbot.errors import ErrorBody
 from khadbot.jobs.budget_store import BudgetManager, build_budget_manager
 
 # ---------------------------------------------------------------------------
@@ -73,7 +74,7 @@ router = APIRouter(prefix="/v1", tags=["budget"])
 @router.get(
     "/budget",
     response_model=BudgetResponse,
-    responses={401: {"model": AuthErrorBody, "description": "Not signed in (not_signed_in)"}},
+    responses={401: {"model": ErrorBody, "description": "Not signed in (not_signed_in)"}},
 )
 async def budget(user: CurrentUser, auth: Auth, manager: Budget, response: Response) -> BudgetResponse:
     """Which WCL budget the next ingest uses, the user's allowance left and how long an ingest would wait now."""

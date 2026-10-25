@@ -36,6 +36,7 @@ from pydantic import BaseModel
 from khadbot.auth.errors import AuthError, CsrfError, LoginError, NotSignedInError
 from khadbot.auth.service import AuthService
 from khadbot.auth.store import User
+from khadbot.errors import ErrorBody
 
 SESSION_COOKIE = "khadbot_session"
 LOGIN_COOKIE = "khadbot_login"
@@ -52,11 +53,6 @@ class Me(BaseModel):
     id: str
     name: str
     wcl_user_id: int
-
-
-class AuthErrorBody(BaseModel):
-    code: str
-    message: str
 
 
 # ---------------------------------------------------------------------------
@@ -101,12 +97,16 @@ CurrentUser = Annotated[User, Depends(current_user)]
 # ---------------------------------------------------------------------------
 
 _ERRORS: dict[int | str, dict] = {
-    400: {"model": AuthErrorBody, "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"},
-    401: {"model": AuthErrorBody, "description": "Not signed in (not_signed_in)"},
-    403: {"model": AuthErrorBody, "description": "CSRF check failed (csrf_failed)"},
+    400: {"model": ErrorBody, "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"},
+    401: {"model": ErrorBody, "description": "Not signed in (not_signed_in)"},
+    403: {"model": ErrorBody, "description": "CSRF check failed (csrf_failed)"},
 }
 
-router = APIRouter(prefix="/v1", tags=["auth"])
+router = APIRouter(
+    prefix="/v1",
+    tags=["auth"],
+    responses={422: {"model": ErrorBody, "description": "Invalid query parameter (bad_request)"}},
+)
 
 
 @router.get("/auth/login", status_code=303, response_class=RedirectResponse)

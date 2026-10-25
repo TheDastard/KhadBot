@@ -113,20 +113,37 @@ def _run_api(host: str, port: int) -> None:
     except ImportError as exc:
         sys.exit(missing_group_message("api", "api") + f"\n({exc})")
 
-    # Stores come from the composition root: with KHADBOT_MODE=hosted the findings and the night summary read Postgres.
+    # Stores come from the composition root. With KHADBOT_MODE=hosted the API is the hosted one: sign-in, report
+    # access checks, the ingest routes on the job queue, and findings and read models from Postgres.
+    hosted = DatabaseConfig().hosted
     try:
-        read_source = None
-        if DatabaseConfig().hosted:
+        if hosted:
             try:
+                from khadbot.api.deps import SqlReportDirectory
                 from khadbot.api.night import SqlSource
                 from khadbot.db import get_pool
+                from khadbot.jobs.queue import build_queue
             except ImportError as exc:
                 sys.exit(missing_group_message("hosted", "api in hosted mode") + f"\n({exc})")
-            read_source = SqlSource(get_pool())
-        app = create_app(findings=wiring.findings_store(), read_source=read_source)
+            pool = get_pool()
+            app = create_app(
+                findings=wiring.findings_store(),
+                read_source=SqlSource(pool),
+                auth=wiring.auth_service(),
+                jobs=build_queue(pool=pool),  # the API only queues and cancels; workers run the jobs
+                reports=SqlReportDirectory(pool),
+            )
+        else:
+            app = create_app(findings=wiring.findings_store())
     except (ConfigurationError, OSError, ValueError) as exc:
         sys.exit(str(exc))
-    uvicorn.run(app, host=host, port=port)
+    if hosted and sys.platform == "win32":
+        # psycopg's async connections (the job event stream, the queue) need the selector event loop, which Windows
+        # does not use by default.
+        server = uvicorn.Server(uvicorn.Config(app, host=host, port=port))
+        asyncio.run(server.serve(), loop_factory=asyncio.SelectorEventLoop)
+    else:
+        uvicorn.run(app, host=host, port=port)
 
 
 def _run_migrate() -> None:

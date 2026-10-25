@@ -89,6 +89,30 @@
         "title": "AggroTarget",
         "type": "object"
       },
+      "AllowanceView": {
+        "description": "One allowance in WCL points for the current window.",
+        "properties": {
+          "left": {
+            "title": "Left",
+            "type": "number"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "number"
+          },
+          "used": {
+            "title": "Used",
+            "type": "number"
+          }
+        },
+        "required": [
+          "limit",
+          "used",
+          "left"
+        ],
+        "title": "AllowanceView",
+        "type": "object"
+      },
       "BestPull": {
         "description": "The section's first kill, or else its wipe with the lowest boss health (ties: lower fight progress).",
         "properties": {
@@ -205,6 +229,87 @@
           "refs"
         ],
         "title": "BriefingLine",
+        "type": "object"
+      },
+      "BudgetResponse": {
+        "description": "The WCL budget as the signed-in user sees it.",
+        "properties": {
+          "allowance": {
+            "$ref": "#/components/schemas/AllowanceView",
+            "description": "The user's own allowance of the shared points."
+          },
+          "charged_to": {
+            "description": "Whose points WCL charges: the app's shared points, or the user's own pool first.",
+            "enum": [
+              "shared",
+              "user_first"
+            ],
+            "title": "Charged To",
+            "type": "string"
+          },
+          "fetches_with": {
+            "description": "Whose WCL token the next ingest fetches with: the user's own when they are signed in to WCL.",
+            "enum": [
+              "user",
+              "app"
+            ],
+            "title": "Fetches With",
+            "type": "string"
+          },
+          "held": {
+            "description": "Points reserved by jobs running now.",
+            "title": "Held",
+            "type": "number"
+          },
+          "limit_per_hour": {
+            "description": "The app's WCL points per window.",
+            "title": "Limit Per Hour",
+            "type": "number"
+          },
+          "resets_at": {
+            "description": "When WCL's current window ends and the allowances start again.",
+            "format": "date-time",
+            "title": "Resets At",
+            "type": "string"
+          },
+          "scheme": {
+            "description": "WCL's limit scheme for the app's account.",
+            "enum": [
+              "current",
+              "new"
+            ],
+            "title": "Scheme",
+            "type": "string"
+          },
+          "spent": {
+            "description": "Points spent this window, as WCL last reported plus jobs settled since.",
+            "title": "Spent",
+            "type": "number"
+          },
+          "wait_s": {
+            "description": "Seconds an ingest of a typical night asked for now would wait; 0 starts now.",
+            "title": "Wait S",
+            "type": "number"
+          },
+          "waiting_jobs": {
+            "description": "Ingests waiting for points, across all users.",
+            "title": "Waiting Jobs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fetches_with",
+          "charged_to",
+          "scheme",
+          "limit_per_hour",
+          "spent",
+          "held",
+          "resets_at",
+          "allowance",
+          "waiting_jobs",
+          "wait_s"
+        ],
+        "title": "BudgetResponse",
         "type": "object"
       },
       "CachedFindings": {
@@ -533,7 +638,7 @@
         "type": "object"
       },
       "ErrorBody": {
-        "description": "Every error response: a stable machine code and a message for people.",
+        "description": "Every API error response: a stable machine code and a message for people.",
         "properties": {
           "code": {
             "examples": [
@@ -932,6 +1037,276 @@
         "title": "Hit",
         "type": "object"
       },
+      "IngestRequest": {
+        "description": "Start an ingest. ``source`` is a report code or a Warcraft Logs report URL.",
+        "properties": {
+          "fights": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "maxItems": 300,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WCL fight IDs to ingest; empty or missing ingests every encounter fight.",
+            "title": "Fights"
+          },
+          "source": {
+            "description": "A report code, or a WCL report URL (…/reports/<code>). A #fight=N part of a URL is used only when `fights` is empty.",
+            "examples": [
+              "aBcD1234eFgH5678",
+              "https://www.warcraftlogs.com/reports/aBcD1234eFgH5678#fight=3"
+            ],
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "IngestRequest",
+        "type": "object"
+      },
+      "Job": {
+        "description": "An ingest job. Also the payload of the `job.state` and `job.done` stream events.",
+        "properties": {
+          "cancel_requested": {
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobFailure"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the job failed, is queued for a retry, or waits for points"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "points_spent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Points Spent"
+          },
+          "pulls": {
+            "items": {
+              "$ref": "#/components/schemas/JobPull"
+            },
+            "title": "Pulls",
+            "type": "array"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobState"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "report_code",
+          "state",
+          "stage",
+          "pct",
+          "pulls",
+          "cancel_requested",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "updated_at"
+        ],
+        "title": "Job",
+        "type": "object"
+      },
+      "JobErrorCode": {
+        "description": "Why a job failed or is waiting. The job's state says which: failed, or queued for a retry, or waiting.",
+        "enum": [
+          "wcl_not_signed_in",
+          "report_not_found",
+          "rate_limited",
+          "budget_wait",
+          "wcl_unreachable",
+          "wcl_error",
+          "not_in_cache",
+          "pulls_failed",
+          "interrupted",
+          "internal_error"
+        ],
+        "title": "JobErrorCode",
+        "type": "string"
+      },
+      "JobFailure": {
+        "description": "A typed error. Never carries a token, URL or connection string.",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/JobErrorCode"
+          },
+          "eta_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "budget_wait: estimated seconds until the job can run",
+            "title": "Eta S"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "rate_limited: seconds until the queue retries the job, when it will",
+            "title": "Retry After S"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "JobFailure",
+        "type": "object"
+      },
+      "JobPull": {
+        "description": "One pull of an ingest, as far as it has reported.",
+        "properties": {
+          "fight": {
+            "title": "Fight",
+            "type": "integer"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "pull_key": {
+            "title": "Pull Key",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PullStatus"
+          }
+        },
+        "required": [
+          "pull_key",
+          "fight",
+          "stage",
+          "pct",
+          "status"
+        ],
+        "title": "JobPull",
+        "type": "object"
+      },
+      "JobState": {
+        "description": "Where a job is. ``waiting_budget`` means it waits for Warcraft Logs points; the others are self-explanatory.",
+        "enum": [
+          "queued",
+          "running",
+          "waiting_budget",
+          "done",
+          "failed",
+          "cancelled"
+        ],
+        "title": "JobState",
+        "type": "string"
+      },
       "LateCooldown": {
         "properties": {
           "late_ms": {
@@ -948,6 +1323,30 @@
           "late_ms"
         ],
         "title": "LateCooldown",
+        "type": "object"
+      },
+      "Me": {
+        "description": "The signed-in user.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "wcl_user_id": {
+            "title": "Wcl User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "wcl_user_id"
+        ],
+        "title": "Me",
         "type": "object"
       },
       "MechanicMarker": {
@@ -1665,6 +2064,18 @@
         "title": "PullDigest",
         "type": "object"
       },
+      "PullStatus": {
+        "enum": [
+          "fetching",
+          "normalizing",
+          "processing",
+          "done",
+          "failed",
+          "cancelled"
+        ],
+        "title": "PullStatus",
+        "type": "string"
+      },
       "PullSummary": {
         "description": "One pull in a report group. Every value is in the record its ``ref`` (a ``pull`` ref) resolves to.",
         "properties": {
@@ -2252,12 +2663,247 @@
     }
   },
   "info": {
-    "description": "Read-only access to ingested WarcraftLogs reports: digests, night summaries and evidence.",
+    "description": "Access to ingested WarcraftLogs reports: digests, night summaries and evidence; in hosted mode also sign-in and ingest jobs.",
     "title": "KhadBot Dashboard API",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/auth/callback": {
+      "get": {
+        "description": "WCL's redirect after sign-in. Starts a session and redirects to the web app, or answers 400.",
+        "operationId": "callback_v1_auth_callback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid query parameter (bad_request)"
+          }
+        },
+        "summary": "Callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "get": {
+        "description": "Start a Warcraft Logs sign-in: redirects the browser to WCL. ``next`` is a path to return to afterwards.",
+        "operationId": "login_v1_auth_login_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "next",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid query parameter (bad_request)"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "description": "End the session and clear its cookie. Signing out twice is fine.",
+        "operationId": "logout_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid query parameter (bad_request)"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/budget": {
+      "get": {
+        "description": "Which WCL budget the next ingest uses, the user's allowance left and how long an ingest would wait now.",
+        "operationId": "budget_v1_budget_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          }
+        },
+        "summary": "Budget",
+        "tags": [
+          "budget"
+        ]
+      }
+    },
     "/v1/evidence/{ref}": {
       "get": {
         "description": "The record a ref names (URL-encode the ref), as the analyst's verify step resolves it.",
@@ -2292,7 +2938,7 @@
                 }
               }
             },
-            "description": "The ref is malformed or names no record"
+            "description": "The ref is malformed, names no record or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2313,6 +2959,16 @@
               }
             },
             "description": "Raid-plan refs cannot be resolved yet"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Evidence",
@@ -2353,9 +3009,300 @@
         ]
       }
     },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "description": "A job of yours: its state, per-pull progress and typed error.",
+        "operationId": "get_job_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such job of yours, or a report you cannot read"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid body or parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Get Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "description": "Cancel a job of yours. A queued job is dropped at once; a running one stops at its next page and shows\n``cancel_requested`` until it has. A finished job is returned unchanged.",
+        "operationId": "cancel_job_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such job of yours, or a report you cannot read"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid body or parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Cancel Job",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}/events": {
+      "get": {
+        "description": "Follow a job of yours as server-sent events. A reconnecting client gets the current state first.",
+        "operationId": "job_events_v1_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Server-sent events: `job.state` (a Job; always first), `pull.progress` (a JobPull), `job.done` (a Job) and `error` (a JobFailure). The stream closes after `job.done`, `error`, or a `job.state` whose state is `cancelled`."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such job of yours, or a report you cannot read"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid body or parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Job Events",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "description": "The signed-in user.",
+        "operationId": "me_v1_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid query parameter (bad_request)"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/reports": {
       "get": {
-        "description": "Ingested reports with their encounter and difficulty groups.",
+        "description": "Ingested reports with their encounter and difficulty groups. Signed in (hosted), the reports the user opened or\ningested, newest first; a visitor has none. Local mode lists every ingested report.",
         "operationId": "list_reports_v1_reports_get",
         "responses": {
           "200": {
@@ -2382,6 +3329,116 @@
         "summary": "List Reports",
         "tags": [
           "reports"
+        ]
+      },
+      "post": {
+        "description": "Queue an ingest of a report. The caller must be able to read the report (404 ``report_not_found`` otherwise).\nThe job fetches with the caller's own Warcraft Logs token when they have one, else with the app's.",
+        "operationId": "start_ingest_v1_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Your own queued or running ingest already covers this request"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not a report code or URL (bad_source, bad_fights)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such job of yours, or a report you cannot read"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Another user's ingest of this report is running (ingest_in_progress)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid body or parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Start Ingest",
+        "tags": [
+          "jobs"
         ]
       }
     },
@@ -2419,7 +3476,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2430,6 +3487,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Report",
@@ -2472,7 +3539,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2483,6 +3550,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Night",
@@ -2544,7 +3621,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2555,6 +3632,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Digest",
@@ -2693,7 +3780,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2704,6 +3791,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Events",
@@ -2755,7 +3852,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2766,6 +3863,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Findings",
@@ -2817,7 +3924,7 @@
                 }
               }
             },
-            "description": "Report or pull not ingested"
+            "description": "Report or pull not ingested, or a report the caller cannot read"
           },
           "422": {
             "content": {
@@ -2828,6 +3935,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
           }
         },
         "summary": "Get Timeline",

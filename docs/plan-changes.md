@@ -752,3 +752,14 @@ The API resolves the same encoded ref at `GET /v1/evidence/{ref}`.
 
 W0: the read API, the contract with its drift test and the fixture data directory are built
 (`mise run gen:fixture-data`, then `mise run serve` with `KHADBOT_DATA_DIR=.khadbot_fixture_data`). The ingest endpoints are still to come.
+
+## api/hosted
+
+### Hosted plan, task 1.5 and portal plan section 4.2 (API surface)
+
+`contracts/openapi.json` is now the hosted API's document (`api.app.hosted_documentation_app`): the read routes, sign-in
+(`/v1/auth/*`, `/v1/me`), `POST /v1/reports`, `GET /v1/jobs/{id}`, `GET /v1/jobs/{id}/events` (server-sent events:
+`job.state`, `pull.progress`, `job.done`, `error`) and `POST /v1/jobs/{id}/cancel`. Replaces the in-memory job registry
+of the earlier ingest plan: a job is a `jobs` row. Job states are `queued | running | waiting_budget | done | failed |
+cancelled`; per-pull status is `fetching | normalizing | processing | done | failed | cancelled`; the error codes are
+in `JobErrorCode`. Every report route answers 404 for a report the caller cannot read.

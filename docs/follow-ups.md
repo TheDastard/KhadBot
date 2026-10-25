@@ -284,6 +284,14 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic
   detail with its cluster rows, the event row) and make the response a union keyed on `kind`.
 
+- Hosted API: `GET /v1/reports` lists a user's reports from cached "readable" access rows without re-checking their age,
+  so a report made private later stays in that user's list (title and pull counts only) until they open it again and
+  the check runs. Filter on `access_recheck_s` if that matters.
+- Hosted API: a failed `rate_limited` job has no `retry_after_s` (the job row keeps no WCL hint; only a job queued for a
+  retry shows the backoff left).
+- Hosted API: a second user's ingest of a report whose ingest is already running gets 409 `ingest_in_progress`
+  rather than following the first user's job.
+
 ## Agent
 
 - **Agent tools over cached data.** The coach's live-API tools were removed (decision D53), so the coach has none.

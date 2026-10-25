@@ -14,7 +14,7 @@ from helpers.jobs.budget import FakeReader, MovableClock, budget_config
 from khadbot.api import create_app
 from khadbot.auth.routes import current_user, optional_user
 from khadbot.auth.store import User
-from khadbot.config import WclLimitScheme
+from khadbot.config import AuthConfig, WclLimitScheme
 from khadbot.jobs.budget import Ask
 from khadbot.jobs.budget_store import BudgetManager, MemoryBudgetBackend
 
@@ -34,6 +34,7 @@ class FakeAuth:
 
     def __init__(self, has_tokens: bool) -> None:
         self.tokens = FakeTokens(has_tokens)
+        self.config = AuthConfig()  # create_app reads the web origins for CORS
 
 
 def client_for(tmp_path, manager: BudgetManager, *, signed_in: bool = True, has_tokens: bool = True) -> TestClient:

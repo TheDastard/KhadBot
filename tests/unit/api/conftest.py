@@ -31,3 +31,56 @@ def no_network(monkeypatch):
 @pytest.fixture
 def client(dataset):
     return dataset.client
+
+
+# ---------------------------------------------------------------------------
+# The hosted API: sign-in over the in-memory store, a faked WCL, the queue on procrastinate's in-memory connector
+# ---------------------------------------------------------------------------
+
+WEB_ORIGIN = "http://localhost:3000"
+
+
+@pytest.fixture
+def clock():
+    from helpers.auth.fake_wcl import Clock
+
+    return Clock()
+
+
+@pytest.fixture
+def wcl():
+    import respx
+    from helpers.auth.fake_wcl import FakeWcl
+
+    with respx.mock(assert_all_called=False) as router:
+        fake = FakeWcl(router)
+        fake.install()
+        yield fake
+
+
+@pytest.fixture
+def auth_store():
+    from khadbot.auth.store import MemoryAuthStore
+
+    return MemoryAuthStore()
+
+
+@pytest.fixture
+def service(auth_store, clock, wcl):
+    from dataclasses import replace
+
+    from cryptography.fernet import Fernet
+    from helpers.auth.fake_wcl import FAKE_CLIENT_ID, FAKE_CLIENT_SECRET
+
+    from khadbot.auth.service import AuthService
+    from khadbot.config import AuthConfig
+
+    config = replace(
+        AuthConfig(),
+        redirect_uri="http://localhost:8000/v1/auth/callback",
+        post_login_url=WEB_ORIGIN,
+        web_origins=(WEB_ORIGIN,),
+        token_keys=(Fernet.generate_key().decode(),),
+        wcl_scope="",
+    )
+    return AuthService(auth_store, config, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET, clock=clock)

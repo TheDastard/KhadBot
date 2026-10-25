@@ -7,6 +7,8 @@ entry points can share them without importing each other.
 
 from __future__ import annotations
 
+from pydantic import BaseModel, Field
+
 # ---------------------------------------------------------------------------
 # Optional dependency groups
 # ---------------------------------------------------------------------------
@@ -33,3 +35,15 @@ class ConfigurationError(Exception):
     """
 
     pass
+
+
+# ---------------------------------------------------------------------------
+# Error responses
+# ---------------------------------------------------------------------------
+
+
+class ErrorBody(BaseModel):
+    """Every API error response: a stable machine code and a message for people."""
+
+    code: str = Field(examples=["report_not_found", "pull_not_found", "unresolvable_ref", "bad_window"])
+    message: str
