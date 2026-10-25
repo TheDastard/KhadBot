@@ -18,6 +18,9 @@ Rules the queue keeps:
 - A backfill's process jobs are queued at a lower priority than every other job (``enqueue_backfill``), once per pull.
 - The records cleanup (``jobs/retention.py``) runs on the ``process`` queue on a schedule any worker registers.
 - Cancelling a queued job drops it; cancelling a running one stops it at the next page boundary.
+- With a WCL budget (``jobs/budget_store.py``), an online ingest reserves its estimated points when a worker picks it
+  up and settles to its measured spend when it ends. One that can't reserve goes to ``waiting_budget`` and is queued
+  again when points free up, or at its next recheck time.
 
 This module needs the ``hosted`` dependency group; nothing in local mode imports it.
 """
@@ -30,7 +33,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import procrastinate
@@ -39,8 +42,11 @@ from procrastinate.retry import RetryStrategy
 from pydantic import TypeAdapter
 
 from khadbot.config import DatabaseConfig, QueueConfig, RetentionConfig
+from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.models import IngestResult
+from khadbot.jobs import budget as budget_policy
 from khadbot.jobs.backfill import BACKFILL_PRIORITY
+from khadbot.jobs.budget import Admission, Ask
 from khadbot.jobs.failures import ErrorCode, JobCancelled, classify
 from khadbot.jobs.reporting import CancelFlag, CancellingRawCache, ProgressWriter
 from khadbot.jobs.retention import CleanupResult, CleanupSources, cleanup_records
@@ -50,6 +56,8 @@ from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, 
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
+
+    from khadbot.jobs.budget_store import BudgetManager
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +117,7 @@ class JobQueue:
         config: Retry and progress settings.
         context_factory: Builds the ``JobContext`` one job runs against. The default builds it from the configuration;
             tests pass a factory that returns fixture stores and a stub WCL client.
+        budget: The WCL budget online ingests reserve points from; None runs every job without one.
     """
 
     def __init__(
@@ -120,8 +129,10 @@ class JobQueue:
         context_factory: Callable[[], JobContext] | None = None,
         retention: RetentionConfig | None = None,
         cleanup: CleanupSources | None = None,
+        budget: BudgetManager | None = None,
     ) -> None:
         self.store = store
+        self.budget = budget
         self.config = config or QueueConfig()
         self._context_factory = context_factory or JobContext
         self.app = procrastinate.App(connector=connector)
@@ -301,13 +312,19 @@ class JobQueue:
         return replace(ctx, cache=CancellingRawCache(ctx.raw_cache(), flag))
 
     async def _execute(self, context: procrastinate.JobContext, job_id: str) -> None:
+        reserved = await self._reserve_budget(job_id)
+        if reserved is None:
+            return  # waiting for WCL points: queued again when they free up
         job = await self.store.begin(job_id)
         if job is None:
             logger.info("Job %s is gone, finished or cancelled; not running it", job_id)
+            if reserved:
+                await self._release_budget(job_id)
             return
         spec = _SPEC.validate_python(job.spec)
         flag = CancelFlag()
         writer = ProgressWriter(self.store, job_id, flag, self.config.progress_interval_s)
+        result: object = None
         try:
             async with writer:
                 result = await run_job(spec, self._context(flag), writer)
@@ -346,6 +363,10 @@ class JobQueue:
                     raise transient from exc
             await self.store.finish(job_id, JobState.FAILED, error_code=failure.code, error_message=failure.message)
             raise
+        finally:
+            if reserved:
+                spent = result.points_spent if isinstance(result, IngestResult) else None
+                await asyncio.shield(self._settle_budget(job_id, spent))
 
     async def _queue_processing(self, job: JobRecord, result: IngestResult) -> None:
         """
@@ -354,6 +375,110 @@ class JobQueue:
         """
         for key in [*result.pulls, *result.skipped]:
             await self.enqueue(ProcessPull(pull_key=key), parent=job)
+
+    # -- the WCL budget (job pick-up path) -------------------------------------
+
+    async def _reserve_budget(self, job_id: str) -> bool | None:
+        """
+        Before a job starts: reserve its WCL points. True when it holds a reservation, False when it needs none
+        (no budget, not an online ingest, or no longer startable), None when it must wait: it is then in
+        ``waiting_budget`` with a wake-up queued for its recheck time.
+        """
+        if self.budget is None:
+            return False
+        job = await self.store.get(job_id)
+        if job is None or job.kind is not JobKind.INGEST or job.state not in (JobState.QUEUED, JobState.WAITING_BUDGET):
+            return False
+        spec = IngestReport.model_validate(job.spec)
+        if spec.offline:
+            return False  # reads the raw page cache only: no points
+        admission = await self.budget.request(await self._ask(job, spec))
+        await self._wake(admission, skip=job_id)
+        if job_id in admission.granted:
+            if job.state is JobState.WAITING_BUDGET and not await self.store.resume_from_budget(job_id):
+                await self._release_budget(job_id)
+                return False
+            return True
+        wait = admission.waits.get(job_id)
+        if not await self.store.wait_for_budget(job_id):
+            await self._release_budget(job_id)  # cancelled meanwhile
+            return False
+        if wait is not None:
+            logger.info("Job %s waits for WCL points (%s), place %d", job_id, wait.reason.value, wait.position)
+            await self._defer_again(job_id, schedule_at=wait.recheck_at)
+        return None
+
+    async def _ask(self, job: JobRecord, spec: IngestReport) -> Ask:
+        """The budget request for an ingest: its estimate, who asked, the report's guild and whose token it uses."""
+        assert self.budget is not None
+        cfg = self.budget.config
+        pulls = 0 if spec.refresh_meta else self._pull_count(spec)
+        return Ask(
+            job_id=job.id,
+            report_code=job.report_code,
+            user_id=job.requested_by,
+            guild_id=await self.budget.guild_of(job.report_code),
+            user_token=isinstance(spec.auth, UserAuth),
+            points=budget_policy.estimate_points(pulls, cfg),
+            asked_at=job.created_at,
+        )
+
+    def _pull_count(self, spec: IngestReport) -> int:
+        """The pulls an ingest fetches: its fights, else the boss fights in cached metadata, else a raid night."""
+        assert self.budget is not None
+        if spec.fights is not None:
+            return len(spec.fights)
+        try:
+            meta = self._context_factory().raw_cache().report_meta(spec.code)
+            if meta is not None:
+                return len(parse_report_meta(spec.code, meta)[0])
+        except Exception:  # noqa: BLE001 - an estimate must never stop a job; fall back to the default
+            logger.warning("Could not count the pulls of %s from cached metadata", spec.code, exc_info=True)
+        return self.budget.config.default_pulls
+
+    async def _settle_budget(self, job_id: str, spent: float | None) -> None:
+        """After a job: charge its measured spend, take WCL's count, and queue the waiting jobs that now fit."""
+        assert self.budget is not None
+        try:
+            await self.budget.settle(job_id, spent)
+            await self.budget.sync()
+            await self._wake(await self.budget.admit_waiting())
+        except Exception:  # noqa: BLE001 - settling must never change how the job ended
+            logger.warning("Could not settle the WCL budget for job %s", job_id, exc_info=True)
+
+    async def _release_budget(self, job_id: str) -> None:
+        assert self.budget is not None
+        await self.budget.release(job_id)
+        await self._wake(await self.budget.admit_waiting())
+
+    async def _wake(self, admission: Admission, *, skip: str | None = None) -> None:
+        """Queue again each waiting job the budget just granted; release the grant of one that was cancelled."""
+        assert self.budget is not None
+        for job_id in admission.granted:
+            if job_id == skip:
+                continue
+            if not await self.store.resume_from_budget(job_id):
+                await self.budget.release(job_id)
+                continue
+            await self._defer_again(job_id)
+
+    async def _defer_again(self, job_id: str, *, schedule_at: datetime | None = None) -> None:
+        """
+        Queue a new run of a job that already has its row: now, or at ``schedule_at``. It keeps the report's lock
+        but takes no queueing lock, so it can sit next to an earlier wake-up, which is cancelled.
+        """
+        job = await self.store.get(job_id)
+        if job is None:
+            return
+        lock, _ = _locks(_SPEC.validate_python(job.spec))
+        deferrer = self.app.tasks[TASK_NAMES[job.kind]].configure(lock=lock, schedule_at=schedule_at)
+        queue_job_id = await deferrer.defer_async(job_id=job_id)
+        await self.store.set_queue_job_id(job_id, queue_job_id)
+        if job.queue_job_id is not None and job.queue_job_id != queue_job_id:
+            try:
+                await self.app.job_manager.cancel_job_by_id_async(job.queue_job_id)
+            except Exception:  # noqa: BLE001 - an earlier wake-up that already ran or is running is harmless
+                logger.debug("Could not cancel the earlier queue job of %s", job_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -369,6 +494,7 @@ def build_queue(
     context_factory: Callable[[], JobContext] | None = None,
     retention: RetentionConfig | None = None,
     cleanup: CleanupSources | None = None,
+    budget: BudgetManager | None = None,
 ) -> JobQueue:
     """
     The queue on the configured Postgres. The ``jobs`` table uses the process-wide pool; procrastinate keeps its own
@@ -380,13 +506,25 @@ def build_queue(
     url = database_url or DatabaseConfig().database_url
     connector = procrastinate.PsycopgConnector(conninfo=url, min_size=1, max_size=cfg.concurrency + 4)
     store = JobStore(PostgresJobBackend(pool or get_pool()))
-    return JobQueue(store, connector, config=cfg, context_factory=context_factory, retention=retention, cleanup=cleanup)
+    return JobQueue(
+        store,
+        connector,
+        config=cfg,
+        context_factory=context_factory,
+        retention=retention,
+        cleanup=cleanup,
+        budget=budget,
+    )
 
 
 async def serve_worker(queues: list[str] | None = None, concurrency: int | None = None) -> None:
     """Run a worker on the configured stores until it is stopped (SIGINT or SIGTERM). The ``worker`` subcommand."""
+    from khadbot.jobs.budget_store import build_budget_manager
+
     resolver = default_token_resolver()  # one for the process: it builds the sign-in service on the first user job
-    queue = build_queue(context_factory=lambda: JobContext(resolver=resolver))
+    budget = build_budget_manager()
+    queue = build_queue(context_factory=lambda: JobContext(resolver=resolver), budget=budget)
+    await budget.sync()  # take WCL's count before the first job reserves
     async with queue.open():
         await queue.run_worker(queues=queues, concurrency=concurrency)
 

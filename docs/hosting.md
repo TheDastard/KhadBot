@@ -54,6 +54,20 @@ Reads everything the API does, plus the WCL credentials once jobs fetch from WCL
 | `KHADBOT_JOB_RETRY_BACKOFF_S` | Base of the wait between retries: the wait is this value to the power of the attempt, in seconds (default 3). |
 | `KHADBOT_JOB_PROGRESS_INTERVAL_S` | How often a running job writes its progress and checks whether it was cancelled (default 0.5). |
 
+The WCL budget (`khadbot.jobs.budget`, state in the `wcl_budget` row). A worker reads the app's `rateLimitData` when it starts and after every job that reserved points (about 1 point a read, with the app's own credentials); a failed read is logged and the budget keeps its own count. `GET /v1/budget` shows it to a signed-in user. Settings, all optional:
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WCL_LIMIT_SCHEME` | `current` (default) or `new`: how WCL charges the account that owns the client (`docs/wcl-api.md`, "Rate limits and point types"). Until the first `rateLimitData` read the bucket assumes the scheme's documented limit, 3,600 or 1,000 points an hour; after it, WCL's own limit, so a subscription shows up without a deploy. |
+| `KHADBOT_BUDGET_USER_TOKENS_SPEND_APP` | `true` (default): a job on a signed-in user's token counts in full against the app's points, as the budget probe measured. `false` needs the `new` scheme and only changes anything once `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` is set. |
+| `KHADBOT_BUDGET_GUILD_SHARE`, `KHADBOT_BUDGET_USER_SHARE` | Share of the hourly points one WCL guild and one user may use per window (defaults 0.25 and 0.10), user-token jobs included. |
+| `KHADBOT_BUDGET_HEADROOM_SHARE` | Share kept free for live raid ingest (default 0.20). |
+| `KHADBOT_BUDGET_POINTS_PER_PULL`, `KHADBOT_BUDGET_POINTS_PER_SINGLE_PULL`, `KHADBOT_BUDGET_POINTS_PER_JOB` | The estimate a job reserves: 7.2 per batched pull (a 25-pull night is about 180 points after cross-fight batching), 14 for a pull fetched alone, plus 4 for the report metadata and rate-limit reads. |
+| `KHADBOT_BUDGET_DEFAULT_PULLS` | Pulls assumed for a whole-report ingest whose metadata isn't cached yet (default 25). |
+| `KHADBOT_BUDGET_DATABASE_POINTS_PER_HOUR` | The `new` scheme's database points (default 250). Ingest uses none. |
+| `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` | A signed-in user's own pool on the `new` scheme; unset until it is measured. |
+| `KHADBOT_BUDGET_RESERVATION_TTL_S` | A reservation no job settled (a worker died) is dropped after this long (default 7200). |
+
 Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API does not call it yet.
 
 ### Seed (`scripts/data/seed_stack.py`)
