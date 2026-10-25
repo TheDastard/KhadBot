@@ -10,9 +10,20 @@ Keys, under ``raw/`` (``$KHADBOT_DATA_DIR/raw`` in the local store)::
     <report>/report.json
     <report>/<fight>/<dir_name>/<filter_hash>/page_000.json ...
     <report>/<fight>/<dir_name>/<filter_hash>/_complete
+    <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/page_000.json ...
+    <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/_complete
+    <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/stalled
 
 ``filter_hash`` is the first 12 hex of SHA-256 of the filter expression (``"none"`` when
 there is none), so changing a filter refetches only that data type.
+
+Batching: the small specs (``BATCHED_SPEC_KEYS``, about one page per pull) are fetched by ``fetch_batches`` in
+one paginated stream across several pulls, because the events query takes a list of fight IDs and every row
+names its ``fight``. The stream is cached under ``batch/`` (``fights_hash`` names the set of fights), split
+by ``fight`` into each pull's own entry above, and deleted once every pull of the batch is complete, so
+normalize and offline ingest only ever see the per-fight layout. A stream that stops advancing marks truncated
+only the pulls ending after the stall (``stalled`` holds its timestamp). A failed batch is logged and left to
+the per-pull fetch, which also handles pulls with partly cached pages.
 """
 
 from __future__ import annotations
@@ -22,7 +33,7 @@ import hashlib
 import logging
 import os
 import re
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any
 
 import orjson
@@ -34,6 +45,7 @@ from khadbot.storage import BlobStore, join_key, resolve_blobs
 from khadbot.wcl.client import (
     WarcraftLogsAPIError,
     WarcraftLogsClient,
+    WarcraftLogsNetworkError,
     WarcraftLogsRateLimitError,
     WarcraftLogsUnauthorizedError,
 )
@@ -79,6 +91,12 @@ DEFAULT_SPECS: list[FetchSpec] = [
     # player threat generation, about 40 times larger, and is not fetched.
     FetchSpec(data_type="Threat"),
 ]
+
+# Specs fetched in one request across pulls when several pulls need them (``fetch_batches``): each is about one page
+# per pull. Healing, DamageTaken and friendly Casts run to many pages per pull and stay per pull.
+BATCHED_SPEC_KEYS = frozenset(
+    {"Deaths", "Buffs", "Buffs:offensive", "Debuffs", "Dispels", "Interrupts", "Threat", "Casts-Enemies"}
+)
 
 
 def _ids_filter(ids: Sequence[int]) -> str | None:
@@ -188,6 +206,48 @@ class RawPageCache:
     def mark_complete(self, code: str, fight: int, spec: FetchSpec) -> None:
         self.blobs.put(f"{self._dir(code, fight, spec)}/_complete", b"")
 
+    def replace_pages(self, code: str, fight: int, spec: FetchSpec, pages: list[dict]) -> None:
+        """Replace a fight's cached pages for ``spec`` with ``pages``. Does not write ``_complete``."""
+        directory = self._dir(code, fight, spec) + "/"
+        for key in self.blobs.list(directory):
+            if _PAGE_NAME.fullmatch(key[len(directory) :]):
+                self.blobs.delete(key)
+        for index, page in enumerate(pages):
+            self.write_page(code, fight, spec, index, page)
+
+    # Batch streams: one paginated request series for several fights, split into the per-fight entries later.
+
+    def _batch_dir(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> str:
+        fights_hash = hashlib.sha256(",".join(str(f) for f in sorted(fight_ids)).encode()).hexdigest()[:12]
+        return join_key(self.prefix, code, "batch", spec.dir_name, filter_hash(spec.filter_expression), fights_hash)
+
+    def batch_pages(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> list[dict]:
+        directory = self._batch_dir(code, spec, fight_ids) + "/"
+        keys = [k for k in self.blobs.list(directory) if _PAGE_NAME.fullmatch(k[len(directory) :])]
+        return [orjson.loads(data) for k in keys if (data := self.blobs.get(k)) is not None]
+
+    def write_batch_page(self, code: str, spec: FetchSpec, fight_ids: Sequence[int], index: int, page: dict) -> None:
+        self.blobs.put(f"{self._batch_dir(code, spec, fight_ids)}/page_{index:03d}.json", orjson.dumps(page))
+
+    def is_batch_complete(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> bool:
+        return self.blobs.exists(f"{self._batch_dir(code, spec, fight_ids)}/_complete")
+
+    def mark_batch_complete(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> None:
+        self.blobs.put(f"{self._batch_dir(code, spec, fight_ids)}/_complete", b"")
+
+    def mark_batch_stalled(self, code: str, spec: FetchSpec, fight_ids: Sequence[int], at_ms: int) -> None:
+        """Record the timestamp at which the batch stream stopped advancing."""
+        self.blobs.put(f"{self._batch_dir(code, spec, fight_ids)}/stalled", str(at_ms).encode("ascii"))
+
+    def batch_stalled_at(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> int | None:
+        data = self.blobs.get(f"{self._batch_dir(code, spec, fight_ids)}/stalled")
+        return int(data.decode("ascii")) if data else None
+
+    def delete_batch(self, code: str, spec: FetchSpec, fight_ids: Sequence[int]) -> None:
+        """Delete the batch stream: its pages, completion marker and stall record."""
+        for key in self.blobs.list(self._batch_dir(code, spec, fight_ids) + "/"):
+            self.blobs.delete(key)
+
 
 # ---------------------------------------------------------------------------
 # Concurrency
@@ -234,6 +294,40 @@ async def query_wcl(
         raise UserTokenRejectedError("WCL rejected the user's access token after a refresh.") from exc
 
 
+async def _request_events(
+    client: WarcraftLogsClient,
+    code: str,
+    variables: dict[str, Any],
+    label: str,
+    cfg: EncounterConfig,
+    max_retries: int,
+    token_provider: TokenProvider | None = None,
+) -> dict:
+    """One events request with backoff on rate limits and network errors. Re-raises after ``max_retries`` retries."""
+    attempt = 0
+    while True:
+        try:
+            async with _request_semaphore(cfg.wcl_max_concurrency):
+                data = await query_wcl(client, GET_EVENTS_PAGE, variables, token_provider)
+            break
+        except (WarcraftLogsRateLimitError, WarcraftLogsNetworkError) as exc:
+            if attempt >= max_retries:
+                raise
+            if isinstance(exc, WarcraftLogsRateLimitError):
+                kind = "rate limited"
+                delay = exc.retry_after_s if exc.retry_after_s is not None else float(2**attempt)
+            else:
+                kind = "network error"
+                delay = float(2**attempt)
+            logger.warning("WCL %s (%s); retry %d/%d in %.1fs", kind, label, attempt + 1, max_retries, delay)
+            attempt += 1
+            await asyncio.sleep(delay)
+    report = (data.get("reportData") or {}).get("report")
+    if report is None:
+        raise WarcraftLogsAPIError(f"WCL returned no report for code '{code}'.")
+    return report["events"]
+
+
 async def _request_page(
     client: WarcraftLogsClient,
     code: str,
@@ -244,7 +338,7 @@ async def _request_page(
     max_retries: int,
     token_provider: TokenProvider | None = None,
 ) -> dict:
-    """One events request with rate-limit backoff. Gives up (re-raises) after ``max_retries`` retries."""
+    """One events page of one pull."""
     variables: dict[str, Any] = {
         "code": code,
         "fightIDs": [pull.fight_id],
@@ -255,23 +349,9 @@ async def _request_page(
         "filter": spec.filter_expression,
         "limit": cfg.wcl_page_limit,
     }
-    attempt = 0
-    while True:
-        try:
-            async with _request_semaphore(cfg.wcl_max_concurrency):
-                data = await query_wcl(client, GET_EVENTS_PAGE, variables, token_provider)
-            break
-        except WarcraftLogsRateLimitError as exc:
-            if attempt >= max_retries:
-                raise
-            delay = exc.retry_after_s if exc.retry_after_s is not None else float(2**attempt)
-            logger.warning("WCL rate limited (%s); retry %d/%d in %.1fs", spec.key, attempt + 1, max_retries, delay)
-            attempt += 1
-            await asyncio.sleep(delay)
-    report = (data.get("reportData") or {}).get("report")
-    if report is None:
-        raise WarcraftLogsAPIError(f"WCL returned no report for code '{code}'.")
-    return report["events"]
+    return await _request_events(
+        client, code, variables, f"{pull.pull_key} {spec.key}", cfg, max_retries, token_provider
+    )
 
 
 async def _fetch_spec(
@@ -364,3 +444,148 @@ async def fetch_pull(
         if isinstance(outcome, BaseException):
             raise outcome
     return {spec.key: bool(o) for spec, o in zip(specs, outcomes, strict=True)}
+
+
+# ---------------------------------------------------------------------------
+# Batched fetch
+# ---------------------------------------------------------------------------
+
+
+async def fetch_batch(
+    client: WarcraftLogsClient,
+    cache: RawPageCache,
+    code: str,
+    pulls: Sequence[Pull],
+    spec: FetchSpec,
+    *,
+    cfg: EncounterConfig,
+    max_retries: int,
+    token_provider: TokenProvider | None = None,
+) -> dict[int, bool]:
+    """
+    Fetch one spec for several pulls in one paginated stream and split it into each pull's cache entry.
+
+    The stream resumes from its last cached page. The per-fight entries are written last (marker after
+    pages), so a crash at any point is repaired by the next call. Returns ``{fight_id: truncated}``.
+    """
+    fights = sorted(p.fight_id for p in pulls)
+    stalled_at: int | None = None
+
+    if not cache.is_batch_complete(code, spec, fights):
+        cached = cache.batch_pages(code, spec, fights)
+        if cached and cached[-1].get("nextPageTimestamp") is None:
+            cache.mark_batch_complete(code, spec, fights)  # a crash lost the marker
+        else:
+            index = len(cached)
+            start = int(cached[-1]["nextPageTimestamp"]) if cached else min(p.start_ms for p in pulls)
+            end = max(p.end_ms for p in pulls)
+            label = f"{code} batch {spec.key} fights {fights[0]}-{fights[-1]}"
+            while True:
+                variables: dict[str, Any] = {
+                    "code": code,
+                    "fightIDs": fights,
+                    "startTime": start,
+                    "endTime": end,
+                    "dataType": spec.data_type,
+                    "hostility": spec.hostility,
+                    "filter": spec.filter_expression,
+                    "limit": cfg.wcl_page_limit,
+                }
+                page = await _request_events(client, code, variables, label, cfg, max_retries, token_provider)
+                cache.write_batch_page(code, spec, fights, index, page)
+                index += 1
+                nxt = page.get("nextPageTimestamp")
+                if nxt is None:
+                    break
+                if int(nxt) <= start:  # no forward progress; stop rather than loop forever
+                    stalled_at = start
+                    logger.warning("%s: nextPageTimestamp did not advance at %d; marking truncated", label, start)
+                    break
+                start = int(nxt)
+            if stalled_at is not None:
+                cache.mark_batch_stalled(code, spec, fights, stalled_at)
+            cache.mark_batch_complete(code, spec, fights)
+
+    if stalled_at is None:
+        stalled_at = cache.batch_stalled_at(code, spec, fights)
+
+    rows_by_fight: dict[int, list[dict]] = {f: [] for f in fights}
+    stray = 0
+    for page in cache.batch_pages(code, spec, fights):
+        for row in page.get("data") or []:
+            fight = row.get("fight") if isinstance(row, dict) else None
+            if fight in rows_by_fight:
+                rows_by_fight[fight].append(row)
+            else:
+                stray += 1
+    if stray:
+        logger.warning("%s batch %s: dropped %d rows with a missing or unrequested fight", code, spec.key, stray)
+
+    for pull in pulls:
+        if not cache.is_complete(code, pull.fight_id, spec):
+            cache.replace_pages(
+                code, pull.fight_id, spec, [{"data": rows_by_fight[pull.fight_id], "nextPageTimestamp": None}]
+            )
+            cache.mark_complete(code, pull.fight_id, spec)
+    cache.delete_batch(code, spec, fights)
+    return {p.fight_id: stalled_at is not None and p.end_ms > stalled_at for p in pulls}
+
+
+async def fetch_batches(
+    client: WarcraftLogsClient,
+    cache: RawPageCache,
+    code: str,
+    pulls: Sequence[Pull],
+    specs_by_fight: Mapping[int, Sequence[FetchSpec]],
+    *,
+    max_retries: int | None = None,
+    token_provider: TokenProvider | None = None,
+    cfg: EncounterConfig | None = None,
+) -> dict[int, set[str]]:
+    """
+    Fetch the batchable specs several pulls still need, one stream per spec, filter and chunk.
+
+    Returns ``{fight_id: {truncated spec keys}}``. A failed batch is logged and left for the per-pull fetch.
+    """
+    cfg = cfg or EncounterConfig()
+    retries = cfg.wcl_max_retries if max_retries is None else max_retries
+
+    groups: dict[tuple[str, str | None], tuple[FetchSpec, list[Pull]]] = {}
+    for pull in pulls:
+        for spec in specs_by_fight.get(pull.fight_id, ()):
+            if spec.key not in BATCHED_SPEC_KEYS:
+                continue
+            if cache.is_complete(code, pull.fight_id, spec) or cache.pages(code, pull.fight_id, spec):
+                continue  # done, or partly fetched: the per-pull fetch resumes it
+            groups.setdefault((spec.key, spec.filter_expression), (spec, []))[1].append(pull)
+
+    jobs: list[tuple[FetchSpec, list[Pull]]] = []
+    size = max(1, cfg.wcl_batch_max_fights)
+    for spec, group in groups.values():
+        ordered = sorted(group, key=lambda p: p.fight_id)
+        for i in range(0, len(ordered), size):
+            chunk = ordered[i : i + size]
+            if len(chunk) >= 2:
+                jobs.append((spec, chunk))
+
+    outcomes = await asyncio.gather(
+        *(
+            fetch_batch(client, cache, code, chunk, spec, cfg=cfg, max_retries=retries, token_provider=token_provider)
+            for spec, chunk in jobs
+        ),
+        return_exceptions=True,
+    )
+    truncated: dict[int, set[str]] = {}
+    for (spec, chunk), outcome in zip(jobs, outcomes, strict=True):
+        if isinstance(outcome, asyncio.CancelledError):
+            raise outcome
+        if isinstance(outcome, BaseException):
+            fights = [p.fight_id for p in chunk]
+            logger.warning(
+                "Batched fetch of %s for fights %s failed; falling back per pull: %s", spec.key, fights, outcome
+            )
+            continue
+        for fight, was_truncated in outcome.items():
+            if was_truncated:
+                truncated.setdefault(fight, set()).add(spec.key)
+    return truncated

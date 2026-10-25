@@ -101,6 +101,9 @@ class EncounterConfig:
     wcl_max_concurrency: int = 2
     wcl_max_retries: int = 3
     wcl_page_limit: int = 10000
+    # Most fights one batched request covers; one 25-fight request has outlasted the 30 s client timeout once,
+    # so lower it if timeouts recur.
+    wcl_batch_max_fights: int = 25
     cutoff_fraction: float = 0.5
     analyst_max_concurrency: int = 3
 
