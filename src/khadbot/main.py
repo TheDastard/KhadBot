@@ -4,13 +4,14 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker]
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import sys
 from collections.abc import Sequence
 
@@ -145,6 +146,25 @@ def _run_migrate() -> None:
     print("Applied: " + ", ".join(applied) if applied else "Database schema is up to date.")
 
 
+def _run_worker(queues: str | None, concurrency: int | None) -> None:
+    from khadbot.config import DatabaseConfig
+
+    if not DatabaseConfig().hosted:
+        sys.exit("The worker runs hosted jobs: set KHADBOT_MODE=hosted and DATABASE_URL (and the S3 settings).")
+    try:
+        from khadbot.jobs.queue import serve_worker
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "worker") + f"\n({exc})")
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    names = [q.strip() for q in queues.split(",") if q.strip()] if queues else None
+    try:
+        # psycopg's async connections need the selector event loop, which Windows does not use by default.
+        asyncio.run(serve_worker(names, concurrency), loop_factory=asyncio.SelectorEventLoop)
+    except (ConfigurationError, OSError) as exc:
+        sys.exit(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -180,6 +200,9 @@ def build_parser() -> argparse.ArgumentParser:
     api.add_argument("--host", default=API_HOST, help=f"Interface to bind (default: {API_HOST})")
     api.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
     sub.add_parser("migrate", help="Apply database migrations to DATABASE_URL (hosted mode)")
+    worker = sub.add_parser("worker", help="Run the job queue worker (hosted mode)")
+    worker.add_argument("--queues", help="Comma-separated queues to take jobs from (default: KHADBOT_WORKER_QUEUES)")
+    worker.add_argument("--concurrency", type=int, help="Jobs to run at once (default: KHADBOT_WORKER_CONCURRENCY)")
     return parser
 
 
@@ -204,6 +227,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_api(args.host, args.port)
     elif command == "migrate":
         _run_migrate()
+    elif command == "worker":
+        _run_worker(args.queues, args.concurrency)
 
 
 if __name__ == "__main__":

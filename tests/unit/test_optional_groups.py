@@ -67,3 +67,10 @@ def test_provider_without_the_providers_group(monkeypatch, provider, module, key
     monkeypatch.setitem(sys.modules, module, None)
     with pytest.raises(LLMProviderError, match="'providers' dependency group"):
         get_llm(provider)
+
+
+def test_worker_without_the_hosted_group(monkeypatch):
+    monkeypatch.setenv("KHADBOT_MODE", "hosted")
+    monkeypatch.setitem(sys.modules, "khadbot.jobs.queue", None)  # earlier tests imported it; make the import fail
+    with pytest.raises(SystemExit, match="'hosted' dependency group"):
+        main(["worker"])

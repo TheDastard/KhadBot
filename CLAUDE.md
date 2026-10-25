@@ -30,7 +30,7 @@ Every store has a local and a hosted implementation behind one interface, and `k
 
 ```
 src/khadbot/
-  main.py            # entry point: cli, ingest, digest, serve, migrate subcommands
+  main.py            # entry point: cli, ingest, digest, serve, api, migrate, worker subcommands
   wiring.py          # composition root: builds the stores for local or hosted mode
   errors.py          # exceptions more than one layer raises or catches (ConfigurationError)
   session.py         # Mode, Session, run_turn()
@@ -46,7 +46,8 @@ src/khadbot/
     analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
   storage/           # BlobStore protocol: local directory, S3-compatible bucket, zstd-compressing wrapper
   db/                # hosted mode Postgres: pool, migration runner and migrations, findings store, read models
-  jobs/              # job specs and functions (ingest, process, review), progress, token resolution
+  jobs/              # job specs and functions (ingest, process, review), progress, token resolution; hosted queue
+                     # (queue.py, the jobs table in status.py, typed failures, cancel and progress writing)
   auth/              # hosted sign-in: WCL OAuth routes, sessions, encrypted WCL tokens, report access (can_read)
   wcl/               # the shared WarcraftLogs client
   simc/              # SimC generated client data: effect codes, table parser, pinned download
