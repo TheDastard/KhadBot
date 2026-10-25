@@ -213,7 +213,8 @@ class EncounterData:
     The pull key plus ``digest.records_inputs`` (events_hash, positions_hash, encfile_hash, the three cooldown
     hashes, friendly_damage_hash, ANNOTATION_VERSION, RECORDS_VERSION, the cutoff fraction, pull_hash) key the
     records, so re-ingesting a pull, refreshing its metadata or editing its encounter file or a registry rebuilds
-    them on next use. Registries not passed in are reread from ``config/`` on every lookup, like encounter files.
+    them on next use. Registries not passed in are re-checked on every lookup, like encounter files, and
+    reparsed only when the file changed (path, modification time and size).
 
     A lookup reads the in-process cache, then ``records_store`` (when given) under the same inputs, then builds
     the records and writes them there. A failed write is logged and does not fail the lookup.

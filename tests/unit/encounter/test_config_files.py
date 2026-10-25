@@ -8,6 +8,7 @@ Every validation rule has a failing case.
 from __future__ import annotations
 
 import copy
+import os
 
 import pytest
 import yaml
@@ -22,10 +23,12 @@ from helpers.encounter.synth import (
     install_synth_encounter,
 )
 
+from khadbot.encounter import config_files
 from khadbot.encounter.config_files import (
     DEFAULT_DEFENSIVE_COOLDOWNS_PATH,
     DEFAULT_FRIENDLY_DAMAGE_PATH,
     check_cooldown_ids,
+    clear_config_cache,
     cooldowns_hash,
     encfile_hash,
     encounter_relpath,
@@ -665,3 +668,123 @@ class TestEncounterFile:
         )
         with pytest.raises(ConfigurationError, match="900311 is in both"):
             fetch_filter_inputs(defensive, offensive, {})
+
+
+# ===========================================================================
+# Load cache
+# ===========================================================================
+
+
+class TestLoadCache:
+    @pytest.fixture(autouse=True)
+    def _fresh_cache(self):
+        clear_config_cache()
+        yield
+        clear_config_cache()
+
+    @staticmethod
+    def _write(path, data) -> None:
+        path.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    @staticmethod
+    def _count_reads(monkeypatch) -> list[int]:
+        calls: list[int] = []
+        real = config_files._read_yaml
+
+        def counting(path):
+            calls.append(1)
+            return real(path)
+
+        monkeypatch.setattr(config_files, "_read_yaml", counting)
+        return calls
+
+    def test_unchanged_file_is_parsed_once_and_shared(self, tmp_path, reg_data, monkeypatch):
+        calls = self._count_reads(monkeypatch)
+        path = tmp_path / "defensive.yaml"
+        self._write(path, reg_data)
+        first = load_cooldowns("defensive", path)
+        assert load_cooldowns("defensive", path) is first
+        assert len(calls) == 1
+
+    def test_each_loader_caches(self, tmp_path, monkeypatch):
+        calls = self._count_reads(monkeypatch)
+        friendly = tmp_path / "friendly.yaml"
+        self._write(friendly, SYNTH_FRIENDLY_DAMAGE)
+        enc_path = install_synth_encounter(tmp_path)
+        assert load_friendly_damage(friendly) is load_friendly_damage(friendly)
+        assert load_encounter_file(enc_path) is load_encounter_file(enc_path)
+        assert load_encounter(SYNTH_ENCOUNTER_ID, tmp_path) is load_encounter(SYNTH_ENCOUNTER_ID, tmp_path)
+        assert len(calls) == 2
+
+    def test_edit_with_a_new_size_is_seen(self, tmp_path, reg_data):
+        path = tmp_path / "defensive.yaml"
+        self._write(path, reg_data)
+        before = load_cooldowns("defensive", path)
+        edited = copy.deepcopy(reg_data)
+        edited["cooldowns"].append({"spell_id": 987654, "name": "Added", "class": "Priest", "target": "raid"})
+        self._write(path, edited)
+        after = load_cooldowns("defensive", path)
+        assert after is not before
+        assert after.get(987654) is not None and before.get(987654) is None
+
+    def test_edit_with_the_same_size_is_seen_through_the_mtime(self, tmp_path, reg_data):
+        path = tmp_path / "defensive.yaml"
+        reg_data["cooldowns"][0]["name"] = "Aaaa"
+        self._write(path, reg_data)
+        before = load_cooldowns("defensive", path)
+        stat = path.stat()
+        reg_data["cooldowns"][0]["name"] = "Bbbb"
+        self._write(path, reg_data)
+        assert path.stat().st_size == stat.st_size
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+        assert load_cooldowns("defensive", path).cooldowns[0].name == "Bbbb"
+        assert before.cooldowns[0].name == "Aaaa"
+
+    def test_an_invalid_version_is_not_cached(self, tmp_path, reg_data):
+        path = tmp_path / "defensive.yaml"
+        self._write(path, reg_data)
+        good = load_cooldowns("defensive", path)
+        path.write_text("category: defensive\ncooldowns: [unclosed", encoding="utf-8")
+        with pytest.raises(ConfigurationError, match="YAML parse error"):
+            load_cooldowns("defensive", path)
+        bad = copy.deepcopy(reg_data)
+        bad["cooldowns"][0]["bogus"] = 1
+        self._write(path, bad)
+        with pytest.raises(ConfigurationError, match="Schema validation failed"):
+            load_cooldowns("defensive", path)
+        with pytest.raises(ConfigurationError, match="Schema validation failed"):
+            load_cooldowns("defensive", path)  # still raising, not served from the cache
+        self._write(path, reg_data)
+        os.utime(path, ns=(0, path.stat().st_mtime_ns + 7_000_000_000))
+        fixed = load_cooldowns("defensive", path)
+        assert fixed == good
+
+    def test_a_missing_file_raises_file_not_found(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            load_cooldowns("defensive", tmp_path / "missing.yaml")
+        with pytest.raises(FileNotFoundError):
+            load_friendly_damage(tmp_path / "missing.yaml")
+        with pytest.raises(FileNotFoundError):
+            load_encounter_file(tmp_path / "missing.yaml")
+
+    def test_clear_config_cache_forces_a_reparse(self, tmp_path, reg_data, monkeypatch):
+        calls = self._count_reads(monkeypatch)
+        path = tmp_path / "defensive.yaml"
+        self._write(path, reg_data)
+        first = load_cooldowns("defensive", path)
+        clear_config_cache()
+        second = load_cooldowns("defensive", path)
+        assert second is not first and second == first
+        assert len(calls) == 2
+
+    def test_the_category_is_still_checked_after_a_good_load(self, tmp_path, reg_data):
+        path = tmp_path / "defensive.yaml"
+        self._write(path, reg_data)
+        load_cooldowns("defensive", path)
+        with pytest.raises(ConfigurationError, match="is a defensive cooldown file, expected offensive"):
+            load_cooldowns("offensive", path)
+        assert load_cooldowns("defensive", path).category == "defensive"
+
+    @pytest.mark.skipif(not yaml.__with_libyaml__, reason="PyYAML was built without libyaml")
+    def test_the_c_loader_is_used_when_available(self):
+        assert config_files._SAFE_LOADER is yaml.CSafeLoader

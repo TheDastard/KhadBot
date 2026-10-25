@@ -15,13 +15,17 @@ Every encounter-file entry (phase, mechanic, damage window, ignored ability) lis
 difficulties it applies to. Analysis works on one difficulty's view of the file
 (``EncounterFile.for_difficulty``), and that view is what gets hashed, so editing the Mythic
 entries does not invalidate Heroic annotations.
+
+Loaders parse with libyaml's safe loader when it is installed, and memoize each validated file on its resolved
+path, modification time and size. A load costs one ``stat``, and a file is reparsed only after it changed;
+``clear_config_cache`` forgets everything. Files that fail to parse or validate are never cached.
 """
 
 from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
@@ -478,9 +482,38 @@ def _unique(label: str, ids: list[str], difficulty: Difficulty) -> None:
 # ---------------------------------------------------------------------------
 
 
+# libyaml's safe loader when installed, about ten times faster than the pure-Python one, with the same results.
+_SAFE_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+# Validated models by (kind, [category,] resolved path) -> ((st_mtime_ns, st_size), model). One entry per file.
+# Plain dict operations only: a race between threads costs at most a duplicate parse.
+_CONFIG_CACHE: dict[tuple[Any, ...], tuple[tuple[int, int], BaseModel]] = {}
+
+
+def clear_config_cache() -> None:
+    """
+    Forget every cached config file.
+
+    For tests and tools that rewrite a file faster than the file system's timestamp resolution.
+    """
+    _CONFIG_CACHE.clear()
+
+
+def _cached_load[M: BaseModel](key: tuple[Any, ...], path: Path, build: Callable[[], M]) -> M:
+    """The model for ``path``, from the cache while the file's modification time and size are unchanged."""
+    stat = path.stat()  # FileNotFoundError for a missing file, as reading it would raise
+    state = (stat.st_mtime_ns, stat.st_size)
+    hit = _CONFIG_CACHE.get(key)
+    if hit is not None and hit[0] == state:
+        return hit[1]  # type: ignore[return-value]
+    model = build()
+    _CONFIG_CACHE[key] = (state, model)
+    return model
+
+
 def _read_yaml(path: Path) -> object:
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
+        return yaml.load(path.read_text(encoding="utf-8"), Loader=_SAFE_LOADER)
     except yaml.YAMLError as e:
         raise ConfigurationError(f"YAML parse error in {path}:\n{e}") from e
 
@@ -519,7 +552,9 @@ def load_cooldowns(category: CooldownCategory, path: Path | None = None) -> Cool
         "utility": DEFAULT_UTILITY_COOLDOWNS_PATH,
     }
     path = Path(path) if path else defaults[category]
-    return parse_cooldowns(_read_yaml(path), category, str(path))
+    return _cached_load(
+        ("cooldowns", category, path.resolve()), path, lambda: parse_cooldowns(_read_yaml(path), category, str(path))
+    )
 
 
 def check_cooldown_ids(*registries: CooldownRegistry) -> None:
@@ -541,11 +576,12 @@ def check_cooldown_ids(*registries: CooldownRegistry) -> None:
 
 def load_friendly_damage(path: Path | None = None) -> FriendlyDamageRegistry:
     path = Path(path) if path else DEFAULT_FRIENDLY_DAMAGE_PATH
-    return parse_friendly_damage(_read_yaml(path), str(path))
+    return _cached_load(("friendly", path.resolve()), path, lambda: parse_friendly_damage(_read_yaml(path), str(path)))
 
 
 def load_encounter_file(path: Path) -> EncounterFile:
-    return parse_encounter(_read_yaml(path), str(path))
+    path = Path(path)
+    return _cached_load(("encounter", path.resolve()), path, lambda: parse_encounter(_read_yaml(path), str(path)))
 
 
 def slugify(name: str) -> str:
