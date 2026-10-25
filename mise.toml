@@ -87,6 +87,14 @@ description = "Dashboard API on 127.0.0.1:8000; reads KHADBOT_DATA_DIR"
 run = "uv run python main.py serve"
 
 
+# Local mode, a quick look at a data directory: read routes only, no sign-in, Postgres, bucket or Docker. Build the data directory once with
+# `mise run gen:fixture-data`. To serve your own data instead, set KHADBOT_DATA_DIR before running the task.
+[tasks."serve:fixtures"]
+description = "Local-mode API on 127.0.0.1:8000 over .khadbot_fixture_data (or KHADBOT_DATA_DIR); see docs/hosting.md"
+env = { KHADBOT_DATA_DIR = "{{ get_env(name='KHADBOT_DATA_DIR', default='.khadbot_fixture_data') }}" }
+run = "uv run python main.py serve"
+
+
 # ── Database (hosted mode) ───────────────────────────────────────────────
 [tasks."db:migrate"]
 description = "Apply database migrations to DATABASE_URL (hosted mode)"
@@ -129,7 +137,7 @@ description = "Regenerate contracts/openapi.json from the API"
 run = "uv run python scripts/dev/gen_contracts.py"
 
 [tasks."gen:fixture-data"]
-description = "Build .khadbot_fixture_data from the recorded fixtures (offline)"
+description = "Build .khadbot_fixture_data from the recorded fixtures: offline ingest and digest, no network"
 run = "uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data"
 
 
