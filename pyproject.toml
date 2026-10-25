@@ -49,6 +49,7 @@ hosted = [
     "boto3>=1.43.115",            # S3-compatible object storage client (Cloudflare R2, SeaweedFS) for hosted blobs
     "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
     "cryptography>=50.0.2",       # Fernet / MultiFernet encryption of stored WCL tokens (sign-in)
+    "procrastinate>=3.10.0",      # Postgres-backed job queue: ingest, process and review workers (no Redis)
 ]
 
 providers = [
