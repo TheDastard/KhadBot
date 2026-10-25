@@ -136,6 +136,36 @@ The seed runs the job functions in-process rather than queueing them: SYNTH01 ne
 
 The `stack` job in `.github/workflows/check.yml` builds the image (nothing is pushed), starts the stack, seeds `SYNTH01`, runs the smoke script and then the queue smoke test against the stack's worker. It is the only place the image is built on every push.
 
+## Local development
+
+There are two ways to run KhadBot on your own machine.
+
+**Local mode** is the CLI plus `main.py serve`: the dashboard API's read routes over `KHADBOT_DATA_DIR`, on 127.0.0.1, with no database, bucket, queue, Docker or sign-in. It is a quick look at a data directory. It is not a user surface: nothing in it signs in, ingests or runs a job.
+
+**The full experience** (sign-in, ingest with live progress, live watch, the budget, reviews and chat) runs on the local test environment: hosted mode on your own machine, with Postgres and the bucket in Docker (see "The local stack" above) and the same API and worker code that production runs. This section covers local mode only; the dev loop for the test environment is documented with it as it lands.
+
+**What local mode serves.** The read routes (`/v1/reports`, `/v1/reports/{code}`, `/night`, the pull `digest`, `timeline`, `events` and `findings`, and `/v1/evidence/{ref}`) over the data directory, and `GET /v1/health`. Findings are the cached ones; nothing runs the analyst or calls Warcraft Logs. There is no sign-in, so every request may read every ingested report. CORS allows `http://localhost:3000` and `http://127.0.0.1:3000` for `GET`, without credentials. The hosted-only routes (`/v1/auth/*`, `/v1/me`, `/v1/jobs/*`, `/v1/reports/{code}/watch`, `/v1/budget`) are not mounted and answer 404 like any unknown route.
+
+**What `/v1/health` reports.** `mode` is `local` or `hosted`, given by the entry point: `main.py serve` says `local`, `main.py api` in hosted mode says `hosted`. It is a label only. `features` has one boolean per optional area, true only when its routes are mounted, and clients branch on `features` only (`.claude/rules/web.md`): with `sign_in` off the web app shows the reports without a session and labels the header "Local", and a direct link to an area whose flag is off shows "Not available on this server yet".
+
+    serve   {"mode": "local",  "features": {"sign_in": false, "ingest_jobs": false, "live_watch": false, "budget": false, "reviews": false, "chat": false}}
+    api     {"mode": "hosted", "features": {"sign_in": true,  "ingest_jobs": true,  "live_watch": true,  "budget": true,  "reviews": false, "chat": false}}
+
+**Steps.**
+
+1. Build a data directory from the recorded fixture reports (needs `git lfs pull`; offline, about 5 seconds): `mise run gen:fixture-data` writes `.khadbot_fixture_data`. It ingests every real recorded report, stores their metadata and digests each pull, so the annotation cache and pull records are filled. It never calls Warcraft Logs and ignores `KHADBOT_MODE`, `DATABASE_URL` and the S3 settings. The synthetic `SYNTH01` report is only in the stack, because it needs an encounter file of its own.
+2. Serve it: `mise run serve:fixtures` runs `main.py serve` on `http://127.0.0.1:8000` over `.khadbot_fixture_data`. To serve your own data, set `KHADBOT_DATA_DIR` first (for example to `.khadbot_data`); the task uses it when it is set.
+3. Point the web dev server at it with `NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000`. The web app reads `/v1/health`, finds sign-in off, shows the reports without a session and labels the header "Local".
+
+**One report, for CI.** The recorded reports are about 200 MB of Git LFS pages, which a CI job need not fetch on every run. `--only` builds just the named reports; the smallest, `QkVa6GHRK8yfrTbw` (one pull, about 10 MB), is enough for the read screens:
+
+    git lfs pull --include "tests/fixtures/encounter/wcl/QkVa6GHRK8yfrTbw/**"
+    uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data --only QkVa6GHRK8yfrTbw
+
+A named report whose pages are missing fails the build with the `git lfs pull --include` line to run, and nothing is written. `SYNTH01` can't be named here (see step 1).
+
+Check it: `curl http://127.0.0.1:8000/v1/health` shows `"mode":"local"` and every feature false. Serving your own `.khadbot_data` is read-only apart from the caches a digest fills; use a copy if you want it untouched.
+
 ## Retention
 
 What hosted mode keeps, and what removes the rest:
