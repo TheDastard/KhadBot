@@ -78,16 +78,18 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **WCL's limit on filter length.** The defensive Buffs filter now holds 95 IDs (under 1 KB); offensive
   cooldowns have their own Buffs request and filter. WCL's limit on filter length is not known.
 - **Fetch with the user's WCL token.** Once KhadBot is hosted, the app's 3,600 points an hour cover about ten
-  25-pull nights, and raid nights cluster on the same evenings. WoWAnalyzer's server sends a signed-in user's
-  requests to `/api/v2/user` with that user's token and uses the app token only for visitors who aren't signed
-  in. `WarcraftLogsClient.query` already accepts a `user_token`, but encounter ingest never passes one. Steps:
-  1. Whose budget a user-token request spends: measured 2026-10-20 (`docs/wcl-api.md`, "Budget probe results").
-     The app and user counters moved together by the same amount, one shared pool, but the signed-in user owned
-     the API client. Still open: whether another WCL account's token has its own budget. A second account
-     settles it; until then plan on the app's pool alone.
+  25-pull nights (about five on WCL's new 1,000-point limit), and raid nights cluster on the same evenings.
+  WoWAnalyzer's server sends a signed-in user's requests to `/api/v2/user` with that user's token and uses the app
+  token only for visitors who aren't signed in. Steps:
+  1. Whose budget a user-token request spends: answered by WCL's point-type documentation (`docs/wcl-api.md`,
+     "Rate limits and point types"). On the current scheme every request spends the app's pool, which both probe runs
+     showed. On the new scheme a signed-in user's requests to user-eligible fields (report events and metadata)
+     spend that user's small pool first, then fall back to the app's. Still open: the pool's size, how
+     `rateLimitData` reports it, and whether every field ingest uses is labelled user-eligible. A probe on the new
+     scheme settles them.
   2. Done: `ingest_report` and `fetch_pull` take a `token_provider` and send every request to `/api/v2/user` with
-     it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. Whether the user's
-     budget pays is still step 1's question; with no provider, ingest uses the app token as before.
+     it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. With no provider,
+     ingest uses the app token as before.
   3. Built, not yet wired into routes: `auth.access.ReportAccess.can_read` decides per user whether a report is
      readable (their token, or the app token for public reports) and caches it in `report_access`; jobs fetch on
      the user's token through `jobs.UserTokenResolver`. Still open: the hosted API must call `require_readable`
@@ -104,6 +106,26 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   Discord-only users, background jobs) share the app's hourly points. Not built: a global points bucket kept in
   step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected
   wait instead of failing when the bucket is empty. Keep headroom for live ingest of linked guilds' raids.
+  WCL's new limits change what the bucket tracks (`docs/wcl-api.md`, "Rate limits and point types"): application
+  points (1,000 an hour), database points (250 an hour, a part of the application points), and user points
+  spent first for signed-in users. Every request, even a user-paid one, needs 1 application point free.
+- **Choose a WCL limit scheme and tier.** KhadBot's client is on WCL's current limit (3,600 points an hour); the
+  new scheme gives 1,000 application points and 250 database points an hour plus each signed-in user's own pool,
+  and new keys start on it, so the current limit may not last. A WCL subscription on the account that owns the
+  client raises the limits: Gold 3x the API points ($5 a month), Platinum 9x ($10). Decide when to opt in, and
+  measure a night's ingest on the new scheme (application, database and user points) before sizing allowances.
+  - Estimate until then: a 25-pull night was about 350 points before cross-fight batching, which saved 172 on the
+    measured night, so about 180 now: about twenty nights an hour on 3,600 points, about five on 1,000.
+  - Ingest reads `reportData.report` metadata (title, zone, `masterData`, `fights`, `phases`) and `events`, which
+    WCL's documentation counts as user-eligible report data, and no rankings or report filtering. Check the
+    schema's label on each of those fields, and on `rateLimitData`, the readability check and `currentUser`.
+  - The probe to run after opting in: the budget probe signed in with an account that doesn't own the client
+    (sign out of Warcraft Logs in the browser first), to see the user pool's size and what `rateLimitData`
+    reports with each token.
+- **WCL approval for commercial use.** Commercialising an app that uses database-point fields needs WCL's
+  explicit approval. Ingest uses none as far as WCL's documentation shows (no rankings or report filtering);
+  confirm against the schema's field labels, and ask WCL before any paid tier, together with the questions on
+  storing and serving derived data.
 - **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
   filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl-api.md`, "Merged-filter results"):
   - One request per hostility with no `dataType` is refused (internal server error), so that merge is out.
