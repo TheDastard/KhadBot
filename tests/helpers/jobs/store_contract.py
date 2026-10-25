@@ -249,3 +249,18 @@ class TestEvents:
             await store.report_progress("p0", "ABC:1", "records", 0.5)
             seen = [await asyncio.wait_for(anext(events), 1) for _ in range(3)]
         assert seen == ["p0", "p0", "a"]
+
+
+class TestActiveProcess:
+    async def test_lists_only_the_active_process_jobs_of_the_report(self, store):
+        await store.create(process("p1", None, "ABC:1"))
+        await store.create(process("p2", None, "ABC:2"))
+        await store.create(process("p3", None, "XYZ:1"))
+        await store.create(ingest("i1"))
+        await store.begin("p2")
+        await store.finish("p2", JobState.DONE)
+
+        active = await store.active_process("ABC")
+        assert [(j.id, j.pull_key) for j in active] == [("p1", "ABC:1")]
+        assert [j.id for j in await store.active_process("XYZ")] == ["p3"]
+        assert await store.active_process("NONE") == []

@@ -15,6 +15,8 @@ Rules the queue keeps:
 - An ingest enqueues a ``ProcessPull`` for every pull it wrote or found unchanged, and finishes with them.
 - Only WCL rate limits, network errors and a sign-in that could not be renewed are retried, with backoff. Anything
   else fails the job once with a typed code.
+- A backfill's process jobs are queued at a lower priority than every other job (``enqueue_backfill``), once per pull.
+- The records cleanup (``jobs/retention.py``) runs on the ``process`` queue on a schedule any worker registers.
 - Cancelling a queued job drops it; cancelling a running one stops it at the next page boundary.
 
 This module needs the ``hosted`` dependency group; nothing in local mode imports it.
@@ -28,6 +30,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 import procrastinate
@@ -35,10 +38,12 @@ from procrastinate import exceptions as procrastinate_exceptions
 from procrastinate.retry import RetryStrategy
 from pydantic import TypeAdapter
 
-from khadbot.config import DatabaseConfig, QueueConfig
+from khadbot.config import DatabaseConfig, QueueConfig, RetentionConfig
 from khadbot.encounter.models import IngestResult
+from khadbot.jobs.backfill import BACKFILL_PRIORITY
 from khadbot.jobs.failures import ErrorCode, JobCancelled, classify
 from khadbot.jobs.reporting import CancelFlag, CancellingRawCache, ProgressWriter
+from khadbot.jobs.retention import CleanupResult, CleanupSources, cleanup_records
 from khadbot.jobs.run import JobContext, TransientJobError, default_token_resolver, run_job
 from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, PostgresJobBackend
@@ -51,6 +56,7 @@ logger = logging.getLogger(__name__)
 _SPEC: TypeAdapter[JobSpec] = TypeAdapter(JobSpec)
 
 QUEUE_NAMES = {JobKind.INGEST: "ingest", JobKind.PROCESS: "process", JobKind.REVIEW: "review"}
+CLEANUP_TASK = "khadbot.cleanup_records"
 TASK_NAMES = {
     JobKind.INGEST: "khadbot.ingest_report",
     JobKind.PROCESS: "khadbot.process_pull",
@@ -112,6 +118,8 @@ class JobQueue:
         *,
         config: QueueConfig | None = None,
         context_factory: Callable[[], JobContext] | None = None,
+        retention: RetentionConfig | None = None,
+        cleanup: CleanupSources | None = None,
     ) -> None:
         self.store = store
         self.config = config or QueueConfig()
@@ -124,12 +132,24 @@ class JobQueue:
         )
         for kind in JobKind:
             self._register(kind, retry)
+        self._register_cleanup(retention or RetentionConfig(), cleanup or CleanupSources())
 
     def _register(self, kind: JobKind, retry: RetryStrategy) -> None:
         async def run(context: procrastinate.JobContext, job_id: str) -> None:
             await self._execute(context, job_id)
 
         self.app.task(name=TASK_NAMES[kind], queue=QUEUE_NAMES[kind], pass_context=True, retry=retry)(run)
+
+    def _register_cleanup(self, retention: RetentionConfig, sources: CleanupSources) -> None:
+        self._retention = retention
+        self._cleanup_sources = sources
+
+        async def run(timestamp: int) -> None:
+            await self.run_cleanup()
+
+        task = self.app.task(name=CLEANUP_TASK, queue=QUEUE_NAMES[JobKind.PROCESS], queueing_lock=CLEANUP_TASK)(run)
+        if retention.cleanup_cron:
+            self.app.periodic(cron=retention.cleanup_cron)(task)
 
     # -- enqueue and cancel ---------------------------------------------------
 
@@ -183,6 +203,59 @@ class JobQueue:
             raise
         await self.store.set_queue_job_id(job.id, queue_job_id)
         return Enqueued(job, True)
+
+    async def enqueue_backfill(self, pull_key: str) -> Enqueued:
+        """
+        Queue a ``ProcessPull`` for a backfill at ``BACKFILL_PRIORITY``, app auth. A pull with a process job already
+        queued or running returns that job (``created`` False), so queueing a backfill twice queues each pull once.
+        """
+        spec = ProcessPull(pull_key=pull_key)
+        _, report, _ = _describe(spec)
+        for active in await self.store.active_process(report):
+            if active.pull_key == pull_key:
+                return Enqueued(active, False)
+        job = await self.store.create(
+            NewJob(
+                id=uuid.uuid4().hex,
+                kind=JobKind.PROCESS,
+                report_code=report,
+                pull_key=pull_key,
+                auth_kind="app",
+                spec=spec.model_dump(mode="json"),
+            )
+        )
+        lock, _ = _locks(spec)
+        deferrer = self.app.tasks[TASK_NAMES[JobKind.PROCESS]].configure(
+            lock=lock, queueing_lock=f"backfill:{pull_key}", priority=BACKFILL_PRIORITY
+        )
+        try:
+            queue_job_id = await deferrer.defer_async(job_id=job.id)
+        except procrastinate_exceptions.AlreadyEnqueued:  # another backfill queued it between the check and here
+            gone = await self.store.finish(
+                job.id, JobState.CANCELLED, error_code="already_queued", error_message="An identical job is queued."
+            )
+            existing = [a for a in await self.store.active_process(report) if a.pull_key == pull_key]
+            return Enqueued(existing[0] if existing else (gone or job), False)
+        except Exception:
+            await self.store.finish(
+                job.id, JobState.FAILED, error_code=ErrorCode.INTERNAL, error_message="The job could not be queued."
+            )
+            raise
+        await self.store.set_queue_job_id(job.id, queue_job_id)
+        return Enqueued(job, True)
+
+    async def run_cleanup(self, *, dry_run: bool = False) -> CleanupResult | None:
+        """
+        Remove records no read-model row references and that are older than ``KHADBOT_RECORDS_MIN_AGE_DAYS``. None
+        when this deployment has no read models to check against (nothing is removed without them).
+        """
+        index = self._cleanup_sources.index()
+        if index is None:
+            logger.info("Records cleanup skipped: no read-model index in this deployment")
+            return None
+        blobs = self._cleanup_sources.blobs()
+        min_age = timedelta(days=self._retention.records_min_age_days)
+        return await asyncio.to_thread(cleanup_records, blobs, index, min_age=min_age, dry_run=dry_run)
 
     async def cancel(self, job_id: str) -> JobRecord | None:
         """
@@ -294,6 +367,8 @@ def build_queue(
     database_url: str | None = None,
     config: QueueConfig | None = None,
     context_factory: Callable[[], JobContext] | None = None,
+    retention: RetentionConfig | None = None,
+    cleanup: CleanupSources | None = None,
 ) -> JobQueue:
     """
     The queue on the configured Postgres. The ``jobs`` table uses the process-wide pool; procrastinate keeps its own
@@ -305,7 +380,7 @@ def build_queue(
     url = database_url or DatabaseConfig().database_url
     connector = procrastinate.PsycopgConnector(conninfo=url, min_size=1, max_size=cfg.concurrency + 4)
     store = JobStore(PostgresJobBackend(pool or get_pool()))
-    return JobQueue(store, connector, config=cfg, context_factory=context_factory)
+    return JobQueue(store, connector, config=cfg, context_factory=context_factory, retention=retention, cleanup=cleanup)
 
 
 async def serve_worker(queues: list[str] | None = None, concurrency: int | None = None) -> None:

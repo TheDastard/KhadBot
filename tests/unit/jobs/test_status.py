@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 from helpers.jobs.store_contract import (  # noqa: F401 - collected here
+    TestActiveProcess,
     TestCancel,
     TestChildren,
     TestClaimIngest,

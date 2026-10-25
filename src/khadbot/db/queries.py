@@ -29,9 +29,11 @@ __all__ = [
     "NightProgress",
     "Progression",
     "ReportRows",
+    "backfill_pull_keys",
     "findings_hashes",
     "progression",
     "report",
+    "referenced_records_keys",
     "report_rows",
 ]
 
@@ -174,3 +176,39 @@ def progression(conn: Connection[Any], encounter_id: int, difficulty: int | None
             params,
         ).fetchall()
     return Progression(encounter_id, difficulty, nights, mechanics)
+
+
+# ---------------------------------------------------------------------------
+# Retention and backfill
+# ---------------------------------------------------------------------------
+
+
+def backfill_pull_keys(
+    conn: Connection[Any], encounter_id: int, difficulty: int | None = None, since_ms: int | None = None
+) -> list[str]:
+    """
+    The keys of every projected pull of ``encounter_id``, oldest night first: all difficulties, or only
+    ``difficulty``; with ``since_ms``, only pulls of reports that started at or after it (a report with no start time
+    uses the time it was fetched).
+    """
+    clauses: list[LiteralString] = ["p.encounter_id = %s"]
+    params: list[Any] = [encounter_id]
+    if difficulty is not None:
+        clauses.append("p.difficulty = %s")
+        params.append(difficulty)
+    when: LiteralString = "COALESCE(r.start_time_ms, (extract(epoch FROM r.fetched_at) * 1000)::bigint)"
+    if since_ms is not None:
+        clauses.append(cast(LiteralString, f"{when} >= %s"))
+        params.append(since_ms)
+    query = cast(
+        LiteralString,
+        "SELECT p.pull_key FROM pulls p JOIN reports r ON r.code = p.report_code WHERE "
+        + " AND ".join(clauses)
+        + f" ORDER BY {when} NULLS LAST, p.report_code, p.fight_id",
+    )
+    return [row[0] for row in conn.execute(query, params).fetchall()]
+
+
+def referenced_records_keys(conn: Connection[Any]) -> set[str]:
+    """Every records blob key a ``pulls`` row points at."""
+    return {row[0] for row in conn.execute("SELECT records_key FROM pulls").fetchall()}

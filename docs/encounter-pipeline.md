@@ -361,6 +361,29 @@ The read-model rows follow the records: every change that rebuilds a pull's reco
 the next projection of that pull replaces its rows; a change only to the projection code needs a
 `READ_MODEL_VERSION` bump. Findings are not projected; the SQL path reads the `findings` table directly.
 
+## Retention and backfill (hosted mode)
+
+Hosted mode keeps `events/` always and expires the stages above it: `raw/` after 14 days and `annotated/` after 90, by
+bucket lifecycle rules (`scripts/data/apply_bucket_lifecycle.py`, `docs/hosting.md`). `records/` has no rule: a blob is
+never updated, so each change leaves the previous blob behind, and the worker's cleanup job removes `records/` objects
+that no `pulls.records_key` references once they are 30 days old. A deleted blob is rebuilt from `events/` on the next
+read.
+
+What an expired stage costs:
+
+| Expired | Rebuilt by | WCL points |
+|---|---|---|
+| `annotated/` | the next records lookup re-annotates from `events/` | none |
+| `records/` (unreferenced) | the next lookup or process job builds and stores it | none |
+| `raw/` | nothing offline: `ingest --offline` and `--refresh-meta` of that report need the pages. `events/`, annotation and records are unaffected | a fresh ingest fetches the pages again |
+
+`python main.py backfill --encounter <id> [--difficulty N] [--since DATE]` queues a low-priority `ProcessPull` for each
+projected pull of the encounter (one per pull; a pull with a process job already queued or running is skipped). A process
+job reads `events/` and the annotation cache only, so it works after `raw/` expired and never calls WCL. It is the way to
+apply an encounter-file, registry or `RECORDS_VERSION` change to stored pulls (the "Records and digest: rebuilt" cells of
+the table above): the pull's records get a new key and its read-model rows are replaced. It cannot apply a change that
+needs a re-ingest (the "Re-ingest: yes" rows), because that refetches from WCL.
+
 ## Cost and size
 
 WCL bills by points, with a budget of 3,600 points per hour for the app. With the default filters a pull costs about

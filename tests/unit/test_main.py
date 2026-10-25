@@ -156,3 +156,24 @@ class TestWorkerSubcommand:
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
         with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
             main(["worker"])
+
+
+class TestBackfillSubcommand:
+    def test_parses_args(self):
+        with patch("khadbot.main._run_backfill") as run:
+            main(["backfill", "--encounter", "3009", "--difficulty", "5", "--since", "2026-10-01", "--dry-run"])
+        run.assert_called_once_with(3009, 5, "2026-10-01", True)
+
+    def test_defaults(self):
+        with patch("khadbot.main._run_backfill") as run:
+            main(["backfill", "--encounter", "3009"])
+        run.assert_called_once_with(3009, None, None, False)
+
+    def test_the_encounter_is_required(self):
+        with pytest.raises(SystemExit):
+            main(["backfill"])
+
+    def test_refuses_to_run_in_local_mode(self, monkeypatch):
+        monkeypatch.delenv("KHADBOT_MODE", raising=False)
+        with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
+            main(["backfill", "--encounter", "3009"])

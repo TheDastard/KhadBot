@@ -20,7 +20,7 @@ from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
-from khadbot.encounter.records_store import ReadModelProjector, RecordsStore
+from khadbot.encounter.records_store import ReadModelIndex, ReadModelProjector, RecordsStore
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.errors import ConfigurationError, missing_group_message
 from khadbot.storage import BlobStore, default_blob_store
@@ -96,6 +96,20 @@ def read_model_projector() -> ReadModelProjector | None:
     return PostgresReadModelProjector(raw_factory=raw_cache)
 
 
+def read_model_index() -> ReadModelIndex | None:
+    """
+    What backfill and the records cleanup ask of the read-model tables: the Postgres index in hosted mode, else None
+    (local mode has no read-model tables). Building it opens no connection.
+    """
+    if not DatabaseConfig().hosted:
+        return None
+    try:
+        from khadbot.db import PostgresReadModelIndex
+    except ImportError as exc:
+        raise ConfigurationError(missing_group_message("hosted", "Hosted mode")) from exc
+    return PostgresReadModelIndex()
+
+
 # ---------------------------------------------------------------------------
 # Sign-in and report access (hosted only)
 # ---------------------------------------------------------------------------
@@ -146,6 +160,7 @@ __all__ = [
     "event_store",
     "findings_store",
     "raw_cache",
+    "read_model_index",
     "read_model_projector",
     "records_store",
     "report_access",
