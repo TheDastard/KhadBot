@@ -9,6 +9,7 @@
 !src/
 !config/
 !scripts/data/seed_stack.py
+!scripts/dev/queue_smoke.py
 
 **/__pycache__
 **/*.pyc

@@ -2,7 +2,7 @@
 #
 #   api      serves the dashboard API on 0.0.0.0:8000 from Postgres and the bucket (the default)
 #   migrate  applies the database migrations and exits
-#   worker   runs the job queue worker (the subcommand arrives with the queue)
+#   worker   runs the job queue worker (ingest, process and review jobs from Postgres)
 #
 # Build from the repository root:  docker build -f deploy/Dockerfile -t khadbot .
 #
@@ -51,6 +51,7 @@ COPY --chown=khadbot:khadbot src ./src
 COPY --chown=khadbot:khadbot config ./config
 COPY --chown=khadbot:khadbot main.py ./main.py
 COPY --chown=khadbot:khadbot scripts/data/seed_stack.py ./scripts/data/seed_stack.py
+COPY --chown=khadbot:khadbot scripts/dev/queue_smoke.py ./scripts/dev/queue_smoke.py
 
 # KHADBOT_DATA_DIR is scratch space only: hosted mode keeps its data in Postgres and the bucket, and nothing from the
 # host is mounted over it. Everything else (database URL, bucket, credentials) comes from the environment at run time.

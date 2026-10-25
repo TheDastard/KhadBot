@@ -120,10 +120,12 @@ jobs:
       - run: docker image ls khadbot:local
       - run: docker compose -f deploy/compose.yaml --profile seed run --rm seed --only SYNTH01
       - run: python3 scripts/dev/stack_smoke.py
+      # Queues a job on the stack and waits for the worker container to finish it.
+      - run: docker compose -f deploy/compose.yaml --profile smoke run --rm queue-smoke
       - if: failure()
-        run: docker compose -f deploy/compose.yaml --profile seed logs --no-color --tail 200
+        run: docker compose -f deploy/compose.yaml --profile seed --profile smoke logs --no-color --tail 200
       - if: always()
-        run: docker compose -f deploy/compose.yaml --profile seed --profile worker down --volumes
+        run: docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes
 
   real-fixtures:
     if: github.event_name == 'workflow_dispatch'

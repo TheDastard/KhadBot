@@ -11,7 +11,7 @@ One image holds every role. `deploy/Dockerfile` builds it from the repository ro
 - Built with uv from `uv.lock` on the Python version the base image provides (`.python-version` names it), installing only the `api` and `hosted` groups. No CLI, LLM provider packages or dev tools.
 - Carries `src/`, `config/` (the authored encounter files and registries: every cache key hashes them, so the image and the stored data must agree on them), `main.py` and the seed script.
 - Runs as the non-root user `khadbot` (uid 10001). `KHADBOT_DATA_DIR` is scratch space inside the container; hosted mode keeps its data in Postgres and the bucket.
-- The command picks the role: `api` (the default, port 8000), `migrate` (apply migrations and exit), `worker` (the job queue worker; the subcommand arrives with the queue).
+- The command picks the role: `api` (the default, port 8000), `migrate` (apply migrations and exit), `worker` (the job queue worker).
 - `.dockerignore` excludes everything except the files the image copies, so `.env` and `.khadbot_data*` can never enter the build context.
 
 Image size: not measured yet. The `stack` CI job prints it (`docker image ls khadbot:local`); record the figure here once a build has run.
@@ -39,11 +39,22 @@ The API makes no WCL calls and needs no WCL credentials.
 
 ### Migrate (`khadbot migrate`)
 
-`DATABASE_URL` (and the pool settings above). It applies the numbered files in `src/khadbot/db/migrations/` under an advisory lock and exits, so running it twice is safe.
+`DATABASE_URL` (and the pool settings above). It applies the numbered files in `src/khadbot/db/migrations/` under an advisory lock and exits, so running it twice is safe. The job queue's tables (procrastinate's schema) are one of those files.
 
 ### Worker (`khadbot worker`)
 
-Reads everything the API does, plus the WCL credentials once jobs fetch from WCL: `WARCRAFTLOGS_CLIENT_ID` and `WARCRAFTLOGS_CLIENT_SECRET`, and the LLM settings for reviews (`LLM_PROVIDER`, the provider's API key, `ANALYST_MODEL`). The subcommand arrives with the job queue; until then the compose service is behind the `worker` profile.
+Reads everything the API does, plus the WCL credentials once jobs fetch from WCL: `WARCRAFTLOGS_CLIENT_ID` and `WARCRAFTLOGS_CLIENT_SECRET`, and the LLM settings for reviews (`LLM_PROVIDER`, the provider's API key, `ANALYST_MODEL`). The worker takes jobs from Postgres (`python main.py worker [--queues ingest,process] [--concurrency N]`), keeps its own connection pool to `DATABASE_URL` beside the one above, and stops gracefully on SIGINT or SIGTERM. Its own settings:
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WORKER_QUEUES` | Queues to take jobs from (default `ingest,process,review`). Run an ingest worker and a review worker apart by giving each its own list. |
+| `KHADBOT_WORKER_CONCURRENCY` | Jobs run at once per worker (default 2). |
+| `KHADBOT_WORKER_SHUTDOWN_TIMEOUT_S` | How long a stopping worker waits for running jobs before interrupting them (default 60). An interrupted job is marked `failed` with the code `interrupted`; request it again and it resumes from the raw page cache. |
+| `KHADBOT_JOB_MAX_RETRIES` | Retries after a WCL rate limit, a WCL network error or a sign-in that could not be renewed (default 5). Other failures are not retried. |
+| `KHADBOT_JOB_RETRY_BACKOFF_S` | Base of the wait between retries: the wait is this value to the power of the attempt, in seconds (default 3). |
+| `KHADBOT_JOB_PROGRESS_INTERVAL_S` | How often a running job writes its progress and checks whether it was cancelled (default 0.5). |
+
+Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API does not call it yet.
 
 ### Seed (`scripts/data/seed_stack.py`)
 
@@ -63,6 +74,7 @@ Needs Docker with Compose. From the repository root:
     mise run stack:up       # build the image; start Postgres, SeaweedFS, the migrate step and the API
     mise run stack:seed     # load the recorded fixture reports (offline, no WCL calls)
     mise run stack:smoke    # health, the report list and a night summary
+    mise run stack:queue-smoke  # queue a job and check the worker finishes it
     mise run stack:logs
     mise run stack:down     # stop, keep the data volumes
     mise run stack:reset    # stop and delete the database and bucket
@@ -77,6 +89,12 @@ It seeds the synthetic report `SYNTH01` and every real recorded report whose pag
 
     docker compose -f deploy/compose.yaml --profile seed run --rm seed --only SYNTH01
 
+The seed runs the job functions in-process rather than queueing them: SYNTH01 needs its own filters, encounter file and registries, which the stack's worker (built from the configuration) does not have.
+
+### The queue smoke test
+
+`stack:queue-smoke` runs `scripts/dev/queue_smoke.py` in the image. It queues an offline ingest of a report that is in no cache and waits for the stack's worker to fail it with the code `not_in_cache`. That exercises enqueue, the queue tables, the worker, the `jobs` row and typed failures on the real stack, with no WCL call. Ingesting a fixture report through a worker is covered by the hosted tests (`tests/integration/hosted/test_queue_pg.py`).
+
 ### CI
 
-The `stack` job in `.github/workflows/check.yml` builds the image (nothing is pushed), starts the stack, seeds `SYNTH01` and runs the smoke script. It is the only place the image is built on every push.
+The `stack` job in `.github/workflows/check.yml` builds the image (nothing is pushed), starts the stack, seeds `SYNTH01`, runs the smoke script and then the queue smoke test against the stack's worker. It is the only place the image is built on every push.
