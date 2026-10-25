@@ -165,6 +165,82 @@ class QueueConfig:
     )
 
 
+class WclLimitScheme(StrEnum):
+    CURRENT = "current"  # one pool of application points; every request spends it, whoever's token sends it
+    NEW = "new"  # application points, a capped share of them as database points, and each signed-in user's pool
+
+
+def _flag(key: str, default: bool) -> bool:
+    return _optional(key, "true" if default else "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _optional_float(key: str) -> float | None:
+    raw = _optional(key).strip()
+    return float(raw) if raw else None
+
+
+@dataclass(frozen=True)
+class BudgetConfig:
+    """
+    The hosted WCL budget manager (``jobs/budget.py``): how WCL charges the client's account, the allowances that
+    share its hourly points, and the cost estimate a job reserves before it runs. Local mode has no budget. The
+    numbers come from ``docs/wcl-api.md``; the allowances are defaults until the free tier is decided.
+    """
+
+    # How WCL charges the account that owns the client ("Rate limits and point types"). "new" once it opts in.
+    scheme: WclLimitScheme = field(
+        default_factory=lambda: WclLimitScheme(_optional("KHADBOT_WCL_LIMIT_SCHEME", WclLimitScheme.CURRENT))
+    )
+    # Whether a job on a signed-in user's token counts in full against the app's points. True is what the budget
+    # probe measured (one shared pool). False only means something on the new scheme, with a known user pool size.
+    user_tokens_spend_app_budget: bool = field(
+        default_factory=lambda: _flag("KHADBOT_BUDGET_USER_TOKENS_SPEND_APP", True)
+    )
+    # Shares of the hourly points: what one WCL guild and one user may use per window, and what only live raid
+    # ingest may use.
+    guild_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_GUILD_SHARE", "0.25")))
+    user_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_USER_SHARE", "0.10")))
+    headroom_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_HEADROOM_SHARE", "0.20")))
+    # The estimate: a batched pull costs about 7.2 points (a 25-pull night is about 180 after cross-fight batching),
+    # a pull fetched alone about 14, and a job adds its report metadata and rate-limit reads (about 1 point each).
+    points_per_pull: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_POINTS_PER_PULL", "7.2")))
+    points_per_single_pull: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_BUDGET_POINTS_PER_SINGLE_PULL", "14"))
+    )
+    points_per_job: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_POINTS_PER_JOB", "4")))
+    # Pulls assumed for a whole-report ingest whose fights are not known yet (no cached metadata): a raid night.
+    default_pulls: int = field(default_factory=lambda: int(_optional("KHADBOT_BUDGET_DEFAULT_PULLS", "25")))
+    # The new scheme's database points per hour; the current scheme does not track them.
+    database_points_per_hour: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_BUDGET_DATABASE_POINTS_PER_HOUR", "250"))
+    )
+    # A signed-in user's own points per hour on the new scheme. Unknown until it is measured, so unset.
+    user_points_per_hour: float | None = field(
+        default_factory=lambda: _optional_float("KHADBOT_BUDGET_USER_POINTS_PER_HOUR")
+    )
+    # A reservation whose job never settled it (a worker died) is dropped after this long.
+    reservation_ttl_s: int = field(default_factory=lambda: int(_optional("KHADBOT_BUDGET_RESERVATION_TTL_S", "7200")))
+
+    def __post_init__(self) -> None:
+        for name in ("guild_share", "user_share", "headroom_share"):
+            if not 0.0 <= getattr(self, name) <= 1.0:
+                raise ValueError(f"BudgetConfig.{name} must be between 0 and 1.")
+        if self.headroom_share >= 1.0:
+            raise ValueError("BudgetConfig.headroom_share must leave some points for ordinary jobs.")
+        if not self.user_tokens_spend_app_budget and self.scheme is WclLimitScheme.CURRENT:
+            raise ValueError(
+                "KHADBOT_BUDGET_USER_TOKENS_SPEND_APP=false needs KHADBOT_WCL_LIMIT_SCHEME=new: on the current "
+                "limits every request spends the app's points."
+            )
+        if min(self.points_per_pull, self.points_per_single_pull, self.points_per_job) < 0 or self.default_pulls < 1:
+            raise ValueError("BudgetConfig's cost estimate must be positive.")
+
+    @property
+    def documented_limit_per_hour(self) -> float:
+        """The scheme's application points per hour before a subscription, used until the first ``rateLimitData``."""
+        return 3600.0 if self.scheme is WclLimitScheme.CURRENT else 1000.0
+
+
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 
 
@@ -276,6 +352,7 @@ class AppConfig:
     storage: StorageConfig = field(default_factory=StorageConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
+    budget: BudgetConfig = field(default_factory=BudgetConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     persona: PersonaConfig = field(default_factory=PersonaConfig)
