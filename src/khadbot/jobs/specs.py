@@ -54,6 +54,7 @@ class IngestReport(BaseModel):
     auth: Auth = Field(default_factory=AppAuth)
     offline: bool = False  # read the raw page cache only; never call WCL
     refresh_meta: bool = False  # refetch report.json only and update stored pulls
+    live: bool = False  # queued by a live report watch: the WCL budget lets it use the headroom ordinary jobs leave
 
     @model_validator(mode="after")
     def _refresh_needs_wcl(self) -> IngestReport:

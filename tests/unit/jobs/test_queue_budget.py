@@ -176,3 +176,19 @@ def _new(code: str):
         report_code=code,
         spec=IngestReport(code=code).model_dump(mode="json"),
     )
+
+
+async def test_a_live_ingest_runs_in_the_headroom_an_ordinary_one_waits_for(env, clock, reader):
+    reader.reading = reader.reading.__class__(1000, 800, 1800)  # spent down to the headroom
+    queue, jobs, _, manager = make(env, clock, reader)
+    await manager.sync()
+    async with queue.open():
+        ordinary = (await queue.enqueue(IngestReport(code="SYNTH01", fights=[1]), requested_by="u")).job
+        live = (await queue.enqueue(IngestReport(code="SYNTH01", fights=[2], live=True), requested_by="v")).job
+    await drain(queue, jobs)
+
+    assert jobs.rows[live.id].state is JobState.DONE
+    assert jobs.rows[ordinary.id].state is JobState.WAITING_BUDGET
+    state = await manager.state()
+    (reservation,) = [r for r in state.reservations if r.ask.job_id == live.id]
+    assert reservation.ask.live
