@@ -2,11 +2,13 @@
 scripts/dev/stack_smoke.py
 
 Smoke test for the compose stack, standard library only. With the stack up and seeded, it waits for the API, then
-checks the health route, the report list and one night summary.
+checks the health route, that a signed-out visitor cannot read a seeded report, and the report list and one night
+summary as the smoke user the seed provisions (a session cookie from KHADBOT_STACK_SMOKE_SESSION in deploy/stack.env).
 
     uv run python scripts/dev/stack_smoke.py [--url http://127.0.0.1:8000] [--timeout 120]
 
-It reads nothing but the API's own routes and never calls WCL. Exit status 0 means every check passed.
+It reads nothing but the API's own routes. The seeded access answers stand for an hour; after that the API asks WCL
+(which the stack cannot reach with its throwaway credentials), so seed again. Exit status 0 means every check passed.
 """
 
 from __future__ import annotations
@@ -18,10 +20,13 @@ import time
 import urllib.error
 import urllib.request
 
+SMOKE_SESSION = "local-stack-smoke-session"  # deploy/stack.env: KHADBOT_STACK_SMOKE_SESSION
 
-def get(base: str, path: str) -> dict:
-    """GET ``path`` and decode the JSON body; raises on a non-200 status."""
-    with urllib.request.urlopen(f"{base}{path}", timeout=10) as resp:
+
+def get(base: str, path: str, cookie: str | None = None) -> dict:
+    """GET ``path`` (with the session ``cookie``, when given) and decode the JSON body; raises on a non-200 status."""
+    request = urllib.request.Request(f"{base}{path}", headers={"Cookie": f"khadbot_session={cookie}"} if cookie else {})
+    with urllib.request.urlopen(request, timeout=10) as resp:
         return json.load(resp)
 
 
@@ -40,6 +45,9 @@ def wait_for_health(base: str, timeout: float) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--url", default="http://127.0.0.1:8000", help="API base URL")
+    parser.add_argument(
+        "--session", default=SMOKE_SESSION, help="The smoke user's session cookie value (stack.env's value)"
+    )
     parser.add_argument("--timeout", type=float, default=120, help="Seconds to wait for the API (default: 120)")
     args = parser.parse_args()
     base = args.url.rstrip("/")
@@ -49,13 +57,21 @@ def main() -> None:
         sys.exit(f"/v1/health is not ok: {health}")
     print(f"health: ok (api {health.get('api_version')})")
 
-    reports = get(base, "/v1/reports")["reports"]
+    reports = get(base, "/v1/reports", args.session)["reports"]
     if not reports:
         sys.exit("/v1/reports is empty: seed the stack first (mise run stack:seed).")
     print(f"reports: {', '.join(r['code'] for r in reports)}")
 
     code = reports[0]["code"]
-    night = get(base, f"/v1/reports/{code}/night")
+    try:
+        get(base, f"/v1/reports/{code}/night")
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            sys.exit(f"A signed-out visitor got HTTP {exc.code} for a private report; expected 404.")
+    else:
+        sys.exit(f"A signed-out visitor could read /v1/reports/{code}/night.")
+    print("signed out: 404 for a report WCL does not share publicly")
+    night = get(base, f"/v1/reports/{code}/night", args.session)
     totals = night["totals"]
     if night["code"] != code or not night["sections"] or not totals["pulls"]:
         sys.exit(f"/v1/reports/{code}/night is empty: {night}")
