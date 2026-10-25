@@ -79,4 +79,5 @@ def test_spec_carries_only_the_user_id():
         "auth": {"kind": "user", "user_id": "u-1"},
         "offline": False,
         "refresh_meta": False,
+        "live": False,
     }

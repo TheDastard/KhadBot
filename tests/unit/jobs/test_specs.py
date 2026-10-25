@@ -70,3 +70,8 @@ class TestReviewPull:
     def test_depth_is_checked(self):
         with pytest.raises(ValidationError):
             ReviewPull(pull_key="ABC:3", depth="huge")
+
+
+def test_an_ingest_is_not_live_unless_a_watch_queued_it():
+    assert IngestReport(code="abc").live is False
+    assert IngestReport.model_validate_json(IngestReport(code="abc", live=True).model_dump_json()).live is True

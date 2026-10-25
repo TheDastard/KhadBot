@@ -420,6 +420,7 @@ class JobQueue:
             guild_id=await self.budget.guild_of(job.report_code),
             user_token=isinstance(spec.auth, UserAuth),
             points=budget_policy.estimate_points(pulls, cfg),
+            live=spec.live,
             asked_at=job.created_at,
         )
 

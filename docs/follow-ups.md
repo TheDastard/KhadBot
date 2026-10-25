@@ -116,8 +116,6 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
     each is charged the other's points too, and the allowances err high. The bucket itself is corrected by the
     `rateLimitData` read after every job. Per-request costs (WCL reports none per response) would fix it.
   - A failed job is charged its whole estimate, even one that failed before any request (a missing sign-in).
-  - Nothing marks a job as live raid ingest yet, so the headroom is only ever left free; the watch task should
-    ask with `live` set.
   - A waiting job that is cancelled keeps its place in the budget's line until it is reached (its grant is then
     released) or a day passes, so it can lengthen other jobs' ETAs meanwhile.
   - The per-guild allowance and round-robin need the report's WCL guild, which isn't fetched yet (see "Report guild
