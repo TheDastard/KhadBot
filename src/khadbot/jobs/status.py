@@ -42,7 +42,7 @@ NOTIFY_CHANNEL = "job_events"
 class JobState(StrEnum):
     QUEUED = "queued"
     RUNNING = "running"
-    WAITING_BUDGET = "waiting_budget"  # reserved for the WCL budget manager: not enough points right now
+    WAITING_BUDGET = "waiting_budget"  # in the WCL budget manager's line: not enough points right now
     DONE = "done"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -331,6 +331,22 @@ def _requeue(tx: JobTx, job_id: str, error_code: str, error_message: str) -> Non
     )
 
 
+def _set_budget_wait(tx: JobTx, job_id: str, waiting: bool) -> bool:
+    """
+    Move a job between ``queued`` and ``waiting_budget`` (the WCL budget manager's line). False when the job is not
+    in the state it should leave: it was cancelled, finished or started meanwhile.
+    """
+    rec = tx.load(job_id)
+    source, target = (
+        (JobState.QUEUED, JobState.WAITING_BUDGET) if waiting else (JobState.WAITING_BUDGET, JobState.QUEUED)
+    )
+    if rec is None or rec.state is not target and rec.state is not source:
+        return False
+    if rec.state is source:
+        tx.save(rec.model_copy(update={"state": target, "updated_at": _now()}))
+    return True
+
+
 def _cancel(tx: JobTx, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
     """
     Cancel a job and the process jobs under it. Queued ones become ``cancelled`` at once (returned, so the queue can
@@ -344,7 +360,7 @@ def _cancel(tx: JobTx, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
         child = tx.load(listed.id)  # reload: finishing a child changes the root's progress
         if child is None or not child.active:
             continue
-        if child.state is JobState.QUEUED:
+        if child.state in (JobState.QUEUED, JobState.WAITING_BUDGET):
             done = _finish(tx, child.id, JobState.CANCELLED)
             if done is not None:
                 dropped.append(done)
@@ -443,6 +459,14 @@ class JobStore:
     async def requeue(self, job_id: str, error_code: str, error_message: str) -> None:
         """Put a running job back to ``queued`` after a failure the queue will retry."""
         await self._run(lambda tx: _requeue(tx, job_id, error_code, error_message), job_id=job_id)
+
+    async def wait_for_budget(self, job_id: str) -> bool:
+        """Put a queued job in the budget's line (``waiting_budget``). False if it is no longer queued."""
+        return await self._run(lambda tx: _set_budget_wait(tx, job_id, True), job_id=job_id)
+
+    async def resume_from_budget(self, job_id: str) -> bool:
+        """Put a job the budget admitted back to ``queued``, ready to start. False if it is no longer waiting."""
+        return await self._run(lambda tx: _set_budget_wait(tx, job_id, False), job_id=job_id)
 
     async def request_cancel(self, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
         """Cancel a job; returns it and the jobs that were still queued and are now cancelled."""

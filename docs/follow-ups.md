@@ -105,19 +105,26 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **Job queue gaps.** (1) A worker that dies without shutting down (killed, out of memory) leaves its job rows
   `running` and the procrastinate job `doing`: nothing marks them failed or retries them. procrastinate records
   worker heartbeats and can list stalled jobs (`JobManager.get_stalled_jobs`); a periodic task should fail the
-  `jobs` row and requeue the job. (2) `waiting_budget` is in the state check but nothing sets it; the budget
-  manager will. (3) The `watch` queue has no tasks. (4) `jobs` rows are never deleted; retention should prune
-  finished ones and procrastinate's (`builtin:remove_old_jobs`). (5) No test runs a fixture report through the
+  `jobs` row and requeue the job. (2) The `watch` queue has no tasks. (3) `jobs` rows are never deleted; retention
+  should prune finished ones and procrastinate's (`builtin:remove_old_jobs`). (4) No test runs a fixture report through the
   compose stack's worker, because the worker uses the configured filters and encounter files and SYNTH01 needs its
   own; the stack smoke test checks a typed failure instead, and the hosted tests ingest SYNTH01 through a worker with
   its stores injected. Letting a test point the worker at fixture filters and an encounter directory would close it.
-- **Rate-limit users on the app budget.** Requests without a user token (users not signed in to WCL,
-  Discord-only users, background jobs) share the app's hourly points. Not built: a global points bucket kept in
-  step with `rateLimitData`, per-user and per-guild allowances within it, and a queue that shows the expected
-  wait instead of failing when the bucket is empty. Keep headroom for live ingest of linked guilds' raids.
-  WCL's new limits change what the bucket tracks (`docs/wcl-api.md`, "Rate limits and point types"): application
-  points (1,000 an hour), database points (250 an hour, a part of the application points), and user points
-  spent first for signed-in users. Every request, even a user-paid one, needs 1 application point free.
+- **WCL budget gaps.** The budget manager (`jobs/budget.py`, `jobs/budget_store.py`, decision D61) is built;
+  what it doesn't do yet:
+  - A job's measured spend is the change in `pointsSpentThisHour` across its run, so with two jobs fetching at once
+    each is charged the other's points too, and the allowances err high. The bucket itself is corrected by the
+    `rateLimitData` read after every job. Per-request costs (WCL reports none per response) would fix it.
+  - A failed job is charged its whole estimate, even one that failed before any request (a missing sign-in).
+  - Nothing marks a job as live raid ingest yet, so the headroom is only ever left free; the watch task should
+    ask with `live` set.
+  - A waiting job that is cancelled keeps its place in the budget's line until it is reached (its grant is then
+    released) or a day passes, so it can lengthen other jobs' ETAs meanwhile.
+  - The per-guild allowance and round-robin need the report's WCL guild, which isn't fetched yet (see "Report guild
+    and visibility are not fetched"); until then they fall back to the requesting user, else the report.
+  - On WCL's new limits, the user pool's size and whether `rateLimitData` reports user and database points are
+    unknown. Once measured, set `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` and turn
+    `KHADBOT_BUDGET_USER_TOKENS_SPEND_APP` off, or read the pool from `rateLimitData` if it reports it.
 - **Choose a WCL limit scheme and tier.** KhadBot's client is on WCL's current limit (3,600 points an hour); the
   new scheme gives 1,000 application points and 250 database points an hour plus each signed-in user's own pool,
   and new keys start on it, so the current limit may not last. A WCL subscription on the account that owns the
