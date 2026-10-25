@@ -69,9 +69,17 @@ finished one never calls WCL again.
 
 ```
 raw/<report>/report.json                                   # reportData.report: fights, masterData actors and abilities, phases
-raw/<report>/<fight>/<spec>/<filter_hash>/page_000.json    # WCL JSON as returned
+raw/<report>/<fight>/<spec>/<filter_hash>/page_000.json    # WCL JSON as returned, or one page split from a batch
 raw/<report>/<fight>/<spec>/<filter_hash>/_complete        # written after the last page
+raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/page_000.json   # one stream for several fights (transient)
+raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/_complete       # written after the last page
+raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/stalled         # timestamp where a stream stopped advancing
 ```
+
+Batch entries are transient: they exist only until their stream has been split by each row's `fight` into the
+per-fight entries, which stay the only thing normalize reads. `fetch_batches` fetches the eight small specs
+(`BATCHED_SPEC_KEYS`) once per spec, filter and chunk of up to `wcl_batch_max_fights` pulls; pulls already partly
+fetched, single pulls, offline and metadata-refresh runs go per pull, and a failed batch falls back to per-pull requests.
 
 Specs per pull (`DEFAULT_SPECS` plus `specs_for`):
 

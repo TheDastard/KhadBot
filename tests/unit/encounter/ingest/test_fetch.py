@@ -23,7 +23,7 @@ from khadbot.encounter.ingest.fetch import (
 )
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.storage import LocalBlobStore
-from khadbot.wcl.client import WarcraftLogsRateLimitError
+from khadbot.wcl.client import WarcraftLogsNetworkError, WarcraftLogsRateLimitError
 
 CODE = "ABC123"
 EMPTY_PAGE = {"data": [], "nextPageTimestamp": None}
@@ -306,6 +306,20 @@ class TestFetchPull:
         with pytest.raises(WarcraftLogsRateLimitError):
             await fetch_pull(client, RawPageCache(tmp_path), CODE, make_pull(), [spec], max_retries=2)
         assert len(client.calls) == 3  # 1 try + 2 retries, no storm
+
+    async def test_network_error_retries_then_succeeds(self, tmp_path, _no_sleep):
+        spec = FetchSpec(data_type="Deaths")
+        client = StubClient(errors=[WarcraftLogsNetworkError("timed out")])
+        await fetch_pull(client, RawPageCache(tmp_path), CODE, make_pull(), [spec], max_retries=3)
+        assert len(client.calls) == 2
+        assert [c.args[0] for c in _no_sleep.await_args_list] == [1.0]
+
+    async def test_network_error_gives_up_after_max_retries(self, tmp_path):
+        spec = FetchSpec(data_type="Deaths")
+        client = StubClient(errors=[WarcraftLogsNetworkError("timed out")] * 50)
+        with pytest.raises(WarcraftLogsNetworkError):
+            await fetch_pull(client, RawPageCache(tmp_path), CODE, make_pull(), [spec], max_retries=2)
+        assert len(client.calls) == 3
 
     async def test_one_failing_spec_keeps_the_others_cached(self, tmp_path):
         cache = RawPageCache(tmp_path)

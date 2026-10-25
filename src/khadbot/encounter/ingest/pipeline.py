@@ -24,6 +24,7 @@ from khadbot.encounter.ingest.fetch import (
     ProgressFn,
     RawPageCache,
     TokenProvider,
+    fetch_batches,
     fetch_pull,
     query_wcl,
     specs_for,
@@ -103,6 +104,9 @@ async def ingest_report(
     ``token_provider`` is an async callable returning a user's WCL access token. With it every WCL request goes
     to the user endpoint with that token and ``points_spent`` counts the user's budget; the report metadata
     records that a user token fetched it. With none, ingest uses the app token as before.
+
+    The small specs several pulls still need are fetched first, one request per spec across those pulls
+    (``fetch_batches``); a failed batch falls back to per-pull requests.
     """
     if refresh_meta and offline:
         raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
@@ -136,12 +140,22 @@ async def ingest_report(
                 if fight_ids is not None and p.fight_id not in stored:
                     failed[p.pull_key] = "not ingested yet; a metadata refresh only updates stored pulls"
             wanted = [p for p in wanted if p.fight_id in stored]
+        specs_by_fight = {
+            p.fight_id: specs_for(defensive_spell_ids, (enemy_cast_ids or {}).get(p.encounter_id), offensive_spell_ids)
+            for p in wanted
+        }
+        batch_truncated: dict[int, set[str]] = {}
+        if client is not None and not offline and not refresh_meta:
+            try:
+                batch_truncated = await fetch_batches(
+                    client, cache, code, wanted, specs_by_fight, token_provider=token_provider
+                )
+            except Exception as exc:  # noqa: BLE001 - one bad batch must never sink the report
+                logger.warning("Batched fetch failed for %s, fetching per pull: %s", code, exc)
         for pull in wanted:
             key = pull.pull_key
             try:
-                specs = specs_for(
-                    defensive_spell_ids, (enemy_cast_ids or {}).get(pull.encounter_id), offensive_spell_ids
-                )
+                specs = specs_by_fight[pull.fight_id]
                 # A metadata refresh never requests event pages: they come from the raw cache only.
                 truncated = await fetch_pull(
                     client,
@@ -167,7 +181,10 @@ async def ingest_report(
                 ):
                     skipped.append(key)
                     continue
-                store.write_pull(pull, df, new_hash, sorted(name for name, t in truncated.items() if t), positions)
+                truncated_specs = sorted(
+                    {name for name, t in truncated.items() if t} | batch_truncated.get(pull.fight_id, set())
+                )
+                store.write_pull(pull, df, new_hash, truncated_specs, positions)
                 ingested.append(key)
             except Exception as exc:  # noqa: BLE001 - one bad pull must not sink the report
                 logger.warning("Ingest failed for %s: %s", key, exc)

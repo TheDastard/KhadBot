@@ -14,6 +14,7 @@ from khadbot.wcl.client import (
     TOKEN_URL,
     WarcraftLogsAPIError,
     WarcraftLogsClient,
+    WarcraftLogsNetworkError,
     WarcraftLogsRateLimitError,
 )
 
@@ -66,3 +67,15 @@ class TestRateLimit:
         router.post(GRAPHQL_CLIENT_URL).mock(return_value=httpx.Response(200, json={"data": data}))
         async with WarcraftLogsClient("id", "secret") as wcl:
             assert await wcl.rate_limit() == data["rateLimitData"]
+
+
+class TestNetworkError:
+    async def test_timeout_raises_network_error(self, router):
+        router.post(GRAPHQL_CLIENT_URL).mock(side_effect=httpx.ReadTimeout("too slow"))
+        with pytest.raises(WarcraftLogsNetworkError, match="network error"):
+            await _query()
+
+    async def test_network_error_is_still_an_api_error(self, router):
+        router.post(GRAPHQL_CLIENT_URL).mock(side_effect=httpx.ConnectError("down"))
+        with pytest.raises(WarcraftLogsAPIError):
+            await _query()

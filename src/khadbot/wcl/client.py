@@ -88,6 +88,10 @@ class WarcraftLogsRateLimitError(WarcraftLogsAPIError):
         self.retry_after_s = retry_after_s
 
 
+class WarcraftLogsNetworkError(WarcraftLogsAPIError):
+    """A request that failed below HTTP: a timeout, a dropped connection or DNS."""
+
+
 class WarcraftLogsUnauthorizedError(WarcraftLogsAPIError):
     """
     Raised on HTTP 401: the bearer token was rejected, usually because a user access token expired.
@@ -224,6 +228,9 @@ class WarcraftLogsClient:
             supplied user token does not have access.
         WarcraftLogsUnauthorizedError
             WCL answered HTTP 401 (the token was rejected or has expired).
+        WarcraftLogsNetworkError
+            The request failed below HTTP (timeout, dropped connection, DNS). A subclass of
+            ``WarcraftLogsAPIError``.
         WarcraftLogsAPIError
             Any other GraphQL-level or HTTP error.
         """
@@ -257,7 +264,7 @@ class WarcraftLogsClient:
                 ) from exc
             raise WarcraftLogsAPIError(f"WarcraftLogs GraphQL HTTP error: {exc.response.status_code}") from exc
         except httpx.RequestError as exc:
-            raise WarcraftLogsAPIError(f"WarcraftLogs network error: {exc}") from exc
+            raise WarcraftLogsNetworkError(f"WarcraftLogs network error: {exc}") from exc
 
         body = resp.json()
 
