@@ -9,12 +9,18 @@ Everything a job needs beyond its spec comes from a ``JobContext``: the stores, 
 resolver. A spec never holds a token; ``TokenResolver`` turns its ``auth`` into a WCL token provider when the job
 runs: in hosted mode ``UserTokenResolver`` loads a signed-in user's own token; local mode resolves app auth only.
 
-Progress sequence per job (pull-level events carry the pull key; job-level events carry None):
+The ingest job only fetches: it writes raw pages and one fetch manifest per pull, never the event store. The
+process job normalizes the pages its pull's manifest names into the event store (or keeps the stored events when the
+pages expired), then builds the records. The queue runs a process job for every pull an ingest leaves ready; the CLI
+runs them one after another.
 
-    IngestReport   ("ingest", None, 0), then per pull what ``ingest_report`` reports ("fetched <spec>" ... then
-                   "normalizing" 1.0), then ("ingest", None, 1)
-    ProcessPull    ("records", pull, 0), ("records", pull, 1), then, with a read-model projector,
-                   ("project", pull, 0), ("project", pull, 1)
+Progress sequence per job (pull-level events carry the pull key; job-level events carry None). Several pulls of one
+ingest are fetched at once, so their "fetched" events interleave:
+
+    IngestReport   ("ingest", None, 0), then per pull what ``fetch_report`` reports ("fetched <spec>", fraction of
+                   the pull's specs done), then ("ingest", None, 1)
+    ProcessPull    ("normalizing", pull, 0), ("normalizing", pull, 1), ("records", pull, 0), ("records", pull, 1),
+                   then, with a read-model projector, ("project", pull, 0), ("project", pull, 1)
     ReviewPull     ("review", pull, 0), ("review", pull, 1)
 """
 
@@ -33,7 +39,7 @@ from khadbot.encounter.analyst import ModelMismatchError, review_pull
 from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_cooldowns
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore
-from khadbot.encounter.ingest import ingest_report
+from khadbot.encounter.ingest import EventsOutcome, fetch_report, process_pull_events
 from khadbot.encounter.ingest.fetch import RawPageCache, TokenProvider
 from khadbot.encounter.models import IngestResult, PullFindings
 from khadbot.encounter.records_store import ReadModelProjector
@@ -82,6 +88,9 @@ class UserAuthUnavailableError(JobError):
 
 class ProcessPullResult(BaseModel):
     pull_key: str
+    # "written" (normalized and stored), "unchanged" (normalized; already stored as is) or "kept" (no fetched pages
+    # to normalize, such as expired raw pages; the stored events were used as they are)
+    events: EventsOutcome
     records_written: bool  # False when the records were already stored (a repeat run)
     projected: bool  # the read models were projected (hosted mode with a projector)
 
@@ -206,8 +215,8 @@ class JobContext:
     """
 
     data: EncounterData | None = None  # records, annotation cache and event store the analysis reads
-    store: EventStore | None = None  # where ingest writes; None is the wired event store
-    cache: RawPageCache | None = None  # where ingest reads and writes raw pages; None is the wired cache
+    store: EventStore | None = None  # what ingest reads (a metadata refresh); None is the wired event store
+    cache: RawPageCache | None = None  # where ingest writes raw pages and process reads them; None is the wired cache
     findings: FindingsStore | None = None
     client: WarcraftLogsClient | None = None  # None: ingest opens one from the app credentials when it needs WCL
     filters: Callable[[], Mapping[str, Any]] = default_filter_kwargs
@@ -244,15 +253,17 @@ async def run_ingest_report(
     spec: IngestReport, ctx: JobContext | None = None, progress: Progress | None = None
 ) -> IngestResult:
     """
-    Ingest the report named by ``spec``. The result's ``pulls`` are the pulls written; a queue enqueues a
-    ``ProcessPull`` for each (``process_specs_for``). Pulls whose stored data already matches are skipped, so a
-    repeat run writes nothing. Raises ``UserAuthUnavailableError`` before any work when the token cannot be resolved.
+    Fetch the raw pages of the report named by ``spec`` and write each completed pull's fetch manifest; nothing is
+    normalized here. Every pull in the result's ``pulls`` and ``skipped`` is ready to process: ``pulls`` had pages or
+    a manifest written by this run, ``skipped`` were already fetched with the same specs. A queue enqueues a
+    ``ProcessPull`` for each (``process_specs_for``). A repeat run with every page cached makes no WCL request and
+    writes nothing. Raises ``UserAuthUnavailableError`` before any work when the token cannot be resolved.
     """
     ctx = ctx or JobContext()
     progress = progress or NullProgress()
     token_provider = await ctx.resolver.provider_for(spec.auth)
     progress.report("ingest", None, 0.0)
-    result = await ingest_report(
+    fetched = await fetch_report(
         spec.code,
         spec.fights,
         store=ctx.event_store(),
@@ -265,27 +276,40 @@ async def run_ingest_report(
         **ctx.filters(),
     )
     progress.report("ingest", None, 1.0)
-    return result
+    return IngestResult(
+        report_code=spec.code,
+        pulls=fetched.written,
+        skipped=fetched.cached,
+        failed=fetched.failed,
+        points_spent=fetched.points_spent,
+    )
 
 
 def process_specs_for(result: IngestResult) -> list[ProcessPull]:
-    """The ``ProcessPull`` specs to run after an ingest: one per pull it wrote."""
-    return [ProcessPull(pull_key=key) for key in result.pulls]
+    """The ``ProcessPull`` specs to run after an ingest job: one per ready pull, newly fetched or not."""
+    return [ProcessPull(pull_key=key) for key in [*result.pulls, *result.skipped]]
 
 
 async def run_process_pull(
     spec: ProcessPull, ctx: JobContext | None = None, progress: Progress | None = None
 ) -> ProcessPullResult:
     """
-    Annotate the pull, build its records and store them; with a read-model projector, project its read models.
+    Normalize the pull's fetched raw pages into the event store, annotate it, build its records and store them; with
+    a read-model projector, project its read models.
 
-    A repeat run finds the annotation and the records stored and writes neither. Raises ``KeyError`` if the pull is
-    not ingested.
+    Normalizing reads the pages the pull's fetch manifest names (never pages derived from the authored files now) and
+    writes the event store only when the result differs from what is stored. Without fetched pages (raw pages
+    expired, or a pull fetched before manifests existed) the stored events are final. Normalizing and building run in
+    worker threads. A repeat run finds the events, the annotation and the records stored and writes nothing. Raises
+    ``PullNotFetchedError`` (a ``KeyError``) when the pull has neither fetched pages nor stored events.
     """
     ctx = ctx or JobContext()
     progress = progress or NullProgress()
     data = ctx.encounter_data()
     code = spec.pull_key.rpartition(":")[0]
+    progress.report("normalizing", spec.pull_key, 0.0)
+    events = await asyncio.to_thread(process_pull_events, data.store, ctx.raw_cache(), spec.pull_key)
+    progress.report("normalizing", spec.pull_key, 1.0)
     stored = _stored_records(data, code)
     progress.report("records", spec.pull_key, 0.0)
     records = await asyncio.to_thread(data.records, spec.pull_key)
@@ -297,7 +321,10 @@ async def run_process_pull(
         progress.report("project", spec.pull_key, 1.0)
         projected = True
     return ProcessPullResult(
-        pull_key=spec.pull_key, records_written=_stored_records(data, code) != stored, projected=projected
+        pull_key=spec.pull_key,
+        events=events,
+        records_written=_stored_records(data, code) != stored,
+        projected=projected,
     )
 
 

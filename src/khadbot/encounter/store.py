@@ -17,13 +17,22 @@ Keys, under ``events/`` in the blob store (``$KHADBOT_DATA_DIR/events`` in the l
 A record written before positions were stored has no ``positions_hash`` and no position table; it reads
 as an empty table until the pull is re-ingested. A record written before fingerprints has no
 ``input_fingerprint``; ``set_input_fingerprint`` adds one without rewriting the pull.
+
+``pulls.json`` is rewritten by every ``write_pull``, and process jobs for different pulls of one report write in
+parallel, so the read-modify-write runs under a per-report lock (``ReportLock``). The default is a lock within this
+process; hosted mode passes a Postgres advisory lock, which holds across worker processes (``khadbot.db.locks``).
+``set_input_fingerprint`` takes the same lock.
 """
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import io
 import os
+import threading
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager
 from typing import Protocol
 
 import orjson
@@ -103,6 +112,22 @@ _positions_hash = positions_hash
 # ---------------------------------------------------------------------------
 
 
+# Serializes the writers of one report's ``pulls.json``: called with the report code, held around the update.
+ReportLock = Callable[[str], AbstractContextManager[None]]
+
+_LOCAL_LOCKS: dict[str, threading.Lock] = {}
+_LOCAL_LOCKS_GUARD = threading.Lock()
+
+
+@contextlib.contextmanager
+def local_report_lock(code: str) -> Iterator[None]:
+    """A per-report lock within this process: enough for the CLI and for one worker's threads."""
+    with _LOCAL_LOCKS_GUARD:
+        lock = _LOCAL_LOCKS.setdefault(code, threading.Lock())
+    with lock:
+        yield
+
+
 class EventStore(Protocol):
     def write_pull(
         self,
@@ -172,8 +197,15 @@ class ParquetEventStore:
     ``storage.resolve_blobs``.
     """
 
-    def __init__(self, blobs: BlobStore | str | os.PathLike[str], prefix: str | None = None) -> None:
+    def __init__(
+        self,
+        blobs: BlobStore | str | os.PathLike[str],
+        prefix: str | None = None,
+        *,
+        report_lock: ReportLock | None = None,
+    ) -> None:
         self.blobs, self.prefix = resolve_blobs(blobs, prefix, "events")
+        self._report_lock = report_lock or local_report_lock
 
     # --- keys ----------------------------------------------------------------
 
@@ -224,28 +256,29 @@ class ParquetEventStore:
             pos_hash = positions_hash if positions_hash is not None else _positions_hash(table)
         else:
             self.blobs.delete(pos_key)
-        records = [r for r in self._records(pull.report_code) if r["pull"]["fight_id"] != pull.fight_id]
-        records.append(
-            {
-                "pull": pull.model_dump(mode="json"),
-                "events_hash": events_hash,
-                "positions_hash": pos_hash,
-                "input_fingerprint": input_fingerprint,
-                "truncated": truncated or [],
-            }
-        )
-        records.sort(key=lambda r: r["pull"]["fight_id"])
-        self.blobs.put(self._pulls_key(pull.report_code), orjson.dumps(records))
+        record = {
+            "pull": pull.model_dump(mode="json"),
+            "events_hash": events_hash,
+            "positions_hash": pos_hash,
+            "input_fingerprint": input_fingerprint,
+            "truncated": truncated or [],
+        }
+        with self._report_lock(pull.report_code):
+            records = [r for r in self._records(pull.report_code) if r["pull"]["fight_id"] != pull.fight_id]
+            records.append(record)
+            records.sort(key=lambda r: r["pull"]["fight_id"])
+            self.blobs.put(self._pulls_key(pull.report_code), orjson.dumps(records))
 
     def set_input_fingerprint(self, pull_key: str, fingerprint: str) -> None:
         """Record ``fingerprint`` on a stored pull without touching its events or positions."""
         code, fight = split_pull_key(pull_key)
-        records = self._records(code)
-        for rec in records:
-            if rec["pull"]["fight_id"] == fight:
-                rec["input_fingerprint"] = fingerprint
-                self.blobs.put(self._pulls_key(code), orjson.dumps(records))
-                return
+        with self._report_lock(code):
+            records = self._records(code)
+            for rec in records:
+                if rec["pull"]["fight_id"] == fight:
+                    rec["input_fingerprint"] = fingerprint
+                    self.blobs.put(self._pulls_key(code), orjson.dumps(records))
+                    return
         raise KeyError(f"pull {pull_key} is not stored")
 
     def write_actors(self, code: str, actors: list[Actor]) -> None:
@@ -355,7 +388,9 @@ __all__ = [
     "POSITION_SCHEMA",
     "EventStore",
     "ParquetEventStore",
+    "ReportLock",
     "empty_positions",
+    "local_report_lock",
     "positions_hash",
     "split_pull_key",
 ]

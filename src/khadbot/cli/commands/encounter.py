@@ -19,6 +19,7 @@ from khadbot.encounter.analyst import ReviewEstimate, estimate_review_cost, revi
 from khadbot.encounter.digest import build_digest, render_digest
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore
+from khadbot.encounter.ingest import EventsOutcome
 from khadbot.encounter.models import (
     AnalysisReport,
     AnalysisRequest,
@@ -83,7 +84,10 @@ def ingest_parser() -> argparse.ArgumentParser:
 
 
 def format_ingest_result(result: IngestResult) -> str:
-    """Markdown summary of an IngestResult."""
+    """
+    Markdown summary of an ingest as ``ingest_and_process`` reports it: ``pulls`` had their events written,
+    ``skipped`` were already stored as they are.
+    """
 
     def fights(keys) -> str:
         return ", ".join(k.split(":")[-1] for k in keys) or "-"
@@ -111,8 +115,35 @@ def console_progress() -> Progress:
     return LineProgress(lambda line: console.print(f"[ui.muted]{line}[/ui.muted]"))
 
 
+async def ingest_and_process(spec: IngestReport, ctx: JobContext, progress: Progress) -> IngestResult:
+    """
+    What a worker does with an ingest, in-process: the ingest job (raw pages and manifests), then the process job
+    for each pull it left ready, in order. The result reads as before the jobs were split: ``pulls`` are the pulls
+    whose events were written, ``skipped`` those whose stored events already matched (or were kept because their raw
+    pages are gone), ``failed`` the pulls that failed in either job.
+    """
+    fetched = await run_ingest_report(spec, ctx, progress)
+    written: list[str] = []
+    unchanged: list[str] = []
+    failed = dict(fetched.failed)
+    for key in [*fetched.pulls, *fetched.skipped]:
+        try:
+            done = await run_process_pull(ProcessPull(pull_key=key), ctx, progress)
+        except Exception as exc:  # noqa: BLE001 - one bad pull must not sink the report
+            failed[key] = f"processing failed: {exc}"
+            continue
+        (written if done.events is EventsOutcome.WRITTEN else unchanged).append(key)
+    return IngestResult(
+        report_code=fetched.report_code,
+        pulls=written,
+        skipped=unchanged,
+        failed=failed,
+        points_spent=fetched.points_spent,
+    )
+
+
 async def ingest_command(arg: str) -> str:
-    """Ingest a WarcraftLogs report into the local event store."""
+    """Ingest a WarcraftLogs report into the local event store and build its pulls' records."""
     try:
         ns = ingest_parser().parse_args(shlex.split(arg))
         fights = parse_fights(ns.fights)
@@ -121,7 +152,7 @@ async def ingest_command(arg: str) -> str:
     except UsageError as exc:
         return f"**{exc}**"
     spec = IngestReport(code=ns.code, fights=fights, offline=ns.offline, refresh_meta=ns.refresh_meta)
-    result = await run_ingest_report(spec, JobContext(), console_progress())
+    result = await ingest_and_process(spec, JobContext(), console_progress())
     global _last_report
     if result.pulls or result.skipped:
         _last_report = result.report_code

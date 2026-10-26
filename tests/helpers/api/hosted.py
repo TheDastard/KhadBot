@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from procrastinate.testing import InMemoryConnector
 from pydantic import SecretStr
 
+from helpers.jobs.ingest import fetch_and_normalize
 from helpers.jobs.synth_queue import SynthEnv, synth_env
 from khadbot.api import create_app
 from khadbot.api.schemas import ReportList
@@ -28,7 +29,7 @@ from khadbot.auth.service import AuthService
 from khadbot.auth.store import User
 from khadbot.config import QueueConfig
 from khadbot.encounter.findings import SqliteFindingsStore
-from khadbot.jobs import IngestReport, UserTokenResolver, run_ingest_report
+from khadbot.jobs import IngestReport, UserTokenResolver
 from khadbot.jobs.queue import JobQueue
 from khadbot.jobs.status import JobStore, MemoryJobBackend
 from khadbot.storage import LocalBlobStore
@@ -105,8 +106,8 @@ class Harness:
         return f"fake-access-{name}"
 
     def ingest_offline(self) -> None:
-        """Put SYNTH01's pulls in the stores directly (what a finished ingest leaves)."""
-        result = asyncio.run(run_ingest_report(IngestReport(code="SYNTH01", offline=True), self.env.context))
+        """Put SYNTH01's pulls in the stores directly (the ingest job, then each pull's events normalized)."""
+        result = asyncio.run(fetch_and_normalize(IngestReport(code="SYNTH01", offline=True), self.env.context))
         assert not result.failed
 
     def run_worker(self) -> threading.Thread:

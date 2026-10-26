@@ -2,7 +2,8 @@
 tests/unit/encounter/ingest/test_input_fingerprint.py
 
 The input fingerprint (what a pull's events are made from) and the ingest skip built on it, on the synthetic
-SYNTH01 fixture (offline; no network).
+SYNTH01 fixture (offline; no network). The skip lives in ``process.normalize_pull_into_store``, so the
+spies patch the names it calls there.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from helpers.encounter.synth import SYNTH_DEFENSIVE_COOLDOWN_IDS, SYNTH_ENEMY_CA
 from khadbot.encounter import store as store_module
 from khadbot.encounter.ingest import fetch as fetch_module
 from khadbot.encounter.ingest import ingest_report
-from khadbot.encounter.ingest import pipeline as pipeline_module
+from khadbot.encounter.ingest import process as process_module
 from khadbot.encounter.ingest.fetch import input_fingerprint, specs_for
 from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.models import Pull
@@ -57,13 +58,13 @@ def _spy_puts(store) -> list[str]:
 
 def _count_normalizes(monkeypatch) -> list[int]:
     calls: list[int] = []
-    real = pipeline_module.normalize_pull_with_positions
+    real = process_module.normalize_pull_with_positions
 
     def spy(*args, **kwargs):
         calls.append(1)
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(pipeline_module, "normalize_pull_with_positions", spy)
+    monkeypatch.setattr(process_module, "normalize_pull_with_positions", spy)
     return calls
 
 
@@ -205,7 +206,7 @@ class TestIngestSkip:
             raise AssertionError("an unchanged pull must not be read or normalized")
 
         monkeypatch.setattr(fetch_module.RawPageCache, "pages", forbidden)
-        monkeypatch.setattr(pipeline_module, "normalize_pull_with_positions", forbidden)
+        monkeypatch.setattr(process_module, "normalize_pull_with_positions", forbidden)
         again = await ingest_report(CODE, **synth_ingest_kwargs)
         assert again.pulls == [] and not again.failed
         assert sorted(again.skipped) == sorted(first.pulls)
@@ -243,20 +244,20 @@ class TestIngestSkip:
         assert not again.failed and len(calls) == len(first.pulls)
 
     async def test_written_pull_hashes_positions_once(self, synth_ingest_kwargs, monkeypatch):
-        pipeline_calls: list[int] = []
+        process_calls: list[int] = []
         store_calls: list[int] = []
-        real_pipeline, real_store = pipeline_module.positions_hash, store_module._positions_hash
+        real_process, real_store = process_module.positions_hash, store_module._positions_hash
 
-        def pipeline_spy(table):
-            pipeline_calls.append(1)
-            return real_pipeline(table)
+        def process_spy(table):
+            process_calls.append(1)
+            return real_process(table)
 
         def store_spy(table):
             store_calls.append(1)
             return real_store(table)
 
-        monkeypatch.setattr(pipeline_module, "positions_hash", pipeline_spy)
+        monkeypatch.setattr(process_module, "positions_hash", process_spy)
         monkeypatch.setattr(store_module, "_positions_hash", store_spy)
         result = await ingest_report(CODE, **synth_ingest_kwargs)
         assert result.pulls
-        assert len(pipeline_calls) == len(result.pulls) and store_calls == []
+        assert len(process_calls) == len(result.pulls) and store_calls == []

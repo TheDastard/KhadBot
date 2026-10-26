@@ -105,6 +105,9 @@ class EncounterConfig:
     # Most fights one batched request covers; one 25-fight request has outlasted the 30 s client timeout once,
     # so lower it if timeouts recur.
     wcl_batch_max_fights: int = 25
+    # Pulls one ingest fetches at once. Requests still wait for the process-wide wcl_max_concurrency permits; this
+    # only keeps those permits busy while one pull's long specs (Healing, DamageTaken, Casts) page on.
+    wcl_pull_concurrency: int = 3
     cutoff_fraction: float = 0.5
     analyst_max_concurrency: int = 3
 

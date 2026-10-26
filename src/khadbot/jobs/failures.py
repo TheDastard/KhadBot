@@ -15,6 +15,7 @@ from enum import StrEnum
 
 from khadbot.encounter.analyst import ModelMismatchError
 from khadbot.encounter.ingest.fetch import MissingFixtureError, UserTokenRejectedError
+from khadbot.encounter.ingest.process import PullNotFetchedError
 from khadbot.jobs.run import JobError, TransientJobError, UserAuthUnavailableError
 from khadbot.wcl.client import (
     WarcraftLogsAPIError,
@@ -79,6 +80,8 @@ def classify(exc: BaseException) -> Failure:
         return Failure(ErrorCode.NOT_IN_CACHE, str(exc))
     if isinstance(exc, ModelMismatchError):
         return Failure(ErrorCode.MODEL_MISMATCH, str(exc))
+    if isinstance(exc, PullNotFetchedError):
+        return Failure(ErrorCode.NOT_INGESTED, str(exc))
     if isinstance(exc, KeyError):
         return Failure(ErrorCode.NOT_INGESTED, "The pull is not ingested.")
     if isinstance(exc, JobError):

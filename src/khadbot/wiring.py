@@ -46,7 +46,17 @@ def raw_cache(blobs: BlobStore | None = None) -> RawPageCache:
 
 
 def event_store(blobs: BlobStore | None = None) -> ParquetEventStore:
-    """The event store (``events/``) in ``blobs``, default the configured blob store."""
+    """
+    The event store (``events/``) in ``blobs``, default the configured blob store. In hosted mode its writes take a
+    Postgres advisory lock per report, because process jobs in several workers write one report's pull list; building
+    it opens no connection.
+    """
+    if DatabaseConfig().hosted:
+        try:
+            from khadbot.db import PostgresReportLock
+        except ImportError as exc:
+            raise ConfigurationError(missing_group_message("hosted", "Hosted mode")) from exc
+        return ParquetEventStore(blobs or blob_store(), report_lock=PostgresReportLock())
     return ParquetEventStore(blobs or blob_store())
 
 

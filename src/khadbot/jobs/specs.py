@@ -44,7 +44,7 @@ Auth = Annotated[AppAuth | UserAuth, Field(discriminator="kind")]
 
 
 class IngestReport(BaseModel):
-    """Fetch, normalize and store the pulls of one report (every encounter fight when ``fights`` is None)."""
+    """Fetch the raw pages of one report's pulls (every encounter fight when ``fights`` is None); no normalizing."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -64,7 +64,7 @@ class IngestReport(BaseModel):
 
 
 class ProcessPull(BaseModel):
-    """Annotate one ingested pull, build its records and store them (and, hosted, project the read models)."""
+    """Normalize one fetched pull into the event store, build and store its records (hosted: project them)."""
 
     model_config = ConfigDict(frozen=True)
 

@@ -2,8 +2,8 @@
 tests/unit/jobs/conftest.py
 
 Fixtures for the job-function tests: SYNTH01's recorded raw pages copied into tmp_path, a ``JobContext`` that
-ingests them offline into a temp event store, and an ``EncounterData`` over that store with a records store and an
-annotation cache in the same temp directory.
+fetches them offline (the ingest job) and normalizes them into a temp event store, and an ``EncounterData`` over that
+store with a records store and an annotation cache in the same temp directory.
 """
 
 from __future__ import annotations
@@ -57,9 +57,12 @@ def ingest_ctx(raw_cache, event_store, filters) -> JobContext:
 
 @pytest.fixture
 async def ingested(ingest_ctx, event_store) -> ParquetEventStore:
-    from khadbot.jobs import IngestReport, run_ingest_report
+    """SYNTH01 fetched by the ingest job and its pulls' events normalized, as process jobs would."""
+    from helpers.jobs.ingest import fetch_and_normalize
 
-    result = await run_ingest_report(IngestReport(code="SYNTH01", offline=True), ingest_ctx)
+    from khadbot.jobs import IngestReport
+
+    result = await fetch_and_normalize(IngestReport(code="SYNTH01", offline=True), ingest_ctx)
     assert not result.failed
     return event_store
 
@@ -70,8 +73,8 @@ def blobs(tmp_path) -> LocalBlobStore:
 
 
 @pytest.fixture
-def make_data(ingested, blobs, tmp_path):
-    """Builds an ``EncounterData`` over the ingested store with the synthetic encounter file and registries."""
+def data_for(blobs, tmp_path):
+    """Builds an ``EncounterData`` over a given event store with the synthetic encounter file and registries."""
     from helpers.encounter.synth import (
         SYNTH_DEFENSIVE_COOLDOWNS_FILE,
         SYNTH_OFFENSIVE_COOLDOWNS_FILE,
@@ -82,9 +85,9 @@ def make_data(ingested, blobs, tmp_path):
     root = tmp_path / "synth_encounters"
     install_synth_encounter(root)
 
-    def make() -> EncounterData:
+    def make(store: ParquetEventStore) -> EncounterData:
         return EncounterData(
-            ingested,
+            store,
             enc_root=root,
             defensive=load_cooldowns("defensive", SYNTH_DEFENSIVE_COOLDOWNS_FILE),
             offensive=load_cooldowns("offensive", SYNTH_OFFENSIVE_COOLDOWNS_FILE),
@@ -94,6 +97,12 @@ def make_data(ingested, blobs, tmp_path):
         )
 
     return make
+
+
+@pytest.fixture
+def make_data(ingested, data_for):
+    """Builds an ``EncounterData`` over the ingested store with the synthetic encounter file and registries."""
+    return lambda: data_for(ingested)
 
 
 @pytest.fixture
