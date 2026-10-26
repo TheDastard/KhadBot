@@ -26,6 +26,7 @@ from khadbot.encounter.ingest.fetch import (
     TokenProvider,
     fetch_batches,
     fetch_pull,
+    input_fingerprint,
     query_wcl,
     specs_for,
 )
@@ -167,24 +168,44 @@ async def ingest_report(
                     progress=progress,
                     token_provider=token_provider,
                 )
+                # Unchanged inputs skip the pull before any page is read.
+                fingerprint = input_fingerprint(cache, pull, specs, actors)
+                if (
+                    fingerprint is not None
+                    and store.input_fingerprint(key) == fingerprint
+                    and stored.get(pull.fight_id) == pull
+                ):
+                    skipped.append(key)
+                    continue
                 if progress:
                     progress(key, "normalizing", 1.0)
                 pages = {s.key: cache.pages(code, pull.fight_id, s) for s in specs}
                 df, positions = normalize_pull_with_positions(pull, actors, pages)
                 new_hash = events_hash(df)
+                pos_hash = positions_hash(positions)
                 # Pull metadata can change without the events (a field added to the report query), and a pull
                 # stored before positions were kept has no positions_hash, so all three must match.
                 if (
                     store.events_hash(key) == new_hash
-                    and store.positions_hash(key) == positions_hash(positions)
+                    and store.positions_hash(key) == pos_hash
                     and stored.get(pull.fight_id) == pull
                 ):
+                    if fingerprint is not None and store.input_fingerprint(key) != fingerprint:
+                        store.set_input_fingerprint(key, fingerprint)
                     skipped.append(key)
                     continue
                 truncated_specs = sorted(
                     {name for name, t in truncated.items() if t} | batch_truncated.get(pull.fight_id, set())
                 )
-                store.write_pull(pull, df, new_hash, truncated_specs, positions)
+                store.write_pull(
+                    pull,
+                    df,
+                    new_hash,
+                    truncated_specs,
+                    positions,
+                    input_fingerprint=fingerprint,
+                    positions_hash=pos_hash,
+                )
                 ingested.append(key)
             except Exception as exc:  # noqa: BLE001 - one bad pull must not sink the report
                 logger.warning("Ingest failed for %s: %s", key, exc)

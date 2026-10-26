@@ -158,7 +158,7 @@ async def test_record_without_positions_hash_loads_and_reingest_adds_the_table(s
     path = store.blobs.root / CODE / "pulls.json"
     records = orjson.loads(path.read_bytes())
     for r in records:
-        del r["positions_hash"]
+        del r["positions_hash"], r["input_fingerprint"]
     path.write_bytes(orjson.dumps(records))
     for fight in (1, 2):
         (store.blobs.root / CODE / "positions" / f"{fight}.parquet").unlink()
