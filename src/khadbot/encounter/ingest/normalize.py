@@ -24,6 +24,11 @@ from khadbot.encounter.store import EVENT_SCHEMA, POSITION_ORDER, POSITION_SCHEM
 # Ordering and field mapping
 # ---------------------------------------------------------------------------
 
+# Bump whenever normalize turns the same raw pages and report metadata into different events or positions (schema,
+# filtering, field mapping, ordering), so every stored pull's input fingerprint changes and the next ingest
+# re-normalizes it.
+NORMALIZE_VERSION = 1
+
 # Sort tie-break between data types at the same millisecond.
 DATA_TYPE_ORDER = ["Deaths", "DamageTaken", "Casts", "Buffs", "Debuffs", "Interrupts", "Dispels", "Healing", "Threat"]
 

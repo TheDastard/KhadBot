@@ -142,7 +142,7 @@ is never rewritten by a later ingest, so the key describes the fetch that wrote 
 `encounter/store.py`, behind the `EventStore` protocol (polars and parquet today):
 
 ```
-events/<report>/pulls.json                 # [{pull, events_hash, positions_hash, truncated: [spec]}]
+events/<report>/pulls.json                 # [{pull, events_hash, positions_hash, input_fingerprint, truncated: [spec]}]
 events/<report>/actors.parquet
 events/<report>/abilities.json
 events/<report>/<fight>.parquet            # the normalized event frame
@@ -151,6 +151,16 @@ events/<report>/positions/<fight>.parquet  # position samples
 
 `events_hash` and `positions_hash` are content hashes. A re-ingest whose hashes and pull metadata match is skipped
 without a write.
+
+`input_fingerprint` is one hash of what the pull's events are made from: `NORMALIZE_VERSION`, the pull metadata, the
+actors, and for each fetch spec its key, filter hash and the name and size of every cached page. It is computed from the
+raw cache listing alone, so a pull whose fingerprint and pull metadata equal the stored ones is skipped before any of
+its pages is read or normalized (`None`, never matching, while a spec is not complete in the cache). A pull stored
+before fingerprints existed is normalized once more; when its hashes still match it only gets the fingerprint written to
+its `pulls.json` record, with no events or positions rewrite. Raw pages are written once and never changed in place (a
+changed filter gets a new directory), so names and sizes identify them. Bumping `NORMALIZE_VERSION` (in
+`ingest/normalize.py`, whenever normalize would turn the same pages into different events or positions) changes every
+fingerprint, so each pull is re-normalized on its next ingest.
 
 ## 4. Annotate: annotation cache
 

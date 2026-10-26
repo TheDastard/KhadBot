@@ -8,14 +8,15 @@ callers.
 Keys, under ``events/`` in the blob store (``$KHADBOT_DATA_DIR/events`` in the local store)::
 
     <report>/pulls.json        # [{"pull": Pull, "events_hash": str, "positions_hash": str | None,
-                               #   "truncated": [dir_name]}]
+                               #   "input_fingerprint": str | None, "truncated": [dir_name]}]
     <report>/actors.parquet
     <report>/abilities.json    # {ability_id: name} from report masterData
     <report>/<fight>.parquet
     <report>/positions/<fight>.parquet
 
 A record written before positions were stored has no ``positions_hash`` and no position table; it reads
-as an empty table until the pull is re-ingested.
+as an empty table until the pull is re-ingested. A record written before fingerprints has no
+``input_fingerprint``; ``set_input_fingerprint`` adds one without rewriting the pull.
 """
 
 from __future__ import annotations
@@ -93,6 +94,10 @@ def positions_hash(df: pl.DataFrame) -> str:
     return h.hexdigest()
 
 
+# ``write_pull`` has a ``positions_hash`` parameter that shadows the function above.
+_positions_hash = positions_hash
+
+
 # ---------------------------------------------------------------------------
 # Store
 # ---------------------------------------------------------------------------
@@ -106,7 +111,12 @@ class EventStore(Protocol):
         events_hash: str,
         truncated: list[str] | None = None,
         positions: pl.DataFrame | None = None,
+        *,
+        input_fingerprint: str | None = None,
+        positions_hash: str | None = None,
     ) -> None: ...
+
+    def set_input_fingerprint(self, pull_key: str, fingerprint: str) -> None: ...
 
     def write_actors(self, code: str, actors: list[Actor]) -> None: ...
 
@@ -119,6 +129,8 @@ class EventStore(Protocol):
     def events_hash(self, pull_key: str) -> str | None: ...
 
     def positions_hash(self, pull_key: str) -> str | None: ...
+
+    def input_fingerprint(self, pull_key: str) -> str | None: ...
 
     def truncated(self, pull_key: str) -> list[str]: ...
 
@@ -192,10 +204,16 @@ class ParquetEventStore:
         events_hash: str,
         truncated: list[str] | None = None,
         positions: pl.DataFrame | None = None,
+        *,
+        input_fingerprint: str | None = None,
+        positions_hash: str | None = None,
     ) -> None:
         """
-        Store a pull's events and, when given, its position table (hashed here). Without ``positions`` the pull
-        has no position table: a stale one is removed and the record's ``positions_hash`` is null.
+        Store a pull's events and, when given, its position table. Without ``positions`` the pull has no
+        position table: a stale one is removed and the record's ``positions_hash`` is null.
+
+        ``positions_hash`` is the hash of ``positions`` when the caller already has it; otherwise it is computed
+        here. ``input_fingerprint`` is recorded with the pull (see ``ingest.fetch.input_fingerprint``).
         """
         self.blobs.put(self._events_key(pull.pull_key), _parquet_bytes(df))
         pos_key = self._positions_key(pull.pull_key)
@@ -203,7 +221,7 @@ class ParquetEventStore:
         if positions is not None:
             table = positions.select(list(POSITION_SCHEMA))
             self.blobs.put(pos_key, _parquet_bytes(table))
-            pos_hash = positions_hash(table)
+            pos_hash = positions_hash if positions_hash is not None else _positions_hash(table)
         else:
             self.blobs.delete(pos_key)
         records = [r for r in self._records(pull.report_code) if r["pull"]["fight_id"] != pull.fight_id]
@@ -212,11 +230,23 @@ class ParquetEventStore:
                 "pull": pull.model_dump(mode="json"),
                 "events_hash": events_hash,
                 "positions_hash": pos_hash,
+                "input_fingerprint": input_fingerprint,
                 "truncated": truncated or [],
             }
         )
         records.sort(key=lambda r: r["pull"]["fight_id"])
         self.blobs.put(self._pulls_key(pull.report_code), orjson.dumps(records))
+
+    def set_input_fingerprint(self, pull_key: str, fingerprint: str) -> None:
+        """Record ``fingerprint`` on a stored pull without touching its events or positions."""
+        code, fight = split_pull_key(pull_key)
+        records = self._records(code)
+        for rec in records:
+            if rec["pull"]["fight_id"] == fight:
+                rec["input_fingerprint"] = fingerprint
+                self.blobs.put(self._pulls_key(code), orjson.dumps(records))
+                return
+        raise KeyError(f"pull {pull_key} is not stored")
 
     def write_actors(self, code: str, actors: list[Actor]) -> None:
         df = pl.DataFrame([a.model_dump() for a in actors], schema=_ACTOR_SCHEMA)
@@ -252,6 +282,10 @@ class ParquetEventStore:
     def positions_hash(self, pull_key: str) -> str | None:
         rec = self._record(pull_key)
         return rec.get("positions_hash") if rec else None
+
+    def input_fingerprint(self, pull_key: str) -> str | None:
+        rec = self._record(pull_key)
+        return rec.get("input_fingerprint") if rec else None
 
     def truncated(self, pull_key: str) -> list[str]:
         rec = self._record(pull_key)

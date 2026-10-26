@@ -9,6 +9,7 @@ offline ingest of recorded pages (test fixtures, the dashboard's fixture data di
 
 from __future__ import annotations
 
+from khadbot.encounter.ingest.normalize import NORMALIZE_VERSION
 from khadbot.encounter.ingest.pipeline import ingest_report
 from khadbot.encounter.ingest.recorded import (
     RECORDED_BUFF_IDS,
@@ -18,6 +19,7 @@ from khadbot.encounter.ingest.recorded import (
 )
 
 __all__ = [
+    "NORMALIZE_VERSION",
     "RECORDED_BUFF_IDS",
     "ingest_recorded",
     "ingest_report",

@@ -39,8 +39,9 @@ from typing import Any
 import orjson
 
 from khadbot.config import EncounterConfig
+from khadbot.encounter.ingest.normalize import NORMALIZE_VERSION
 from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
-from khadbot.encounter.models import FetchSpec, Pull
+from khadbot.encounter.models import Actor, FetchSpec, Pull
 from khadbot.storage import BlobStore, join_key, resolve_blobs
 from khadbot.wcl.client import (
     WarcraftLogsAPIError,
@@ -197,6 +198,16 @@ class RawPageCache:
         keys = [k for k in self.blobs.list(directory) if _PAGE_NAME.fullmatch(k[len(directory) :])]
         return [orjson.loads(data) for k in keys if (data := self.blobs.get(k)) is not None]
 
+    def page_sizes(self, code: str, fight: int, spec: FetchSpec) -> list[tuple[str, int]]:
+        """``(page name, stored size in bytes)`` of each page of the spec, sorted by name; no page is read."""
+        directory = self._dir(code, fight, spec) + "/"
+        sizes = [
+            (info.key[len(directory) :], info.size)
+            for info in self.blobs.list_info(directory)
+            if _PAGE_NAME.fullmatch(info.key[len(directory) :])
+        ]
+        return sorted(sizes)
+
     def write_page(self, code: str, fight: int, spec: FetchSpec, index: int, page: dict) -> None:
         self.blobs.put(f"{self._dir(code, fight, spec)}/page_{index:03d}.json", orjson.dumps(page))
 
@@ -247,6 +258,40 @@ class RawPageCache:
         """Delete the batch stream: its pages, completion marker and stall record."""
         for key in self.blobs.list(self._batch_dir(code, spec, fight_ids) + "/"):
             self.blobs.delete(key)
+
+
+# ---------------------------------------------------------------------------
+# Input fingerprint
+# ---------------------------------------------------------------------------
+
+
+def input_fingerprint(
+    cache: RawPageCache, pull: Pull, specs: Sequence[FetchSpec], actors: Sequence[Actor]
+) -> str | None:
+    """
+    What a pull's normalized events are made from, as one hash; None while any spec is not complete in the cache.
+
+    Covers the normalize version, the pull metadata, the actors (they decide friendly flags and filtering) and,
+    per spec, its key, filter hash and the name and size of each cached page. No page is read: raw pages are
+    written once and never rewritten in place (a changed filter gets a new directory), so names and sizes
+    identify them.
+    """
+    if not all(cache.is_complete(pull.report_code, pull.fight_id, spec) for spec in specs):
+        return None
+    payload = {
+        "normalize_version": NORMALIZE_VERSION,
+        "pull": pull.model_dump(mode="json"),
+        "actors": [a.model_dump(mode="json") for a in sorted(actors, key=lambda a: a.actor_id)],
+        "specs": [
+            {
+                "key": spec.key,
+                "filter": filter_hash(spec.filter_expression),
+                "pages": cache.page_sizes(pull.report_code, pull.fight_id, spec),
+            }
+            for spec in sorted(specs, key=lambda s: s.key)
+        ],
+    }
+    return hashlib.sha256(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS)).hexdigest()
 
 
 # ---------------------------------------------------------------------------
