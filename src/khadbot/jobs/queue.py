@@ -23,6 +23,7 @@ Rules the queue keeps:
 - With a WCL budget (``jobs/budget_store.py``), an online ingest reserves its estimated points when a worker picks it
   up and settles to its measured spend when it ends. One that can't reserve goes to ``waiting_budget`` and is queued
   again when points free up, or at its next recheck time.
+- Every job logs with its job, user and report IDs as context.
 
 This module needs the ``hosted`` dependency group; nothing in local mode imports it.
 """
@@ -57,6 +58,7 @@ from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, PostgresJobBackend
 from khadbot.jobs.watch import WatchService
 from khadbot.jobs.watch_store import MemoryWatchBackend, PostgresWatchBackend, WatchRecord, WatchStore
+from khadbot.logging_setup import log_context
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
@@ -358,6 +360,13 @@ class JobQueue:
         return replace(ctx, cache=CancellingRawCache(ctx.raw_cache(), flag))
 
     async def _execute(self, context: procrastinate.JobContext, job_id: str) -> None:
+        row = await self.store.get(job_id)
+        with log_context(
+            job_id=job_id, user_id=row.requested_by if row else None, report_code=row.report_code if row else None
+        ):
+            await self._execute_job(context, job_id)
+
+    async def _execute_job(self, context: procrastinate.JobContext, job_id: str) -> None:
         reserved = await self._reserve_budget(job_id)
         if reserved is None:
             return  # waiting for WCL points: queued again when they free up

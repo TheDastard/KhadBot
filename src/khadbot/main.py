@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import logging
 import sys
 from collections.abc import Sequence
 
@@ -140,10 +139,10 @@ def _run_api(host: str, port: int) -> None:
     if hosted and sys.platform == "win32":
         # psycopg's async connections (the job event stream, the queue) need the selector event loop, which Windows
         # does not use by default.
-        server = uvicorn.Server(uvicorn.Config(app, host=host, port=port))
+        server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_config=None))
         asyncio.run(server.serve(), loop_factory=asyncio.SelectorEventLoop)
     else:
-        uvicorn.run(app, host=host, port=port)
+        uvicorn.run(app, host=host, port=port, log_config=None)  # uvicorn logs through the root handler: JSON, redacted
 
 
 def _run_migrate() -> None:
@@ -173,7 +172,6 @@ def _run_worker(queues: str | None, concurrency: int | None) -> None:
     except ImportError as exc:
         sys.exit(missing_group_message("hosted", "worker") + f"\n({exc})")
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     names = [q.strip() for q in queues.split(",") if q.strip()] if queues else None
     try:
         # psycopg's async connections need the selector event loop, which Windows does not use by default.
@@ -274,6 +272,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
+    if command in {"api", "migrate", "worker", "backfill"}:
+        from khadbot.logging_setup import configure_logging
+
+        configure_logging()
     if command == "ingest" and args.refresh_meta and args.offline:
         from khadbot.cli.commands.encounter import REFRESH_OFFLINE_ERROR
 

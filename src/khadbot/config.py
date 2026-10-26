@@ -416,6 +416,18 @@ class RetentionConfig:
 # Call get_config() to trigger validation.
 # ---------------------------------------------------------------------------
 
+
+@dataclass(frozen=True)
+class LoggingConfig:
+    """
+    Logging for hosted deployments. Logs are one JSON object per line on stdout; ``text`` gives plain lines for a
+    terminal.
+    """
+
+    log_format: str = field(default_factory=lambda: _optional("KHADBOT_LOG_FORMAT", "json").strip().lower())
+    log_level: str = field(default_factory=lambda: _optional("KHADBOT_LOG_LEVEL", "INFO").strip().upper())
+
+
 _config: AppConfig | None = None
 
 

@@ -285,6 +285,7 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
   section 6.2 has the current layout.
 
+- **No error tracker.** `sentry-sdk` was not added; errors reach the JSON logs only.
 ### Dashboard API
 
 - **Night summary on large reports in local mode.** `EncounterData` keeps records for 32 pulls, so the night
