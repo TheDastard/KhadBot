@@ -211,5 +211,5 @@ layers = [
     "db",
     "encounter",
     "wcl | simc",
-    "config : errors : storage : llm_factory",
+    "config : errors : storage : llm_factory : logging_setup",
 ]

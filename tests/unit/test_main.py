@@ -112,7 +112,11 @@ class TestApiSubcommand:
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
         with patch("uvicorn.run") as run:
             _run_api("0.0.0.0", 8123)
-        assert run.call_args.kwargs == {"host": "0.0.0.0", "port": 8123}
+        assert run.call_args.kwargs == {
+            "host": "0.0.0.0",
+            "port": 8123,
+            "log_config": None,
+        }  # uvicorn logs via the root handler
         assert run.call_args.args[0].state.ctx.read_source is None
 
     def test_hosted_mode_without_a_database_url_exits_with_the_reason(self, monkeypatch):

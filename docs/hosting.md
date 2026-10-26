@@ -177,3 +177,16 @@ Both providers expire `raw/` and `annotated/` only by age; neither knows whether
 Run it after a config deploy that changed an encounter file or registry, or after a `RECORDS_VERSION` bump. It needs hosted mode and `DATABASE_URL` and queues one low-priority process job (priority -10, behind every other job on the `process` queue, app auth) for each projected pull of the encounter, from the `pulls` table: all difficulties unless `--difficulty` is given, and only reports that started on or after `--since` (UTC date; a report with no start time uses its fetch time). `--dry-run` only counts. A pull that already has a queued or running process job is skipped, so running it twice queues each pull once. The jobs are rebuilt from stored events and the annotation cache: no raw page is read and no WCL call is made, so it costs no points and works for pulls whose raw pages expired. A fetch-filter change needs a re-ingest instead, which spends points and which backfill never does.
 
 The worker registers a periodic job, `khadbot.cleanup_records` on the `process` queue, on `KHADBOT_RECORDS_CLEANUP_CRON` (every worker with the schedule registers the same job; procrastinate defers it once per tick). It deletes `records/` objects that no `pulls.records_key` references and that were written at least `KHADBOT_RECORDS_MIN_AGE_DAYS` ago, and logs how many it examined, kept and deleted. Without the read-model tables (local mode) it does nothing. It never touches `events/`, `raw/` or `annotated/`.
+
+## Usage ledger and observability
+
+### Logs
+
+Hosted commands (`api`, `worker`, `migrate`, `backfill`, `usage`) log one JSON object per line to stdout: `time`, `level`, `logger`, `message`, and `job_id`, `user_id`, `report_code` when the line is written while a job runs, plus `exc` for an exception. Every message and exception text passes through a redaction step that masks passwords in URLs, values of secret-named pairs (`token`, `secret`, `password`, `key`, `cookie`, `session`, `authorization`), `Cookie`, `Set-Cookie` and `Authorization` header values, `Bearer` values, JWTs, Fernet-shaped keys and API key prefixes. That is a backstop: code still must not log them. The API runs uvicorn without its own log config, so its access lines go through the same handler.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs after the message). |
+| `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). |
+
+There is no error tracker; `sentry-sdk` was not added.
