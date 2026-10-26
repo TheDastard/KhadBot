@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker [--check] | backfill --encounter ID]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker [--check] | backfill --encounter ID | usage --since DATE [--by user|guild|kind]]
 """
 
 from __future__ import annotations
@@ -227,6 +227,32 @@ def _run_backfill(encounter: int, difficulty: int | None, since: str | None, dry
         sys.exit(str(exc))
 
 
+def _run_usage(since: str, by: str) -> None:
+    from khadbot.config import DatabaseConfig
+
+    if not DatabaseConfig().hosted:
+        sys.exit("The usage ledger is in the hosted database: set KHADBOT_MODE=hosted and DATABASE_URL.")
+    try:
+        from datetime import UTC, datetime
+
+        from khadbot.db import get_pool
+        from khadbot.jobs.usage import GroupBy, PostgresUsageLedger, format_usage_report
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "usage") + f"\n({exc})")
+    try:
+        start = datetime.fromisoformat(since)
+    except ValueError:
+        sys.exit(f"--since must be a date such as 2026-10-01, not {since!r}")
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=UTC)
+    group: GroupBy = by  # type: ignore[assignment]  # argparse restricts it to the choices
+    try:
+        totals = PostgresUsageLedger(get_pool()).totals(start, group)
+    except (ConfigurationError, OSError) as exc:
+        sys.exit(str(exc))
+    print(format_usage_report(totals, group, start))
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
@@ -268,6 +294,11 @@ def build_parser() -> argparse.ArgumentParser:
     worker.add_argument(
         "--check", action="store_true", help="Exit 0 if a worker on this machine is alive (health check); run nothing"
     )
+    usage = sub.add_parser("usage", help="Print the usage ledger: WCL points and estimated LLM cost (hosted mode)")
+    usage.add_argument("--since", required=True, help="Count rows on or after this date (UTC), e.g. 2026-10-01")
+    usage.add_argument(
+        "--by", choices=["user", "guild", "kind"], default="kind", help="Group the totals (default: kind)"
+    )
     backfill = sub.add_parser(
         "backfill",
         help="Queue low-priority process jobs for an encounter's stored pulls (hosted mode; never spends WCL points)",
@@ -283,7 +314,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
-    if command in {"api", "migrate", "worker", "backfill"} and not getattr(args, "check", False):
+    if command in {"api", "migrate", "worker", "backfill", "usage"} and not getattr(args, "check", False):
         from khadbot.logging_setup import configure_logging
 
         configure_logging()
@@ -306,6 +337,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_migrate()
     elif command == "worker":
         _run_worker_check() if args.check else _run_worker(args.queues, args.concurrency)
+    elif command == "usage":
+        _run_usage(args.since, args.by)
     elif command == "backfill":
         _run_backfill(args.encounter, args.difficulty, args.since, args.dry_run)
 

@@ -198,3 +198,26 @@ class TestWorkerCheck:
         monkeypatch.setenv("KHADBOT_WORKER_HEALTH_FILE", str(tmp_path / "missing"))
         with pytest.raises(SystemExit, match="not alive"):
             main(["worker", "--check"])
+
+
+class TestUsageSubcommand:
+    def test_parses_args(self):
+        with patch("khadbot.main._run_usage") as run:
+            main(["usage", "--since", "2026-10-01", "--by", "user"])
+        run.assert_called_once_with("2026-10-01", "user")
+
+    def test_groups_by_kind_by_default(self):
+        with patch("khadbot.main._run_usage") as run:
+            main(["usage", "--since", "2026-10-01"])
+        run.assert_called_once_with("2026-10-01", "kind")
+
+    def test_since_is_required_and_by_is_restricted(self):
+        with pytest.raises(SystemExit):
+            main(["usage"])
+        with pytest.raises(SystemExit):
+            main(["usage", "--since", "2026-10-01", "--by", "report"])
+
+    def test_refuses_to_run_in_local_mode(self, monkeypatch):
+        monkeypatch.delenv("KHADBOT_MODE", raising=False)
+        with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
+            main(["usage", "--since", "2026-10-01"])

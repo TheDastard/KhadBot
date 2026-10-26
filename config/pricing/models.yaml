@@ -1,0 +1,40 @@
+# config/pricing/models.yaml
+#
+# Anthropic API prices in US dollars per million tokens, the one table the usage ledger (jobs/usage.py) estimates
+# LLM cost from. Never edit a price from memory: copy it from the pricing page, then update `checked`.
+#
+# Source: https://platform.claude.com/docs/en/about-claude/pricing (docs.claude.com/en/docs/about-claude/pricing
+# redirects there). Model IDs: https://platform.claude.com/docs/en/models/overview ("Claude API ID").
+# A model not listed here gets no cost estimate (the ledger row keeps its tokens and a null cost).
+#
+# Columns: input = base input tokens; cache_write = 5-minute cache writes; cache_read = cache hits and refreshes;
+# output = output tokens. `long_context` (optional) replaces the prices for a prompt over `above_input_tokens`.
+checked: 2026-10-25
+source: https://platform.claude.com/docs/en/about-claude/pricing
+models:
+  claude-fable-5-1:
+    input: 10
+    cache_write: 12.5
+    cache_read: 0.25
+    output: 50
+  claude-opus-5-5:
+    input: 4
+    cache_write: 5
+    cache_read: 0.2
+    output: 20
+  claude-sonnet-5-5:
+    input: 2
+    cache_write: 2.5
+    cache_read: 0.1
+    output: 10
+  claude-haiku-5-5:
+    input: 0.1
+    cache_write: 0.125
+    cache_read: 0.01
+    output: 0.5
+    long_context:
+      above_input_tokens: 100000
+      input: 0.5
+      cache_write: 0.625
+      cache_read: 0.05
+      output: 2.5
