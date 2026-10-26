@@ -286,6 +286,9 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   section 6.2 has the current layout.
 
 - **No error tracker.** `sentry-sdk` was not added; errors reach the JSON logs only.
+- **Worker health is per machine.** `main.py worker --check` reads a local file, so it fits a container health check
+  but shows nothing about workers on other machines. A heartbeat row would, if a dashboard needs it.
+
 ### Dashboard API
 
 - **Night summary on large reports in local mode.** `EncounterData` keeps records for 32 pulls, so the night
