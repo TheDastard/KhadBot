@@ -155,6 +155,18 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
   explicit approval. Ingest uses none as far as WCL's documentation shows (no rankings or report filtering);
   confirm against the schema's field labels, and ask WCL before any paid tier, together with the questions on
   storing and serving derived data.
+- **Batched fetch gaps.** The batched small-spec fetch (`fetch_batches`, decision D55) is built; what's left:
+  - No recorded-fixture test shows batched frames equal per-pull frames. The live probe showed it on a 25-pull
+    night (`docs/wcl-api.md`, "Cross-fight and heal-only results"), but the fixtures hold per-pull pages only. A
+    test could build each night's batch streams from those pages (every row carries its `fight`), split them and
+    compare the normalized frames, for every fixture night.
+  - Live ingests are batched too. Ingest never reads `IngestReport.live`, so a watch poll that finds two or more
+    new fights fetches them as one batch. That is cheaper, not wrong. Either record it in D55 or send live
+    ingests per pull.
+  - The item below, "Merge fetch filters per pull", is closed by its numbers (the one merge WCL accepted saved
+    14%, under the 15% bar) and can be removed.
+  - The saving hasn't been measured on a real ingest through the shipped code path, only with the probe script.
+    Measuring it spends WCL points.
 - **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
   filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl-api.md`, "Merged-filter results"):
   - One request per hostility with no `dataType` is refused (internal server error), so that merge is out.
