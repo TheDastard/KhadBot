@@ -57,13 +57,13 @@ def _run_ingest(code: str, fights: str | None, offline: bool, refresh_meta: bool
     from rich.console import Console
     from rich.markdown import Markdown
 
-    from khadbot.cli.commands.encounter import format_ingest_result, parse_fights
-    from khadbot.jobs import IngestReport, JobContext, LineProgress, run_ingest_report
+    from khadbot.cli.commands.encounter import format_ingest_result, ingest_and_process, parse_fights
+    from khadbot.jobs import IngestReport, JobContext, LineProgress
 
     console = Console()
     spec = IngestReport(code=code, fights=parse_fights(fights), offline=offline, refresh_meta=refresh_meta)
     result = asyncio.run(
-        run_ingest_report(spec, JobContext(), LineProgress(lambda line: console.print(f"[dim]{line}[/dim]")))
+        ingest_and_process(spec, JobContext(), LineProgress(lambda line: console.print(f"[dim]{line}[/dim]")))
     )
     console.print(Markdown(format_ingest_result(result)))
     if result.failed:

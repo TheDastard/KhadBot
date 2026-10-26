@@ -20,7 +20,7 @@ from khadbot.config import WatchConfig
 from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.jobs import IngestReport, UserAuth
 from khadbot.jobs.budget_store import BudgetManager, MemoryBudgetBackend
-from khadbot.jobs.status import JobState
+from khadbot.jobs.status import JobKind, JobState
 from khadbot.jobs.watch import finished_boss_fights
 from khadbot.jobs.watch_store import StopReason, WatchState
 
@@ -360,6 +360,10 @@ async def test_a_worker_polls_and_ingests_the_new_pulls(env):
             )
     (ingest,) = w.ingests()
     assert ingest.state is JobState.DONE
+    # The watch's ingest only fetches, like a manual one: its process jobs normalized the pulls.
+    process = {r.pull_key: r.state for r in w.jobs.rows.values() if r.kind is JobKind.PROCESS}
+    assert process == {f"{CODE}:1": JobState.DONE, f"{CODE}:2": JobState.DONE}
+    assert all(r.parent_id == ingest.id for r in w.jobs.rows.values() if r.kind is JobKind.PROCESS)
     assert {p.fight_id for p in env.events.pulls(CODE)} == {1, 2}
     stored = watch_of(w, rec.id)
     assert stored.active and stored.polls == 1

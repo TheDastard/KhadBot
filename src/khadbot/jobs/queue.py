@@ -12,7 +12,8 @@ Rules the queue keeps:
 - One ingest runs per report. An ingest request returns the queued or running ingest that already covers it; a
   procrastinate lock on the report code also stops two from running at once, and a queueing lock on the report and
   the request stops two identical ones from waiting.
-- An ingest enqueues a ``ProcessPull`` for every pull it wrote or found unchanged, and finishes with them.
+- An ingest only fetches raw pages; it enqueues a ``ProcessPull`` for every pull it left ready (newly fetched or
+  already cached), and finishes with them. The process job normalizes the pull and builds its records.
 - Only WCL rate limits, network errors and a sign-in that could not be renewed are retried, with backoff. Anything
   else fails the job once with a typed code.
 - A backfill's process jobs are queued at a lower priority than every other job (``enqueue_backfill``), once per pull.
@@ -443,8 +444,8 @@ class JobQueue:
 
     async def _queue_processing(self, job: JobRecord, result: IngestResult) -> None:
         """
-        Queue a ProcessPull per pull. Unchanged pulls are queued too: a cancelled earlier run may have written them
-        without queueing them, and processing a processed pull writes nothing.
+        Queue a ProcessPull per ready pull. Pulls that were already fetched are queued too: a cancelled earlier run
+        may have fetched them without queueing them, and processing a processed pull writes nothing.
         """
         for key in [*result.pulls, *result.skipped]:
             await self.enqueue(ProcessPull(pull_key=key), parent=job)

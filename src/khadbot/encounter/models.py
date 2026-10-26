@@ -4,7 +4,7 @@ encounter/models.py
 Pydantic models shared across encounter review. Times inside a pull are
 fight-relative milliseconds unless a field says otherwise.
 
-Ingest models: WclPhase, Pull, Actor, FetchSpec, IngestResult.
+Ingest models: WclPhase, Pull, Actor, FetchSpec, ManifestEntry, FetchManifest, IngestResult.
 Annotation and analysis models: PhaseSpan, DeathRecord, MechanicStat, MechanicCluster, CooldownUse,
 LateCooldown, WindowCoverage, FriendlyDamage, PullDigest.
 Analyst contracts: ToolResult, AnalysisRequest, Finding, ProducedBy, AnalysisReport.
@@ -93,10 +93,48 @@ class FetchSpec(BaseModel):
         return f"{self.dir_name}:{self.part}" if self.part else self.dir_name
 
 
+class ManifestEntry(FetchSpec):
+    """One spec of a fetch manifest: the request as it was made, and whether its pagination stopped early."""
+
+    truncated: bool = False
+
+    def fetch_spec(self) -> FetchSpec:
+        return FetchSpec.model_validate(self.model_dump(exclude={"truncated"}))
+
+
+MANIFEST_VERSION = 1
+
+
+class FetchManifest(BaseModel):
+    """
+    What one pull's fetch wrote to the raw page cache (``raw/<report>/<fight>/manifest.json``): every spec, with its
+    filter, whose pages are complete, and which of them were truncated. Written by the ingest job once all of a pull's
+    specs are complete; the process job normalizes exactly these pages, whatever the authored files say by then.
+    """
+
+    version: int = MANIFEST_VERSION
+    specs: list[ManifestEntry]
+
+    def fetch_specs(self) -> list[FetchSpec]:
+        return [entry.fetch_spec() for entry in self.specs]
+
+    def truncated(self) -> list[str]:
+        """Sorted keys of the truncated specs: the event store's ``truncated`` list."""
+        return sorted(entry.key for entry in self.specs if entry.truncated)
+
+
 class IngestResult(BaseModel):
+    """
+    What an ingest did. From the ingest job (``fetch_report``) every pull in ``pulls`` and ``skipped`` has complete
+    raw pages and a fetch manifest, and is ready to process: ``pulls`` are those whose pages or manifest this run
+    wrote, ``skipped`` those already fetched with the same specs (nothing written). From ``ingest_report``, which
+    also normalizes, ``pulls`` are the pulls whose events were written and ``skipped`` those whose stored events,
+    positions and metadata already matched.
+    """
+
     report_code: str
-    pulls: list[str]  # pull_keys ingested
-    skipped: list[str]  # already ingested with the same events_hash, positions_hash and metadata
+    pulls: list[str]
+    skipped: list[str]
     failed: dict[str, str]  # pull_key -> error message
     points_spent: float | None  # from WCL rateLimitData, if available
 

@@ -31,14 +31,15 @@ leaves. The findings and checkpoint SQLite databases are not blobs and stay file
 
 | Stage | REPL command | Entry point |
 |---|---|---|
-| Fetch, normalize, store | `/ingest <code> [--fights 3,4] [--offline \| --refresh-meta]` | `uv run python main.py ingest <code> [--fights 3,4] [--offline] [--refresh-meta]` |
+| Fetch, normalize, store, records | `/ingest <code> [--fights 3,4] [--offline \| --refresh-meta]` | `uv run python main.py ingest <code> [--fights 3,4] [--offline] [--refresh-meta]` |
 | List stored pulls | `/pulls [<code>]` | none |
 | Annotate, analyse, digest | `/digest [<code>] <fight> [--json] [--unregistered]` | `uv run python main.py digest <code> <fight> [--json] [--unregistered]` |
 | Analyst review and findings | `/review [--report <code>] [--fights 3,4] [--depth quick\|standard\|deep] [--estimate] [question]` | none |
 
 - `--offline` reads only the raw page cache and fails on a missing page instead of calling WCL.
-- `--refresh-meta` refetches `report.json` only and re-normalizes stored pulls from their cached pages, so a field
-  added to the report query reaches pulls ingested before it. It cannot be combined with `--offline`.
+- `--refresh-meta` refetches `report.json` only and re-normalizes stored pulls from their cached pages (the specs of
+  their fetch manifest), so a field added to the report query reaches pulls ingested before it. It cannot be combined
+  with `--offline`.
 - `--unregistered` prints the top unregistered and unclassified friendly-damage abilities (up to 20 each) instead of
   the digest. It is an authoring aid for the encounter file and the friendly-damage registry.
 - `--estimate` prints the review's token estimate without calling a model.
@@ -52,39 +53,57 @@ Annotation runs inside `/digest` and `/review`; it has no command of its own.
 
 | Job | Spec | Does | Progress `(stage, pull)` |
 |---|---|---|---|
-| `run_ingest_report` | `IngestReport(code, fights, auth, offline, refresh_meta)` | Stages 1 to 3 for the report; returns the `IngestResult` (its `pulls` are the ones written) | `("ingest", None)`, ingest's own `fetched <spec>` and `normalizing` per pull, `("ingest", None)` |
-| `run_process_pull` | `ProcessPull(pull_key)` | Stages 4 and 5: annotate, build and store the records; then project the read models when a projector is wired (hosted) | `("records", pull)` twice, then `("project", pull)` twice with a projector |
+| `run_ingest_report` | `IngestReport(code, fights, auth, offline, refresh_meta)` | Stage 1 only: report metadata, raw pages and a fetch manifest per completed pull; never the event store. Returns the `IngestResult`: every pull in `pulls` (pages or manifest written now) and `skipped` (already fetched with the same specs) is ready to process | `("ingest", None)`, `fetched <spec>` per pull (several pulls at once, interleaved), `("ingest", None)` |
+| `run_process_pull` | `ProcessPull(pull_key)` | Stages 2 and 3 from the manifest's pages (or the stored events kept when the raw pages are gone), then stages 4 and 5: annotate, build and store the records; then project the read models when a projector is wired (hosted) | `("normalizing", pull)` twice, `("records", pull)` twice, then `("project", pull)` twice with a projector |
 | `run_review_pull` | `ReviewPull(pull_key, depth, model)` | Stage 7 for one pull, without the synthesis: cached findings, or a fresh analysis that is cached | `("review", pull)` twice |
 
-A job is idempotent: a second run finds stage 3's hashes, the annotation, the records or the findings already stored
-and writes nothing. A spec holds `AppAuth` or `UserAuth(user_id)`, never a token; the context's `TokenResolver`
+A job is idempotent: a second ingest finds every page and manifest cached, makes no WCL request and writes nothing;
+a second process job finds stage 3's hashes, the annotation and the records stored and writes nothing; a second
+review finds the findings. The CLI's `/ingest` and `main.py ingest` run the ingest job, then the process job for each
+pull it left ready, in order, and print which pulls had their events written, which were unchanged and which failed
+in either job. A spec holds `AppAuth` or `UserAuth(user_id)`, never a token; the context's `TokenResolver`
 resolves it to ingest's `token_provider` at run time, and local mode resolves `AppAuth` only. `/digest` runs
 `ProcessPull` without a records store, and `/review` runs it for each pull before the analyst reads them.
 
 In hosted mode the queue (`jobs/queue.py`, run by `main.py worker`) runs the same functions. It adds no stage and
 changes what none of them stores, reads or invalidates; it changes when they run:
 
-- An ingest job queues a `ProcessPull` for every pull it wrote *and* every pull it found unchanged. Processing an
-  already processed pull finds the annotation and records stored and writes nothing, and queueing the unchanged ones
-  as well means a pull written by an ingest that was cancelled before it queued its process jobs is processed by the
-  next run.
-- A running ingest can be cancelled. It stops right after the page it is writing to the raw page cache, so the pages
-  and pulls written so far stay and the next ingest resumes from the cache like any interrupted one.
+- An ingest job queues a `ProcessPull` for every pull it fetched now *and* every pull it found already fetched.
+  Processing an already processed pull finds the events, annotation and records stored and writes nothing, and
+  queueing the already fetched ones as well means a pull fetched by an ingest that was cancelled before it queued its
+  process jobs is processed by the next run.
+- The ingest worker only does I/O: normalizing (about a second of CPU per pull) runs in the process job, in a worker
+  thread. Process jobs for different pulls of one report run in parallel; their writes to the report's `pulls.json`
+  take a per-report lock (a Postgres advisory lock in hosted mode).
+- A running ingest can be cancelled. Every pull being fetched stops right after the page it is writing to the raw
+  page cache and no further pull starts, so the pages written so far stay (a pull's manifest is written only once
+  all its specs are complete) and the next ingest resumes from the cache like any interrupted one.
 
 ## 1. Fetch: raw page cache
 
 `encounter/ingest/fetch.py` pages through WCL's `events` query once per fetch spec (a data type, a hostility and an
 optional filter) and writes every page to disk as it arrives. An interrupted ingest resumes from the last page; a
-finished one never calls WCL again.
+finished one never calls WCL again. `pipeline.fetch_report` fetches up to `wcl_pull_concurrency` (3) pulls of a report
+at once; every request still waits for the process-wide `wcl_max_concurrency` (2) permits, which is what bounds the
+requests in flight. A failed pull is reported and the others go on.
 
 ```
 raw/<report>/report.json                                   # reportData.report: fights, masterData actors and abilities, phases
 raw/<report>/<fight>/<spec>/<filter_hash>/page_000.json    # WCL JSON as returned, or one page split from a batch
-raw/<report>/<fight>/<spec>/<filter_hash>/_complete        # written after the last page
+raw/<report>/<fight>/<spec>/<filter_hash>/_complete        # written after the last page: empty, or "truncated"
+raw/<report>/<fight>/manifest.json                         # the fetch manifest, written once every spec is complete
 raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/page_000.json   # one stream for several fights (transient)
 raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/_complete       # written after the last page
 raw/<report>/batch/<spec>/<filter_hash>/<fights_hash>/stalled         # timestamp where a stream stopped advancing
 ```
+
+The fetch manifest (`FetchManifest`) lists every spec the pull was fetched with (data type, hostility, part and
+filter expression) and whether its pagination was truncated. The process job normalizes exactly those pages, so a
+registry or encounter-file edit between the ingest and the process job cannot point it at pages that were never
+fetched, and the truncation flags reach the event store's `truncated` list. A manifest that is unchanged is not
+rewritten. A `_complete` marker holding `truncated` keeps the flag for a later run that finds the spec complete, so a
+resumed fetch no longer loses it. Offline ingest of recorded fixture directories (`ingest_report`,
+`ingest_recorded`) writes no manifest, so the recordings stay as they are.
 
 Batch entries are transient: they exist only until their stream has been split by each row's `fight` into the
 per-fight entries, which stay the only thing normalize reads. `fetch_batches` fetches the eight small specs
@@ -124,6 +143,11 @@ is never rewritten by a later ingest, so the key describes the fetch that wrote 
 ## 2. Normalize
 
 `encounter/ingest/normalize.py` turns the raw JSON into typed tables. It flattens and cleans; it does not interpret.
+It runs in the process job (`process.process_pull_events`, off the event loop), from the pages the pull's fetch
+manifest names and the pull and actors in the cached `report.json`, and `normalize_pull_into_store` is the one
+function that reads, normalizes, compares and writes. Without a manifest, a `report.json` or a complete spec (raw
+pages expired, or a pull fetched before manifests existed) the stored events are final and the job goes on to the
+records; with neither raw pages nor stored events it fails with `PullNotFetchedError` (`pull_not_ingested`).
 
 - **Report metadata:** `Pull` (fight ID, encounter, difficulty, kill, start, end and duration, WCL phase transitions,
   fight progress and boss health, friendly player IDs) and `Actor` (player, pet, boss or NPC; pet owner; game ID).
@@ -149,18 +173,24 @@ events/<report>/<fight>.parquet            # the normalized event frame
 events/<report>/positions/<fight>.parquet  # position samples
 ```
 
-`events_hash` and `positions_hash` are content hashes. A re-ingest whose hashes and pull metadata match is skipped
-without a write.
+`events_hash` and `positions_hash` are content hashes. A normalize whose hashes and pull metadata match is skipped
+without a write. The event store is written only by the process job (and the in-process `ingest_report`); the
+report's actors and abilities are rewritten only when they differ. `pulls.json` is rewritten under a per-report lock
+(`ReportLock`): within the process by default, a Postgres advisory lock in hosted mode (`db/locks.py`), because
+process jobs of one report run in parallel.
 
 `input_fingerprint` is one hash of what the pull's events are made from: `NORMALIZE_VERSION`, the pull metadata, the
 actors, and for each fetch spec its key, filter hash and the name and size of every cached page. It is computed from the
 raw cache listing alone, so a pull whose fingerprint and pull metadata equal the stored ones is skipped before any of
-its pages is read or normalized (`None`, never matching, while a spec is not complete in the cache). A pull stored
+its pages is read or normalized (`None`, never matching, while a spec is not complete in the cache). The check runs at
+the top of `normalize_pull_into_store`, over the specs of the pull's fetch manifest, so it serves the process job (a
+repeated, retried or backfill `ProcessPull` reports `unchanged` without reading a page) and the in-process
+`ingest_report` alike; the ingest job never normalizes, so it never needs it. A pull stored
 before fingerprints existed is normalized once more; when its hashes still match it only gets the fingerprint written to
 its `pulls.json` record, with no events or positions rewrite. Raw pages are written once and never changed in place (a
 changed filter gets a new directory), so names and sizes identify them. Bumping `NORMALIZE_VERSION` (in
 `ingest/normalize.py`, whenever normalize would turn the same pages into different events or positions) changes every
-fingerprint, so each pull is re-normalized on its next ingest.
+fingerprint, so each pull is re-normalized by its next process job.
 
 ## 4. Annotate: annotation cache
 
@@ -343,7 +373,9 @@ primary keys, which start with `(report_code, fight_id)`.
 ## What invalidates what
 
 Every cache is keyed by content hashes (`records/` by the `produced_from` ones), so a change takes effect at the first stage whose inputs it touches and flows
-down from there. Changes to fetch filters take effect only when `ingest` runs again.
+down from there. Changes to fetch filters take effect only when `ingest` runs again: the ingest job writes a new
+manifest for the new filter's pages, and the process job normalizes from it. A process job alone (a backfill)
+never changes which pages are normalized.
 
 | Change | Re-ingest | Fetch | Annotation | Records and digest | Findings |
 |---|---|---|---|---|---|
@@ -385,11 +417,12 @@ What an expired stage costs:
 |---|---|---|
 | `annotated/` | the next records lookup re-annotates from `events/` | none |
 | `records/` (unreferenced) | the next lookup or process job builds and stores it | none |
-| `raw/` | nothing offline: `ingest --offline` and `--refresh-meta` of that report need the pages. `events/`, annotation and records are unaffected | a fresh ingest fetches the pages again |
+| `raw/` | nothing offline: `ingest --offline` and `--refresh-meta` of that report need the pages. A process job keeps the stored `events/` as final and builds the annotation and records from them | a fresh ingest fetches the pages again |
 
 `python main.py backfill --encounter <id> [--difficulty N] [--since DATE]` queues a low-priority `ProcessPull` for each
 projected pull of the encounter (one per pull; a pull with a process job already queued or running is skipped). A process
-job reads `events/` and the annotation cache only, so it works after `raw/` expired and never calls WCL. It is the way to
+job never calls WCL: while the manifest's raw pages exist it finds the input fingerprint unchanged (no page read)
+and otherwise keeps the stored `events/`, so it works after `raw/` expired. It is the way to
 apply an encounter-file, registry or `RECORDS_VERSION` change to stored pulls (the "Records and digest: rebuilt" cells of
 the table above): the pull's records get a new key and its read-model rows are replaced. It cannot apply a change that
 needs a re-ingest (the "Re-ingest: yes" rows), because that refetches from WCL.

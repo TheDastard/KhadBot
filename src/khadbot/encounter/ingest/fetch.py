@@ -9,13 +9,19 @@ Keys, under ``raw/`` (``$KHADBOT_DATA_DIR/raw`` in the local store)::
 
     <report>/report.json
     <report>/<fight>/<dir_name>/<filter_hash>/page_000.json ...
-    <report>/<fight>/<dir_name>/<filter_hash>/_complete
+    <report>/<fight>/<dir_name>/<filter_hash>/_complete    # empty, or "truncated"
+    <report>/<fight>/manifest.json                         # the specs fetched for the pull (FetchManifest)
     <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/page_000.json ...
     <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/_complete
     <report>/batch/<dir_name>/<filter_hash>/<fights_hash>/stalled
 
 ``filter_hash`` is the first 12 hex of SHA-256 of the filter expression (``"none"`` when
-there is none), so changing a filter refetches only that data type.
+there is none), so changing a filter refetches only that data type. ``_complete`` holds ``truncated`` when the
+spec's pagination stopped without advancing, so the flag survives a resumed or repeated fetch.
+
+The manifest is written by the ingest job once every spec of the pull is complete (``write_manifest``). It names the
+pages the process job normalizes, so a registry or encounter-file edit between the two jobs cannot make the process
+job look for pages that were never fetched.
 
 Batching: the small specs (``BATCHED_SPEC_KEYS``, about one page per pull) are fetched by ``fetch_batches`` in
 one paginated stream across several pulls, because the events query takes a list of fight IDs and every row
@@ -41,7 +47,7 @@ import orjson
 from khadbot.config import EncounterConfig
 from khadbot.encounter.ingest.normalize import NORMALIZE_VERSION
 from khadbot.encounter.ingest.wcl_queries import GET_EVENTS_PAGE
-from khadbot.encounter.models import Actor, FetchSpec, Pull
+from khadbot.encounter.models import Actor, FetchManifest, FetchSpec, Pull
 from khadbot.storage import BlobStore, join_key, resolve_blobs
 from khadbot.wcl.client import (
     WarcraftLogsAPIError,
@@ -166,6 +172,9 @@ def filter_hash(expression: str | None) -> str:
 # The page objects directly inside a spec's directory; the path-based cache matched them with ``page_*.json``.
 _PAGE_NAME = re.compile(r"page_[^/]*\.json")
 
+# The content of ``_complete`` for a spec whose pagination stopped without advancing; an empty marker is a clean end.
+_TRUNCATED = b"truncated"
+
 
 class RawPageCache:
     """
@@ -214,8 +223,32 @@ class RawPageCache:
     def is_complete(self, code: str, fight: int, spec: FetchSpec) -> bool:
         return self.blobs.exists(f"{self._dir(code, fight, spec)}/_complete")
 
-    def mark_complete(self, code: str, fight: int, spec: FetchSpec) -> None:
-        self.blobs.put(f"{self._dir(code, fight, spec)}/_complete", b"")
+    def completion(self, code: str, fight: int, spec: FetchSpec) -> bool | None:
+        """None while the spec is incomplete; else whether its pagination was truncated."""
+        data = self.blobs.get(f"{self._dir(code, fight, spec)}/_complete")
+        return None if data is None else data == _TRUNCATED
+
+    def mark_complete(self, code: str, fight: int, spec: FetchSpec, *, truncated: bool = False) -> None:
+        self.blobs.put(f"{self._dir(code, fight, spec)}/_complete", _TRUNCATED if truncated else b"")
+
+    # The fetch manifest: which specs one pull's fetch completed, written after the last of them.
+
+    def _manifest_key(self, code: str, fight: int) -> str:
+        return join_key(self.prefix, code, str(fight), "manifest.json")
+
+    def manifest(self, code: str, fight: int) -> FetchManifest | None:
+        """The pull's fetch manifest; None when there is none or it cannot be read (logged)."""
+        data = self.blobs.get(self._manifest_key(code, fight))
+        if data is None:
+            return None
+        try:
+            return FetchManifest.model_validate_json(data)
+        except ValueError:
+            logger.warning("Unreadable fetch manifest for %s:%s; ignoring it", code, fight)
+            return None
+
+    def write_manifest(self, code: str, fight: int, manifest: FetchManifest) -> None:
+        self.blobs.put(self._manifest_key(code, fight), manifest.model_dump_json().encode())
 
     def replace_pages(self, code: str, fight: int, spec: FetchSpec, pages: list[dict]) -> None:
         """Replace a fight's cached pages for ``spec`` with ``pages``. Does not write ``_complete``."""
@@ -411,9 +444,9 @@ async def _fetch_spec(
     max_retries: int,
     token_provider: TokenProvider | None = None,
 ) -> bool:
-    """Fetch (or resume) one data type. Returns True if pagination did not terminate cleanly."""
-    if cache.is_complete(code, pull.fight_id, spec):
-        return False
+    """Fetch (or resume) one data type. Returns True if pagination did not terminate cleanly, now or when fetched."""
+    if (done := cache.completion(code, pull.fight_id, spec)) is not None:
+        return done
 
     cached = cache.pages(code, pull.fight_id, spec)
     # A cache with a null-terminated final page just lost its marker to a crash.
@@ -439,7 +472,7 @@ async def _fetch_spec(
             logger.warning("%s %s: nextPageTimestamp did not advance; marking truncated", pull.pull_key, spec.key)
             break
         start = int(nxt)
-    cache.mark_complete(code, pull.fight_id, spec)
+    cache.mark_complete(code, pull.fight_id, spec, truncated=truncated)
     return truncated
 
 
@@ -566,14 +599,15 @@ async def fetch_batch(
     if stray:
         logger.warning("%s batch %s: dropped %d rows with a missing or unrequested fight", code, spec.key, stray)
 
+    truncated = {p.fight_id: stalled_at is not None and p.end_ms > stalled_at for p in pulls}
     for pull in pulls:
         if not cache.is_complete(code, pull.fight_id, spec):
             cache.replace_pages(
                 code, pull.fight_id, spec, [{"data": rows_by_fight[pull.fight_id], "nextPageTimestamp": None}]
             )
-            cache.mark_complete(code, pull.fight_id, spec)
+            cache.mark_complete(code, pull.fight_id, spec, truncated=truncated[pull.fight_id])
     cache.delete_batch(code, spec, fights)
-    return {p.fight_id: stalled_at is not None and p.end_ms > stalled_at for p in pulls}
+    return truncated
 
 
 async def fetch_batches(
@@ -622,8 +656,8 @@ async def fetch_batches(
     )
     truncated: dict[int, set[str]] = {}
     for (spec, chunk), outcome in zip(jobs, outcomes, strict=True):
-        if isinstance(outcome, asyncio.CancelledError):
-            raise outcome
+        if isinstance(outcome, BaseException) and not isinstance(outcome, Exception):
+            raise outcome  # a cancelled task or job stops the ingest; only errors fall back per pull
         if isinstance(outcome, BaseException):
             fights = [p.fight_id for p in chunk]
             logger.warning(
