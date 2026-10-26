@@ -180,6 +180,25 @@ The worker registers a periodic job, `khadbot.cleanup_records` on the `process` 
 
 ## Usage ledger and observability
 
+### The usage ledger
+
+The `usage` table (migration `0008_usage.sql`) records what the service spends, with the user, WCL guild, report and job each row was for:
+
+| Column | Meaning |
+|---|---|
+| `at`, `user_id`, `guild_id`, `report_code`, `job_id` | When, and who it was for. The guild is `reports.guild_id`, read at insert time; it is null until something fills that column. |
+| `kind` | `wcl` or `llm`. |
+| `wcl_points` | `wcl` rows: the points the ingest job measured. |
+| `model`, `input_tokens`, `cached_input_tokens`, `cache_write_tokens`, `output_tokens`, `cost_usd` | `llm` rows. `input_tokens` includes the cached ones. `cost_usd` is an estimate from the price table, null for a model with no price. |
+
+An ingest job writes its `wcl` row when it settles, from the same measured `points_spent` that the WCL budget settles to and `jobs.points_spent` stores. A job has at most one `wcl` row, and an offline ingest, which spends nothing, has none. Model calls are written by `khadbot.jobs.usage.record_llm_usage`.
+
+    python main.py usage --since 2026-10-01 [--by user|guild|kind]     # hosted mode, needs DATABASE_URL
+
+It prints one line per group (default `kind`) with calls, WCL points, input, cached and output tokens and estimated cost, and a total.
+
+Model prices are in `config/pricing/models.yaml`, with the page they came from and the date they were checked (2026-10-25, https://platform.claude.com/docs/en/about-claude/pricing). When Anthropic changes a price, or a new model is used, copy it from that page and update `checked:`.
+
 ### Logs
 
 Hosted commands (`api`, `worker`, `migrate`, `backfill`, `usage`) log one JSON object per line to stdout: `time`, `level`, `logger`, `message`, and `job_id`, `user_id`, `report_code` when the line is written while a job runs, plus `exc` for an exception. Every message and exception text passes through a redaction step that masks passwords in URLs, values of secret-named pairs (`token`, `secret`, `password`, `key`, `cookie`, `session`, `authorization`), `Cookie`, `Set-Cookie` and `Authorization` header values, `Bearer` values, JWTs, Fernet-shaped keys and API key prefixes. That is a backstop: code still must not log them. The API runs uvicorn without its own log config, so its access lines go through the same handler.

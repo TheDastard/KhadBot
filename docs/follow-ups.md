@@ -285,6 +285,16 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
   section 6.2 has the current layout.
 
+- **Usage ledger gaps.**
+  - The guild column is null: nothing fills `reports.guild_id` yet, so `usage --by guild` shows one `(none)` group.
+    It fills itself once report metadata projection sets the guild.
+  - An ingest that fails part way writes no WCL row: only a finished run has a measured figure (`points_spent`), the
+    same limit the budget has (it settles a failed job to its estimate).
+  - No job calls `record_llm_usage` yet; the review and conversation jobs must, after each model call, with the
+    model ID the provider reports.
+  - The default `ANTHROPIC_MODEL` (`claude-sonnet-4-20250514`) is not in `config/pricing/models.yaml`, so its calls
+    would be recorded with a null cost. Set a listed model, or add its price from the pricing page.
+  - Prices are checked by hand (`checked:` in the file); nothing warns when they go stale.
 - **No error tracker.** `sentry-sdk` was not added; errors reach the JSON logs only.
 - **Worker health is per machine.** `main.py worker --check` reads a local file, so it fits a container health check
   but shows nothing about workers on other machines. A heartbeat row would, if a dashboard needs it.

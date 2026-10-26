@@ -23,7 +23,8 @@ Rules the queue keeps:
 - With a WCL budget (``jobs/budget_store.py``), an online ingest reserves its estimated points when a worker picks it
   up and settles to its measured spend when it ends. One that can't reserve goes to ``waiting_budget`` and is queued
   again when points free up, or at its next recheck time.
-- Every job logs with its job, user and report IDs as context.
+- An ingest's measured WCL points are written to the usage ledger (``jobs/usage.py``) when it settles, the same figure
+  the budget settles to. Every job logs with its job, user and report IDs as context.
 
 This module needs the ``hosted`` dependency group; nothing in local mode imports it.
 """
@@ -56,6 +57,7 @@ from khadbot.jobs.retention import CleanupResult, CleanupSources, cleanup_record
 from khadbot.jobs.run import JobContext, TransientJobError, default_token_resolver, run_job
 from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, PostgresJobBackend
+from khadbot.jobs.usage import UsageLedger, record_wcl_points
 from khadbot.jobs.watch import WatchService
 from khadbot.jobs.watch_store import MemoryWatchBackend, PostgresWatchBackend, WatchRecord, WatchStore
 from khadbot.logging_setup import log_context
@@ -128,6 +130,7 @@ class JobQueue:
         budget: The WCL budget online ingests reserve points from; None runs every job without one.
         watches: The ``watches`` table; None keeps watches in memory (unit tests).
         watch_config: Poll interval, quiet period and maximum length of a live report watch.
+        usage: The usage ledger an ingest's measured WCL points are written to; None writes none.
     """
 
     def __init__(
@@ -142,9 +145,11 @@ class JobQueue:
         budget: BudgetManager | None = None,
         watches: WatchStore | None = None,
         watch_config: WatchConfig | None = None,
+        usage: UsageLedger | None = None,
     ) -> None:
         self.store = store
         self.budget = budget
+        self.usage = usage
         self.config = config or QueueConfig()
         self._context_factory = context_factory or JobContext
         self.app = procrastinate.App(connector=connector)
@@ -419,9 +424,22 @@ class JobQueue:
             await self.store.finish(job_id, JobState.FAILED, error_code=failure.code, error_message=failure.message)
             raise
         finally:
+            spent = result.points_spent if isinstance(result, IngestResult) else None
+            if isinstance(result, IngestResult):
+                await asyncio.shield(self._record_usage(job, spent))
             if reserved:
-                spent = result.points_spent if isinstance(result, IngestResult) else None
                 await asyncio.shield(self._settle_budget(job_id, spent))
+
+    async def _record_usage(self, job: JobRecord, points: float | None) -> None:
+        """Write the ingest's measured WCL points to the ledger: the figure the budget settles to, at the same point."""
+        if self.usage is None:
+            return
+        try:
+            await record_wcl_points(
+                self.usage, points, job_id=job.id, user_id=job.requested_by, report_code=job.report_code
+            )
+        except Exception:  # noqa: BLE001 - the ledger must never change how the job ended
+            logger.warning("Could not write the usage ledger for job %s", job.id, exc_info=True)
 
     async def _queue_processing(self, job: JobRecord, result: IngestResult) -> None:
         """
@@ -552,17 +570,20 @@ def build_queue(
     cleanup: CleanupSources | None = None,
     budget: BudgetManager | None = None,
     watch_config: WatchConfig | None = None,
+    usage: UsageLedger | None = None,
 ) -> JobQueue:
     """
     The queue on the configured Postgres. The ``jobs`` table uses the process-wide pool; procrastinate keeps its own
     async pool on the same ``DATABASE_URL`` (psycopg's sync pool cannot serve its async connector).
     """
     from khadbot.db import get_pool
+    from khadbot.jobs.usage import PostgresUsageLedger
 
     cfg = config or QueueConfig()
     url = database_url or DatabaseConfig().database_url
     connector = procrastinate.PsycopgConnector(conninfo=url, min_size=1, max_size=cfg.concurrency + 4)
-    store = JobStore(PostgresJobBackend(pool or get_pool()))
+    shared_pool = pool or get_pool()
+    store = JobStore(PostgresJobBackend(shared_pool))
     return JobQueue(
         store,
         connector,
@@ -573,6 +594,7 @@ def build_queue(
         budget=budget,
         watches=WatchStore(PostgresWatchBackend(pool or get_pool())),
         watch_config=watch_config,
+        usage=usage or PostgresUsageLedger(shared_pool),
     )
 
 
