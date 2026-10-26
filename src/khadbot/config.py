@@ -8,6 +8,7 @@ ToDo
 from __future__ import annotations
 
 import os
+import tempfile
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -420,12 +421,20 @@ class RetentionConfig:
 @dataclass(frozen=True)
 class LoggingConfig:
     """
-    Logging for hosted deployments. Logs are one JSON object per line on stdout; ``text`` gives plain lines for a
-    terminal.
+    Logging and worker liveness for hosted deployments. Logs are one JSON object per line on stdout; ``text`` gives
+    plain lines for a terminal. A worker touches ``worker_health_file`` every ``worker_heartbeat_s`` seconds, and
+    ``main.py worker --check`` (the container health check) fails when the file is older than ``worker_stale_s``.
     """
 
     log_format: str = field(default_factory=lambda: _optional("KHADBOT_LOG_FORMAT", "json").strip().lower())
     log_level: str = field(default_factory=lambda: _optional("KHADBOT_LOG_LEVEL", "INFO").strip().upper())
+    worker_health_file: str = field(
+        default_factory=lambda: (
+            _optional("KHADBOT_WORKER_HEALTH_FILE") or os.path.join(tempfile.gettempdir(), "khadbot-worker.alive")
+        )
+    )
+    worker_heartbeat_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WORKER_HEARTBEAT_S", "10")))
+    worker_stale_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WORKER_STALE_S", "60")))
 
 
 _config: AppConfig | None = None

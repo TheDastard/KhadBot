@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker | backfill --encounter ID]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker [--check] | backfill --encounter ID]
 """
 
 from __future__ import annotations
@@ -162,6 +162,14 @@ def _run_migrate() -> None:
     print("Applied: " + ", ".join(applied) if applied else "Database schema is up to date.")
 
 
+def _run_worker_check() -> None:
+    """The container health check: needs no database, only the liveness file a running worker keeps fresh."""
+    from khadbot.jobs.health import check_alive
+
+    if not check_alive():
+        sys.exit("The worker is not alive: its health file is missing or stale.")
+
+
 def _run_worker(queues: str | None, concurrency: int | None) -> None:
     from khadbot.config import DatabaseConfig
 
@@ -257,6 +265,9 @@ def build_parser() -> argparse.ArgumentParser:
     worker = sub.add_parser("worker", help="Run the job queue worker (hosted mode)")
     worker.add_argument("--queues", help="Comma-separated queues to take jobs from (default: KHADBOT_WORKER_QUEUES)")
     worker.add_argument("--concurrency", type=int, help="Jobs to run at once (default: KHADBOT_WORKER_CONCURRENCY)")
+    worker.add_argument(
+        "--check", action="store_true", help="Exit 0 if a worker on this machine is alive (health check); run nothing"
+    )
     backfill = sub.add_parser(
         "backfill",
         help="Queue low-priority process jobs for an encounter's stored pulls (hosted mode; never spends WCL points)",
@@ -272,7 +283,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
-    if command in {"api", "migrate", "worker", "backfill"}:
+    if command in {"api", "migrate", "worker", "backfill"} and not getattr(args, "check", False):
         from khadbot.logging_setup import configure_logging
 
         configure_logging()
@@ -294,7 +305,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     elif command == "migrate":
         _run_migrate()
     elif command == "worker":
-        _run_worker(args.queues, args.concurrency)
+        _run_worker_check() if args.check else _run_worker(args.queues, args.concurrency)
     elif command == "backfill":
         _run_backfill(args.encounter, args.difficulty, args.since, args.dry_run)
 

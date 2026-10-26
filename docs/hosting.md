@@ -190,3 +190,13 @@ Hosted commands (`api`, `worker`, `migrate`, `backfill`, `usage`) log one JSON o
 | `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). |
 
 There is no error tracker; `sentry-sdk` was not added.
+
+### Worker health
+
+A worker has no HTTP server. While it runs it touches a file every `KHADBOT_WORKER_HEARTBEAT_S` seconds from its event loop, and removes it when it stops. `python main.py worker --check` (in the image, `khadbot worker --check`) needs no database and exits 0 only if that file was touched within `KHADBOT_WORKER_STALE_S` seconds, so a crashed or hung worker fails it. The compose stack uses it as the worker's health check; on a platform, use it as the container health command. The API's health route is `/v1/health`.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WORKER_HEALTH_FILE` | The file (default `khadbot-worker.alive` in the temp directory). |
+| `KHADBOT_WORKER_HEARTBEAT_S` | Seconds between touches (default 10). |
+| `KHADBOT_WORKER_STALE_S` | Age at which the check fails (default 60). |

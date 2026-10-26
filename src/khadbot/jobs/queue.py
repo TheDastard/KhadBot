@@ -579,12 +579,13 @@ def build_queue(
 async def serve_worker(queues: list[str] | None = None, concurrency: int | None = None) -> None:
     """Run a worker on the configured stores until it is stopped (SIGINT or SIGTERM). The ``worker`` subcommand."""
     from khadbot.jobs.budget_store import build_budget_manager
+    from khadbot.jobs.health import heartbeat
 
     resolver = default_token_resolver()  # one for the process: it builds the sign-in service on the first user job
     budget = build_budget_manager()
     queue = build_queue(context_factory=lambda: JobContext(resolver=resolver), budget=budget)
     await budget.sync()  # take WCL's count before the first job reserves
-    async with queue.open():
+    async with heartbeat(), queue.open():  # the liveness file `main.py worker --check` reads
         await queue.run_worker(queues=queues, concurrency=concurrency)
 
 

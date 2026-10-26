@@ -181,3 +181,20 @@ class TestBackfillSubcommand:
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
         with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
             main(["backfill", "--encounter", "3009"])
+
+
+class TestWorkerCheck:
+    def test_check_exits_zero_for_a_fresh_health_file(self, monkeypatch, tmp_path):
+        from khadbot.jobs.health import beat
+
+        path = tmp_path / "alive"
+        monkeypatch.setenv("KHADBOT_WORKER_HEALTH_FILE", str(path))
+        beat(path)
+        with patch("khadbot.main._run_worker") as run:
+            main(["worker", "--check"])  # returns without exiting
+        run.assert_not_called()
+
+    def test_check_fails_when_no_worker_wrote_the_file(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("KHADBOT_WORKER_HEALTH_FILE", str(tmp_path / "missing"))
+        with pytest.raises(SystemExit, match="not alive"):
+            main(["worker", "--check"])
