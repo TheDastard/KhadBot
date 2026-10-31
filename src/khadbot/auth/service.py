@@ -221,6 +221,11 @@ class AuthService:
                 "Warcraft Logs could not complete the sign-in. Try again.", code="sign_in_failed"
             ) from None
 
+        if wcl_user.id <= 0:
+            # WCL account IDs are positive. Non-positive IDs are reserved for test users (auth.dev_sessions), so a
+            # sign-in can never land on one.
+            logger.warning("A WCL sign-in returned a non-positive user ID and was refused")
+            raise LoginError("Warcraft Logs could not complete the sign-in. Try again.", code="sign_in_failed")
         user = await asyncio.to_thread(self.store.upsert_user, wcl_user.id, wcl_user.name, self._clock())
         await self.tokens.save(user.id, tokens)
         session_id = await self.sessions.create(user.id)
