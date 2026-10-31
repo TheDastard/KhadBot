@@ -1,7 +1,9 @@
 # scripts/dev/setup.ps1 — first-time setup for a KhadBot checkout on Windows.
 #
 # Installs what the project needs and wires it up, skipping anything already in place, so it is safe to re-run:
-#   1. Tools via winget: Git (with Git LFS), uv 0.13 or later, mise, and optionally the GitHub CLI.
+#   1. Tools via winget: Git (with Git LFS), uv 0.13 or later, mise, and optionally the GitHub CLI and Docker Desktop.
+#      Docker Desktop is only checked unless -WithDocker is given: the native dev loop (mise run dev:all) runs
+#      Postgres and the bucket in it. The check names what is missing: Docker itself, WSL 2, or a stopped engine.
 #   2. mise's shims folder on the user PATH, so node and pnpm resolve outside `mise run` too. No `mise trust` is
 #      needed: the project's mise.toml uses nothing that requires it.
 #   3. Git LFS hooks, so the recorded WCL fixtures download as real files.
@@ -9,17 +11,22 @@
 #      Every worktree shares the main clone's hooks, and `pre-commit install` writes the path of the Python that
 #      ran it into them, so the hooks are installed from the main checkout only. A worktree just checks them;
 #      installing from one would break the hooks for every checkout once that worktree is removed.
-#   5. .env copied from .env.example if it doesn't exist yet. Fill in its keys yourself.
+#   5. .env copied from .env.example if it doesn't exist yet. Fill in its keys yourself. Likewise deploy/dev.env from
+#      deploy/dev.env.example, the dev loop's throwaway settings (no secrets; created in a worktree too).
 #
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
 # anything (winget shows its own agreement prompts).
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-SkipInstall]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-WithDocker] [-SkipInstall]
 #   -WithGitHubCli  also install the GitHub CLI (`gh`), which /land uses to watch CI when present
+#   -WithDocker     also install Docker Desktop (winget Docker.DockerDesktop, a large download under Docker's
+#                   subscription agreement). It may then ask for WSL 2, a reboot or Docker's own licence prompt;
+#                   finish those, start Docker Desktop and rerun this script to check the engine.
 #   -SkipInstall    only check and configure; don't install tools or dependencies
 
 param(
     [switch]$WithGitHubCli,
+    [switch]$WithDocker,
     [switch]$SkipInstall
 )
 
@@ -73,6 +80,7 @@ function Install-WingetPackage($id, $name) {
     Add-SessionPath "$env:USERPROFILE\.local\bin"
     Add-SessionPath "$env:ProgramFiles\Git\cmd"
     Add-SessionPath "$env:ProgramFiles\GitHub CLI"
+    Add-SessionPath "$env:ProgramFiles\Docker\Docker\resources\bin"
     Did "installed $name"
 }
 
@@ -97,6 +105,28 @@ if (Has mise) { Ok "mise $(((mise version --quiet) -split ' ')[0])" } else { Ins
 
 if ($WithGitHubCli) {
     if (Has gh) { Ok ((gh --version) | Select-Object -First 1) } else { Install-WingetPackage "GitHub.cli" "GitHub CLI" }
+}
+
+# Docker Desktop runs Postgres and the bucket for the dev loop. Local mode (the CLI) does not need it.
+function Test-WslReady {
+    if (-not (Has wsl)) { return $false }
+    wsl --status *> $null
+    return ($LASTEXITCODE -eq 0)
+}
+
+if ($WithDocker -and -not (Has docker)) {
+    Install-WingetPackage "Docker.DockerDesktop" "Docker Desktop"
+    if (Has docker) {
+        Write-Host "  Docker Desktop may now need WSL 2 (wsl --install), a reboot, and its licence prompt on first start." -ForegroundColor Yellow
+    }
+}
+if (Has docker) {
+    docker info *> $null
+    if ($LASTEXITCODE -eq 0) { Ok "Docker engine running ($(docker version --format '{{.Server.Version}}'))" }
+    elseif (-not (Test-WslReady)) { Problem "Docker is installed but WSL 2 isn't ready (run: wsl --install, reboot, then start Docker Desktop)" }
+    else { Problem "Docker's engine isn't running (start Docker Desktop and wait until it says it is running)" }
+} else {
+    Problem "Docker Desktop is not installed; the dev loop needs it (rerun with -WithDocker, or install Docker.DockerDesktop)"
 }
 
 # The rest needs git and mise.
@@ -173,6 +203,14 @@ try {
     } else {
         Copy-Item .env.example .env
         Did "created .env from .env.example; set LLM_PROVIDER, its API key and WARCRAFTLOGS_CLIENT_ID/SECRET"
+    }
+
+    # The dev loop's settings are throwaway local values, so unlike .env they are copied in a worktree as well.
+    if (Test-Path deploy/dev.env) {
+        Ok "deploy/dev.env exists (left untouched)"
+    } else {
+        Copy-Item deploy/dev.env.example deploy/dev.env
+        Did "created deploy/dev.env from deploy/dev.env.example (the dev loop's settings; WCL credentials stay in .env)"
     }
 } finally {
     Pop-Location
