@@ -108,7 +108,7 @@ Needs Docker with Compose. From the repository root:
 
     mise run stack:up       # build the image; start Postgres, SeaweedFS, the migrate step and the API
     mise run stack:seed     # load the recorded fixture reports (offline, no WCL calls)
-    mise run stack:smoke    # health, a signed-out 404, then the report list and a night summary as the smoke user
+    mise run stack:smoke    # health, a signed-out 404, then the report list and a night summary as the smoke test user
     mise run stack:queue-smoke  # queue a job and check the worker finishes it
     mise run stack:logs
     mise run stack:down     # stop, keep the data volumes
@@ -118,7 +118,7 @@ Everything listens on 127.0.0.1: the API on 8000, Postgres on 5432 and the Seawe
 
 ### Seeding
 
-The seed also provisions a smoke user whose session cookie value is `KHADBOT_STACK_SMOKE_SESSION` (set only in `deploy/stack.env`) with a cached "readable" answer for each seeded report, so `stack:smoke` can read them without a Warcraft Logs sign-in, and caches each report as not public, so a signed-out visitor gets 404 without asking WCL. The readable answers stand for an hour (`KHADBOT_ACCESS_RECHECK_S`) and the not-public ones for 5 minutes (`KHADBOT_ACCESS_DENIED_RECHECK_S`); the stack's placeholder WCL credentials cannot renew either, so a visitor's request after that gets 503, and the routes answer 503 for everyone once the hour is up. Seed again to reset them.
+The seed also provisions the test user `smoke` (see [Test sessions](#test-sessions)) with each seeded report cached as readable for it and as not public, so `stack:smoke` can read them without a Warcraft Logs sign-in and a signed-out visitor gets 404 without asking WCL. The readable answers stand for an hour (`KHADBOT_ACCESS_RECHECK_S`) and the not-public ones for 5 minutes (`KHADBOT_ACCESS_DENIED_RECHECK_S`); the stack's placeholder WCL credentials cannot renew either, so a visitor's request after that gets 503, and the routes answer 503 for everyone once the hour is up. Seed again to reset them.
 
 `stack:seed` runs `scripts/data/seed_stack.py` in the image with the fixtures mounted read-only from the repository. For each report it ingests the pulls offline into the bucket, stores the report metadata, then runs the same process job the queue runs: annotate, build and store the records, project the read-model tables. A second run changes nothing.
 
@@ -189,6 +189,29 @@ The full experience runs hosted mode on your machine: Postgres and the bucket in
 **Switches for development.** WCL replay, the fake model provider and test sessions come with their own tasks and are documented here when they land.
 
 **Time to start.** With the images pulled and the volumes in place, `dev:all` has the infrastructure ready in about 3 seconds and the API healthy about 8 seconds after the command (measured on the maintainer's Windows machine, 2026-10-31). The first run also pulls the Postgres and SeaweedFS images, which takes around a minute depending on the connection.
+
+## Test sessions
+
+Playwright, offline work and multi-user checks need signed-in users without a Warcraft Logs login. `khadbot test-session` starts a session for a named test user:
+
+    mise run dev:session -- --user alice --reports ABC123       # on the dev loop (loads deploy/dev.env); prints the cookie value on stdout, nothing else
+    mise run dev:session -- --user bob --storage-state .auth/bob.json   # a Playwright storage-state file instead
+    docker compose -f deploy/compose.yaml run --rm --no-deps -T api test-session --user alice   # inside the stack
+
+| Option | Meaning |
+|---|---|
+| `--user NAME` | The test user, created on first use and reused after: 1 to 32 lowercase letters, digits or hyphens (default `dev`). Use several names to test access rules and "another user sees the same findings". |
+| `--reports CODE...` | Reports this user may read. Each is cached as readable for the user and as not public, so every other user and any visitor gets 404 without a Warcraft Logs call. The answers stand for `KHADBOT_ACCESS_RECHECK_S` and `KHADBOT_ACCESS_DENIED_RECHECK_S`; run the command again to renew them. |
+| `--hours N` | Session lifetime (default 24). |
+| `--storage-state FILE` | Write a Playwright `storageState` file holding the session cookie, and print nothing on stdout. The file is a live credential: keep it out of the repository. |
+| `--domain HOST` | The cookie's domain in that file (default `localhost`; browsers share it across ports, so it serves the web app and the API). |
+| `--quiet` | No summary on stderr. |
+
+To act as a user with `curl`: `curl -b "khadbot_session=$(uv run python main.py test-session --user alice --quiet)" http://localhost:8000/v1/me`.
+
+It is a development switch and refuses to run unless `KHADBOT_TEST_SESSIONS` is `1`, `true`, `yes` or `on`, before it opens a database. The local stack's env file (`deploy/stack.env`), the dev loop's (`deploy/dev.env.example`, copied to `deploy/dev.env`) and CI turn it on; staging only for the load test; production never. The API and the worker log a warning at start while it is on. It also needs the hosted settings (`KHADBOT_MODE=hosted`, `DATABASE_URL`); `mise run dev:session` runs it through `scripts/dev/dev.py` with the dev loop's environment, so it reaches the stack's Postgres on `127.0.0.1:5432` from the host.
+
+Test users have a negative WCL user ID (-1 down to -(2^40), derived from the name). Warcraft Logs account IDs are positive, and sign-in refuses a non-positive ID, so a real account can never be a test user. A test user holds no Warcraft Logs tokens, so its jobs use the app's auth (which WCL replay answers). The session cookie is never logged and only its SHA-256 is stored. The smoke tests (`stack:smoke` in the image, `dev:smoke` natively) start their own session this way for the user `smoke`; the old fixed `KHADBOT_STACK_SMOKE_SESSION` value is gone.
 
 ## Retention
 
