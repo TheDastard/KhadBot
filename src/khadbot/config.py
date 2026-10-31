@@ -434,6 +434,34 @@ class RetentionConfig:
 
 
 # ---------------------------------------------------------------------------
+# WCL replay (development only)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class WclReplayConfig:
+    """
+    WCL replay, a development switch: with ``directory`` set (``KHADBOT_WCL_REPLAY``, a directory laid out like the
+    raw page cache: ``<code>/report.json`` and ``<code>/<fight>/...``), every WCL data request is answered from the
+    recorded reports there or refused, and none reaches the network; sign-in still goes to real WCL. Off unless set.
+
+    ``rateLimitData`` comes from a simulated counter of ``limit_per_hour`` points per window of ``reset_s`` seconds.
+    ``live_report`` names a recorded report whose recorded fights appear one at a time: one more per metadata request
+    when ``live_interval_s`` is 0, else one more every ``live_interval_s`` seconds. ``docs/hosting.md``, "WCL replay".
+    """
+
+    directory: str = field(default_factory=lambda: _optional("KHADBOT_WCL_REPLAY").strip())
+    limit_per_hour: float = field(default_factory=lambda: float(_optional("KHADBOT_WCL_REPLAY_LIMIT", "3600")))
+    reset_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WCL_REPLAY_RESET_S", "3600")))
+    live_report: str = field(default_factory=lambda: _optional("KHADBOT_WCL_REPLAY_LIVE").strip())
+    live_interval_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WCL_REPLAY_LIVE_INTERVAL_S", "0")))
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.directory)
+
+
+# ---------------------------------------------------------------------------
 # Module-level singleton — import this everywhere else in the codebase.
 # Instantiation is deferred: importing config.py does NOT read env vars.
 # Call get_config() to trigger validation.
