@@ -61,11 +61,11 @@ config/
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
 contracts/           # openapi.json generated from the API (the frontend's types come from it)
-scripts/             # dev/ (setup, clean, distclean, contract generator), data/ (fixture data builder, WCL fixture
+scripts/             # dev/ (setup, dev loop runner, clean, distclean, contract generator), data/ (fixture data builder, WCL fixture
                      # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
 apps/                # TypeScript apps (pnpm workspace): web/ now; desktop/ and discord/ later. Not created yet
 packages/            # api-client/: the client generated from contracts/openapi.json. Not created yet
-deploy/              # Dockerfile, compose stack and its env file; docs/hosting.md describes running and configuring them
+deploy/              # Dockerfile, compose stack, its env file and the dev loop's env example (dev.env.example); docs/hosting.md describes running and configuring them
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates
@@ -87,7 +87,7 @@ Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `m
 the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
 `install:cli`); name new tasks the same way.
 
-A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`). After that
+A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`, `deploy/dev.env`, and a check that Docker's engine is running; `-WithDocker` also installs Docker Desktop through winget). After that
 `uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
 `mise trust`.
 
@@ -101,6 +101,8 @@ A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, depe
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
 | Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
+| Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload (needs Docker; port 8000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
+| Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
 | Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
 | Same, then delete `.venv` | `mise run clean:all` | `scripts/dev/clean.ps1`, then `scripts/dev/distclean.ps1` |
 
