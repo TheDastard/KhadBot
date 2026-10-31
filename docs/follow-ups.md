@@ -11,7 +11,8 @@ file's header comment points to.
 
 The current track is the hosted service: hosted backend first, then the web dashboard and the agents on the web.
 Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "Hosted architecture" in
-`docs/decisions.md`).
+`docs/decisions.md`). The web dashboard's first round has its own work plan:
+https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 
 ### Data and ingest
 
@@ -310,6 +311,14 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - **No error tracker.** `sentry-sdk` was not added; errors reach the JSON logs only.
 - **Worker health is per machine.** `main.py worker --check` reads a local file, so it fits a container health check
   but shows nothing about workers on other machines. A heartbeat row would, if a dashboard needs it.
+
+### Web dashboard
+
+- **Phone layouts.** The first round builds the canvas's 1440-wide screens only (D72). The 390-wide artboards
+  are still to build: the pull rail as a collapsible selector, the context panel as a bottom sheet, the account
+  menu as a sheet under the top bar, the phone chip and type sizes, and phone-width Playwright and axe runs. The
+  desktop screens are built with flex, grid and the tokens and no fixed page widths, so this adds layouts rather
+  than reworking them.
 
 ### Dashboard API
 
