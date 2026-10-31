@@ -326,6 +326,24 @@ def is_local_http(url: str) -> bool:
     return host in _LOCAL_HOSTS
 
 
+# ---------------------------------------------------------------------------
+# Test sessions (development switch)
+# ---------------------------------------------------------------------------
+
+_TRUE = {"1", "true", "yes", "on"}
+
+
+@dataclass(frozen=True)
+class DevSessionsConfig:
+    """
+    The gate on test sessions (``auth.dev_sessions``): signed-in users without a Warcraft Logs login, for development
+    and tests. Off unless ``KHADBOT_TEST_SESSIONS`` is ``1``, ``true``, ``yes`` or ``on``. Only the local stack's and
+    CI's environment files set it; staging sets it only for the load test; production never does.
+    """
+
+    enabled: bool = field(default_factory=lambda: _optional("KHADBOT_TEST_SESSIONS").strip().lower() in _TRUE)
+
+
 @dataclass(frozen=True)
 class ApiConfig:
     """Hosted API settings that are not sign-in (``AuthConfig``) or queue (``QueueConfig``) settings."""
@@ -390,6 +408,7 @@ class AppConfig:
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    dev_sessions: DevSessionsConfig = field(default_factory=DevSessionsConfig)
     queue: QueueConfig = field(default_factory=QueueConfig)
     budget: BudgetConfig = field(default_factory=BudgetConfig)
     wipefest: WipefestConfig = field(default_factory=WipefestConfig)

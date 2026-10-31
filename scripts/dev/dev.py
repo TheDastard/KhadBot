@@ -10,8 +10,9 @@ worker run on this machine in hosted mode and restart when a Python or config fi
     uv run python scripts/dev/dev.py seed [args]    # load the recorded fixture reports (--only CODE ...)
     uv run python scripts/dev/dev.py smoke          # health, a night summary and a queued job against the loop
     uv run python scripts/dev/dev.py all            # infra, then the API and the worker together
+    uv run python scripts/dev/dev.py session [args] # a test user's session cookie (main.py test-session)
 
-``mise run dev:infra``, ``dev:api``, ``dev:worker``, ``dev:seed``, ``dev:smoke`` and ``dev:all`` run these. Settings
+``mise run dev:infra``, ``dev:api``, ``dev:worker``, ``dev:seed``, ``dev:smoke``, ``dev:all`` and ``dev:session`` run these. Settings
 come from deploy/dev.env (copied from deploy/dev.env.example by scripts/dev/setup.ps1) on top of the main checkout's
 .env, which supplies the WCL credentials. See docs/hosting.md, "Local development".
 """
@@ -310,7 +311,7 @@ def stop_on_terminate() -> None:
 def main() -> None:
     stop_on_terminate()
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    parser.add_argument("command", choices=["infra", "api", "worker", "seed", "smoke", "all"])
+    parser.add_argument("command", choices=["infra", "api", "worker", "seed", "smoke", "all", "session"])
     parser.add_argument("args", nargs=argparse.REMAINDER, help="passed to the command (for example --only SYNTH01)")
     parsed = parser.parse_args()
     args = [a for a in parsed.args if a != "--"]
@@ -323,6 +324,8 @@ def main() -> None:
     elif parsed.command == "smoke":
         run(python_script("scripts/dev/stack_smoke.py", *args), env)
         run(python_script("scripts/dev/queue_smoke.py"), env)
+    elif parsed.command == "session":
+        run(python_script("main.py", "test-session", *args), env)
     elif parsed.command == "all":
         run_all(args, env)
     else:

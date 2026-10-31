@@ -159,6 +159,14 @@ run = "uv run python scripts/dev/dev.py smoke"
 description = "dev:infra, then the API and the worker together; Ctrl-C stops both"
 run = "uv run python scripts/dev/dev.py all"
 
+# ── Test sessions (development only) ────────────────────────────────────────
+# Runs `main.py test-session` with the dev loop's environment (deploy/dev.env, which turns KHADBOT_TEST_SESSIONS on);
+# it refuses otherwise. Arguments go after `--`: `mise run dev:session -- --user alice --reports CODE`.
+[tasks."dev:session"]
+description = "Start a session for a named test user and print its cookie (development only; see docs/hosting.md)"
+run = "uv run python scripts/dev/dev.py session"
+
+
 
 # ── Generated files ─────────────────────────────────────────────────────────
 [tasks."gen:contracts"]

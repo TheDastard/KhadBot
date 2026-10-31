@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] [--reload] | migrate | worker [--check] [--reload] | backfill --encounter ID | usage --since DATE [--by user|guild|kind]]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] [--reload] | migrate | worker [--check] [--reload] | backfill --encounter ID | usage --since DATE [--by user|guild|kind] | test-session [--user NAME]]
 """
 
 from __future__ import annotations
@@ -165,6 +165,80 @@ def _run_migrate() -> None:
     finally:
         pool.close()
     print("Applied: " + ", ".join(applied) if applied else "Database schema is up to date.")
+
+
+def _run_test_session(
+    user: str, reports: list[str], hours: float, storage_state: str | None, domain: str, quiet: bool
+) -> None:
+    """Start a session for a named test user (hosted stack, development only) and hand the cookie to the caller."""
+    from khadbot.config import AuthConfig, DatabaseConfig, DevSessionsConfig
+
+    dev = DevSessionsConfig()
+    try:
+        from khadbot.auth.dev_sessions import require_enabled
+
+        require_enabled(dev)  # before anything is opened: a disabled gate must cost nothing
+    except ConfigurationError as exc:
+        sys.exit(str(exc))
+    if not DatabaseConfig().hosted:
+        sys.exit("Test sessions belong to the hosted stack: set KHADBOT_MODE=hosted and DATABASE_URL.")
+    try:
+        from datetime import timedelta
+
+        from khadbot.auth.dev_sessions import issue_session
+        from khadbot.auth.dev_sessions import storage_state as storage_state_document
+        from khadbot.auth.pg import PostgresAuthStore
+        from khadbot.auth.routes import SESSION_COOKIE
+        from khadbot.db import close_pool, get_pool
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "test-session") + f"\n({exc})")
+    try:
+        issued = asyncio.run(
+            issue_session(PostgresAuthStore(get_pool()), dev, user, reports=reports, ttl=timedelta(hours=hours)),
+            loop_factory=asyncio.SelectorEventLoop,
+        )
+    except (ConfigurationError, OSError, ValueError) as exc:
+        sys.exit(str(exc))
+    finally:
+        close_pool()  # an open pool's threads would otherwise fail at interpreter shutdown
+    if storage_state:
+        import json
+        import os
+
+        document = storage_state_document(
+            issued.cookie,
+            domain=domain,
+            secure=AuthConfig().cookie_secure,
+            expires_at=issued.expires_at,
+            cookie_name=SESSION_COOKIE,
+        )
+        # The file holds a live session cookie: owner-only where the platform has permissions.
+        fd = os.open(storage_state, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(document, handle, indent=2)
+        where = f"storage state written to {storage_state}"
+    else:
+        print(issued.cookie)  # stdout carries the cookie value and nothing else, so `$(...)` captures it
+        where = f"cookie printed on stdout (name: {SESSION_COOKIE})"
+    if not quiet:
+        marked = f", {len(issued.readable)} reports readable" if issued.readable else ""
+        print(
+            f"test user {issued.user.name!r} (id {issued.user.id}, wcl id {issued.user.wcl_user_id}){marked}; "
+            f"session until {issued.expires_at:%Y-%m-%d %H:%M} UTC; {where}",
+            file=sys.stderr,
+        )
+
+
+def _log_development_switches() -> None:
+    """Say in the log, at API and worker start, which development switches are on (they never are in production)."""
+    import logging
+
+    from khadbot.config import DevSessionsConfig
+
+    if DevSessionsConfig().enabled:
+        logging.getLogger("khadbot.main").warning(
+            "Development switch ON: KHADBOT_TEST_SESSIONS (test sessions can be issued). Never set this in production."
+        )
 
 
 def _run_worker_check() -> None:
@@ -352,6 +426,20 @@ def build_parser() -> argparse.ArgumentParser:
     backfill.add_argument("--difficulty", type=int, help="Only this difficulty (default: all)")
     backfill.add_argument("--since", help="Only reports that started on or after this date (UTC), e.g. 2026-10-01")
     backfill.add_argument("--dry-run", action="store_true", help="Count the matching pulls; queue nothing")
+    test_session = sub.add_parser(
+        "test-session",
+        help="Start a session for a named test user and print its cookie (hosted stack; needs KHADBOT_TEST_SESSIONS=1)",
+    )
+    test_session.add_argument("--user", default="dev", help="Test user's name: lowercase letters, digits, hyphens")
+    test_session.add_argument(
+        "--reports", nargs="+", default=[], metavar="CODE", help="Report codes this user may read (all others 404)"
+    )
+    test_session.add_argument("--hours", type=float, default=24, help="Session lifetime in hours (default: 24)")
+    test_session.add_argument(
+        "--storage-state", metavar="FILE", help="Write a Playwright storage-state file instead of printing the cookie"
+    )
+    test_session.add_argument("--domain", default="localhost", help="Cookie domain in the storage state")
+    test_session.add_argument("--quiet", action="store_true", help="No summary on stderr")
     return parser
 
 
@@ -367,6 +455,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         from khadbot.logging_setup import configure_logging
 
         configure_logging()
+        if command in {"api", "worker"}:
+            _log_development_switches()
     if command == "ingest" and args.refresh_meta and args.offline:
         from khadbot.cli.commands.encounter import REFRESH_OFFLINE_ERROR
 
@@ -390,6 +480,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_usage(args.since, args.by)
     elif command == "backfill":
         _run_backfill(args.encounter, args.difficulty, args.since, args.dry_run)
+    elif command == "test-session":
+        _run_test_session(args.user, args.reports, args.hours, args.storage_state, args.domain, args.quiet)
 
 
 if __name__ == "__main__":
