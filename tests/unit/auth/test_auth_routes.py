@@ -117,6 +117,15 @@ class TestLoginFlow:
         me = client.get("/v1/me").json()
         assert me["id"] == user_id and me["name"] == "Khadgar the Renamed"
 
+    @pytest.mark.parametrize("wcl_id", [0, -1, -(2**40)])
+    def test_a_non_positive_wcl_id_never_signs_in(self, client, wcl, store, wcl_id):
+        """Those IDs are reserved for test users (auth.dev_sessions): a real sign-in must not land on one."""
+        wcl.wcl_user = (wcl_id, "Impostor")
+        resp = sign_in(client)
+        assert resp.status_code == 400 and resp.json()["code"] == "sign_in_failed"
+        assert SESSION_COOKIE not in resp.cookies
+        assert store.users == {} and store.sessions == {}
+
     def test_unsafe_next_is_dropped(self, client):
         _, query = start_login(client, "//evil.example/x")
         resp = client.get("/v1/auth/callback", params={"code": "c", "state": query["state"]}, follow_redirects=False)
