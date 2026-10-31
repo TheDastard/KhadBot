@@ -1,6 +1,6 @@
 ---
 name: land
-description: Land a finished task branch on main. Syncs with main, runs the checks, pushes the branch, waits for CI on that commit (skipped for doc- and comment-only changes), fast-forwards main, pushes it, then deletes the branch locally and on GitHub and removes its worktree. Use when the user asks to land, ship, merge or finish a branch.
+description: Land a finished task branch on main. Syncs with main, runs the checks, pushes the branch, waits for CI on that commit (skipped for doc- and comment-only changes), fast-forwards main, pushes it, then deletes the branch locally and on GitHub and removes its worktree. Marks finished plan tasks done in their planning doc, and lands docs-only changes straight on main without CI. Use when the user asks to land, ship, merge or finish a branch.
 ---
 
 # Land a branch
@@ -106,7 +106,29 @@ it sees that old run, before GitHub has registered `main`'s. Tell the user if it
    `git branch -d` may warn that the branch isn't merged into `HEAD` when the main checkout is on another branch;
    it is merged into `main`, which is what matters.
 
-## 7. Report
+## 7. Mark the plan task done
+
+Skip this step when the work didn't come from a planning doc. Otherwise, once `main` is pushed (and green, unless CI
+was skipped), mark each task this landing completed in the doc it came from, in that doc's own convention (checkbox,
+status column or "done" marker), with the short SHA of the commit on `main`.
+
+- A plan kept in the repo is a docs-only change: commit it straight on `main` (see "Docs-only changes" below), push
+  it, and skip CI.
+- A plan that is a claude.ai artifact (the refactor and web portal plans) is edited with the Artifact tool, not in
+  a branch: read it, update the task's status, republish to the same URL. Contract changes still go through
+  `docs/plan-changes.md`; this step only records that the task is done.
+
+If you can't tell which task the work satisfied, ask the user instead of guessing.
+
+## Docs-only changes
+
+A change that touches only documentation (`*.md`, `docs/`, `.claude/` rules and skills prose, comment-only edits per
+step 4) needs no branch or worktree: commit it on `main` in the main checkout, run `mise run check`, push `main`
+and skip CI monitoring, then say in the report that CI was skipped and why. Anything beyond that, or any doubt, uses
+the normal branch flow above.
+
+## 8. Report
 
 Tell the user: the commits now on `main` (short SHA and summary), the CI run links and results for the branch and
-for `main`, and what was deleted. Mention any other worktree that is now behind `main`.
+for `main` (or that CI was skipped and why), the plan tasks marked done, and what was deleted. Mention any other
+worktree that is now behind `main`.

@@ -4,6 +4,13 @@ How a session that coordinates subagents (the orchestrator) gives each one its o
 branches and cleans up. Everything in `git-commits.md` still applies. A single integration branch that collects
 several tasks before landing is allowed only when the user asks for it; otherwise each task lands on its own.
 
+## When to use subagents
+
+Tasks that come from a plan are always executed by subagents, one per task, never by the orchestrator itself. The
+orchestrator reads the plan, picks the tasks, writes each brief, spawns the agents, reviews their reports and
+integrates their branches into one result (see below); it writes no task code. Tasks that depend on each other run
+in order, the rest in parallel. Work that didn't come from a plan stays with whoever was asked.
+
 ## Setting up worktrees
 
 - **The orchestrator stays in the main checkout.** A session that has entered a worktree (`EnterWorktree`) pins
