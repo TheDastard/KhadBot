@@ -47,6 +47,7 @@ cython_debug/
 .env
 .env.*
 !.env.example
+/deploy/dev.env
 .envrc
 .venv/
 venv/

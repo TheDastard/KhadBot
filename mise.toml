@@ -131,6 +131,35 @@ description = "Stop the stack and delete its data volumes (database and bucket)"
 run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes"
 
 
+# -- Native dev loop (needs Docker for Postgres and SeaweedFS; docs/hosting.md, "Local development") --
+# Postgres and SeaweedFS run in Docker; the hosted API and worker run natively and restart when Python files change.
+# Settings come from deploy/dev.env (setup.ps1 creates it from deploy/dev.env.example). Port 8000 is shared with
+# stack:up: run one of them at a time.
+[tasks."dev:infra"]
+description = "Start Postgres and SeaweedFS in Docker, create the bucket and apply migrations"
+run = "uv run python scripts/dev/dev.py infra"
+
+[tasks."dev:api"]
+description = "Hosted API on 127.0.0.1:8000, native, restarting on Python changes (run dev:infra first)"
+run = "uv run python scripts/dev/dev.py api"
+
+[tasks."dev:worker"]
+description = "Job worker, native, restarting on Python changes (run dev:infra first)"
+run = "uv run python scripts/dev/dev.py worker"
+
+[tasks."dev:seed"]
+description = "Load the recorded fixture reports into the dev loop's database and bucket; pass --only CODE after --"
+run = "uv run python scripts/dev/dev.py seed"
+
+[tasks."dev:smoke"]
+description = "Check the running dev loop: health, a night summary and a queued job the worker finishes"
+run = "uv run python scripts/dev/dev.py smoke"
+
+[tasks."dev:all"]
+description = "dev:infra, then the API and the worker together; Ctrl-C stops both"
+run = "uv run python scripts/dev/dev.py all"
+
+
 # ── Generated files ─────────────────────────────────────────────────────────
 [tasks."gen:contracts"]
 description = "Regenerate contracts/openapi.json from the API"
