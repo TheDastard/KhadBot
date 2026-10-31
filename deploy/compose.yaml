@@ -1,6 +1,9 @@
 # Local hosted-mode stack: Postgres, SeaweedFS (S3-compatible storage), a migrate step, the API and a worker, all reading
 # deploy/stack.env. Run it with `mise run stack:up`; see deploy/README.md and docs/hosting.md.
 #
+# The native dev loop (`mise run dev:all`) starts only the postgres and seaweedfs services from this file and runs the
+# API and worker on the host; the bucket and migrations are done by scripts/dev/dev.py, so it builds no image.
+#
 # Everything listens on 127.0.0.1 only. The stack stores its data in named volumes, never in a host directory: the
 # local .khadbot_data directory is not mounted and plays no part here.
 
