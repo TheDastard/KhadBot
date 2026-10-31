@@ -4,7 +4,7 @@ main.py
 Entry point for KhadBot. Dispatches to a subcommand; ``cli`` (the interactive
 REPL) is the default.
 
-Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] | migrate | worker [--check] | backfill --encounter ID | usage --since DATE [--by user|guild|kind]]
+Run: python main.py [cli | ingest <code> | digest <code> <fight> | serve [--port 8000] | api [--host H --port P] [--reload] | migrate | worker [--check] [--reload] | backfill --encounter ID | usage --since DATE [--by user|guild|kind]]
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ import argparse
 import asyncio
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -20,6 +21,9 @@ from khadbot.errors import ConfigurationError, missing_group_message
 
 SERVE_HOST = "127.0.0.1"
 API_HOST = "0.0.0.0"  # the container binds every interface; the published port decides who can reach it
+PACKAGE_DIR = Path(__file__).resolve().parent
+CONFIG_DIR = PACKAGE_DIR.parents[1] / "config"  # the authored encounter files and registries, next to src/
+RELOAD_DEBOUNCE_MS = 500
 
 # ---------------------------------------------------------------------------
 # Subcommands
@@ -254,9 +258,47 @@ def _run_usage(since: str, by: str) -> None:
     print(format_usage_report(totals, group, start))
 
 
+def _reload_child(argv: list[str]) -> None:
+    """The process the reloader (re)starts: the same command, without ``--reload``."""
+    main(argv)
+
+
+def _run_reloading(argv: list[str]) -> None:
+    """Development only: run ``argv`` (an ``api`` or ``worker`` command) and restart it when a source file changes.
+
+    Watches the package and ``config/`` for Python and YAML edits. A restart stops the process hard (on Windows a
+    signal cannot ask it to finish), so a job the worker was running stays in its running state; nothing re-queues
+    stalled jobs yet.
+    """
+    try:
+        from watchfiles import Change, PythonFilter, run_process
+    except ImportError as exc:
+        sys.exit(missing_group_message("dev", "--reload") + f"\n({exc})")
+
+    def announce(changes: set[tuple[Change, str]]) -> None:
+        names = sorted({Path(path).name for _, path in changes})
+        print(f"[reload] {', '.join(names[:3])}{' ...' if len(names) > 3 else ''} changed; restarting", flush=True)
+
+    try:
+        run_process(
+            PACKAGE_DIR,
+            CONFIG_DIR,
+            target=_reload_child,
+            args=(argv,),
+            target_type="function",
+            watch_filter=PythonFilter(extra_extensions=(".yaml",)),
+            callback=announce,
+            debounce=RELOAD_DEBOUNCE_MS,
+        )
+    except KeyboardInterrupt:
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
+
+RELOAD_HELP = "Development: restart when a Python or config file changes (needs the dev extra; not for containers)"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -288,10 +330,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     api.add_argument("--host", default=API_HOST, help=f"Interface to bind (default: {API_HOST})")
     api.add_argument("--port", type=int, default=8000, help="Port (default: 8000)")
+    api.add_argument("--reload", action="store_true", help=RELOAD_HELP)
     sub.add_parser("migrate", help="Apply database migrations to DATABASE_URL (hosted mode)")
     worker = sub.add_parser("worker", help="Run the job queue worker (hosted mode)")
     worker.add_argument("--queues", help="Comma-separated queues to take jobs from (default: KHADBOT_WORKER_QUEUES)")
     worker.add_argument("--concurrency", type=int, help="Jobs to run at once (default: KHADBOT_WORKER_CONCURRENCY)")
+    worker.add_argument("--reload", action="store_true", help=RELOAD_HELP)
     worker.add_argument(
         "--check", action="store_true", help="Exit 0 if a worker on this machine is alive (health check); run nothing"
     )
@@ -315,6 +359,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     command = args.command or "cli"
+    if getattr(args, "reload", False):
+        argv_list = list(sys.argv[1:] if argv is None else argv)
+        _run_reloading([a for a in argv_list if a != "--reload"])
+        return
     if command in {"api", "migrate", "worker", "backfill", "usage"} and not getattr(args, "check", False):
         from khadbot.logging_setup import configure_logging
 

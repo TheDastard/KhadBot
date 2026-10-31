@@ -240,3 +240,53 @@ class TestUsageSubcommand:
         monkeypatch.delenv("KHADBOT_MODE", raising=False)
         with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
             main(["usage", "--since", "2026-10-01"])
+
+
+class TestReload:
+    def test_api_reload_runs_the_same_command_under_the_reloader(self):
+        with patch("khadbot.main._run_reloading") as reloading, patch("khadbot.main._run_api") as run:
+            main(["api", "--port", "9000", "--reload"])
+        reloading.assert_called_once_with(["api", "--port", "9000"])
+        run.assert_not_called()
+
+    def test_worker_reload_keeps_its_other_arguments(self):
+        with patch("khadbot.main._run_reloading") as reloading, patch("khadbot.main._run_worker") as run:
+            main(["worker", "--queues", "ingest", "--reload"])
+        reloading.assert_called_once_with(["worker", "--queues", "ingest"])
+        run.assert_not_called()
+
+    def test_without_reload_the_command_runs_directly(self):
+        with patch("khadbot.main._run_reloading") as reloading, patch("khadbot.main._run_api") as run:
+            main(["api", "--port", "9000"])
+        reloading.assert_not_called()
+        run.assert_called_once_with("0.0.0.0", 9000)
+
+    def test_only_api_and_worker_take_reload(self):
+        with pytest.raises(SystemExit):
+            main(["migrate", "--reload"])
+
+    def test_the_reloader_watches_the_package_and_config_and_restarts_the_child(self):
+        from khadbot import main as main_module
+
+        with patch("watchfiles.run_process") as run_process:
+            main_module._run_reloading(["api"])
+        (*paths,) = run_process.call_args.args
+        assert main_module.PACKAGE_DIR in paths and main_module.CONFIG_DIR in paths
+        assert run_process.call_args.kwargs["target"] is main_module._reload_child
+        assert run_process.call_args.kwargs["args"] == (["api"],)
+
+    def test_the_child_runs_the_command_without_reload(self):
+        from khadbot import main as main_module
+
+        with patch("khadbot.main._run_api") as run:
+            main_module._reload_child(["api", "--port", "9000"])
+        run.assert_called_once_with("0.0.0.0", 9000)
+
+    def test_reload_without_the_dev_group(self, monkeypatch):
+        import sys
+
+        from khadbot import main as main_module
+
+        monkeypatch.setitem(sys.modules, "watchfiles", None)
+        with pytest.raises(SystemExit, match="'dev' dependency group"):
+            main_module._run_reloading(["api"])
