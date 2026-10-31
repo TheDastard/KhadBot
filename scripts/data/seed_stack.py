@@ -28,6 +28,7 @@ import orjson
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = REPO / "tests" / "fixtures" / "encounter" / "wcl"
 SYNTHETIC = "SYNTH01"
+SMOKE_USER = "smoke"  # scripts/dev/stack_smoke.py signs in as this test user
 
 sys.path.insert(0, str(REPO / "tests"))  # tests/helpers is plain Python; the stack mounts it beside the fixtures
 
@@ -110,36 +111,32 @@ async def seed_report(code: str, fixtures: Path, scratch: Path) -> list[str]:
     return failures
 
 
-def provision_smoke_session(codes: list[str]) -> None:
+async def provision_smoke_session(codes: list[str]) -> None:
     """
-    For the stack smoke test only: a user, a one-day session whose cookie value is ``KHADBOT_STACK_SMOKE_SESSION``,
-    a cached "readable" access answer for each seeded report, so the smoke script can read them without signing in
-    to Warcraft Logs, and a cached "not public" answer for each, so a signed-out visitor gets 404 without a WCL call.
-    Does nothing unless that variable is set, which only the stack's env file does: a known session value must never
-    exist in a real deployment. The readable answers stand for the usual hour, the not-public ones for the denied
+    For the stack smoke test: the test user ``smoke`` (see ``khadbot.auth.dev_sessions``) with each seeded report
+    cached as readable for it and as not public, so the smoke script can read them as that user and a signed-out
+    visitor gets 404, all without a Warcraft Logs call. The smoke script then starts its own session for the user
+    with ``khadbot test-session --user smoke``; the session started here is never handed to anyone.
+
+    Does nothing unless test sessions are on (``KHADBOT_TEST_SESSIONS``, which only the stack's env file sets). The
+    readable answers stand for the usual hour (``KHADBOT_ACCESS_RECHECK_S``) and the not-public ones for the denied
     re-check age (``KHADBOT_ACCESS_DENIED_RECHECK_S``, 5 minutes by default).
     """
-    import os
-    from datetime import UTC, datetime, timedelta
+    from khadbot.config import DevSessionsConfig
 
-    value = os.environ.get("KHADBOT_STACK_SMOKE_SESSION")
-    if not value:
+    dev = DevSessionsConfig()
+    if not dev.enabled:
+        print("test sessions are off (KHADBOT_TEST_SESSIONS): smoke user not provisioned")
         return
+    from khadbot.auth.dev_sessions import issue_session
     from khadbot.auth.pg import PostgresAuthStore
-    from khadbot.auth.sessions import digest
-    from khadbot.auth.store import AccessRecord, SessionRecord
-    from khadbot.db import get_pool
+    from khadbot.db import close_pool, get_pool
 
-    store = PostgresAuthStore(get_pool())
-    now = datetime.now(UTC)
-    user = store.upsert_user(1, "Stack smoke", now)
-    store.create_session(SessionRecord(digest(value), user.id, now, now + timedelta(days=1), now))
-    for code in codes:
-        store.put_access(user.id, code, AccessRecord(readable=True, via="user", checked_at=now))
-        # Not public: a signed-out visitor's check answers from this instead of asking WCL, which the stack's
-        # placeholder credentials cannot do, so the visitor gets the usual 404 rather than 503.
-        store.put_public_access(code, AccessRecord(readable=False, via=None, checked_at=now))
-    print(f"smoke session provisioned for {len(codes)} reports")
+    try:
+        await issue_session(PostgresAuthStore(get_pool()), dev, SMOKE_USER, reports=codes)
+    finally:
+        close_pool()  # the last use of the pool; open, its threads would fail at interpreter shutdown
+    print(f"smoke user provisioned for {len(codes)} reports")
 
 
 async def seed(fixtures: Path, only: list[str]) -> int:
@@ -154,7 +151,7 @@ async def seed(fixtures: Path, only: list[str]) -> int:
             failures += await seed_report(code, fixtures, Path(tmp))
     for line in failures:
         print(f"  {line}", file=sys.stderr)
-    provision_smoke_session(codes)
+    await provision_smoke_session(codes)
     return len(failures)
 
 

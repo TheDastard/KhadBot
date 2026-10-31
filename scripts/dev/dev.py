@@ -322,7 +322,7 @@ def main() -> None:
     elif parsed.command == "seed":
         run(python_script("scripts/data/seed_stack.py", *args), env)
     elif parsed.command == "smoke":
-        run(python_script("scripts/dev/stack_smoke.py", *args), env)
+        run(python_script("scripts/dev/stack_smoke.py", "--native-session", *args), env)
         run(python_script("scripts/dev/queue_smoke.py"), env)
     elif parsed.command == "session":
         run(python_script("main.py", "test-session", *args), env)
