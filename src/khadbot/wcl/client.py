@@ -139,10 +139,14 @@ class WarcraftLogsClient:
         WarcraftLogs application client ID.
     client_secret:
         WarcraftLogs application client secret.
+    transport:
+        The ``httpx`` transport requests go through. None uses the network, or with ``KHADBOT_WCL_REPLAY`` set the
+        process's replay transport (``wcl/replay.py``), so no caller has to ask for replay.
     """
 
     client_id: str
     client_secret: str
+    transport: httpx.AsyncBaseTransport | None = field(default=None, repr=False)
     _token_cache: _TokenCache = field(default_factory=_TokenCache, init=False, repr=False)
     _http: httpx.AsyncClient | None = field(default=None, init=False, repr=False)
 
@@ -151,7 +155,12 @@ class WarcraftLogsClient:
     # ------------------------------------------------------------------
 
     async def __aenter__(self) -> WarcraftLogsClient:
-        self._http = httpx.AsyncClient(timeout=30.0)
+        transport = self.transport
+        if transport is None:
+            from khadbot.wcl.replay import configured_transport  # imports this module
+
+            transport = configured_transport()
+        self._http = httpx.AsyncClient(timeout=30.0, transport=transport)
         return self
 
     async def __aexit__(self, *_: Any) -> None:
