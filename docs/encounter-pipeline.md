@@ -109,6 +109,8 @@ Batch entries are transient: they exist only until their stream has been split b
 per-fight entries, which stay the only thing normalize reads. `fetch_batches` fetches the eight small specs
 (`BATCHED_SPEC_KEYS`) once per spec, filter and chunk of up to `wcl_batch_max_fights` pulls; pulls already partly
 fetched, single pulls, offline and metadata-refresh runs go per pull, and a failed batch falls back to per-pull requests.
+`fetch_report(batch=False)` fetches every spec per pull; the job context passes it under WCL replay, whose recordings
+hold per-pull pages only (`docs/hosting.md`, "WCL replay").
 
 Specs per pull (`DEFAULT_SPECS` plus `specs_for`):
 

@@ -375,6 +375,16 @@ def _run_reloading(argv: list[str]) -> None:
 RELOAD_HELP = "Development: restart when a Python or config file changes (needs the dev extra; not for containers)"
 
 
+def _announce_wcl_replay() -> None:
+    """Say at start-up when WCL replay (a development switch) answers WCL, and stop on settings that can't work."""
+    from khadbot import wiring
+
+    try:
+        wiring.announce_wcl_replay()
+    except ConfigurationError as exc:
+        sys.exit(str(exc))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="khadbot", description="KhadBot — Agentic WoW Assistant")
     sub = parser.add_subparsers(dest="command")
@@ -457,6 +467,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         configure_logging()
         if command in {"api", "worker"}:
             _log_development_switches()
+            _announce_wcl_replay()
     if command == "ingest" and args.refresh_meta and args.offline:
         from khadbot.cli.commands.encounter import REFRESH_OFFLINE_ERROR
 

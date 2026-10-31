@@ -12,14 +12,16 @@ Nothing below it reads the mode: the engine takes a store as an argument and nev
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from khadbot.config import AuthConfig, DatabaseConfig, EncounterConfig, WarcraftLogsConfig
+from khadbot.config import AuthConfig, DatabaseConfig, EncounterConfig, WarcraftLogsConfig, WclReplayConfig
 from khadbot.encounter.annotate import AnnotationCache
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
+from khadbot.encounter.ingest.recorded import RECORDED_BUFF_IDS
 from khadbot.encounter.records_store import ReadModelIndex, ReadModelProjector, RecordsStore
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.errors import ConfigurationError, missing_group_message
@@ -29,6 +31,8 @@ if TYPE_CHECKING:
     from khadbot.auth.access import ReportAccess
     from khadbot.auth.service import AuthService
     from khadbot.auth.tokens import WclTokens
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Blob-backed stores
@@ -162,9 +166,55 @@ def report_access() -> ReportAccess | None:
     return service.access if service is not None else None
 
 
+# ---------------------------------------------------------------------------
+# WCL replay (development only)
+# ---------------------------------------------------------------------------
+
+
+def wcl_replay() -> WclReplayConfig | None:
+    """The WCL replay settings when ``KHADBOT_WCL_REPLAY`` is set, else None. ``WarcraftLogsClient`` picks it up."""
+    cfg = WclReplayConfig()
+    return cfg if cfg.enabled else None
+
+
+def replay_fetch_filters() -> dict[str, Any] | None:
+    """
+    Under WCL replay, the fetch filters ingest jobs use: the ones the recordings were fetched with (``RECORDED_BUFF_IDS``
+    for defensive Buffs, no offensive Buffs, enemy Casts unfiltered), as offline recorded ingest uses. The filters the
+    registries and encounter files give now have other filter hashes, which no recording holds. None without replay:
+    jobs use the configured filters.
+    """
+    if wcl_replay() is None:
+        return None
+    return {"defensive_spell_ids": list(RECORDED_BUFF_IDS), "offensive_spell_ids": [], "enemy_cast_ids": {}}
+
+
+def batch_fetch() -> bool:
+    """Whether ingest batches the small specs across pulls: not under WCL replay, which fetches per pull as recorded."""
+    return wcl_replay() is None
+
+
+def announce_wcl_replay() -> None:
+    """
+    Log at start-up that WCL replay is on, and how it answers; nothing when it is off.
+
+    Raises:
+        ConfigurationError: Replay is on and its settings can't work.
+    """
+    cfg = wcl_replay()
+    if cfg is None:
+        return
+    from khadbot.wcl.replay import check_config, describe
+
+    check_config(cfg)
+    logger.warning(describe(cfg) + "; ingest asks for the recorded fetch filters, per pull")
+
+
 __all__ = [
+    "announce_wcl_replay",
     "annotation_cache",
     "auth_service",
+    "batch_fetch",
     "blob_store",
     "encounter_data",
     "event_store",
@@ -173,6 +223,8 @@ __all__ = [
     "read_model_index",
     "read_model_projector",
     "records_store",
+    "replay_fetch_filters",
     "report_access",
     "user_tokens",
+    "wcl_replay",
 ]

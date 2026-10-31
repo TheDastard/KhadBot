@@ -2,7 +2,7 @@
 tests/unit/encounter/ingest/test_fetch_report.py
 
 The ingest job's half of ingest (``fetch_report``) on SYNTH01's report metadata with no cached events: raw pages and
-one fetch manifest per pull, never the event store; several pulls fetched at once; one pull's failure leaving the
+one fetch manifest per pull, never the event store; several pulls fetched at once; batching turned off; one pull's failure leaving the
 others ready; cancellation stopping at a page boundary; truncation flags kept in the cache and the manifest. WCL is a
 stub client that answers every events request with an empty page, after a short delay.
 """
@@ -103,6 +103,17 @@ class TestRawPagesAndManifests:
             manifest = cache.manifest(SYNTH, pull.fight_id)
             assert manifest == out.manifests[pull.fight_id]
             assert len(manifest.specs) == 11 and manifest.truncated() == []
+
+    async def test_batching_off_sends_only_single_fight_requests(self, online, tmp_path):
+        kwargs, _ = online
+        batched, per_pull = SlowStub(0), SlowStub(0)
+        await fetch_report(SYNTH, client=batched, **kwargs)
+        kwargs["cache"] = RawPageCache(tmp_path / "raw-per-pull")
+        kwargs["cache"].write_report_meta(SYNTH, RawPageCache(FIXTURES / "wcl").report_meta(SYNTH))
+        out = await fetch_report(SYNTH, client=per_pull, batch=False, **kwargs)
+        assert any(len(c["fightIDs"]) > 1 for c in batched.calls)
+        assert out.failed == {} and {len(c["fightIDs"]) for c in per_pull.calls} == {1}
+        assert len(per_pull.calls) == 22  # 11 specs for each of the two pulls
 
     async def test_a_repeat_makes_no_request_and_writes_nothing(self, online, tmp_path):
         kwargs, _ = online

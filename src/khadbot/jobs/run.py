@@ -60,6 +60,7 @@ __all__ = [
     "UserAuthUnavailableError",
     "UserTokenResolver",
     "UserTokenSource",
+    "configured_filter_kwargs",
     "default_filter_kwargs",
     "default_token_resolver",
     "process_specs_for",
@@ -207,6 +208,11 @@ def default_filter_kwargs() -> dict:
     )
 
 
+def configured_filter_kwargs() -> Mapping[str, Any]:
+    """The fetch filters ingest jobs use: the recorded ones under WCL replay (``wiring``), else the configured ones."""
+    return wiring.replay_fetch_filters() or default_filter_kwargs()
+
+
 @dataclass
 class JobContext:
     """
@@ -219,7 +225,8 @@ class JobContext:
     cache: RawPageCache | None = None  # where ingest writes raw pages and process reads them; None is the wired cache
     findings: FindingsStore | None = None
     client: WarcraftLogsClient | None = None  # None: ingest opens one from the app credentials when it needs WCL
-    filters: Callable[[], Mapping[str, Any]] = default_filter_kwargs
+    filters: Callable[[], Mapping[str, Any]] = configured_filter_kwargs
+    batch: bool = field(default_factory=lambda: wiring.batch_fetch())  # off under WCL replay: fetch per pull
     resolver: TokenResolver = field(default_factory=lambda: default_token_resolver())
     projector: ReadModelProjector | None = field(default_factory=wiring.read_model_projector)
 
@@ -273,6 +280,7 @@ async def run_ingest_report(
         refresh_meta=spec.refresh_meta,
         progress=lambda pull, stage, pct: progress.report(stage, pull, pct),
         token_provider=token_provider,
+        batch=ctx.batch,
         **ctx.filters(),
     )
     progress.report("ingest", None, 1.0)

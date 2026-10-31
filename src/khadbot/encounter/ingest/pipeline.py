@@ -137,6 +137,7 @@ async def fetch_report(
     token_provider: TokenProvider | None = None,
     write_manifests: bool = True,
     pull_concurrency: int | None = None,
+    batch: bool = True,
 ) -> FetchedReport:
     """
     Fetch the report metadata and the raw pages of the requested fights of ``code`` (all encounter fights when
@@ -159,6 +160,9 @@ async def fetch_report(
 
     ``token_provider`` makes every WCL request use a signed-in user's token and ``points_spent`` count the user's
     budget; the report metadata records that a user token fetched it. Without it ingest uses the app token.
+
+    ``batch=False`` fetches every spec per pull, with no cross-fight requests: the shape recorded reports were fetched
+    in, which WCL replay answers.
     """
     if refresh_meta and offline:
         raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
@@ -202,7 +206,7 @@ async def fetch_report(
                 )
 
         batch_truncated: dict[int, set[str]] = {}
-        if client is not None and not offline and not refresh_meta:
+        if batch and client is not None and not offline and not refresh_meta:
             try:
                 batch_truncated = await fetch_batches(
                     client, cache, code, wanted, specs_by_fight, token_provider=token_provider
