@@ -290,3 +290,37 @@ class TestReload:
         monkeypatch.setitem(sys.modules, "watchfiles", None)
         with pytest.raises(SystemExit, match="'dev' dependency group"):
             main_module._run_reloading(["api"])
+
+
+class TestWclReplayAnnouncement:
+    """``api`` and ``worker`` say at start-up when WCL replay is on, and stop on replay settings that can't work."""
+
+    @pytest.fixture(autouse=True)
+    def _env(self, monkeypatch):
+        from khadbot.config import reset_config
+
+        monkeypatch.delenv("KHADBOT_WCL_REPLAY", raising=False)
+        monkeypatch.delenv("KHADBOT_WCL_REPLAY_LIVE", raising=False)
+        with patch("khadbot.logging_setup.configure_logging"):
+            yield monkeypatch
+        reset_config()
+
+    def test_off_says_nothing(self, caplog):
+        with patch("khadbot.main._run_worker") as run, caplog.at_level("WARNING"):
+            main(["worker"])
+        run.assert_called_once()
+        assert "WCL replay" not in caplog.text
+
+    def test_on_is_logged_before_the_worker_starts(self, _env, caplog, tmp_path):
+        _env.setenv("KHADBOT_WCL_REPLAY", str(tmp_path))
+        with patch("khadbot.main._run_api") as run, caplog.at_level("WARNING"):
+            main(["api"])
+        run.assert_called_once()
+        assert f"WCL replay is on: WCL data requests are answered from {tmp_path}" in caplog.text
+        assert "recorded fetch filters, per pull" in caplog.text
+
+    def test_a_missing_directory_stops_the_process(self, _env, tmp_path):
+        _env.setenv("KHADBOT_WCL_REPLAY", str(tmp_path / "missing"))
+        with patch("khadbot.main._run_worker") as run, pytest.raises(SystemExit, match="not a directory"):
+            main(["worker"])
+        run.assert_not_called()

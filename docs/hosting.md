@@ -91,6 +91,30 @@ A signed-in user can watch a report that is still being logged (`POST /v1/report
 
 Polls and the ingests a watch queues are live requests to the WCL budget, which may use the headroom (`KHADBOT_BUDGET_HEADROOM_SHARE`). A poll the budget has no points for is skipped; the watch shows it in `polls_skipped`. Watches are rows in the `watches` table (migration 0007), one active per report.
 
+### WCL replay
+
+A development switch for the API, the worker and the CLI (`docs/decisions.md`, D71): with `KHADBOT_WCL_REPLAY` set to a directory of recorded reports, every WCL data request is answered from that directory or refused, and none reaches the network. Ingest, the queue, the budget, progress, live watch and access checks run their production code; only the answers are recorded ones. Sign-in still goes to real WCL: the code exchange, the refresh and the current-user query pass through, so real sign-in keeps working, and a signed-in user's ingests and watches are then replayed too. Off unless set; the local stack's and CI's environment files are the only places to set it, never staging or production.
+
+`main.py api` and `main.py worker` log a warning at start-up that replay is on, with the directory, the simulated limit and the live report, and stop at once when the settings can't work (no such directory, a live report that isn't recorded there). Every other process that opens a WCL client logs the same line the first time it does.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_WCL_REPLAY` | A directory laid out like the raw page cache: `<code>/report.json` and `<code>/<fight>/<spec>/<filter_hash>/page_NNN.json`, optionally `<code>/batch/...` streams. `tests/fixtures/encounter/wcl` (after `git lfs pull`) is one. Empty turns replay off (the default). |
+| `KHADBOT_WCL_REPLAY_LIMIT` | Points per window of the simulated `rateLimitData` counter (default 3600, the current scheme's limit). Set it low (say 40) to see an ingest wait in `waiting_budget`. |
+| `KHADBOT_WCL_REPLAY_RESET_S` | The counter's window in seconds (default 3600). `pointsResetIn` counts down to its end; the next window starts with nothing spent. |
+| `KHADBOT_WCL_REPLAY_LIVE` | A recorded report that is "still being logged": its metadata shows only its recorded fights, one at a time, so a live watch sees a raid in progress. Empty for none. |
+| `KHADBOT_WCL_REPLAY_LIVE_INTERVAL_S` | 0 (default): one more fight with every metadata request (every watch poll). Above 0: one fight at the first request and one more every so many seconds. |
+
+**Ingest asks for the recorded fetch shape.** Under replay, `wiring.py` gives ingest jobs the filters the real recordings were fetched with, the same ones offline recorded ingest uses: `RECORDED_BUFF_IDS` for defensive Buffs, no offensive Buffs, and enemy Casts unfiltered. It also turns cross-fight batching off, so every spec is fetched per pull, as the recordings were made. The filters the registries and encounter files give now have other filter hashes (the defensive registry has grown, the offensive one was never recorded), and no recording holds those pages; the fetch and ingest code is the same either way. So a replayed ingest shows what production ingest does, but not with production's filters, and its point spend is per pull rather than batched. `SYNTH01` was recorded with its own synthetic filters and encounter file, so a stock worker can't replay it; the tests replay it with those filters.
+
+**What is refused.** A page, filter or fight that wasn't recorded, a multi-fight request with no recorded `batch/` stream, any other query and any other URL raise `WclReplayRefusedError`, a WCL API error whose message names the report, fight, spec and filter hash (so a registry change that outgrows the recordings is obvious). A pull whose pages are refused fails with that message and the rest of the ingest goes on. A report code with no recording answers as WCL does for a missing report, with a GraphQL error. A recording still in Git LFS pointer form is refused with the `git lfs pull` hint. The full request-to-page mapping is in `docs/wcl-api.md`, "WCL replay".
+
+**Points.** Every answered request costs 1 point, the measured cost of a one-page request; a `rateLimitData` read shows the count before its own point, and refusals cost nothing. With no point free the answer is HTTP 429 with no `Retry-After` (WCL isn't known to send one), which ingest retries and the budget sees through its reads. The counter lives in each process: the worker's is the one the budget syncs from, and the API's (access checks) counts apart. The budget assumes an hour between resets after the first one, so with a short `KHADBOT_WCL_REPLAY_RESET_S` it learns of the next reset at its next read (after each job and when a worker starts).
+
+**Credentials.** Replay never sends the WCL client credentials anywhere (the app token is a local placeholder), but `WarcraftLogsConfig` still requires `WARCRAFTLOGS_CLIENT_ID` and `WARCRAFTLOGS_CLIENT_SECRET` to be set, so an environment without `.env` (CI) sets placeholder values.
+
+Try it on the local stack: set `KHADBOT_WCL_REPLAY=tests/fixtures/encounter/wcl` (an absolute path when the process runs elsewhere) for the API and the worker, sign in, and ingest `QkVa6GHRK8yfrTbw` with fight 14 (the report lists every fight, but only the recorded ones have pages, so name them). For live watch, add `KHADBOT_WCL_REPLAY_LIVE=H7z1fqDXjRTFnbtg` and a short `KHADBOT_WATCH_POLL_INTERVAL_S`, then watch that report: its four recorded fights arrive one per poll.
+
 ### Seed (`scripts/data/seed_stack.py`)
 
 The API's variables. It refuses to run unless `KHADBOT_MODE=hosted` and `KHADBOT_STORAGE=s3`, so it can never write a local data directory. It needs no WCL credentials.
@@ -186,7 +210,7 @@ The full experience runs hosted mode on your machine: Postgres and the bucket in
 
 **Reset.** `mise run stack:reset` stops everything in the project and deletes the database and the bucket; `dev:all` recreates them, and `dev:seed` fills them again.
 
-**Switches for development.** WCL replay, the fake model provider and test sessions come with their own tasks and are documented here when they land.
+**Switches for development.** WCL replay answers WCL from the recorded fixture reports, so ingest and live watch spend no WCL points: uncomment `KHADBOT_WCL_REPLAY` in `deploy/dev.env` (see "WCL replay" under "Environment variables" above). Test sessions are described under "Test sessions" below.
 
 **Time to start.** With the images pulled and the volumes in place, `dev:all` has the infrastructure ready in about 3 seconds and the API healthy about 8 seconds after the command (measured on the maintainer's Windows machine, 2026-10-31). The first run also pulls the Postgres and SeaweedFS images, which takes around a minute depending on the connection.
 
