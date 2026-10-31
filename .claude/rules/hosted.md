@@ -41,4 +41,6 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 - The image is built from the repository root with `deploy/Dockerfile`. `.dockerignore` excludes everything by default, so a new file reaches the image only through a `COPY` line and an allow entry; never add `.env`, `.khadbot_data*` or `.git`.
 - No secret is baked into an image or written in a compose file. `deploy/stack.env` holds throwaway local values only (the local S3 store is SeaweedFS; production uses Cloudflare R2); real deployments set the same variable names on the platform.
 - The stack never mounts `.khadbot_data`; hosted mode keeps its data in Postgres and the bucket. The image runs as a non-root user.
+- `deploy/dev.env.example` is the native dev loop's counterpart of `stack.env` (`127.0.0.1` instead of container host names); the copy `deploy/dev.env` is gitignored and holds throwaway values and nothing else. Real WCL credentials stay in `.env`.
+- The dev loop's `--reload` (`main.py api|worker --reload`) is for development only; never put it in the image or a compose command.
 - A new environment variable goes in `.env.example`, in `docs/hosting.md` under its component, and in `stack.env` when the local stack needs it.

@@ -142,7 +142,7 @@ There are two ways to run KhadBot on your own machine.
 
 **Local mode** is the CLI plus `main.py serve`: the dashboard API's read routes over `KHADBOT_DATA_DIR`, on 127.0.0.1, with no database, bucket, queue, Docker or sign-in. It is a quick look at a data directory. It is not a user surface: nothing in it signs in, ingests or runs a job.
 
-**The full experience** (sign-in, ingest with live progress, live watch, the budget, reviews and chat) runs on the local test environment: hosted mode on your own machine, with Postgres and the bucket in Docker (see "The local stack" above) and the same API and worker code that production runs. This section covers local mode only; the dev loop for the test environment is documented with it as it lands.
+**The full experience** (sign-in, ingest with live progress, live watch, the budget, reviews and chat) runs on the local test environment: hosted mode on your own machine, with Postgres and the bucket in Docker (see "The local stack" above) and the same API and worker code that production runs. Local mode is described first; the dev loop for the test environment follows it.
 
 **What local mode serves.** The read routes (`/v1/reports`, `/v1/reports/{code}`, `/night`, the pull `digest`, `timeline`, `events` and `findings`, and `/v1/evidence/{ref}`) over the data directory, and `GET /v1/health`. Findings are the cached ones; nothing runs the analyst or calls Warcraft Logs. There is no sign-in, so every request may read every ingested report. CORS allows `http://localhost:3000` and `http://127.0.0.1:3000` for `GET`, without credentials. The hosted-only routes (`/v1/auth/*`, `/v1/me`, `/v1/jobs/*`, `/v1/reports/{code}/watch`, `/v1/budget`) are not mounted and answer 404 like any unknown route.
 
@@ -165,6 +165,30 @@ There are two ways to run KhadBot on your own machine.
 A named report whose pages are missing fails the build with the `git lfs pull --include` line to run, and nothing is written. `SYNTH01` can't be named here (see step 1).
 
 Check it: `curl http://127.0.0.1:8000/v1/health` shows `"mode":"local"` and every feature false. Serving your own `.khadbot_data` is read-only apart from the caches a digest fills; use a copy if you want it untouched.
+
+### The dev loop (the full experience)
+
+The full experience runs hosted mode on your machine: Postgres and the bucket in Docker, the API and the worker natively, so a Python edit takes effect in seconds and no image is built. It runs the code production runs, against a real database and bucket. Needs Docker Desktop running (`scripts/dev/setup.ps1` checks it; `-WithDocker` installs it) and `uv sync --extra dev` (the reload uses `watchfiles`).
+
+    mise run dev:all        # Postgres and SeaweedFS in Docker, the bucket, migrations, then the API and the worker
+    mise run dev:seed -- --only SYNTH01   # in a second terminal; without --only, every recorded report
+    mise run dev:smoke      # health, a signed-out 404, a night summary, and a queued job the worker finishes
+
+`dev:all` prints `dev: ready at http://127.0.0.1:8000` when the API answers and keeps running; the API's and the worker's logs share the terminal with `[api]` and `[worker]` prefixes. Ctrl-C stops both. The pieces run on their own too: `dev:infra` (the Docker services, the bucket and migrations, then exits), `dev:api` and `dev:worker` (each in the foreground, with reload). The web dev server joins `dev:all` when the web app exists.
+
+**Settings.** `deploy/dev.env` (gitignored; `setup.ps1` creates it from `deploy/dev.env.example`, or copy it by hand) holds the same throwaway values as `deploy/stack.env` with `127.0.0.1` in place of the container host names. Use `127.0.0.1`, not `localhost`, for Postgres and the bucket: on Windows the connection pool stalls on its IPv6 attempt for `localhost`. The runner lays dev.env over the main checkout's `.env` (found the way the app finds it, so a worktree needs none of its own), which still supplies the WCL credentials, `LLM_PROVIDER` and the rest. With no WCL credentials anywhere, placeholders let the API start; everything but signing in to Warcraft Logs then works. The worker asks WCL for an app token when it starts (no points); a worker started without real credentials logs a warning that it could not read WCL's rate limit and carries on.
+
+**Reload.** `main.py api --reload` and `main.py worker --reload` (what the tasks run) watch `src/khadbot` and `config/` for Python and YAML changes and restart the command; each prints `[reload] <file> changed; restarting`. A restart takes about 3 seconds. It stops the old process hard (on Windows a signal cannot ask it to finish), so a job the worker was running stays in its running state: cancel it, or `mise run stack:reset`. `--reload` needs the `dev` extra and is for development only; containers never use it.
+
+**Sign in.** Real Warcraft Logs sign-in needs your own client in `.env` and a browser: the API runs on `localhost:8000`, whose callback (`KHADBOT_WCL_REDIRECT_URI` in dev.env) is registered with Warcraft Logs. This has not been exercised on the dev loop yet. Without a browser, the seed provisions the smoke user whose cookie `khadbot_session=local-stack-smoke-session` reads the seeded reports (see "Seeding"). Test sessions, which replace this for the web app, come with their own task.
+
+**Port 8000 is shared.** `mise run stack:up` and `dev:all` both want it, and the dev tasks refuse to start while something listens there. Run `mise run stack:down` before the dev loop, or the other way round. They share the same Postgres and bucket volumes (the infrastructure is the stack's `postgres` and `seaweedfs` services, in the same compose project), so seeded data carries over, and `stack:down` also stops the dev loop's containers.
+
+**Reset.** `mise run stack:reset` stops everything in the project and deletes the database and the bucket; `dev:all` recreates them, and `dev:seed` fills them again.
+
+**Switches for development.** WCL replay, the fake model provider and test sessions come with their own tasks and are documented here when they land.
+
+**Time to start.** With the images pulled and the volumes in place, `dev:all` has the infrastructure ready in about 3 seconds and the API healthy about 8 seconds after the command (measured on the maintainer's Windows machine, 2026-10-31). The first run also pulls the Postgres and SeaweedFS images, which takes around a minute depending on the connection.
 
 ## Retention
 
