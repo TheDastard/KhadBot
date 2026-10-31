@@ -331,6 +331,46 @@ Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "H
 - Hosted API: a second user's ingest of a report whose ingest is already running gets 409 `ingest_in_progress`
   rather than following the first user's job.
 
+### Local test environment
+
+- **Reload strands running jobs.** `main.py worker --reload` restarts the worker by killing it (on Windows a signal
+  can't ask it to finish), so a job it was running stays `running` and nothing re-queues it. Today the docs say to
+  cancel it or run `stack:reset`. Re-queue stalled jobs when a worker starts (or use the queue's own stalled-job
+  retry), which would also cover a worker that crashes in production.
+- **`dev:infra` can fail on its first try.** `scripts/dev/dev.py`'s `create_bucket` reads `exc.response` from a
+  botocore error, but while SeaweedFS is still starting the error has `response=None`, so it raises
+  `AttributeError: 'NoneType' object has no attribute 'get'`. Rerunning works. Use
+  `(getattr(exc, "response", None) or {})` and retry until the gateway answers.
+- **Playwright storage-state files hold a live session cookie.** `test-session --storage-state FILE` writes one
+  (owner-only where the platform allows); the docs say to keep them out of the repo, but no `.gitignore` entry
+  does. Add one for the path the web app's Playwright setup uses.
+- **WCL's real answer for a missing report isn't recorded.** WCL replay answers an unknown report code with its
+  own GraphQL error ("WCL replay has no report ..."), worded to avoid "private", "forbidden" and "rate limit". If
+  WCL's real message contains "private", the client classifies it as a private report instead, and a live watch
+  would stop with a different reason. Record the real response once (a live call that spends points: ask first) and match it.
+- **A worker start costs about one WCL point.** With real credentials, every worker start (and so every `--reload`
+  restart in the dev loop) syncs the budget from `rateLimitData` (about 1 point, plus a free token request). WCL
+  replay answers both locally; it stays opt-in.
+- **Scripts that leave the Postgres pool open.** `scripts/dev/queue_smoke.py` (and any script that calls
+  `get_pool()` without `close_pool()`) prints a psycopg `PythonFinalizationError` at exit. `test-session` and the
+  seed's smoke-user path now close the pool; do the same in the rest.
+- **Test-user ID collisions aren't detected.** Test users' WCL IDs are a hash of the name into `-1` to `-(2**40)`;
+  two names hashing to one ID would share a user. Vanishingly unlikely; a check in `issue_session` would make it
+  impossible.
+- **WCL replay limits.**
+  - The point counter is per process: the worker's budget syncs from the worker's counter, and the API's access
+    checks count separately.
+  - With a short `KHADBOT_WCL_REPLAY_RESET_S`, the budget assumes an hour after the first reset and only learns of
+    the next reset at its next sync (after each job, and when a worker starts).
+  - The live report reveals fights in its metadata only; events pages of fights not shown yet still answer.
+  - A stock worker can't replay SYNTH01: its synthetic encounter file and filters aren't in `config/`. Tests inject
+    them.
+  - Replayed ingest uses the recorded fetch filters, not production's, so replay never exercises a cooldown-registry
+    change. Staging, ingesting real reports, does.
+  - `deploy/stack.env` has no replay settings; the container stack would need an absolute path to the fixtures.
+- **Not verified yet.** Real WCL sign-in through the dev loop (it needs a browser); `dev:smoke` doesn't run in CI
+  (the stack job runs `stack:smoke`).
+
 ## Agent
 
 - **Agent tools over cached data.** The coach's live-API tools were removed (decision D53), so the coach has none.
