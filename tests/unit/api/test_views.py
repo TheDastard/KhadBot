@@ -48,6 +48,22 @@ def test_no_findings_cached(ds):
     assert not ds.ctx.findings.db_path.exists()
 
 
+def test_findings_from_a_store_with_no_file(ds):
+    """A hosted-like store has no ``db_path``; the route reads it through the interface only."""
+
+    class NoFileStore:
+        def __init__(self, inner):
+            self._inner = inner
+
+        def for_pull(self, pull_key, *, include_flagged=False):
+            return self._inner.for_pull(pull_key, include_flagged=include_flagged)
+
+    ds.ctx.findings.put(make(pull=next(p for p in ds.store.pulls(ds.code) if p.fight_id == 1).pull_key))
+    ds.ctx.findings = NoFileStore(ds.ctx.findings)
+    assert findings(ds)["total"] == 1
+    assert findings(ds, 2) == {"findings": [], "truncated": False, "total": 0}
+
+
 def test_current_findings_are_not_stale(ds):
     pf = _store_current(ds)
     body = findings(ds)

@@ -283,12 +283,13 @@ def _actor_id(r: PullRecords, actor: str) -> int:
 
 def cached_findings(ctx: ApiContext, pull: Pull) -> list[CachedFindings]:
     """The pull's cached findings, newest first, each marked stale if its events or encounter file changed."""
-    if not ctx.findings.db_path.is_file():  # reading must not create the database
+    stored = ctx.findings.for_pull(pull.pull_key)  # a store that holds nothing answers [] without being created
+    if not stored:
         return []
     events_hash = ctx.data.store.events_hash(pull.pull_key) or ""
     current_enc = encfile_hash(load_encounter_view(pull.encounter_id, pull.difficulty, ctx.data.enc_root))
     out = []
-    for pf in ctx.findings.for_pull(pull.pull_key):
+    for pf in stored:
         produced = pf.produced_by
         stale = findings_stale(
             produced.events_hashes.get(pull.pull_key), produced.encfile_hash, events_hash, current_enc

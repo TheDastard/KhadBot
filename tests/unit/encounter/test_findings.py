@@ -86,6 +86,12 @@ class TestSqliteFindingsStore(FindingsStoreContract):
         assert store.db_path.exists()
         assert SqliteFindingsStore(store.db_path).get("k1") == make()  # a fresh handle reads the same file
 
+    def test_reads_and_flag_do_not_create_the_database(self, store):
+        assert store.get("k1") is None
+        assert store.for_pull("SYNTH01:1") == []
+        assert store.flag("aaaa0000-1") is False
+        assert not store.db_path.parent.exists()
+
     def test_flag_persists_across_handles(self, store):
         store.put(make("aaaa0000-1", key="k1"))
         store.put(make("bbbb0000-1", key="k2", minutes=1))

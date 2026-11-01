@@ -87,7 +87,11 @@ def cache_key(
 
 
 class FindingsStore(Protocol):
-    """Per-pull findings storage. Implementations: ``SqliteFindingsStore`` and ``PostgresFindingsStore``."""
+    """Per-pull findings storage. Implementations: ``SqliteFindingsStore`` and ``PostgresFindingsStore``.
+
+    Reads (``get``, ``for_pull``) and ``flag`` never create the store: against one that holds nothing yet they answer
+    None, an empty list and False.
+    """
 
     def get(self, key: str) -> PullFindings | None:
         """The findings stored under ``key``, flagged or not, or None."""
@@ -125,6 +129,8 @@ class SqliteFindingsStore:
 
     def get(self, key: str) -> PullFindings | None:
         """The findings stored under ``key``, flagged or not, or None."""
+        if not self.db_path.is_file():  # reading must not create the database
+            return None
         with self._connect() as conn:
             row = conn.execute("SELECT json, flagged FROM findings WHERE cache_key = ?", (key,)).fetchone()
         return _load(*row) if row else None
@@ -139,6 +145,8 @@ class SqliteFindingsStore:
 
     def for_pull(self, pull_key: str, *, include_flagged: bool = False) -> list[PullFindings]:
         """Stored findings for a pull, newest first. Flagged rows are left out unless asked for."""
+        if not self.db_path.is_file():  # reading must not create the database
+            return []
         sql = "SELECT json, flagged FROM findings WHERE pull_key = ?"
         if not include_flagged:
             sql += " AND flagged = 0"
@@ -148,6 +156,8 @@ class SqliteFindingsStore:
 
     def flag(self, finding_id: str) -> bool:
         """Flag the stored findings that contain ``finding_id``. Returns False if none do."""
+        if not self.db_path.is_file():
+            return False
         with self._connect() as conn:
             rows = conn.execute("SELECT cache_key, json FROM findings WHERE json LIKE ?", (f"%{finding_id}%",))
             keys = [
