@@ -336,6 +336,13 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **The two end-to-end suites share port 3000.** `test:e2e:local` starts its own web server on 3000 (local-mode CORS
   allows only that port), so the dev loop's web server must be stopped first (`dev:all -- --no-web`). If running both
   together matters, let `main.py serve` allow another web port and give the local suite that port.
+- **The pull page's full-fixture tests don't run in CI.** `e2e/pull-page.spec.ts` checks every section against the
+  digest of `H7z1fqDXjRTFnbtg:15` only when `E2E_REPORTS` includes that report (seed it with
+  `dev:seed -- --only H7z1fqDXjRTFnbtg`; about 126 MB of Git LFS pages); CI seeds only SYNTH01, so there it runs the
+  SYNTH01 tests. Decide whether CI should fetch the long fixture, or record a smaller pull with deaths past the cutoff.
+- **The pull rail lists only loaded pulls.** It reads `GET /v1/reports/{code}`, so pulls of the night that were never
+  opened don't appear until the whole-report night overview is built (or the rail reads the lookup route, which can
+  spend WCL points).
 
 ### Dashboard API
 
