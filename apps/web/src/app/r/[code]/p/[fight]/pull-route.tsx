@@ -17,6 +17,7 @@ import { isApiError } from "@khadbot/api-client";
 import type { ReactNode } from "react";
 
 import { PullNotLoaded } from "@/components/open-pull/pull-not-loaded";
+import { PullPage } from "@/components/pull/pull-page";
 import { ErrorState } from "@/components/shared/error-state";
 import { NotAvailable } from "@/components/shared/not-available";
 import { SkeletonBlock, SkeletonCard } from "@/components/shared/skeletons";
@@ -25,7 +26,7 @@ import { useFeature } from "@/lib/capabilities";
 import { useFocus } from "@/lib/focus";
 import { usePullDigest } from "@/lib/queries";
 
-import { PullBodySlot, PullTimelineSlot } from "./slots";
+import { PullTimelineSlot } from "./slots";
 
 const NOT_LOADED = new Set(["pull_not_found", "report_not_found"]);
 
@@ -119,8 +120,8 @@ function PullRouteFor({ code, fight }: { code: string; fight: number }) {
   return (
     <>
       <TopBar breadcrumb={pullCrumbs} />
-      {/* Slot: pull-body. Replace with the pull page (components/pull/), keeping `timeline`. */}
-      <PullBodySlot
+      {/* Slot: pull-body, filled by the pull page (components/pull/), which places `timeline`. */}
+      <PullPage
         code={code}
         fight={fight}
         digest={digest.data}
