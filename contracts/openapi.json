@@ -398,6 +398,52 @@
         "title": "CachedFindings",
         "type": "object"
       },
+      "CharacterSearch": {
+        "description": "A character's recent nights, newest first, each holding only the boss pulls the character took part in (pull\nlabels and ordinals are the night's own, so P7 here is P7 in the log search).",
+        "properties": {
+          "capped": {
+            "description": "True when the character has more recent reports than one search lists",
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "character": {
+            "$ref": "#/components/schemas/SearchCharacter"
+          },
+          "encounter_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The encounter the pulls were limited to, if one was asked for",
+            "title": "Encounter Id"
+          },
+          "left_out": {
+            "description": "Listed reports not shown: ones the caller may not read, or that Warcraft Logs could not load",
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "nights": {
+            "items": {
+              "$ref": "#/components/schemas/ReportLookup"
+            },
+            "title": "Nights",
+            "type": "array"
+          }
+        },
+        "required": [
+          "character",
+          "encounter_id",
+          "nights",
+          "capped",
+          "left_out"
+        ],
+        "title": "CharacterSearch",
+        "type": "object"
+      },
       "CooldownEvidence": {
         "description": "A ``cd`` ref: one cast of a cooldown-file spell.",
         "properties": {
@@ -1221,6 +1267,12 @@
             "title": "Live Watch",
             "type": "boolean"
           },
+          "raid_search": {
+            "default": false,
+            "description": "Guild and character search and the server list: GET /v1/search/guild, /v1/search/character and /v1/servers",
+            "title": "Raid Search",
+            "type": "boolean"
+          },
           "report_lookup": {
             "default": false,
             "description": "Report lookup: a report's boss pulls before any is loaded, GET /v1/lookup/report",
@@ -1467,6 +1519,53 @@
           "pulls"
         ],
         "title": "GroupInfo",
+        "type": "object"
+      },
+      "GuildSearch": {
+        "description": "A guild and its raid nights in the window, newest first, each in the report lookup's shape.",
+        "properties": {
+          "capped": {
+            "description": "True when the guild has more reports in the window than one search lists",
+            "title": "Capped",
+            "type": "boolean"
+          },
+          "guild": {
+            "$ref": "#/components/schemas/SearchGuild"
+          },
+          "left_out": {
+            "description": "Listed reports not shown: ones the caller may not read, or that Warcraft Logs could not load",
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "nights": {
+            "description": "Newest first; only reports the caller may read, with boss pulls",
+            "items": {
+              "$ref": "#/components/schemas/ReportLookup"
+            },
+            "title": "Nights",
+            "type": "array"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "description": "The window's start (UTC): reports that started after it are listed",
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "guild",
+          "window_start",
+          "window_end",
+          "nights",
+          "capped",
+          "left_out"
+        ],
+        "title": "GuildSearch",
         "type": "object"
       },
       "Health": {
@@ -3784,6 +3883,167 @@
         "title": "ReportLookup",
         "type": "object"
       },
+      "SearchCharacter": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "description": "The short name of the region, e.g. \"US\"",
+            "title": "Region",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "server_slug": {
+            "title": "Server Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "server_name",
+          "server_slug",
+          "region"
+        ],
+        "title": "SearchCharacter",
+        "type": "object"
+      },
+      "SearchGuild": {
+        "properties": {
+          "faction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The faction name WCL gives, e.g. \"Horde\"; None when it gives none",
+            "title": "Faction"
+          },
+          "id": {
+            "description": "WCL's guild ID",
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "description": "The short name of the region, e.g. \"US\"",
+            "title": "Region",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "server_slug": {
+            "title": "Server Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "server_name",
+          "server_slug",
+          "region",
+          "faction"
+        ],
+        "title": "SearchGuild",
+        "type": "object"
+      },
+      "ServerEntry": {
+        "properties": {
+          "match": {
+            "description": "The name folded for matching as the user types: lower case, accents removed, only letters and digits kept, e.g. \"aggraportugues\". Fold the typed text the same way and match on it",
+            "title": "Match",
+            "type": "string"
+          },
+          "name": {
+            "description": "As players know it, e.g. Aggra (Português)",
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "description": "WCL's region slug, e.g. eu",
+            "title": "Region",
+            "type": "string"
+          },
+          "slug": {
+            "description": "WCL's server slug, e.g. aggra-português: what the searches take",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "region",
+          "match"
+        ],
+        "title": "ServerEntry",
+        "type": "object"
+      },
+      "ServerList": {
+        "description": "Every server a search can name, by region, in the file's order (United States, then Europe): the whole list in one\nresponse, with no filtering. The web app filters it in the browser as the user types.",
+        "properties": {
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/ServerRegion"
+            },
+            "title": "Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "regions"
+        ],
+        "title": "ServerList",
+        "type": "object"
+      },
+      "ServerRegion": {
+        "properties": {
+          "complete": {
+            "description": "Whether the list holds every server WCL had for the region",
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The short name shown, e.g. \"US\"",
+            "title": "Name",
+            "type": "string"
+          },
+          "servers": {
+            "description": "Sorted by name",
+            "items": {
+              "$ref": "#/components/schemas/ServerEntry"
+            },
+            "title": "Servers",
+            "type": "array"
+          },
+          "slug": {
+            "description": "WCL's region slug, e.g. us: what the searches take",
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "servers",
+          "complete"
+        ],
+        "title": "ServerRegion",
+        "type": "object"
+      },
       "StepName": {
         "description": "The three steps a player sees while a pull opens: \"Download the fight\", \"Prepare the events\", \"Find what happened\".",
         "enum": [
@@ -5979,6 +6239,291 @@
         "summary": "Start Watch",
         "tags": [
           "watch"
+        ]
+      }
+    },
+    "/v1/search/character": {
+      "get": {
+        "description": "A character's recent nights, newest first, each holding only the boss pulls the character took part in\n(optionally only one encounter's). Only reports the caller may read are listed.",
+        "operationId": "search_character_v1_search_character_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "maxLength": 4,
+              "minLength": 2,
+              "title": "Region",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "server",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Server",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this encounter's pulls",
+            "in": "query",
+            "name": "encounter",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this encounter's pulls",
+              "title": "Encounter"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterSearch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown server (server_unknown) or character (character_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Missing or invalid query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free now (budget_exhausted); see wait_s"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer (wcl_unavailable)"
+          }
+        },
+        "summary": "Search Character",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/v1/search/guild": {
+      "get": {
+        "description": "A guild and its raid nights from the last 30 days, newest first: each night is a report lookup holding the\nreport's boss pulls. Only reports the caller may read are listed.",
+        "operationId": "search_guild_v1_search_guild_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "server",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Server"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          },
+          {
+            "description": "A warcraftlogs.com guild URL",
+            "in": "query",
+            "name": "url",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A warcraftlogs.com guild URL",
+              "title": "Url"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuildSearch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not a warcraftlogs.com guild URL (bad_guild_url)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown server (server_unknown) or guild (guild_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Missing or invalid query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free now (budget_exhausted); see wait_s"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer (wcl_unavailable)"
+          }
+        },
+        "summary": "Search Guild",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/v1/servers": {
+      "get": {
+        "description": "Every server a guild or character search can name, by region (United States, then Europe), in one response: no\nsearch parameter, no filtering. Filter it in the browser as the user types (``match``). It changes only when the\nfile is rebuilt: cache it for a day and revalidate with its ETag.",
+        "operationId": "list_servers_v1_servers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Not modified: the list matches the If-None-Match ETag"
+          }
+        },
+        "summary": "List Servers",
+        "tags": [
+          "search"
         ]
       }
     }

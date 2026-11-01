@@ -22,6 +22,10 @@ How a request is answered (``docs/wcl/replay.md``, "WCL replay"):
   ``nextPageTimestamp``. ``endTime`` must be the fight's ``endTime``.
 - ``GetEventsPage`` for several fights: a recorded ``<root>/<code>/batch/<dir>/<filter_hash>/<fights_hash>/`` stream
   the same way, from the earliest fight start; without one the request is refused.
+- The search queries (``wcl/search.py``: ``GuildHeader``, ``GuildReports``, ``CharacterReports``):
+  the recorded GraphQL body under ``<root>/_search/`` (``search_*_path``), errors included, as WCL gave it. A guild's
+  report listing is found by guild ID and answers whatever time window and limit are asked (the caller applies its own
+  window too); a character's by region, server and name. Anything nobody recorded is refused.
 - ``rateLimitData``: the simulated counter (``ReplayCounter``).
 - A code with no recorded report gets a GraphQL error, as WCL answers a missing report (the wording is replay's own).
 - Anything else (an unrecorded page or filter, another query, another URL) raises ``WclReplayRefusedError``, which
@@ -45,7 +49,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 import httpx
 
@@ -53,6 +57,12 @@ from khadbot.config import WclReplayConfig
 from khadbot.errors import ConfigurationError
 from khadbot.wcl.client import GRAPHQL_CLIENT_URL, GRAPHQL_USER_URL, RATE_LIMIT_QUERY, TOKEN_URL, WarcraftLogsAPIError
 from khadbot.wcl.oauth import CURRENT_USER_QUERY
+from khadbot.wcl.search import (
+    CHARACTER_OPERATION,
+    GUILD_OPERATION,
+    GUILD_REPORTS_OPERATION,
+    guild_source,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +105,35 @@ def fights_hash(fight_ids: list[int]) -> str:
 
 def spec_dir_name(data_type: str, hostility: str) -> str:
     return data_type if hostility == "Friendlies" else f"{data_type}-{hostility}"
+
+
+SEARCH_DIR = "_search"  # not a report code (codes are letters and digits), so report discovery never lists it
+
+
+def search_guild_path(region: str, server: str, name: str) -> Path:
+    """
+    Where a guild header's recorded answer lives, relative to the replay root: by region and server slug, and the
+    name lower case and percent-encoded (``death%20and%20destruction.json``), so one guild has one file whatever case
+    it was typed in.
+    """
+    return Path(SEARCH_DIR, "guilds", region.lower(), server.lower(), quote(name.casefold(), safe="") + ".json")
+
+
+def search_guild_reports_path(guild_id: int) -> Path:
+    """Where a guild's recorded report listing lives, relative to the replay root: by WCL guild ID."""
+    return Path(SEARCH_DIR, "guild_reports", f"{int(guild_id)}.json")
+
+
+def search_character_path(region: str, server: str, name: str) -> Path:
+    """Where a character's recorded answer (with its recent reports) lives, laid out like a guild's."""
+    return Path(SEARCH_DIR, "characters", region.lower(), server.lower(), quote(name.casefold(), safe="") + ".json")
+
+
+SEARCH_OPERATIONS = (
+    GUILD_OPERATION,
+    GUILD_REPORTS_OPERATION,
+    CHARACTER_OPERATION,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +390,8 @@ class ReplayTransport(httpx.AsyncBaseTransport):
             return _json(200, {"data": {"rateLimitData": self.counter.reading()}})
         match = _OPERATION.match(query)
         operation = match.group(1) if match else None
+        if operation is not None and operation in SEARCH_OPERATIONS:
+            return self._search(operation, variables)
         if operation not in (REPORT_META_OPERATION, REPORT_READABLE_OPERATION, EVENTS_PAGE_OPERATION):
             shown = operation or " ".join(query.split())[:60]
             raise WclReplayRefusedError(f"WCL replay has no answer for the query '{shown}'.")
@@ -368,6 +409,35 @@ class ReplayTransport(httpx.AsyncBaseTransport):
             content=b'{"data":{"reportData":{"report":{"events":' + page + b"}}}}",
             headers={"Content-Type": "application/json"},
         )
+
+    def _search(self, operation: str, variables: dict[str, Any]) -> httpx.Response:
+        """A recorded search answer: the whole GraphQL body WCL gave, without KhadBot's own keys."""
+        if operation == GUILD_REPORTS_OPERATION:
+            guild_id = variables.get("guildID")
+            if not isinstance(guild_id, int):
+                raise WclReplayRefusedError(f"WCL replay needs a guildID on a guild listing; got {guild_id!r}.")
+            relative = search_guild_reports_path(guild_id)
+            what = f"guild {guild_id}'s reports"
+        else:
+            try:
+                source = guild_source(
+                    str(variables.get("serverRegion") or ""),
+                    str(variables.get("serverSlug") or ""),
+                    str(variables.get("name") or ""),
+                )
+            except ValueError:
+                raise WclReplayRefusedError(f"WCL replay can't read the name in {variables!r}.") from None
+            kind = "guild" if operation == GUILD_OPERATION else "character"
+            path_of = search_guild_path if operation == GUILD_OPERATION else search_character_path
+            relative = path_of(source.region, source.server, source.name)
+            what = f"the {kind} {source.name!r} on {source.region}/{source.server}"
+        path = self.reports.root / relative
+        if not path.is_file():
+            raise WclReplayRefusedError(f"WCL replay has no recording of {what} ({relative.as_posix()}).")
+        data = path.read_bytes()
+        if data.startswith(_LFS_POINTER):
+            raise WclReplayRefusedError(f"WCL replay: {relative.as_posix()} is a Git LFS pointer; run `git lfs pull`.")
+        return _json(200, _strip_khadbot(json.loads(data)))
 
     def _meta(self, code: str, meta: dict) -> dict:
         meta = _strip_khadbot(meta)
@@ -500,5 +570,9 @@ __all__ = [
     "filter_hash",
     "fights_hash",
     "reset_configured_transport",
+    "SEARCH_OPERATIONS",
+    "search_character_path",
+    "search_guild_path",
+    "search_guild_reports_path",
     "spec_dir_name",
 ]

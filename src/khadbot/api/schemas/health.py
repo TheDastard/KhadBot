@@ -30,6 +30,11 @@ class Features(BaseModel):
     report_lookup: bool = Field(
         default=False, description="Report lookup: a report's boss pulls before any is loaded, GET /v1/lookup/report"
     )
+    raid_search: bool = Field(
+        default=False,
+        description="Guild and character search and the server list: GET /v1/search/guild, /v1/search/character "
+        "and /v1/servers",
+    )
 
 
 class Health(BaseModel):

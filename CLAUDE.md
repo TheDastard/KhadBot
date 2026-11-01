@@ -53,7 +53,7 @@ src/khadbot/
   simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL
     commands/        # slash-command handlers per mode
-  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary, raids/ (report lookup)
+  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary, raids/ (report lookup, server list, guild and character search)
 config/
   agents/            # coach.yaml, encounter.yaml
   personas/          # khadgar, thrall, xalatath
@@ -70,7 +70,7 @@ tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter-pipeline.md  # encounter data stages: what each stores, reads and invalidates
 docs/follow-ups.md   # open work: encounter system and per-encounter gaps
-docs/wcl/            # the WarcraftLogs API as KhadBot uses it: access and points, report data, costs, replay (README indexes it)
+docs/wcl/            # the WarcraftLogs API as KhadBot uses it: access and points, report data, search, costs, replay (README indexes it)
 ```
 
 Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events and per-pull position tables, annotations, persisted pull records, and the findings and checkpoint SQLite databases. Hosted mode (`KHADBOT_MODE=hosted`, `KHADBOT_STORAGE=s3`) keeps the same objects in an S3-compatible bucket and findings and read models in Postgres.

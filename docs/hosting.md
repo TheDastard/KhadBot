@@ -101,6 +101,20 @@ Polls and the ingests a watch queues are live requests to the WCL budget, which 
 | `KHADBOT_LOOKUP_SETTLED_AFTER_S` | Metadata fetched at least this long after the log's last fight is of a finished log and stands for good (default 21600). |
 | `KHADBOT_LOOKUP_POINTS` | Points one lookup reserves from the WCL budget (default 2, measured at 2.01 for a raid night; never below 1; `docs/wcl/report-data.md`, "Report metadata"). |
 
+### Guild, character and server search
+
+`GET /v1/servers`, `GET /v1/search/guild?region=&server=&name=` (or `?url=` a warcraftlogs.com guild URL) and `GET /v1/search/character?region=&server=&name=&encounter=` (`features.raid_search`, `api/raids/`). The server list (US and EU) is `config/registries/servers.yaml`, loaded at start-up (a malformed file stops the API) and served whole in one response with a day's `Cache-Control` and an ETag; the API never asks WCL for it, and a search naming a server not in it answers 404 `server_unknown` without spending a point. Rebuild the file with `uv run python scripts/data/build_server_list.py` (from the committed recording; `--live` asks WCL, after a typed `yes`). A guild search lists the guild's reports from the last 30 days, a character search the character's recent reports; each listed night is built like a report lookup (same metadata, same raw page cache), at most `KHADBOT_SEARCH_MAX_REPORTS` of them. Listing a guild's or character's reports spends WCL **database points**, which the budget holds against their own cap. A guild's or character's identity is kept in the blob store for good (`search/guilds/`, `search/characters/`); a listing made on the app token holds public reports only and is shared by every caller without a WCL sign-in, in the blob store (`search/listings/`); a listing made on a user's own token stays in memory for that user only. Every listed report passes the access check on every read; one the caller can't read is left out (`left_out`). Errors: 400 `bad_guild_url`, 404 `server_unknown`, `guild_not_found`, `character_not_found`, 429 `budget_exhausted`, 503 `wcl_unavailable`.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_SEARCH_GUILD_WINDOW_DAYS` | How far back a guild search looks (default 30). |
+| `KHADBOT_SEARCH_MAX_REPORTS` | The most reports one search lists (default 15, at most 100); each costs a metadata request when it isn't cached. |
+| `KHADBOT_SEARCH_LISTING_MAX_AGE_S` | How long a guild or character listing is reused: the shared public one, or a user's own (default 900). |
+| `KHADBOT_SEARCH_NOT_FOUND_MAX_AGE_S` | How long a "no such guild or character" answer stands (default 3600). |
+| `KHADBOT_SEARCH_POINTS` | Points each search request reserves: a guild or character lookup, a listing (default 1.2, never below 1; `docs/wcl/search.md`, "Queries and cost"). |
+| `KHADBOT_SEARCH_DATABASE_POINTS` | Database points a report listing reserves (default 1, measured at 1). |
+| `KHADBOT_ACCESS_PUBLIC_RECHECK_S` | How long a cached "public" report-access answer stands (default 21600), longer than `KHADBOT_ACCESS_RECHECK_S` (a user-token answer, 3600) and `KHADBOT_ACCESS_DENIED_RECHECK_S` (300). A log its owner makes private stays readable here for up to this long. |
+
 ### WCL replay
 
 A development switch for the API, the worker and the CLI (`docs/decisions.md`, D71): with `KHADBOT_WCL_REPLAY` set to a directory of recorded reports, every WCL data request is answered from that directory or refused, and none reaches the network. Ingest, the queue, the budget, progress, live watch and access checks run their production code; only the answers are recorded ones. Sign-in still goes to real WCL: the code exchange, the refresh and the current-user query pass through, so real sign-in keeps working, and a signed-in user's ingests and watches are then replayed too. Off unless set; the local stack's and CI's environment files are the only places to set it, never staging or production.
