@@ -343,7 +343,6 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **The pull rail lists only loaded pulls.** It reads `GET /v1/reports/{code}`, so pulls of the night that were never
   opened don't appear until the whole-report night overview is built (or the rail reads the lookup route, which can
   spend WCL points).
-
 - **Timeline markers lack spell IDs.** `MechanicMarker` and `WindowMarker` carry no spell ID, so the timeline's mechanic
   rows and window chips show the neutral square and cooldown markers show the spell's initials, where the canvas
   draws Wowhead icons. Add the ability ID to both markers (the encounter file knows it) and draw them through
@@ -352,6 +351,10 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **Crowded deaths overlap.** Deaths less than about a pixel apart (fight 15 has several within 0.5 s) share a hit
   area, so a click reaches the later one. Arrow keys and the list reach every marker; a stacked or clustered death
   lane would fix the pointer.
+- **The character search has no encounter list.** The Encounter select can offer only the encounters seen in the
+  character results so far this visit, because the API serves no list of the current raid's encounters (WCL has no
+  "current zone" field; `docs/wcl/search.md`). Add a route (from the encounter files, or a zone chosen in config) and
+  have the select read it.
 
 ### Dashboard API
 
