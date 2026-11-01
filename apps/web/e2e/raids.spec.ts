@@ -1,8 +1,11 @@
 // apps/web/e2e/raids.spec.ts
 //
-// The Raids page and the log search on the hosted API (the dev loop with WCL replay): H7z1fqDXjRTFnbtg is a recorded
+// The Raids page and the log search on the hosted API (the dev loop with WCL replay): trMgApZCVYkv3jdq is a recorded
 // public report the replay answers on the app token; SYNTH01 (seeded) is readable by the test users only. Every chip
 // is compared with the lookup's own answer, never with hard-coded numbers.
+//
+// PUBLIC must never be in E2E_REPORTS: global setup marks every report in that list as readable by the test users
+// and not public, which would turn the public lookup into a 404.
 
 import type { components } from "@khadbot/api-client";
 
@@ -12,7 +15,7 @@ import { expect, test } from "./support/fixtures";
 
 type Lookup = components["schemas"]["ReportLookup"];
 
-const PUBLIC = "H7z1fqDXjRTFnbtg";
+const PUBLIC = "trMgApZCVYkv3jdq";
 const PRIVATE = "SYNTH01";
 const UNKNOWN = "ZZZZZZZZZZZZZZZZ";
 

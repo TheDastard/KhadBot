@@ -30,6 +30,9 @@ export const AUTH_DIR = path.join(WEB_ROOT, "e2e", ".auth");
 /**
  * The fixture reports the hosted suite expects seeded (`mise run dev:seed -- --only SYNTH01`) and readable by the
  * test users. SYNTH01 is small and seeds in seconds; add codes here when a test needs another report.
+ *
+ * Global setup marks every report listed here as readable by the test users and NOT public (so every other visitor
+ * gets 404). A report a test uses as public (the Raids spec's trMgApZCVYkv3jdq) must therefore never be in this list.
  */
 export const E2E_REPORTS = (process.env.E2E_REPORTS ?? "SYNTH01").split(",").filter(Boolean);
 
