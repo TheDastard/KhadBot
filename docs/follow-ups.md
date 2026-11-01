@@ -344,6 +344,15 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   opened don't appear until the whole-report night overview is built (or the rail reads the lookup route, which can
   spend WCL points).
 
+- **Timeline markers lack spell IDs.** `MechanicMarker` and `WindowMarker` carry no spell ID, so the timeline's mechanic
+  rows and window chips show the neutral square and cooldown markers show the spell's initials, where the canvas
+  draws Wowhead icons. Add the ability ID to both markers (the encounter file knows it) and draw them through
+  `AbilityName`. The Focus artboard's timeline that itself zooms to a range is not built either: the timeline always
+  shows the whole fight and zoom only opens the events table.
+- **Crowded deaths overlap.** Deaths less than about a pixel apart (fight 15 has several within 0.5 s) share a hit
+  area, so a click reaches the later one. Arrow keys and the list reach every marker; a stacked or clustered death
+  lane would fix the pointer.
+
 ### Dashboard API
 
 - **Boss and faction art from Blizzard's Game Data API.** Boss portraits, raid images and class icons have no source
