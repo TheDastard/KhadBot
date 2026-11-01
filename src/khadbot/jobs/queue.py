@@ -38,12 +38,12 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import procrastinate
 from procrastinate import exceptions as procrastinate_exceptions
-from procrastinate.retry import RetryStrategy
+from procrastinate.retry import RetryDecision, RetryStrategy
 from pydantic import TypeAdapter
 
 from khadbot.config import DatabaseConfig, QueueConfig, RetentionConfig, WatchConfig
@@ -81,6 +81,25 @@ TASK_NAMES = {
     JobKind.PROCESS: "khadbot.process_pull",
     JobKind.REVIEW: "khadbot.review_pull",
 }
+
+# ---------------------------------------------------------------------------
+# Retry
+# ---------------------------------------------------------------------------
+
+
+class RetryAfterStrategy(RetryStrategy):
+    """The exponential backoff, but never sooner than the wait the service asked for (``retry_after_s``)."""
+
+    def get_retry_decision(self, *, exception: BaseException, job: Any) -> RetryDecision | None:
+        decision = super().get_retry_decision(exception=exception, job=job)
+        hint = getattr(exception, "retry_after_s", None)
+        if decision is None or hint is None:
+            return decision
+        floor = datetime.now(UTC) + timedelta(seconds=hint)
+        if decision.retry_at is None or decision.retry_at < floor:
+            decision.retry_at = floor
+        return decision
+
 
 # ---------------------------------------------------------------------------
 # Describing a spec
@@ -154,7 +173,7 @@ class JobQueue:
         self.config = config or QueueConfig()
         self._context_factory = context_factory or JobContext
         self.app = procrastinate.App(connector=connector)
-        retry = RetryStrategy(
+        retry = RetryAfterStrategy(
             max_attempts=self.config.max_retries,
             exponential_wait=self.config.retry_backoff_s,
             retry_exceptions=[TransientJobError],
@@ -164,7 +183,7 @@ class JobQueue:
         self._register_cleanup(retention or RetentionConfig(), cleanup or CleanupSources())
         self.watches = self._register_watch(watches or WatchStore(MemoryWatchBackend()), watch_config or WatchConfig())
 
-    def _register(self, kind: JobKind, retry: RetryStrategy) -> None:
+    def _register(self, kind: JobKind, retry: RetryAfterStrategy) -> None:
         async def run(context: procrastinate.JobContext, job_id: str) -> None:
             await self._execute(context, job_id)
 
@@ -417,12 +436,21 @@ class JobQueue:
             raise
         except Exception as exc:
             failure = classify(exc)
+            hint = (
+                datetime.now(UTC) + timedelta(seconds=failure.retry_after_s)
+                if failure.retry_after_s is not None
+                else None
+            )
             if failure.retryable:
-                transient = TransientJobError(failure.message)
-                if context.task.get_retry_exception(transient, context.job) is not None:
-                    await self.store.requeue(job_id, failure.code, failure.message)
+                transient = TransientJobError(failure.message, retry_after_s=failure.retry_after_s)
+                retry_exc = context.task.get_retry_exception(transient, context.job)
+                if retry_exc is not None:
+                    when = retry_exc.retry_decision.retry_at  # the later of the backoff and WCL's hint
+                    await self.store.requeue(job_id, failure.code, failure.message, when or hint)
                     raise transient from exc
-            await self.store.finish(job_id, JobState.FAILED, error_code=failure.code, error_message=failure.message)
+            await self.store.finish(
+                job_id, JobState.FAILED, error_code=failure.code, error_message=failure.message, retry_at=hint
+            )
             raise
         finally:
             spent = result.points_spent if isinstance(result, IngestResult) else None

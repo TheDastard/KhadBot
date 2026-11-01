@@ -53,19 +53,24 @@ def test_two_users_can_both_read_a_report_marked_for_both(h):
     assert bob.get(f"/v1/reports/{CODE}").status_code == 200
 
 
-def test_users_do_not_see_each_others_jobs(h):
+def test_a_reader_follows_another_users_job_but_cannot_stop_it(h):
     alice, bob = browser(h, "alice", [CODE]), browser(h, "bob", [CODE])
+    carol = browser(h, "carol", [])  # cannot read the report
     started = alice.post("/v1/reports", json={"source": CODE}, headers=CSRF)
     assert started.status_code == 202, started.text
-    job_id = started.json()["id"]
+    job_id = started.json()["job"]["id"]
     row = h.backend.rows[job_id]
     assert row.auth_kind == "app"  # a test user has no WCL token, so the job runs on the app's auth
+    seen = bob.get(f"/v1/jobs/{job_id}")
+    assert seen.status_code == 200 and seen.json()["can_cancel"] is False
+    denied = bob.post(f"/v1/jobs/{job_id}/cancel", headers=CSRF)
+    assert (denied.status_code, denied.json()["code"]) == (403, "not_your_job")
     for call in (
         lambda c: c.get(f"/v1/jobs/{job_id}"),
         lambda c: c.get(f"/v1/jobs/{job_id}/events"),
         lambda c: c.post(f"/v1/jobs/{job_id}/cancel", headers=CSRF),
     ):
-        resp = call(bob)
-        assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
+        resp = call(carol)
+        assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
     assert alice.get(f"/v1/jobs/{job_id}").status_code == 200
     assert h.backend.rows[job_id].state is JobState.QUEUED

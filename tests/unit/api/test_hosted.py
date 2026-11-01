@@ -213,53 +213,89 @@ class TestIngestRoutes:
         h.wcl.readable[h.token_of("Jaina")] = {CODE}
         first = jaina.post("/v1/reports", json={"source": f"https://www.warcraftlogs.com/reports/{CODE}#fight=1"})
         assert first.status_code == 202, first.text
-        job = first.json()
+        job = first.json()["job"]
         assert (job["report_code"], job["state"], job["error"]) == (CODE, "queued", None)
         row = h.backend.rows[job["id"]]
         assert (row.requested_by, row.auth_kind, row.spec["fights"]) == (jaina.user.id, "user", [1])
         assert "fake-access" not in json.dumps(row.spec)  # a user ID, never a token
         again = jaina.post("/v1/reports", json={"source": CODE, "fights": [1]})
-        assert (again.status_code, again.json()["id"]) == (200, job["id"])
+        assert (again.status_code, again.json()["job"]["id"]) == (200, job["id"])
 
     def test_a_user_without_a_wcl_token_ingests_with_app_auth(self, h):
         jaina = h.actor("Jaina", tokens=False)
         h.wcl.readable["app"] = {CODE}
-        job = jaina.post("/v1/reports", json={"source": CODE}).json()
+        job = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]
         assert h.backend.rows[job["id"]].auth_kind == "app"
 
-    def test_another_users_running_ingest_is_not_shown_to_you(self, h):
+    def test_a_second_visitor_opening_a_loading_pull_follows_the_job_and_cannot_cancel_it(self, h):
         h.wcl.readable["app"] = {CODE}
-        first = h.actor("Jaina").post("/v1/reports", json={"source": CODE})
+        first = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [1]})
         assert first.status_code == 202
-        second = h.actor("Thrall").post("/v1/reports", json={"source": CODE})
-        assert (second.status_code, second.json()["code"]) == (409, "ingest_in_progress")
-        assert first.json()["id"] not in second.text
+        assert first.json()["job"]["can_cancel"] is True
+        thrall = h.actor("Thrall")
+        second = thrall.post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert second.status_code == 200 and second.json()["ready"] is False
+        followed = second.json()["job"]
+        assert followed["id"] == first.json()["job"]["id"]
+        assert followed["can_cancel"] is False and followed["points_spent"] is None
+        assert thrall.get(f"/v1/jobs/{followed['id']}").status_code == 200
+        denied = thrall.post(f"/v1/jobs/{followed['id']}/cancel")
+        assert (denied.status_code, denied.json()["code"]) == (403, "not_your_job")
+        assert h.backend.rows[followed["id"]].state is JobState.QUEUED
+
+    def test_a_pull_that_is_loaded_is_ready_with_no_job(self, h):
+        h.wcl.readable["app"] = {CODE}
+        h.ingest_offline()
+        h.process_offline()
+        resp = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (resp.status_code, resp.json()) == (200, {"ready": True, "job": None})
+        assert h.backend.rows == {}
+        whole = h.actor("Jaina").post("/v1/reports", json={"source": CODE})  # a whole report is never ready
+        assert whole.status_code == 202 and whole.json()["ready"] is False
+
+    def test_a_job_shows_its_pulls_before_they_report(self, h):
+        h.wcl.readable["app"] = {CODE}
+        job = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [2]}).json()["job"]
+        (pull,) = job["pulls"]
+        assert (pull["pull_key"], pull["fight"], pull["status"]) == (f"{CODE}:2", 2, "waiting")
+        assert [(s["name"], s["state"]) for s in pull["steps"]] == [
+            ("download", "waiting"),
+            ("prepare", "waiting"),
+            ("analyse", "waiting"),
+        ]
 
     def test_other_users_and_missing_jobs_are_404(self, h):
         h.wcl.readable["app"] = {CODE}
         jaina, thrall = h.actor("Jaina"), h.actor("Thrall")
-        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["id"]
+        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]["id"]
         for call in (
             lambda a, i: a.get(f"/v1/jobs/{i}"),
             lambda a, i: a.get(f"/v1/jobs/{i}/events"),
             lambda a, i: a.post(f"/v1/jobs/{i}/cancel"),
         ):
-            for actor, ident in ((thrall, job_id), (jaina, "missing")):
-                resp = call(actor, ident)
-                assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
+            resp = call(jaina, "missing")
+            assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
+        assert h.backend.rows[job_id].state is JobState.QUEUED
+        assert thrall.post(f"/v1/jobs/{job_id}/cancel").status_code == 403  # a reader may follow it, not stop it
         assert h.backend.rows[job_id].state is JobState.QUEUED  # Thrall's cancel did nothing
+
+    def test_a_user_who_cannot_read_the_report_cannot_follow_its_job(self, h):
+        h.wcl.readable[h.token_of("Jaina")] = {CODE}
+        job_id = h.actor("Jaina").post("/v1/reports", json={"source": CODE}).json()["job"]["id"]
+        for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
+            assert h.actor("Thrall").get(url).json()["code"] == "report_not_found"
 
     def test_process_jobs_are_not_exposed(self, h):
         h.wcl.readable["app"] = {CODE}
         jaina = h.actor("Jaina")
-        job = jaina.post("/v1/reports", json={"source": CODE}).json()
+        job = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]
         child = asyncio.run(h.queue.enqueue(ProcessPull(pull_key=f"{CODE}:1"), parent=h.backend.rows[job["id"]]))
         assert jaina.get(f"/v1/jobs/{child.job.id}").status_code == 404
 
     def test_losing_access_to_the_report_hides_its_job(self, h):
         jaina = h.actor("Jaina")
         h.wcl.readable[h.token_of("Jaina")] = {CODE}
-        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["id"]
+        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]["id"]
         h.wcl.readable.clear()
         h.clock.advance(hours=2)  # past the cached answer
         for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
@@ -268,7 +304,7 @@ class TestIngestRoutes:
     def test_cancel_drops_a_queued_job(self, h):
         h.wcl.readable["app"] = {CODE}
         jaina = h.actor("Jaina")
-        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["id"]
+        job_id = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]["id"]
         resp = jaina.post(f"/v1/jobs/{job_id}/cancel")
         assert (resp.status_code, resp.json()["state"]) == (200, "cancelled")
         assert jaina.get(f"/v1/jobs/{job_id}").json()["state"] == "cancelled"
@@ -276,7 +312,7 @@ class TestIngestRoutes:
     def test_ingest_end_to_end_over_server_sent_events(self, h):
         jaina = h.actor("Jaina")
         h.wcl.readable[h.token_of("Jaina")] = {CODE}
-        job = jaina.post("/v1/reports", json={"source": CODE}).json()
+        job = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]
         worker = h.run_worker()
         with jaina.client.stream("GET", f"/v1/jobs/{job['id']}/events") as resp:
             assert resp.status_code == 200
@@ -302,7 +338,7 @@ class TestIngestRoutes:
     def test_a_finished_job_streams_its_state_and_closes(self, h):
         jaina = h.actor("Jaina")
         h.wcl.readable[h.token_of("Jaina")] = {CODE}
-        job = jaina.post("/v1/reports", json={"source": CODE}).json()
+        job = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]
         h.run_worker().join(timeout=60)
         text = jaina.get(f"/v1/jobs/{job['id']}/events").text  # a reconnect after the end: current state, no replay
         assert [e[1] for e in sse_events(text)] == ["job.state", "job.done"]

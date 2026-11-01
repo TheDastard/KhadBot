@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Literal, LiteralString, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 from khadbot.jobs.failures import ErrorCode
+from khadbot.jobs.progress import PullInfo
 from khadbot.jobs.specs import IngestReport
 
 if TYPE_CHECKING:
@@ -76,6 +77,11 @@ class JobProgress(BaseModel):
     stage: str | None = None
     fraction: float = 0.0
     pulls: dict[str, PullProgress] = Field(default_factory=dict)
+    # What each pull is (encounter, difficulty), described once when the ingest knows its pulls.
+    info: dict[str, PullInfo] = Field(default_factory=dict)
+    # When the queue will try again after a rate limit (the later of its backoff and WCL's Retry-After), or when WCL
+    # said to retry a job that then failed. Kept so the API can show the seconds left.
+    retry_at: datetime | None = None
 
 
 class JobRecord(BaseModel):
@@ -249,12 +255,15 @@ def _finish(
     points_spent: float | None = None,
     failed_pulls: dict[str, str] | None = None,
     awaiting_children: bool = False,
+    retry_at: datetime | None = None,
 ) -> JobRecord | None:
     rec = tx.load(job_id)
     if rec is None or not rec.active:
         return rec
     now = _now()
     doc = rec.progress
+    if retry_at is not None:
+        doc = doc.model_copy(update={"retry_at": retry_at})
     for pull, message in (failed_pulls or {}).items():
         doc = _with_pull(doc, pull, PullProgress(stage="ingest", fraction=0.0, state="failed", error=message))
     update: dict[str, Any] = {"progress": doc, "points_spent": points_spent, "updated_at": now}
@@ -315,13 +324,24 @@ def _settle(tx: JobTx, rec: JobRecord) -> JobRecord:
     return rec
 
 
-def _requeue(tx: JobTx, job_id: str, error_code: str, error_message: str) -> None:
+def _set_info(tx: JobTx, job_id: str, infos: list[PullInfo]) -> None:
+    rec = tx.load(job_id)
+    if rec is None or not rec.active or not infos:
+        return
+    info = {**rec.progress.info, **{i.pull_key: i for i in infos}}
+    if info == rec.progress.info:
+        return
+    tx.save(rec.model_copy(update={"progress": rec.progress.model_copy(update={"info": info}), "updated_at": _now()}))
+
+
+def _requeue(tx: JobTx, job_id: str, error_code: str, error_message: str, retry_at: datetime | None = None) -> None:
     rec = tx.load(job_id)
     if rec is None or rec.state is not JobState.RUNNING:
         return
     tx.save(
         rec.model_copy(
             update={
+                "progress": rec.progress.model_copy(update={"retry_at": retry_at}),
                 "state": JobState.QUEUED,
                 "error_code": error_code,
                 "error_message": error_message,
@@ -440,6 +460,7 @@ class JobStore:
         points_spent: float | None = None,
         failed_pulls: dict[str, str] | None = None,
         awaiting_children: bool = False,
+        retry_at: datetime | None = None,
     ) -> JobRecord | None:
         """End a job. With ``awaiting_children`` it stays running until its process jobs finish (``state`` unused)."""
         return await self._run(
@@ -452,13 +473,18 @@ class JobStore:
                 points_spent=points_spent,
                 failed_pulls=failed_pulls,
                 awaiting_children=awaiting_children,
+                retry_at=retry_at,
             ),
             job_id=job_id,
         )
 
-    async def requeue(self, job_id: str, error_code: str, error_message: str) -> None:
-        """Put a running job back to ``queued`` after a failure the queue will retry."""
-        await self._run(lambda tx: _requeue(tx, job_id, error_code, error_message), job_id=job_id)
+    async def requeue(self, job_id: str, error_code: str, error_message: str, retry_at: datetime | None = None) -> None:
+        """Put a running job back to ``queued`` after a failure the queue will retry, at ``retry_at`` if known."""
+        await self._run(lambda tx: _requeue(tx, job_id, error_code, error_message, retry_at), job_id=job_id)
+
+    async def set_pull_info(self, job_id: str, infos: list[PullInfo]) -> None:
+        """Record what the job's pulls are (encounter, difficulty). Repeating it with the same facts writes nothing."""
+        await self._run(lambda tx: _set_info(tx, job_id, infos), job_id=job_id)
 
     async def wait_for_budget(self, job_id: str) -> bool:
         """Put a queued job in the budget's line (``waiting_budget``). False if it is no longer queued."""

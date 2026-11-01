@@ -49,3 +49,9 @@ def test_an_unknown_exception_never_leaks_its_message():
 
 def test_a_sign_in_failure_does_not_repeat_the_user_id():
     assert "u1" not in classify(UserAuthUnavailableError("u1 must sign in")).message
+
+
+def test_a_rate_limit_carries_the_wait_wcl_asked_for():
+    failure = classify(WarcraftLogsRateLimitError("429", retry_after_s=12.5))
+    assert (failure.code, failure.retryable, failure.retry_after_s) == (ErrorCode.RATE_LIMITED, True, 12.5)
+    assert classify(WarcraftLogsRateLimitError("429")).retry_after_s is None

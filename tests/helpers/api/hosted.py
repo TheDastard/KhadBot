@@ -110,6 +110,12 @@ class Harness:
         result = asyncio.run(fetch_and_normalize(IngestReport(code="SYNTH01", offline=True), self.env.context))
         assert not result.failed
 
+    def process_offline(self) -> None:
+        """Build and store SYNTH01's records, as the process job does, so its pulls count as loaded."""
+        data = self.env.context.encounter_data()
+        for pull in data.store.pulls("SYNTH01"):
+            data.records(pull.pull_key)
+
     def run_worker(self) -> threading.Thread:
         """Run queued jobs on a thread (the API's TestClient loop is busy serving), until none is left."""
 

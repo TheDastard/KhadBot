@@ -7,15 +7,16 @@ API restart and runs in a worker, and any API instance can follow it.
 
 Routes (all under ``/v1``; every one needs a signed-in user, and the two that change state need the CSRF header):
 
-- ``POST /reports``: queue an ingest of a report code or WCL URL (202), or return the caller's own queued or running
-  ingest that already covers it (200).
-- ``GET /jobs/{id}``: the job's state, per-pull progress and typed error.
+- ``POST /reports``: open pulls (or a whole report). Answers ``ready`` with no job when every pull asked for is already
+  loaded (200); queues an ingest (202); or returns the queued or running ingest that already covers the request (200),
+  whoever started it, so a second visitor opening a pull that is loading follows the first one's job.
+- ``GET /jobs/{id}``: the job's state, per-pull steps (download, prepare, analyse) and typed error.
 - ``GET /jobs/{id}/events``: the same as a server-sent event stream.
 - ``POST /jobs/{id}/cancel``: cancel it. Pulls already written stay written; the raw page cache resumes.
 
-A user sees only their own ingest jobs; any other job ID answers 404 ``job_not_found``, as does a missing one. Reading
-a job or its stream also needs the caller to still be able to read the job's report (the access rule every report
-route uses), so a user who lost access to a report cannot follow its ingest.
+Any signed-in user who can read a job's report may read the job and its stream (the access rule every report route
+uses, so losing access to a report ends it); only the user who started a job may cancel it (403 ``not_your_job``),
+and only they see its points spent. A missing job, or a process job, answers 404 ``job_not_found``.
 
 Event stream
 ------------
@@ -51,14 +52,18 @@ from khadbot.api.deps import SignedIn, csrf, require_readable
 from khadbot.api.schemas import (
     ErrorBody,
     IngestRequest,
+    IngestResponse,
     Job,
     JobErrorCode,
     JobFailure,
     JobPull,
     JobState,
+    JobStep,
     PullStatus,
+    StepName,
+    StepState,
 )
-from khadbot.api.views import ApiError
+from khadbot.api.views import ApiError, difficulty_name
 from khadbot.config import ApiConfig, QueueConfig
 from khadbot.jobs.budget_store import BudgetManager
 from khadbot.jobs.failures import ErrorCode
@@ -66,6 +71,7 @@ from khadbot.jobs.queue import JobQueue  # hosted only: this module is imported 
 from khadbot.jobs.specs import AppAuth, IngestReport, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobStore, PullProgress
 from khadbot.jobs.status import JobState as StoredState
+from khadbot.jobs.steps import pull_steps
 
 logger = logging.getLogger(__name__)
 
@@ -184,8 +190,11 @@ def failure_for(rec: JobRecord, config: QueueConfig, now: datetime, *, eta_s: fl
         return None
     code = _CODES.get(rec.error_code, JobErrorCode.internal_error)
     retry_after: float | None = None
-    if code is JobErrorCode.rate_limited and rec.state is StoredState.QUEUED:
-        # The queue waits backoff ** attempts seconds before the next try (jobs.queue's RetryStrategy).
+    if code is JobErrorCode.rate_limited and rec.progress.retry_at is not None:
+        # When the queue will try again (a queued job), or when WCL said to (a job that ran out of retries).
+        retry_after = max(0.0, (rec.progress.retry_at - now).total_seconds())
+    elif code is JobErrorCode.rate_limited and rec.state is StoredState.QUEUED:
+        # No stored time: the queue waits backoff ** attempts seconds before the next try (jobs.queue's strategy).
         wait = float(config.retry_backoff_s) ** max(rec.attempts, 1)
         retry_after = max(0.0, wait - (now - rec.updated_at).total_seconds())
     return JobFailure(
@@ -209,23 +218,59 @@ def _pull_status(stage: str, state: str) -> PullStatus:
     return PullStatus.fetching
 
 
-def _pull_view(key: str, progress: PullProgress) -> JobPull:
+def _pull_view(key: str, rec: JobRecord) -> JobPull:
+    """One pull of a job: from its progress entry, or, before it has reported, from the job's own state."""
     fight = key.rpartition(":")[2]
+    progress: PullProgress | None = rec.progress.pulls.get(key)
+    info = rec.progress.info.get(key)
+    steps = pull_steps(progress, StoredState(rec.state.value), fetched=rec.awaiting_children)
+    if progress is not None:
+        stage, pct, status, message = (
+            progress.stage,
+            round(min(max(progress.fraction, 0.0), 1.0) * 100, 1),
+            _pull_status(progress.stage, progress.state),
+            progress.error,
+        )
+    else:
+        running = rec.state is StoredState.RUNNING
+        stage, pct, message = "", 0.0, None
+        status = PullStatus.fetching if running else PullStatus.waiting
     return JobPull(
         pull_key=key,
         fight=int(fight) if fight.isdigit() else 0,
-        stage=progress.stage,
-        pct=round(min(max(progress.fraction, 0.0), 1.0) * 100, 1),
-        status=_pull_status(progress.stage, progress.state),
-        message=progress.error,
+        encounter_id=info.encounter_id if info else None,
+        encounter_name=info.encounter_name if info else None,
+        difficulty=info.difficulty if info else None,
+        difficulty_name=difficulty_name(info.difficulty) if info else None,
+        steps=[JobStep(name=StepName(s.step.value), state=StepState(s.state.value), pct=s.pct) for s in steps],
+        stage=stage,
+        pct=pct,
+        status=status,
+        message=message,
     )
 
 
+def _pull_keys(rec: JobRecord) -> list[str]:
+    """Every pull the job covers: the fights it was asked for (before they report) and those that have reported."""
+    keys = {f"{rec.report_code}:{f}" for f in (rec.spec.get("fights") or []) if isinstance(f, int)}
+    keys.update(rec.progress.pulls)
+    keys.update(rec.progress.info)
+    return list(keys)
+
+
 def job_view(
-    rec: JobRecord, config: QueueConfig | None = None, now: datetime | None = None, *, eta_s: float | None = None
+    rec: JobRecord,
+    config: QueueConfig | None = None,
+    now: datetime | None = None,
+    *,
+    eta_s: float | None = None,
+    own: bool = True,
 ) -> Job:
-    """The API's view of a job row. ``eta_s`` is the budget wait of a job in ``waiting_budget``."""
-    pulls = sorted((_pull_view(k, p) for k, p in rec.progress.pulls.items()), key=lambda p: (p.fight, p.pull_key))
+    """
+    The API's view of a job row. ``eta_s`` is the budget wait of a job in ``waiting_budget``. ``own`` says the viewer
+    started the job: only they may cancel it and see its points spent.
+    """
+    pulls = sorted((_pull_view(k, rec) for k in _pull_keys(rec)), key=lambda p: (p.fight, p.pull_key))
     done = rec.state is StoredState.DONE
     return Job(
         id=rec.id,
@@ -235,8 +280,9 @@ def job_view(
         pct=100.0 if done else round(min(max(rec.progress.fraction, 0.0), 1.0) * 100, 1),
         pulls=pulls,
         error=failure_for(rec, config or QueueConfig(), now or datetime.now(UTC), eta_s=eta_s),
-        points_spent=rec.points_spent,
+        points_spent=rec.points_spent if own else None,
         cancel_requested=rec.cancel_requested,
+        can_cancel=own and rec.active,
         created_at=rec.created_at,
         started_at=rec.started_at,
         finished_at=rec.finished_at,
@@ -292,6 +338,7 @@ async def event_stream(
     keepalive_s: float,
     config: QueueConfig | None = None,
     eta: EtaLookup | None = None,
+    own: bool = True,
 ) -> AsyncIterator[str]:
     """
     The job's server-sent events, as text chunks, until it ends. See the module docstring for the event order.
@@ -303,7 +350,7 @@ async def event_stream(
     seq = 0
 
     async def view(rec: JobRecord) -> Job:
-        return job_view(rec, config, eta_s=await eta(rec) if eta is not None else None)
+        return job_view(rec, config, eta_s=await eta(rec) if eta is not None else None, own=own)
 
     async with store.listen() as notices:
         pending: asyncio.Future[str] | None = None
@@ -365,8 +412,8 @@ Queue = Annotated[JobQueue, Depends(get_queue)]
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"model": ErrorBody, "description": "Not signed in (not_signed_in)"},
-    403: {"model": ErrorBody, "description": "CSRF check failed (csrf_failed)"},
-    404: {"model": ErrorBody, "description": "No such job of yours, or a report you cannot read"},
+    403: {"model": ErrorBody, "description": "CSRF check failed (csrf_failed), or not your job (not_your_job)"},
+    404: {"model": ErrorBody, "description": "No such job, or a report you cannot read"},
     422: {"model": ErrorBody, "description": "Invalid body or parameter (bad_request)"},
     503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
 }
@@ -390,35 +437,71 @@ class EventStreamResponse(StreamingResponse):
     media_type = "text/event-stream"
 
 
-async def _own_job(queue: JobQueue, job_id: str, user_id: str) -> JobRecord:
+async def _ingest_job(queue: JobQueue, job_id: str) -> JobRecord:
+    """An ingest job by ID. Process and review jobs are internal and answer like a missing one."""
     rec = await queue.store.get(job_id)
-    if rec is None or rec.kind is not JobKind.INGEST or rec.requested_by != user_id:
+    if rec is None or rec.kind is not JobKind.INGEST:
         raise ApiError(404, "job_not_found", "No such job.")
     return rec
 
 
+async def _readable_job(request: Request, queue: JobQueue, job_id: str) -> JobRecord:
+    """An ingest job the caller may follow: they can read its report (anyone who can may, not only who started it)."""
+    rec = await _ingest_job(queue, job_id)
+    await require_readable(request, rec.report_code)
+    return rec
+
+
+def _written(request: Request, code: str, fights: list[int] | None) -> bool:
+    """
+    Whether every pull asked for is already loaded: in the event store with its records stored. A whole-report request
+    (no fights) is never \"written\", since the report's pulls are not known without asking Warcraft Logs. Records built
+    under older inputs count: the digest route rebuilds them on read.
+    """
+    if not fights:
+        return False
+    data = request.app.state.ctx.data
+    if data.records_store is None:
+        return False
+    try:
+        stored = {p.fight_id for p in data.store.pulls(code)}
+        keys = data.records_store.keys(code)
+    except Exception:  # noqa: BLE001 - not knowing means loading it
+        logger.warning("Could not check whether the pulls of %s are loaded", code, exc_info=True)
+        return False
+    names = {k.rpartition("/")[2] for k in keys}
+    return all(f in stored and any(n.startswith(f"{f}__") for n in names) for f in fights)
+
+
 @router.post(
     "/reports",
-    response_model=Job,
+    response_model=IngestResponse,
     status_code=202,
     dependencies=[Depends(csrf)],
     responses={
-        200: {"model": Job, "description": "Your own queued or running ingest already covers this request"},
+        200: {
+            "model": IngestResponse,
+            "description": "Every pull asked for is already loaded (`ready`, no job), or a queued or running ingest "
+            "already covers the request (`job`, whoever started it)",
+        },
         **_ERRORS,
         400: {"model": ErrorBody, "description": "Not a report code or URL (bad_source, bad_fights)"},
-        409: {
-            "model": ErrorBody,
-            "description": "Another user's ingest of this report is running (ingest_in_progress)",
-        },
     },
 )
-async def start_ingest(body: IngestRequest, request: Request, response: Response, user: SignedIn, queue: Queue) -> Job:
+async def start_ingest(
+    body: IngestRequest, request: Request, response: Response, user: SignedIn, queue: Queue
+) -> IngestResponse:
     """
-    Queue an ingest of a report. The caller must be able to read the report (404 ``report_not_found`` otherwise).
-    The job fetches with the caller's own Warcraft Logs token when they have one, else with the app's.
+    Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`
+    otherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job
+    (200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued
+    (202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's.
     """
     code, fights = parse_source(body.source, body.fights)
     await require_readable(request, code)
+    if _written(request, code, fights):
+        response.status_code = 200
+        return IngestResponse(ready=True, job=None)
     service = request.app.state.auth
     auth = UserAuth(user_id=user.id) if await service.tokens.has_tokens(user.id) else AppAuth()
     try:
@@ -426,36 +509,37 @@ async def start_ingest(body: IngestRequest, request: Request, response: Response
     except Exception:
         logger.exception("Could not queue an ingest of report %s", code)
         raise ApiError(503, "queue_unavailable", "The job queue is unavailable; try again shortly.") from None
-    if queued.job.requested_by != user.id:
-        raise ApiError(
-            409,
-            "ingest_in_progress",
-            "Someone else is already ingesting this report. It will be in your reports when it finishes.",
-        )
     if not queued.created:
         response.status_code = 200
-    return job_view(queued.job, queue.config, eta_s=await request_eta(request)(queued.job))
+    job = job_view(
+        queued.job,
+        queue.config,
+        eta_s=await request_eta(request)(queued.job),
+        own=queued.job.requested_by == user.id,
+    )
+    return IngestResponse(ready=False, job=job)
 
 
 @router.get("/jobs/{job_id}", response_model=Job, responses=_READ_ERRORS)
 async def get_job(job_id: str, request: Request, user: SignedIn, queue: Queue) -> Job:
-    """A job of yours: its state, per-pull progress and typed error."""
-    rec = await _own_job(queue, job_id, user.id)
-    await require_readable(request, rec.report_code)
-    return job_view(rec, queue.config, eta_s=await request_eta(request)(rec))
+    """A job on a report you can read: its state, per-pull steps and typed error."""
+    rec = await _readable_job(request, queue, job_id)
+    return job_view(rec, queue.config, eta_s=await request_eta(request)(rec), own=rec.requested_by == user.id)
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=Job, dependencies=[Depends(csrf)], responses=_ERRORS)
 async def cancel_job(job_id: str, request: Request, user: SignedIn, queue: Queue) -> Job:
     """
-    Cancel a job of yours. A queued job is dropped at once; a running one stops at its next page and shows
-    ``cancel_requested`` until it has. A finished job is returned unchanged.
+    Cancel a job you started (403 `not_your_job` for anyone else who follows it). A queued job is dropped at once; a
+    running one stops at its next page and shows `cancel_requested` until it has. A finished job is returned unchanged.
     """
-    await _own_job(queue, job_id, user.id)
+    rec = await _readable_job(request, queue, job_id)
+    if rec.requested_by != user.id:
+        raise ApiError(403, "not_your_job", "Only the person who started this can stop it.")
     cancelled = await queue.cancel(job_id)
     if cancelled is None:
         raise ApiError(404, "job_not_found", "No such job.")
-    return job_view(cancelled, queue.config, eta_s=await request_eta(request)(cancelled))
+    return job_view(cancelled, queue.config, eta_s=await request_eta(request)(cancelled), own=True)
 
 
 @router.get(
@@ -472,15 +556,15 @@ async def cancel_job(job_id: str, request: Request, user: SignedIn, queue: Queue
     },
 )
 async def job_events(job_id: str, request: Request, user: SignedIn, queue: Queue) -> StreamingResponse:
-    """Follow a job of yours as server-sent events. A reconnecting client gets the current state first."""
-    rec = await _own_job(queue, job_id, user.id)
-    await require_readable(request, rec.report_code)
+    """Follow a job on a report you can read as server-sent events. A reconnecting client gets the current state first."""
+    rec = await _readable_job(request, queue, job_id)
     stream = event_stream(
         queue.store,
         job_id,
         keepalive_s=ApiConfig().sse_keepalive_s,
         config=queue.config,
         eta=request_eta(request),
+        own=rec.requested_by == user.id,
     )
     return StreamingResponse(
         stream,

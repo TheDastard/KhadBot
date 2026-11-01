@@ -27,7 +27,7 @@ ingest are fetched at once, so their "fetched" events interleave:
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -41,10 +41,10 @@ from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.ingest import EventsOutcome, fetch_report, process_pull_events
 from khadbot.encounter.ingest.fetch import RawPageCache, TokenProvider
-from khadbot.encounter.models import IngestResult, PullFindings
+from khadbot.encounter.models import IngestResult, Pull, PullFindings
 from khadbot.encounter.records_store import ReadModelProjector
 from khadbot.encounter.store import EventStore
-from khadbot.jobs.progress import NullProgress, Progress
+from khadbot.jobs.progress import NullProgress, Progress, PullDescriber, PullInfo
 from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull, UserAuth
 from khadbot.wcl.client import WarcraftLogsClient
 
@@ -80,7 +80,14 @@ class JobError(Exception):
 
 
 class TransientJobError(JobError):
-    """A job failed for a reason that may pass (a sign-in that could not be renewed just now); the queue retries it."""
+    """
+    A job failed for a reason that may pass (a sign-in that could not be renewed just now); the queue retries it.
+    ``retry_after_s`` is the wait the service asked for (WCL's ``Retry-After``), when it gave one.
+    """
+
+    def __init__(self, message: str = "", retry_after_s: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
 
 
 class UserAuthUnavailableError(JobError):
@@ -270,6 +277,21 @@ async def run_ingest_report(
     progress = progress or NullProgress()
     token_provider = await ctx.resolver.provider_for(spec.auth)
     progress.report("ingest", None, 0.0)
+
+    def describe(pulls: Sequence[Pull]) -> None:
+        if isinstance(progress, PullDescriber):
+            progress.describe(
+                [
+                    PullInfo(
+                        pull_key=p.pull_key,
+                        encounter_id=p.encounter_id,
+                        encounter_name=p.encounter_name,
+                        difficulty=p.difficulty,
+                    )
+                    for p in pulls
+                ]
+            )
+
     fetched = await fetch_report(
         spec.code,
         spec.fights,
@@ -281,6 +303,7 @@ async def run_ingest_report(
         progress=lambda pull, stage, pct: progress.report(stage, pull, pct),
         token_provider=token_provider,
         batch=ctx.batch,
+        on_pulls=describe,
         **ctx.filters(),
     )
     progress.report("ingest", None, 1.0)
