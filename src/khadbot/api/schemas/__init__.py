@@ -67,7 +67,20 @@ from khadbot.api.schemas.pulls import (
     WindowEvidence,
     WindowMarker,
 )
-from khadbot.api.schemas.raids import BudgetWaitBody, LookupGroup, LookupPull, LookupZone, ReportLookup
+from khadbot.api.schemas.raids import (
+    BudgetWaitBody,
+    CharacterSearch,
+    GuildSearch,
+    LookupGroup,
+    LookupPull,
+    LookupZone,
+    ReportLookup,
+    SearchCharacter,
+    SearchGuild,
+    ServerEntry,
+    ServerList,
+    ServerRegion,
+)
 from khadbot.api.schemas.reports import GroupInfo, PullSummary, ReportDetail, ReportGroup, ReportInfo, ReportList
 
 __all__ = [
@@ -76,6 +89,7 @@ __all__ = [
     "BriefingLine",
     "BudgetWaitBody",
     "CachedFindings",
+    "CharacterSearch",
     "CooldownEvidence",
     "CooldownList",
     "CooldownMarker",
@@ -93,6 +107,7 @@ __all__ = [
     "FindingsList",
     "FirstDeath",
     "GroupInfo",
+    "GuildSearch",
     "Health",
     "IngestRequest",
     "IngestResponse",
@@ -127,6 +142,11 @@ __all__ = [
     "ReportInfo",
     "ReportList",
     "ReportLookup",
+    "SearchCharacter",
+    "SearchGuild",
+    "ServerEntry",
+    "ServerList",
+    "ServerRegion",
     "StepName",
     "StepState",
     "TrendRow",

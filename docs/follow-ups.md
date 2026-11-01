@@ -352,6 +352,12 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **Live watch poll cost.** The report metadata query a watch poll sends costs 2.01 points for a raid night
   (`docs/wcl/report-data.md`, "Report metadata"), but `KHADBOT_WATCH_POLL_POINTS` defaults to 1. Set it to 2 with
   the next watch change.
+- **Encounter list for the character search.** The canvas's encounter picker needs the current raid's encounters.
+  WCL's schema has no "current zone" field and `Zone` has no raid-or-dungeon type (`docs/wcl/search.md`); take the list
+  from the encounter files under `config/encounters/`, or from the zones of the character's nights.
+- **Character matching by name.** Report metadata gives no server per actor, so a character search matches player
+  actors by name; a same-named player from another server in the same report would match too. Ask for the actor's
+  `server` in the report query if WCL's schema has it.
 
 ### Local test environment
 

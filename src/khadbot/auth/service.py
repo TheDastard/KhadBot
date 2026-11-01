@@ -139,6 +139,7 @@ class AuthService:
             self._wcl_client,
             recheck=timedelta(seconds=config.access_recheck_s),
             denied_recheck=timedelta(seconds=config.access_denied_recheck_s),
+            public_recheck=timedelta(seconds=config.access_public_recheck_s),
             clock=clock,
         )
 

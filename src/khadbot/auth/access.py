@@ -3,8 +3,9 @@ auth/access.py
 
 Report access: ``ReportAccess.can_read(user, code)`` decides whether a user may read a report. A report is readable
 when WCL lets the user's own token read it, or when it is public (the app token can read it). Answers are cached
-per user, and per report for the public check, with the time WCL was asked; a cached "readable" stands for
-``access_recheck_s`` and a cached "not readable" for the shorter ``access_denied_recheck_s``.
+per user, and per report for the public check, with the time WCL was asked; a cached "readable on the user's token"
+stands for ``access_recheck_s``, a cached "public" (readable on the app's token) for the longer
+``access_public_recheck_s``, and a cached "not readable" for the shorter ``access_denied_recheck_s``.
 
 Callers turn an unreadable report into a 404 (``require_readable`` raises ``ReportNotFoundError``), so the API never
 confirms that a private report exists. When WCL can't be reached nothing is cached and ``WclUnavailableError`` is
@@ -51,8 +52,9 @@ class ReportAccess:
         store: Where answers are cached.
         tokens: Users' WCL tokens.
         client: Builds an (unentered) WCL client; its app credentials serve the public check.
-        recheck: How long a "readable" answer stands.
+        recheck: How long a "readable on the user's token" answer stands.
         denied_recheck: How long a "not readable" answer stands.
+        public_recheck: How long a "public" answer stands (readable on the app's token); default ``recheck``.
         clock: The current UTC time.
     """
 
@@ -64,6 +66,7 @@ class ReportAccess:
         *,
         recheck: timedelta,
         denied_recheck: timedelta,
+        public_recheck: timedelta | None = None,
         clock: Clock = utc_now,
     ) -> None:
         self._store = store
@@ -71,6 +74,7 @@ class ReportAccess:
         self._client = client
         self._recheck = recheck
         self._denied_recheck = denied_recheck
+        self._public_recheck = public_recheck if public_recheck is not None else recheck
         self._clock = clock
 
     async def can_read(self, user_id: str | None, code: str) -> bool:
@@ -111,7 +115,10 @@ class ReportAccess:
     # ------------------------------------------------------------------
 
     def _stands(self, record: AccessRecord) -> bool:
-        age = self._recheck if record.readable else self._denied_recheck
+        if not record.readable:
+            age = self._denied_recheck
+        else:
+            age = self._public_recheck if record.via == "app" else self._recheck
         return self._clock() - record.checked_at < age
 
     async def _user_check(self, user_id: str, code: str) -> bool:

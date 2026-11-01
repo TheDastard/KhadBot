@@ -19,4 +19,5 @@ Reference reports (public, Heroic Ula'tek progression, zone The Venomous Abyss):
 | [positions.md](positions.md) | NPC instances and position samples: what carries a position, scale, freshness, uses |
 | [costs.md](costs.md) | Measured ingest cost, raw page compression, live watch poll cost |
 | [probes.md](probes.md) | The budget and merged-filter probe scripts and their results |
+| [search.md](search.md) | Guild, character and server search: schema fields, queries and measured costs, caching, the server list |
 | [replay.md](replay.md) | How WCL replay answers each request from recordings |

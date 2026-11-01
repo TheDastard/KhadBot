@@ -297,6 +297,47 @@ class LookupConfig:
             raise ValueError("LookupConfig.points must be at least 1: WCL charges every request at least 1 point.")
 
 
+@dataclass(frozen=True)
+class SearchConfig:
+    """
+    Guild and character search and the server list (``api/raids/``): how far back a guild search looks, how many
+    reports one search lists, how long answers are cached and what each WCL request reserves from the budget. Local
+    mode has no search.
+    """
+
+    # A guild search lists the guild's reports that started in the last this many days (the canvas's "last 30 days").
+    guild_window_days: int = field(default_factory=lambda: int(_optional("KHADBOT_SEARCH_GUILD_WINDOW_DAYS", "30")))
+    # The most reports one search lists, newest first. Every listed night costs one metadata request (2.01 points for a
+    # raid night) the first time it is seen, so this caps a search's spend: 15 covers a guild raiding three nights a
+    # week for 30 days with room for an extra night or two, about 30 points when nothing is cached.
+    max_reports: int = field(default_factory=lambda: int(_optional("KHADBOT_SEARCH_MAX_REPORTS", "15")))
+    # How long a report listing is reused (seconds): one made on the app token by every caller, one made on a user's
+    # own token by that user. 15 minutes: a guild's log uploaded mid-raid shows up within the quarter hour, and a
+    # guild searched by its whole roster after a raid costs one listing (1 database point) a quarter hour.
+    listing_max_age_s: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_SEARCH_LISTING_MAX_AGE_S", "900"))
+    )
+    # How long a "no such guild or character" answer stands (seconds). An hour: a mistyped name searched again costs
+    # nothing, while a guild WCL only creates with its first uploaded log shows up within the hour.
+    not_found_max_age_s: float = field(
+        default_factory=lambda: float(_optional("KHADBOT_SEARCH_NOT_FOUND_MAX_AGE_S", "3600"))
+    )
+    # Points one search request reserves: a guild or character lookup or a report listing. Measured
+    # (``docs/wcl/search.md``, "Queries and cost"): 1 for each, 1.11 for a guild listing of 15 reports.
+    points: float = field(default_factory=lambda: float(_optional("KHADBOT_SEARCH_POINTS", "1.2")))
+    # Database points a report listing reserves (``reportData.reports`` and ``Character.recentReports`` are
+    # ``[Database Points]`` fields): measured at 1 for each, 15 reports listed.
+    database_points: float = field(default_factory=lambda: float(_optional("KHADBOT_SEARCH_DATABASE_POINTS", "1")))
+
+    def __post_init__(self) -> None:
+        if self.guild_window_days < 1 or self.max_reports < 1 or self.max_reports > 100:
+            raise ValueError("SearchConfig needs a window of at least a day and 1 to 100 reports per search.")
+        if self.listing_max_age_s < 0 or self.not_found_max_age_s < 0:
+            raise ValueError("SearchConfig's cache ages must not be negative.")
+        if self.points < 1 or self.database_points < 0:
+            raise ValueError("SearchConfig.points must be at least 1 and database_points not negative.")
+
+
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 
 
@@ -324,10 +365,18 @@ class AuthConfig:
     session_idle_hours: float = field(default_factory=lambda: float(_optional("KHADBOT_SESSION_IDLE_HOURS", "336")))
     session_max_days: float = field(default_factory=lambda: float(_optional("KHADBOT_SESSION_MAX_DAYS", "30")))
     login_timeout_s: int = 600  # how long a started sign-in may take before its state expires
-    # How long a cached report-access answer stands before WCL is asked again: readable, then not readable.
+    # How long a cached report-access answer stands before WCL is asked again: readable on the user's own token, then
+    # not readable.
     access_recheck_s: int = field(default_factory=lambda: int(_optional("KHADBOT_ACCESS_RECHECK_S", "3600")))
     access_denied_recheck_s: int = field(
         default_factory=lambda: int(_optional("KHADBOT_ACCESS_DENIED_RECHECK_S", "300"))
+    )
+    # How long a cached "public" answer stands (the app's token read the report). Six hours, longer than a user-token
+    # answer: anyone may read a public report, so the only risk is a log its owner makes private later, which then
+    # stays readable here for up to this long; a private report is never served on a public answer. A guild search
+    # checks each listed report once per caller, so this keeps an evening of searches from re-checking every night.
+    access_public_recheck_s: int = field(
+        default_factory=lambda: int(_optional("KHADBOT_ACCESS_PUBLIC_RECHECK_S", "21600"))
     )
 
     @property

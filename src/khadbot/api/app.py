@@ -176,6 +176,15 @@ def create_app(
 
         app.include_router(lookup_router)
         offered["report_lookup"] = True
+        from khadbot.api.raids.search import router as search_router  # guild and character search, hosted only
+        from khadbot.api.raids.servers import router as servers_router
+        from khadbot.api.raids.servers import server_list_response
+
+        # config/registries/servers.yaml, built once into the response and its ETag; a malformed file fails here
+        app.state.server_list, app.state.server_list_body, app.state.server_list_etag = server_list_response()
+        app.include_router(servers_router)
+        app.include_router(search_router)
+        offered["raid_search"] = True
     app.state.mode = mode
     app.state.features = Features(**offered)
     return app

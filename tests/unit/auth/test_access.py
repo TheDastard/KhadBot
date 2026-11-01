@@ -69,6 +69,23 @@ async def test_answers_are_cached_then_rechecked(access, wcl, user, clock):
     assert wcl.report_checks[-1] == "app:PRIV1"
 
 
+async def test_a_public_answer_outlives_a_user_token_one(access, wcl, user, clock):
+    wcl.readable["app"] = {"PUB1"}
+    wcl.readable["fake-access-1"] = {"PRIV1"}
+    assert await access.can_read(user, "PUB1") and await access.can_read(user, "PRIV1")
+    assert await access.can_read(None, "PUB1")
+    checks = len(wcl.report_checks)
+    clock.advance(hours=2)  # past the user-token answer's hour, inside the public answer's six
+    assert await access.can_read(user, "PUB1") and await access.can_read(None, "PUB1")
+    assert len(wcl.report_checks) == checks  # both public answers still stand
+    assert await access.can_read(user, "PRIV1")
+    assert [c.split(":")[1] for c in wcl.report_checks[checks:]] == ["PRIV1"]  # the user-token answer, asked again
+    assert wcl.report_checks[-1].startswith("fake-access-")  # on the user's (refreshed) token
+    wcl.readable["app"] = set()  # its owner made it private
+    clock.advance(hours=5)  # past six hours
+    assert await access.can_read(None, "PUB1") is False
+
+
 async def test_denials_are_rechecked_sooner(access, wcl, user, clock):
     assert not await access.can_read(user, "LATER1")
     checks = len(wcl.report_checks)
