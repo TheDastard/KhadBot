@@ -6,24 +6,12 @@ One pull's views: the timeline markers, event pages, evidence and cached finding
 
 from __future__ import annotations
 
-from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, RootModel
 
-from khadbot.encounter.models import PullFindings
-
-
-class RefKind(StrEnum):
-    """The kind of record an evidence ref names (the part after ``ev:<report>:<fight>:``, or ``plan``)."""
-
-    death = "death"
-    mech = "mech"
-    cd = "cd"
-    win = "win"
-    event = "event"
-    pull = "pull"
-    plan = "plan"
+from khadbot.encounter.evidence import EventRecord, MechanicRecord, PullRecord
+from khadbot.encounter.models import CooldownUse, DeathRecord, PullFindings, WindowCoverage
 
 
 class PhaseMarker(BaseModel):
@@ -95,12 +83,66 @@ class EventsPage(BaseModel):
     note: str | None = None
 
 
-class Evidence(BaseModel):
-    """The record a ref names, exactly as the analyst's verify step resolves it."""
+class DeathEvidence(BaseModel):
+    """A ``death`` ref: one player death with its window, top hits, killer and defensives."""
 
+    kind: Literal["death"]
     ref: str
-    kind: RefKind
-    record: dict[str, Any]
+    record: DeathRecord
+
+
+class MechanicEvidence(BaseModel):
+    """A ``mech`` ref: the mechanic's stat and one row per cluster of its hits."""
+
+    kind: Literal["mech"]
+    ref: str
+    record: MechanicRecord
+
+
+class CooldownEvidence(BaseModel):
+    """A ``cd`` ref: one cast of a cooldown-file spell."""
+
+    kind: Literal["cd"]
+    ref: str
+    record: CooldownUse
+
+
+class WindowEvidence(BaseModel):
+    """A ``win`` ref: one occurrence of a damage window and the defensive raid cooldowns that covered it."""
+
+    kind: Literal["win"]
+    ref: str
+    record: WindowCoverage
+
+
+class EventEvidence(BaseModel):
+    """An ``event`` ref: one annotated event."""
+
+    kind: Literal["event"]
+    ref: str
+    record: EventRecord
+
+
+class PullEvidence(BaseModel):
+    """A ``pull`` ref: the pull summary."""
+
+    kind: Literal["pull"]
+    ref: str
+    record: PullRecord
+
+
+class Evidence(
+    RootModel[
+        Annotated[
+            DeathEvidence | MechanicEvidence | CooldownEvidence | WindowEvidence | EventEvidence | PullEvidence,
+            Field(discriminator="kind"),
+        ]
+    ]
+):
+    """
+    The record a ref names, exactly as the analyst's verify step resolves it, typed by ``kind``. Plan refs have no
+    member: the route answers them 501 ``plan_refs_unavailable`` until raid plans exist.
+    """
 
 
 class CachedFindings(PullFindings):

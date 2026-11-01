@@ -17,6 +17,11 @@ Ref kinds::
 ``EncounterData`` is the read side the analyst works from. It builds the records for a pull (cached
 in-process, keyed by pull and content hashes) and resolves refs against them. A ref resolves to the
 same JSON-safe dict a query tool returned for it, so a claim is checked against what the model saw.
+
+Each kind's resolved shape has a model, so the dashboard API can publish it: ``DeathRecord``,
+``MechanicRecord`` (the stat plus its cluster rows), ``CooldownUse``, ``WindowCoverage``, ``EventRecord``
+and ``PullRecord``. The resolver still builds plain dicts; ``RECORD_MODELS`` names each kind's model, and
+a resolved dict dumps back unchanged through it (``extra="forbid"`` catches a field the model lacks).
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import polars as pl
+from pydantic import BaseModel, ConfigDict, Field
 
 from khadbot.config import EncounterConfig
 from khadbot.encounter.analysis.mechanics import blame_reach_yd, mechanic_clusters
@@ -40,14 +46,32 @@ from khadbot.encounter.config_files import (
     load_friendly_damage,
 )
 from khadbot.encounter.digest import PullRecords, build_pull_records, records_inputs
-from khadbot.encounter.models import MechanicStat, Pull, PullDigest, Ref, actor_label, make_ref
+from khadbot.encounter.models import (
+    AggroSummary,
+    CooldownUse,
+    DeathRecord,
+    FriendlyDamage,
+    MechanicCluster,
+    MechanicStat,
+    Pull,
+    PullDigest,
+    Ref,
+    UnregisteredAbility,
+    WindowCoverage,
+    actor_label,
+    make_ref,
+)
 from khadbot.encounter.records_store import RecordsStore
 from khadbot.encounter.store import EventStore, split_pull_key
 
 __all__ = [
     "ClaimNumber",
     "EncounterData",
+    "EventRecord",
+    "MechanicRecord",
     "ParsedRef",
+    "PullRecord",
+    "RECORD_MODELS",
     "UnresolvableRef",
     "claim_numbers",
     "event_row",
@@ -199,6 +223,92 @@ def mechanic_detail(r: PullRecords, stat: MechanicStat) -> dict[str, Any]:
     reach = blame_reach_yd(r.enc, stat.mechanic_id)
     clusters = mechanic_clusters(r.annotated, stat.mechanic_id, r.actors, reach_yd=reach)
     return {**stat.model_dump(mode="json"), "cluster_rows": [c.model_dump(mode="json") for c in clusters]}
+
+
+# ---------------------------------------------------------------------------
+# Resolved record models
+# ---------------------------------------------------------------------------
+
+
+def _none(value: object) -> bool:
+    return value is None
+
+
+def _absent() -> Any:
+    """An optional event field: left out of the dump when null, as ``event_row`` leaves it out."""
+    return Field(None, exclude_if=_none)
+
+
+class MechanicRecord(MechanicStat):
+    """What a ``mech`` ref resolves to (``mechanic_detail``): the stat plus one row per cluster."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cluster_rows: list[MechanicCluster]
+
+
+class EventRecord(BaseModel):
+    """
+    What an ``event`` ref resolves to (``event_row``): one annotated event with actor names instead of IDs. Fields
+    that are null on the event are absent.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ref: Ref
+    seq: int
+    t_ms: int
+    type: str  # WCL event type (damage, heal, cast, death, applybuff, ...)
+    source: str | None = _absent()  # actor name, with ``#<instance>`` when NPCs share an actor
+    target: str | None = _absent()
+    ability: str | None = _absent()  # the report's name for ``ability_id``
+    ability_id: int | None = _absent()
+    extra_ability_id: int | None = _absent()  # the interrupted or dispelled spell
+    amount: int | None = _absent()
+    absorbed: int | None = _absent()
+    overkill: int | None = _absent()
+    overheal: int | None = _absent()
+    hp_pct: float | None = _absent()  # the target's health after the event, rounded to 0.1
+    stack: int | None = _absent()
+    mechanic_id: str | None = _absent()
+    window_id: str | None = _absent()
+    phase_id: str | None = _absent()
+    failure: bool | None = _absent()  # true on a failure row
+    blamed: str | None = _absent()  # the player the failure is charged to, when someone is
+
+
+class PullRecord(BaseModel):
+    """What a ``pull`` ref resolves to (``pull_summary``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ref: Ref
+    pull_key: str
+    encounter_name: str
+    outcome: Literal["kill", "wipe"]
+    duration_ms: int
+    boss_pct: float | None  # fight progress, 0-100
+    boss_hp_pct: float | None  # boss health, 0-100
+    phase_reached: str | None
+    cutoff_ms: int | None
+    deaths: int
+    deaths_before_cutoff: int
+    coverage: Literal["full", "partial", "none"]
+    anomalies: list[str]
+    aggro: list[AggroSummary]
+    friendly_damage: FriendlyDamage
+    unregistered: list[UnregisteredAbility]
+
+
+# The model each resolvable ref kind's record validates against. Plan refs don't resolve yet.
+RECORD_MODELS: dict[str, type[BaseModel]] = {
+    "death": DeathRecord,
+    "mech": MechanicRecord,
+    "cd": CooldownUse,
+    "win": WindowCoverage,
+    "event": EventRecord,
+    "pull": PullRecord,
+}
 
 
 # ---------------------------------------------------------------------------

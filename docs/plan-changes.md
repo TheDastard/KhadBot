@@ -794,3 +794,21 @@ Three read routes, mounted in every mode (`api/names.py`):
 | `GET /v1/encounters/{encounter_id}/names?difficulty=<WCL code>` | `EncounterNames {encounter_id, difficulty, difficulty_name, encounter_name, phases, mechanics, damage_windows}`. `phases` maps phase IDs to `PhaseName {name, short_name}` (file order); `short_name` is the text before the name's first `": "`, else the whole name, derived by the API rather than authored. `mechanics` and `damage_windows` map IDs to names from the encounter file's view for that difficulty. Without a file for it every map is empty and `encounter_name` is null, never an error. No report access check: encounter files are config. `PullDigest` is unchanged. |
 | `GET /v1/cooldowns` | `CooldownList {cooldowns}`: every cooldown-file spell ID to `CooldownName {name, category, verified}`, `category` being the file's own (`defensive`, `offensive`, `utility`). Depends on no report or encounter: no report gate, `Cache-Control: public, max-age=86400` and an ETag of the cooldown files' content, 304 on `If-None-Match`. |
 | `GET /v1/reports/{code}/players` | `PlayerList {code, players: Player[]}` by actor ID; `Player {id, name, class_name}` from the cached report metadata's actors with `type` Player that appear in at least one fight's `friendlyPlayers` (bystanders WCL lists without a fight are left out). `class_name` is WCL's `subType` when it is one of `PlayerClass` (`DeathKnight, DemonHunter, Druid, Evoker, Hunter, Mage, Monk, Paladin, Priest, Rogue, Shaman, Warlock, Warrior`), else null (WCL writes `Unknown`). Gated on report access; 404 `report_not_found` without cached metadata. |
+
+### Refactor plan 6.5 (Evidence refs): resolved record models
+
+Add after the table: each kind's resolved dict has a Pydantic model, listed in `evidence.RECORD_MODELS`:
+`death` → `DeathRecord`; `mech` → `MechanicRecord` (`MechanicStat` plus `cluster_rows: list[MechanicCluster]`);
+`cd` → `CooldownUse`; `win` → `WindowCoverage`; `event` → `EventRecord {ref, seq, t_ms, type, source?, target?,
+ability?, ability_id?, extra_ability_id?, amount?, absorbed?, overkill?, overheal?, hp_pct?, stack?, mechanic_id?,
+window_id?, phase_id?, failure?, blamed?}` (a field is absent when null); `pull` → `PullRecord {ref, pull_key,
+encounter_name, outcome, duration_ms, boss_pct, boss_hp_pct, phase_reached, cutoff_ms, deaths, deaths_before_cutoff,
+coverage, anomalies, aggro, friendly_damage, unregistered}`. `resolve` still returns the dict; every record dumps back
+unchanged through its model.
+
+### Portal plan, section 4.2 (API surface): typed evidence
+
+Replace the evidence row: `GET /v1/evidence/{ref}` returns `Evidence`, a union discriminated on `kind`:
+`DeathEvidence | MechanicEvidence | CooldownEvidence | WindowEvidence | EventEvidence | PullEvidence`, each
+`{kind: "<kind>", ref, record: <the kind's record model>}`. Plan refs answer 501 `plan_refs_unavailable` and have no
+member. `RefKind` is no longer in the schema.

@@ -257,7 +257,9 @@ built without a records store (tests, `build_digest`) neither reads nor writes `
 | Unregistered damage | `digest` | damage from abilities the encounter file doesn't name, with each one's share |
 
 A `pull` ref resolves to the pull summary: outcome, progress, death counts, coverage, anomalies, aggro, friendly and
-unregistered damage. An `event:<seq>` ref resolves to one annotated event.
+unregistered damage. An `event:<seq>` ref resolves to one annotated event. Each kind's resolved dict has a model in
+`evidence.RECORD_MODELS` (`DeathRecord`, `MechanicRecord`, `CooldownUse`, `WindowCoverage`, `EventRecord`,
+`PullRecord`), which the API's `GET /v1/evidence/{ref}` publishes as a union on `kind`.
 
 ## 6. Digest
 

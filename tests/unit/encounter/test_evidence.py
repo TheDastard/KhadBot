@@ -22,6 +22,7 @@ from helpers.encounter.synth import (
 from khadbot.encounter.config_files import parse_friendly_damage
 from khadbot.encounter.digest import render_digest
 from khadbot.encounter.evidence import (
+    RECORD_MODELS,
     EncounterData,
     UnresolvableRef,
     claim_numbers,
@@ -134,6 +135,33 @@ def test_resolve_every_kind(synth_data):
             "taunts": {"Alphadps": 1},
         }
     ]
+
+
+@pytest.mark.parametrize("fight", [1, 2])
+def test_every_resolved_record_dumps_back_through_its_model(synth_data, fight):
+    r = synth_data.records(f"SYNTH01:{fight}")
+    refs = [f"ev:SYNTH01:{fight}:pull", *(d.ref for d in r.deaths), *(m.ref for m in r.mechanics)]
+    refs += [c.ref for c in r.cooldowns] + [w.ref for w in r.windows]
+    refs += [f"ev:SYNTH01:{fight}:event:{seq}" for seq in r.annotated.frame["seq"].to_list()]
+    kinds = set()
+    for ref in refs:
+        kind = parse_ref(ref).kind
+        record = synth_data.resolve(ref)
+        assert RECORD_MODELS[kind].model_validate(record).model_dump(mode="json") == record, ref
+        kinds.add(kind)
+    assert kinds == set(RECORD_MODELS)
+
+
+def test_record_models_reject_a_field_they_do_not_know(synth_data):
+    from pydantic import ValidationError
+
+    for kind, ref in (
+        ("event", "ev:SYNTH01:1:event:6"),
+        ("pull", "ev:SYNTH01:1:pull"),
+        ("mech", "ev:SYNTH01:1:mech:swirl"),
+    ):
+        with pytest.raises(ValidationError):
+            RECORD_MODELS[kind].model_validate({**synth_data.resolve(ref), "surprise": 1})
 
 
 def test_mechanic_with_no_hits_resolves(synth_data):
