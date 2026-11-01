@@ -3,7 +3,8 @@
 ## Report metadata (`report.fights`, `report.masterData`)
 
 `GET_REPORT_META` (`encounter/ingest/wcl_queries.py`, operation `GetReportMeta`) reads a report's fights, actors,
-abilities (with each ability's `icon`, `docs/game-art.md`) and phase names. It uses no `[Database Points]` field; on the new limits it is user-eligible report data.
+abilities (with each ability's `icon`, `docs/game-art.md`) and phase names. It uses no `[Database Points]` field;
+on the new limits it is user-eligible report data.
 
 - **Who sends it.** Ingest, once per report; the report lookup (`GET /v1/lookup/report`, `api/raids/lookup.py`),
   on the signed-in user's token when they have one, else the app's; and a live watch poll (`costs.md`, "Live watch
@@ -19,8 +20,9 @@ abilities (with each ability's `icon`, `docs/game-art.md`) and phase names. It u
   `KHADBOT_LOOKUP_META_MAX_AGE_S` (120 s), after which the next lookup fetches it again so new pulls of a live log
   appear. A lookup followed by opening a pull makes no second metadata request.
 
-All of these fields are confirmed on the live schema: `encounterID`, `name`, `difficulty`, `kill`, `startTime`,
-`endTime`, `lastPhase`, `fightPercentage`, `bossPercentage`, `size`, `friendlyPlayers`, `phaseTransitions { id startTime }`.
+Every field below is confirmed on the live schema: `encounterID`, `name`, `difficulty`, `kill`, `startTime`,
+`endTime`, `lastPhase`, `fightPercentage`, `bossPercentage`, `size`, `friendlyPlayers`,
+`phaseTransitions { id startTime }`.
 
 | Field | Meaning and quirks |
 |---|---|
@@ -30,7 +32,10 @@ All of these fields are confirmed on the live schema: `encounterID`, `name`, `di
 | `fightPercentage` vs `bossPercentage` | Not the same. `bossPercentage` is the boss's health; `fightPercentage` is overall progress through the fight, so it is lower than boss health in later phases (`QkVa6GHRK8yfrTbw:20`: boss 38.62, fight 27.51). Both are about 0.01 on a kill. Keep both; use `fightPercentage` for "how close was the pull". |
 | `lastPhase` | **The ordinal within its kind, not the phase ID.** Stages and intermissions are numbered separately, so a pull that ends in the first intermission reports `lastPhase=1` (`QkVa6GHRK8yfrTbw:19` ends in phase ID 3, "Intermission: The Shattering"). Ula'tek: phase IDs `[1,2]` report 2, `[1,2,3]` report 1 (intermission 1), `[1,2,3,4]` report 3 (Stage Three). Use the last `phaseTransitions` ID for the phase reached. |
 | `phaseTransitions` | Phase IDs in order, with start times. Present on Heroic Ula'tek; empty on the Mythic Nymrissa pulls. |
-| `report.phases` | Per encounter: `phases { id name isIntermission }` and `separatesWipes`. This is what maps phase IDs to names. `GET_REPORT_META` requests `phases { encounterID phases { id name isIntermission } }`, confirmed on 2026-10-17 by refreshing the three recorded reports: the names match the phase IDs below. |
+| `report.phases` | Per encounter: `phases { id name isIntermission }` and `separatesWipes`. This is what maps phase IDs to names. `GET_REPORT_META` requests `phases { encounterID phases { id name isIntermission } }`; refreshed metadata of the three reference reports gives the names in "Phase IDs" below. |
+| `size` | **Not a reliable head count.** Mythic raids are locked to 20 except Lair fights, which allow 15 to 25. The `H7z1fqDXjRTFnbtg` Mythic Nymrissa pulls report `size=20`, yet 22 players took part. |
+| `friendlyPlayers` | Player actor IDs for the pull, and accurate: in all 62 recorded pulls every listed player has events in that pull, and no other player does. Take each pull's roster and raid size from here, never from `size` or report-wide actors. |
+| `masterData.actors(type: "Player")` | Every player seen anywhere in the report, not the raid. `H7z1fqDXjRTFnbtg` lists 276 for a 22-player raid. |
 
 ### Phase IDs
 
@@ -42,28 +47,34 @@ All of these fields are confirmed on the live schema: `encounterID`, `name`, `di
 
 Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic Ula'tek, Stage Three always started
 362 to 365 s into the pull across the 14 pulls that reached it.
-| `size` | **Not a reliable head count.** Mythic raids are locked to 20 except Lair fights, which allow 15 to 25. The `H7z1fqDXjRTFnbtg` Mythic Nymrissa pulls report `size=20`, yet 22 players took part. |
-| `friendlyPlayers` | Player actor IDs for the pull, and accurate: in all 62 recorded pulls every listed player has events in that pull, and no other player does. Take each pull's roster and raid size from here, never from `size` or report-wide actors. |
-| `masterData.actors(type: "Player")` | Every player seen anywhere in the report, not the raid. `H7z1fqDXjRTFnbtg` lists 276 for a 22-player raid. |
 
 ## Events (`report.events`)
 
+`GET_EVENTS_PAGE` (operation `GetEventsPage`) fetches one page of one data type for one or more fights.
+
+### Arguments and paging
+
 - Arguments in use, all confirmed: `dataType` (`Deaths`, `DamageTaken`, `Casts`, `Buffs`, `Debuffs`, `Interrupts`,
-  `Dispels`, `Healing`), `hostilityType` (`Friendlies`, `Enemies`), `fightIDs`, `startTime`, `endTime`,
+  `Dispels`, `Healing`, `Threat`), `hostilityType` (`Friendlies`, `Enemies`), `fightIDs`, `startTime`, `endTime`,
   `filterExpression`, `includeResources`, `limit`.
 - Paged: follow `nextPageTimestamp` until it is null. A long pull needs up to 9 pages for Buffs or Healing.
-- Filter syntax confirmed: `ability.id IN (633,1022,...)` (comma-separated, no spaces), used for friendly Buffs
-  (one request per cooldown file: defensive and offensive registry IDs) and enemy Casts (encounter-file ability
-  IDs); and `type = "heal"` on Healing, not used by ingest yet (2026-10-20, `probes.md`, "Cross-fight and heal-only results").
+- A request needs a `dataType`: a Friendlies request without one gets an internal server error (`probes.md`,
+  "Merged-filter results").
+- **Filter syntax.** `ability.id IN (633,1022,...)` (comma-separated, no spaces) is used for friendly Buffs (one
+  request per cooldown file: defensive and offensive registry IDs) and enemy Casts (encounter-file ability IDs).
+  `type = "heal"` on Healing is valid and returns exactly the `heal` rows (`probes.md`, "Cross-fight and heal-only
+  results"); ingest doesn't use it, because Healing carries rows other code reads (below).
+- **One request can cover many fights.** `fightIDs` takes a list, and every row's `fight` field names the fight
+  it belongs to, so a multi-fight stream splits back into per-fight rows. With 25 fights no row named a fight that
+  wasn't requested. Such a request can be slow: one 25-fight request took longer than the client's 30 s timeout and
+  succeeded on a retry.
+
+### What the rows hold
 
 - **Deaths rows name no ability or source.** Every recorded `death` row has `abilityGameID: 0` and `sourceID: -1`;
   the killing blow is in `killingAbilityGameID` and the killer in `killerID`, for example
   `{"type":"death","sourceID":-1,"targetID":10,"abilityGameID":0,"killerID":233,"killingAbilityGameID":1301122}`.
   Normalize fills `ability_id` and `source_id` from those two fields.
-- **One request can cover many fights.** `fightIDs` takes a list, and every row's `fight` field names the fight
-  it belongs to, so a multi-fight stream splits back into per-fight rows. With 25 fights no row named a fight that
-  wasn't requested. Such a request can be slow: one 25-fight request took longer than the client's 30 s timeout,
-  and the same request succeeded on a retry (2026-10-24, `probes.md`, "Cross-fight and heal-only results").
 - `includeResources: true` adds `hitPoints` / `maxHitPoints` to events. About 85 to 90% of friendly `damage`
   events carry them across all 62 recorded pulls; the rest have none, so code must tolerate missing HP.
 - Events also carry fields KhadBot ignores (`classResources`, `buffs`, `attackPower`, ...). They make raw pages
@@ -75,8 +86,9 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
   data other code reads: redistribution damage counts as friendly damage and as hits in death windows, and a
   shield's `removebuff` may be its only aura row when Buffs doesn't request that spell.
 
-Checked on the 47 Heroic Ula'tek pulls (2026-10-16); the encounter details are in `docs/decisions.md`, "Log
-investigations".
+### Casts and auras
+
+From the 47 Heroic Ula'tek pulls; the encounter details are in `docs/decisions.md`, "Log investigations".
 
 - **A channeling NPC logs one `cast`, then nothing until the channel ends.** Its damage carries on, and some
   damage is never cast at all (an enrage). A quiet enemy Casts page doesn't mean the NPC did nothing:
@@ -90,13 +102,13 @@ investigations".
   Match a removal to what follows it, not what precedes it (1,235 removals of one debuff).
 - **Friendly Casts carry the aimed target** (`targetID`) of player spells. A cast with no target names actor
   -1, the Environment. Auto-attacks and pet spells appear only on the Enemies side of Threat, and no fetched data
-  type records damage done to an NPC: that needs DamageDone, which this file doesn't cover yet.
+  type records damage done to an NPC: that needs DamageDone, which KhadBot doesn't fetch.
 
-## Threat data (2026-10-11)
+## Threat data
 
-`dataType: Threat` is in the live `EventDataType` enum. Probed on `trMgApZCVYkv3jdq:18` through `events`,
-`table` and `graph`. **Nothing in it is a threat amount.** WCL's "threat" is target tracking: who is attacking
-whom. `hostilityType` picks the direction.
+`dataType: Threat` is in the live `EventDataType` enum. Probed on `trMgApZCVYkv3jdq:18` through `events`, `table`
+and `graph`. **Nothing in it is a threat amount.** WCL's "threat" is target tracking: who is attacking whom.
+`hostilityType` picks the direction.
 
 | | Friendlies: NPCs attacking players | Enemies: players and pets attacking NPCs |
 |---|---|---|
@@ -135,3 +147,8 @@ whom. `hostilityType` picks the direction.
   the events keep `sourceInstance`, so KhadBot's bands stay per instance.
 - Taunt spell IDs seen so far: Taunt 355 (warrior), Growl 6795 (druid), Dark Command 56222 (death knight) and
   Challenging Shout 1161 (area taunt, no single target).
+
+## Open questions
+
+- **Damage done to NPCs.** No fetched data type records it; DamageDone's fields (`targetInstance`, `amount`,
+  `absorbed`), pages, size and cost on a long pull are not checked (`docs/follow-ups.md`).

@@ -1,9 +1,9 @@
 # WarcraftLogs API: measured costs
 
-## Measured cost (2026-10-11)
+## Measured cost
 
-Recorded with `main.py ingest` (Buffs filtered to the 17 cooldown-registry IDs; enemy Casts unfiltered because
-no encounter file existed yet) and `scripts/wcl/spike_wcl_cost.py` (no filters).
+Three whole reports ingested with `main.py ingest` (Buffs filtered to the 17 cooldown-registry IDs of the time,
+enemy Casts unfiltered) and with `scripts/wcl/spike_wcl_cost.py` (no filters):
 
 | Report | Boss pulls | Points | Wall time | Raw pages | Events | Parquet |
 |---|---|---|---|---|---|---|
@@ -11,19 +11,20 @@ no encounter file existed yet) and `scripts/wcl/spike_wcl_cost.py` (no filters).
 | `H7z1fqDXjRTFnbtg` | 16 | 242 | 1 min 50 s | 438 MB | 1.05 M | 13 MB |
 | `QkVa6GHRK8yfrTbw` | 21 | 347 | about 3 min | 730 MB | 1.83 M | 22 MB |
 
-- About **14 points per pull** with the default filters, so a full night is a tenth of the hourly budget.
-- A request costs about 2 points, plus roughly 1 point per extra page. Unfiltered Buffs on a 526 s pull
-  (`trMgApZCVYkv3jdq:26`) took 9 pages, 82.7k events and 10 points; Healing on the same pull took 9 pages,
-  89.7k events, 10 points and 37 MB. A one-page request of a small spec costs about 1 point instead: 48 cost 49
-  (2026-10-20, `probes.md`, "Cross-fight and heal-only results").
+- About **14 points per pull** fetched this way, so a full night is a tenth of the current scheme's hourly allowance.
+  Batching the small specs across a report's pulls cuts this (`probes.md`, "Cross-fight and heal-only results").
+- A multi-page request costs about 2 points, plus about 1 per extra page: unfiltered Buffs on a 526 s pull
+  (`trMgApZCVYkv3jdq:26`) took 9 pages, 82.7k events and 10 points; Healing on the same pull took 9 pages, 89.7k
+  events, 10 points and 37 MB. A one-page request of a small spec costs about 1 (48 cost 49; `probes.md`,
+  "Cross-fight and heal-only results").
 - No data type was truncated in any pull.
 - Local processing (parse, normalize, store) of the whole 25-pull night from cached pages: **18.4 s** on the dev
   machine, under the 30 s budget. Peak traced memory was about 400 MB, bounded by the largest pull because
   pages are concatenated per pull.
 - Parsing one long pull's pages: stdlib `json` 1.58 s, `orjson` 0.56 s. Normalizing it: 2.3 s.
-- Digest per pull (no encounter file yet): 0.1 to 0.7 s and about 850 to 1,250 tokens.
+- Digest per pull without an encounter file: 0.1 to 0.7 s and about 850 to 1,250 tokens.
 
-## Raw page compression (2026-10-20)
+## Raw page compression
 
 How well zstd compresses the raw pages that hosted mode stores in object storage (`CompressedBlobStore`, `raw/`
 only). Measured on a copy of `raw/H7z1fqDXjRTFnbtg` (the 16-pull night above): 453 objects, 439.3 MB, one page per
@@ -38,8 +39,8 @@ machine; read them as relative, not as a benchmark.
 | 6 | 25.5 MB | 17.2x | 68 MB/s | 686 MB/s |
 | 9 (KhadBot default) | 22.3 MB | 19.7x | 58 MB/s | 740 MB/s |
 
-- A first run (wall clock, with the machine busy) also timed level 19: 18.0 MB (24.4x), but 1 MB/s to compress, far
-  too slow for an ingest.
+- Level 19 stores 18.0 MB (24.4x) but compresses at 1 MB/s, far too slow for an ingest (timed by wall clock on a
+  busy machine).
 - By data type at level 3: Healing 328.5 MB to 21.7 MB (15.1x), DamageTaken 73.7 to 5.6 (13.1x), Casts 32.3 to
   2.9 (11.3x); the small types compress 4x to 17x. `report.json` goes from 0.2 MB to 0.03 MB (4.7x).
 - Page sizes: median 1.7 kB (the many small types), 90th percentile 4.3 MB, largest 4.7 MB. The largest page takes
@@ -54,14 +55,17 @@ A live report watch (`jobs/watch.py`) sends the report metadata query (`GET_REPO
 `KHADBOT_WATCH_POLL_INTERVAL_S` seconds (180 by default), so a 6-hour night is at most 120 polls.
 
 - **Cost.** The query costs 2.01 points for a finished raid night (`report-data.md`, "Report metadata"), so the
-  longest watch's polls cost about 240 points (7% of an hour's 3,600), against about 180 for the ingest of a
-  25-pull night. The budget reserves `KHADBOT_WATCH_POLL_POINTS` per poll, 1 by default (`docs/follow-ups.md`).
-- To measure a poll of a live log directly (this spends WCL points, about 20: it prints the estimate and waits for a
-  typed `yes`), on a public report:
+  longest watch's polls cost about 240 points (7% of an hour's 3,600), against about 180 for the ingest of a 25-pull
+  night. The budget reserves `KHADBOT_WATCH_POLL_POINTS` per poll, 1 by default (`docs/follow-ups.md`).
+- **To measure a poll directly** (about 20 points; it prints the estimate and waits for a typed `yes`), on a public
+  report:
 
       uv run python scripts/wcl/measure_watch_poll.py --code <report code> --polls 3
 
-  It reads `rateLimitData` twice to find a read's own cost, then before and after each metadata query. Record the report
-  code, the date and the per-poll cost here, then set `KHADBOT_WATCH_POLL_POINTS` if it differs. It uses the app token;
-  on the current limits a user's token spends the same pool. On the new limits the metadata query is user-eligible
-  report data, so a user-token poll would spend the user's own points first.
+  It reads `rateLimitData` twice to find a read's own cost, then before and after each metadata query. It uses the
+  app token; on the current limits a user's token spends the same pool. On the new limits the metadata query is
+  user-eligible report data, so a user-token poll would spend the user's own points first.
+
+## Open questions
+
+- **A poll of a live log** is not measured directly; the 2.01 points are a finished night's.
