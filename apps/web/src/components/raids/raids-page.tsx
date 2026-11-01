@@ -12,11 +12,12 @@ import { Suspense, useEffect, useId, useRef, useState, type FormEvent, type Keyb
 
 import { Button } from "@/components/ui/button";
 import { SkeletonBlock, SkeletonCard } from "@/components/shared/skeletons";
-import { SlotPlaceholder } from "@/components/shared/slot-placeholder";
 import { useFeatures } from "@/lib/capabilities";
 import { pullPagePath } from "@/lib/refs";
 import { cn } from "@/lib/utils";
 
+import { CharacterResults, CharacterSearchForm } from "./character";
+import { GuildResults, GuildSearchForm } from "./guild";
 import { BeforeSearch } from "./before-search";
 import { LookupError } from "./lookup-error";
 import { useReportLookup } from "./lookup";
@@ -102,13 +103,15 @@ function Search() {
         </div>
         <div id={`${baseId}-panel`} role="tabpanel" aria-labelledby={`${baseId}-tab-${tab}`} className="px-5 pt-4 pb-[18px]">
           {tab === "log" ? <LogForm key={source ?? ""} source={source} onSubmit={(v) => go("log", v)} /> : null}
-          {/* Slot: raids-guild. The guild search form (components/raids/guild/) replaces this line. */}
-          {tab === "guild" ? <SlotPlaceholder slot="raids-guild" label="Guild search" minHeight={96} /> : null}
-          {/* Slot: raids-character. The character search form (components/raids/character/) replaces this line. */}
-          {tab === "character" ? <SlotPlaceholder slot="raids-character" label="Character search" minHeight={96} /> : null}
+          {/* Slot: raids-guild. The guild search form (components/raids/guild/). */}
+          {tab === "guild" ? <GuildSearchForm /> : null}
+          {/* Slot: raids-character. The character search form (components/raids/character/). */}
+          {tab === "character" ? <CharacterSearchForm /> : null}
         </div>
       </section>
       {tab === "log" ? <LogResults source={source} /> : null}
+      {tab === "guild" ? <GuildResults /> : null}
+      {tab === "character" ? <CharacterResults /> : null}
     </>
   );
 }
