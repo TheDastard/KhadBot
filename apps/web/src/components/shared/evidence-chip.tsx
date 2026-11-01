@@ -2,7 +2,8 @@
 //
 // A link to a piece of evidence: it opens the ref's pull page with `?ref=` set (the context panel shows the record),
 // keeping the current `full` setting. The visible label is short ("P2 · death 2"); the full ref is the link's title
-// and its accessible name. A plan ref stays on the current page. Every chip is a link: Tab reaches it, Enter follows.
+// and the end of its accessible name, which starts with the visible text (WCAG 2.5.3). A plan ref stays on the
+// current page. Every chip is a link: Tab reaches it, Enter follows.
 //
 //   <EvidenceChip evidenceRef="ev:H7z1fqDXjRTFnbtg:15:death:2" label="P2 · death 2" />
 
@@ -42,7 +43,7 @@ export function EvidenceChip({ evidenceRef, label, selected = false, className }
       href={evidenceHref(evidenceRef, pathname, new URLSearchParams(params.toString()))}
       scroll={false}
       title={evidenceRef}
-      aria-label={`Open evidence ${evidenceRef}`}
+      aria-label={`${text}: open evidence ${evidenceRef}`}
       aria-current={selected ? "true" : undefined}
       data-ref={evidenceRef}
       className={cn(
