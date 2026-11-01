@@ -1,0 +1,40 @@
+{
+ "data": {
+  "worldData": {
+   "regions": [
+    {
+     "id": 1,
+     "compactName": "US",
+     "name": "United States",
+     "slug": "US"
+    },
+    {
+     "id": 2,
+     "compactName": "EU",
+     "name": "Europe",
+     "slug": "EU"
+    },
+    {
+     "id": 3,
+     "compactName": "KR",
+     "name": "Korea",
+     "slug": "KR"
+    },
+    {
+     "id": 4,
+     "compactName": "TW",
+     "name": "Taiwan",
+     "slug": "TW"
+    },
+    {
+     "id": 5,
+     "compactName": "CN",
+     "name": "China",
+     "slug": "CN"
+    }
+   ]
+  }
+ },
+ "khadbotRecordedAt": "2026-11-01T04:05:26+00:00",
+ "khadbotPoints": 1.0
+}

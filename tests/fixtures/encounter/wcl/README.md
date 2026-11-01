@@ -85,3 +85,22 @@ filtered to the encounter file's ability IDs, which is what an ingest with the c
 | `trMgApZCVYkv3jdq:11` | Ula'tek wipe, phase 2, boss 53% | 244 s | Typical wipe from the wipe-heavy night; one player dying twice. |
 | `trMgApZCVYkv3jdq:18` | Ula'tek wipe, 35 s into Stage Three (phase ID 4) | 398 s | No deaths before Stage Three, then 20 deaths in 3 s around *Unchecked Rage*: a collapse at the start of a stage. |
 | `QkVa6GHRK8yfrTbw:14` | Ula'tek wipe, phase 1, boss 80% | 106 s | Early-learning wipe from the first night. |
+
+# Recorded searches (`_search/`)
+
+WCL's answers to the guild, character and server queries (`wcl/search.py`), recorded from the public guild Death and
+Destruction on Skullcrusher-US and the character Dastard on the same server. Each file is WCL's whole GraphQL body,
+plus `khadbotRecordedAt` and `khadbotPoints` (the query's measured cost). They are small JSON, so they are plain git,
+not LFS (`.gitattributes`), and offline tests need no `git lfs pull`.
+
+| Path | Answer |
+|---|---|
+| `regions.json` | `worldData.regions` |
+| `servers/<region id>/page_NNN.json` | One page of a region's servers (1 US, 2 EU) |
+| `guilds/<region>/<server>/<name>.json` | A guild's header, name lower case and percent-encoded |
+| `guild_reports/<guild id>.json` | A guild's report listing |
+| `characters/<region>/<server>/<name>.json` | A character with its recent reports |
+
+The reports those listings name have their `report.json` here too (metadata only, no pages), so a replayed search
+can build every night. Report discovery for ingest and seeding (`recorded.recorded_reports`) counts only reports with
+at least one fight's pages, so these metadata-only directories are not taken for ingestable reports.
