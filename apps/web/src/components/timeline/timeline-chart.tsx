@@ -18,7 +18,7 @@
 import { Brush } from "@visx/brush";
 import { Group } from "@visx/group";
 import { scaleLinear } from "@visx/scale";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { IconFallback } from "@/components/shared/ability-name";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -112,7 +112,17 @@ export interface TimelineChartProps {
 }
 
 export default function TimelineChart(props: TimelineChartProps) {
-  const { code, model, durationMs, cutoffMs, phases, selectedRef, zoom, onSelect, onZoom, onZoomAround } = props;
+  const { code, model, durationMs, cutoffMs, phases, selectedRef: urlRef, zoom, onSelect, onZoom, onZoomAround } = props;
+  // A click or Escape shows at once; the URL catches up (a router push re-renders the whole page) and then wins.
+  const [local, setLocal] = useState<{ from: string | null; value: string | null } | null>(null);
+  const selectedRef = local && local.from === urlRef ? local.value : urlRef;
+  const chooseRef = useCallback(
+    (value: string | null) => {
+      setLocal({ from: urlRef, value });
+      onSelect(value);
+    },
+    [urlRef, onSelect],
+  );
   const { ordered, rows } = model;
   const layout = useMemo(() => layoutLanes(rows.length), [rows.length]);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -139,7 +149,7 @@ export default function TimelineChart(props: TimelineChartProps) {
       const next = ordered[stepIndex(ordered.length, activeIndex, event.key)];
       if (next) focusMarker(groupRef.current, next.id);
     } else if (event.key === "Escape") {
-      onSelect(null);
+      chooseRef(null);
     } else if (event.key === "z" || event.key === "Z") {
       const at = ordered[activeIndex];
       if (at) {
@@ -149,10 +159,13 @@ export default function TimelineChart(props: TimelineChartProps) {
     }
   };
 
-  const select = (m: Marker) => {
-    setActiveId(m.id);
-    onSelect(m.ref);
-  };
+  const select = useCallback(
+    (m: Marker) => {
+      setActiveId(m.id);
+      chooseRef(m.ref);
+    },
+    [chooseRef],
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -247,8 +260,8 @@ function state(
   return {
     selected: m.ref === selectedRef,
     tabbable: m.id === tabId,
-    onSelect: () => select(m),
-    onFocus: () => setActiveId(m.id),
+    onSelectMarker: select,
+    onFocusMarker: setActiveId,
   };
 }
 
@@ -487,8 +500,8 @@ function MarkerList({
 interface ButtonState {
   selected: boolean;
   tabbable: boolean;
-  onSelect: () => void;
-  onFocus: () => void;
+  onSelectMarker: (m: Marker) => void;
+  onFocusMarker: (id: string) => void;
 }
 
 const RING = "shadow-[0_0_0_3px_var(--acc),0_0_0_7px_var(--acct)]";
@@ -498,14 +511,14 @@ function pct(scale: ReturnType<typeof makeTimeScale>, ms: number): string {
   return `${scale.toPct(ms)}%`;
 }
 
-function MechanicButton({
+function MechanicButtonImpl({
   m,
   top,
   scale,
   selected,
   tabbable,
-  onSelect,
-  onFocus,
+  onSelectMarker,
+  onFocusMarker,
 }: ButtonState & { m: MechanicMark; top: number; scale: ReturnType<typeof makeTimeScale> }) {
   const failed = m.failures > 0;
   return (
@@ -516,8 +529,8 @@ function MechanicButton({
           tabIndex={tabbable ? 0 : -1}
           aria-label={m.label}
           aria-pressed={selected}
-          onClick={onSelect}
-          onFocus={onFocus}
+          onClick={() => onSelectMarker(m)}
+          onFocus={() => onFocusMarker(m.id)}
           data-marker={m.id}
           data-lane="mechanic"
           className={cn(
@@ -541,15 +554,15 @@ function MechanicButton({
   );
 }
 
-function DeathButton({
+function DeathButtonImpl({
   m,
   top,
   scale,
   code,
   selected,
   tabbable,
-  onSelect,
-  onFocus,
+  onSelectMarker,
+  onFocusMarker,
 }: ButtonState & { m: DeathMark; top: number; scale: ReturnType<typeof makeTimeScale>; code: string }) {
   return (
     <Tooltip>
@@ -559,11 +572,11 @@ function DeathButton({
           tabIndex={tabbable ? 0 : -1}
           aria-label={m.label}
           aria-pressed={selected}
-          onClick={onSelect}
-          onFocus={onFocus}
+          onClick={() => onSelectMarker(m)}
+          onFocus={() => onFocusMarker(m.id)}
           data-marker={m.id}
           data-lane="death"
-          className="group pointer-events-auto absolute flex w-3 -translate-x-1/2 items-end justify-center border-0 bg-transparent p-0 outline-none"
+          className="group pointer-events-auto absolute flex w-2 -translate-x-1/2 items-end justify-center border-0 bg-transparent p-0 outline-none"
           style={{ top: top + 2, height: H_DEATH - 6, left: pct(scale, m.tMs) }}
         >
           <span
@@ -588,15 +601,15 @@ function initials(spell: string): string {
   return (words.length > 1 ? words[0]!.charAt(0) + words[1]!.charAt(0) : spell.slice(0, 2)).toUpperCase();
 }
 
-function CooldownButton({
+function CooldownButtonImpl({
   m,
   top,
   scale,
   code,
   selected,
   tabbable,
-  onSelect,
-  onFocus,
+  onSelectMarker,
+  onFocusMarker,
 }: ButtonState & { m: CooldownMark; top: number; scale: ReturnType<typeof makeTimeScale>; code: string }) {
   return (
     <Tooltip>
@@ -606,19 +619,19 @@ function CooldownButton({
           tabIndex={tabbable ? 0 : -1}
           aria-label={m.label}
           aria-pressed={selected}
-          onClick={onSelect}
-          onFocus={onFocus}
+          onClick={() => onSelectMarker(m)}
+          onFocus={() => onFocusMarker(m.id)}
           data-marker={m.id}
           data-lane="cooldown"
+          data-initials={initials(m.spell)}
           className={cn(
             "pointer-events-auto absolute flex h-[22px] w-[22px] -translate-x-1/2 items-center justify-center rounded-sm border border-line bg-s3 p-0",
-            "font-mono text-[9px] font-semibold text-mut hover:border-info",
+            "font-mono text-[9px] font-semibold text-mut before:content-[attr(data-initials)] hover:border-info",
             FOCUS_RING,
             selected && RING,
           )}
           style={{ top: top + (m.tier ? 25 : 3), left: pct(scale, m.tMs) }}
         >
-          <span aria-hidden="true">{initials(m.spell)}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent className="w-72 max-w-72 border border-line bg-s1 p-3 text-ink shadow-lg">
@@ -628,14 +641,14 @@ function CooldownButton({
   );
 }
 
-function WindowButton({
+function WindowButtonImpl({
   m,
   top,
   scale,
   selected,
   tabbable,
-  onSelect,
-  onFocus,
+  onSelectMarker,
+  onFocusMarker,
 }: ButtonState & { m: WindowMark; top: number; scale: ReturnType<typeof makeTimeScale> }) {
   return (
     <Tooltip>
@@ -645,12 +658,13 @@ function WindowButton({
           tabIndex={tabbable ? 0 : -1}
           aria-label={m.label}
           aria-pressed={selected}
-          onClick={onSelect}
-          onFocus={onFocus}
+          onClick={() => onSelectMarker(m)}
+          onFocus={() => onFocusMarker(m.id)}
           data-marker={m.id}
           data-lane="window"
+          data-text={`${m.covered ? "✓" : "✗"} ${m.short} ${m.occurrence}`}
           className={cn(
-            "pointer-events-auto absolute inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-sm border-0 py-0 pr-1.5 pl-[3px] text-[11px] font-semibold",
+            "pointer-events-auto absolute inline-flex h-5 after:content-[attr(data-text)] items-center gap-1 whitespace-nowrap rounded-sm border-0 py-0 pr-1.5 pl-[3px] text-[11px] font-semibold",
             m.covered ? "bg-okt text-ok" : "bg-badt text-bad shadow-[inset_0_0_0_1px_var(--bad)]",
             FOCUS_RING,
             selected && RING,
@@ -658,9 +672,6 @@ function WindowButton({
           style={{ top: top + 4, left: pct(scale, m.tMs) }}
         >
           <IconFallback size={16} className="align-middle" />
-          <span aria-hidden="true">
-            {m.covered ? "✓" : "✗"} {m.short} {m.occurrence}
-          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent>
@@ -669,3 +680,11 @@ function WindowButton({
     </Tooltip>
   );
 }
+
+const MechanicButton = memo(MechanicButtonImpl);
+
+const DeathButton = memo(DeathButtonImpl);
+
+const CooldownButton = memo(CooldownButtonImpl);
+
+const WindowButton = memo(WindowButtonImpl);

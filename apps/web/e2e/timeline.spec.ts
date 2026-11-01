@@ -26,9 +26,11 @@ async function open(page: import("@playwright/test").Page) {
 
 test("clicking a death marker selects it in the URL", async ({ page }) => {
   await open(page);
-  const death = page.getByRole("button", { name: /^Death 2,/ });
+  // The last death stands alone; earlier ones can sit within a pixel of each other.
+  const death = page.locator("[data-lane=death]").last();
+  const ref = await death.getAttribute("data-marker");
   await death.click();
-  await expect(page).toHaveURL(new RegExp(`ref=ev%3A${CODE}%3A${FIGHT}%3Adeath%3A2`));
+  await expect(page).toHaveURL(new RegExp(`ref=${encodeURIComponent(ref!).replace(/%/g, "%")}`));
   await expect(death).toHaveAttribute("aria-pressed", "true");
 });
 
@@ -117,7 +119,7 @@ test("budgets: first render, hover, click and step", async ({ page }) => {
       (k) =>
         new Promise<number>((resolve) => {
           let start = 0;
-          const stamp = (e: Event) => (start = e.timeStamp);
+          const stamp = (e: Event) => (start = e.timeStamp || performance.now());
           const done = () => resolve(performance.now() - start);
           const check = () => {
             if (k === "hover" && document.querySelector("[data-slot='tooltip-content']")) return true;
@@ -130,23 +132,23 @@ test("budgets: first render, hover, click and step", async ({ page }) => {
           };
           const type = k === "hover" ? "pointermove" : k === "click" ? "click" : "keydown";
           document.addEventListener(type, stamp, { capture: true, once: true });
-          const obs = new MutationObserver(() => {
-            if (start && check()) {
-              obs.disconnect();
-              done();
-            }
-          });
-          obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+          const poll = () => {
+            if (start && check()) done();
+            else requestAnimationFrame(poll);
+          };
+          requestAnimationFrame(poll);
         }),
       kind,
     );
 
-  const death = page.getByRole("button", { name: /^Death 3,/ });
+  const death = page.locator("[data-lane=death]").last();
   const hoverP = measure("hover");
+  await page.waitForTimeout(100); // let the listener arm before the input
   await death.hover();
   const hover = await hoverP;
 
   const clickP = measure("click");
+  await page.waitForTimeout(100); // let the listener arm before the input
   await death.click();
   const click = await clickP;
 
@@ -155,7 +157,8 @@ test("budgets: first render, hover, click and step", async ({ page }) => {
     (window as unknown as { __from?: string }).__from = (document.activeElement as HTMLElement).dataset.marker;
   });
   const stepP = measure("step");
-  await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(100); // let the listener arm before the input
+  await page.keyboard.press("ArrowLeft");
   const step = await stepP;
 
   const fixed = (n: number) => Math.round(n);
