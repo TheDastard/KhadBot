@@ -1,16 +1,16 @@
 // apps/web/src/components/raids/lookup.ts
 //
-// The Raids page's data hooks: the report lookup (GET /v1/lookup/report), whether the visitor is signed in (it picks
-// which "report not found" the page shows), and the server's reports list for a server without lookup.
+// The Raids page's data hooks: the report lookup (GET /v1/lookup/report) and the server's reports list for a server
+// without lookup. Whether the visitor is signed in (it picks which "report not found" the page shows) is `useSignedIn`
+// in lib/session.ts, shared with the account menu.
 
 "use client";
 
-import { isApiError, unwrap } from "@khadbot/api-client";
+import { unwrap } from "@khadbot/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
-import { useFeatures } from "@/lib/capabilities";
 
 import { nightFromLookup, nightFromReport } from "./night";
 
@@ -25,28 +25,6 @@ export function useReportLookup(source: string | null) {
       return { data, night: nightFromLookup(data) };
     },
   });
-}
-
-/** True/false once `GET /v1/me` has answered; null while unknown, and always false on a server without sign-in. */
-export function useSignedIn(): boolean | null {
-  const { sign_in } = useFeatures();
-  const me = useQuery({
-    queryKey: ["me"],
-    enabled: sign_in,
-    retry: false,
-    staleTime: 60_000,
-    queryFn: async () => {
-      try {
-        return await unwrap(api().GET("/v1/me"));
-      } catch (error) {
-        if (isApiError(error) && error.status === 401) return null;
-        throw error;
-      }
-    },
-  });
-  if (!sign_in) return false;
-  if (me.isPending) return null;
-  return me.data != null;
 }
 
 /** The server's reports (lookup off): each report's detail, as a night. */

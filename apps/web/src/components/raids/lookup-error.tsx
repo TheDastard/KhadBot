@@ -9,8 +9,9 @@ import type { ApiError } from "@khadbot/api-client";
 
 import { ErrorState } from "@/components/shared/error-state";
 import { formatCountdown } from "@/lib/format";
+import { useSignedIn } from "@/lib/session";
 
-import { useCountdown, useSignedIn } from "./lookup";
+import { useCountdown } from "./lookup";
 
 export interface LookupErrorProps {
   error: ApiError;

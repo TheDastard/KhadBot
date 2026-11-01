@@ -14,6 +14,7 @@ import { api, healthApi } from "./api";
 
 export const queryKeys = {
   health: ["health"] as const,
+  me: ["me"] as const,
   report: (code: string) => ["report", code] as const,
   pull: (code: string, fight: number) => ["report", code, "pull", fight] as const,
   digest: (code: string, fight: number) => ["report", code, "pull", fight, "digest"] as const,
