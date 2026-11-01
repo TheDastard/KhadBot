@@ -53,7 +53,7 @@ src/khadbot/
   simc/              # SimC generated client data: effect codes, table parser, pinned download
   cli/               # Rich + prompt_toolkit REPL
     commands/        # slash-command handlers per mode
-  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary
+  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary, raids/ (report lookup)
 config/
   agents/            # coach.yaml, encounter.yaml
   personas/          # khadgar, thrall, xalatath

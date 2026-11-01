@@ -2,6 +2,23 @@
 
 ## Report metadata (`report.fights`, `report.masterData`)
 
+`GET_REPORT_META` (`encounter/ingest/wcl_queries.py`, operation `GetReportMeta`) reads a report's fights, actors,
+abilities and phase names. It uses no `[Database Points]` field; on the new limits it is user-eligible report data.
+
+- **Who sends it.** Ingest, once per report; the report lookup (`GET /v1/lookup/report`, `api/raids/lookup.py`),
+  on the signed-in user's token when they have one, else the app's; and a live watch poll (`costs.md`, "Live watch
+  polls").
+- **Cost: 2.01 points** for a raid night's metadata: `H7z1fqDXjRTFnbtg` on the app token, with
+  `rateLimitData.currentRequest` asked in the same request (`application` 0, `user` 2.01, `total` 2.01, no database
+  points; `access-and-points.md`, "Reading the counter"). The lookup reserves `KHADBOT_LOOKUP_POINTS` (2) from the
+  budget and settles that estimate.
+- **Caching.** The answer is cached as `raw/<code>/report.json` in the raw page cache (`docs/encounter-pipeline.md`,
+  stage 1), with two keys of KhadBot's own: `khadbotFetchedWith` (`"user"` or `"app"`: which kind of token fetched
+  it) and `khadbotFetchedAt` (when). Ingest never rewrites a cached copy. The lookup serves it while it stands: for
+  good when it was fetched at least `KHADBOT_LOOKUP_SETTLED_AFTER_S` (six hours) after the log's last fight, else
+  `KHADBOT_LOOKUP_META_MAX_AGE_S` (120 s), after which the next lookup fetches it again so new pulls of a live log
+  appear. A lookup followed by opening a pull makes no second metadata request.
+
 All of these fields are confirmed on the live schema: `encounterID`, `name`, `difficulty`, `kill`, `startTime`,
 `endTime`, `lastPhase`, `fightPercentage`, `bossPercentage`, `size`, `friendlyPlayers`, `phaseTransitions { id startTime }`.
 

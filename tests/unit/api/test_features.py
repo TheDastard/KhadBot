@@ -28,6 +28,7 @@ ALL_OFF = {
     "budget": False,
     "reviews": False,
     "chat": False,
+    "report_lookup": False,
 }
 
 # One request per flag whose route is mounted exactly when the flag is true. A route that is not mounted answers with
@@ -38,6 +39,7 @@ PROBES = {
     "ingest_jobs": ("GET", "/v1/jobs/nope"),
     "live_watch": ("GET", "/v1/reports/ABC123/watch"),
     "budget": ("GET", "/v1/budget"),
+    "report_lookup": ("GET", "/v1/lookup/report"),
 }
 
 
@@ -95,7 +97,14 @@ class TestHostedMode:
     def test_reports_hosted_mode_with_what_is_mounted(self, h):
         body = h.actor().get("/v1/health").json()
         assert body["mode"] == "hosted"
-        assert body["features"] == {**ALL_OFF, "sign_in": True, "ingest_jobs": True, "live_watch": True, "budget": True}
+        assert body["features"] == {
+            **ALL_OFF,
+            "sign_in": True,
+            "ingest_jobs": True,
+            "live_watch": True,
+            "budget": True,
+            "report_lookup": True,
+        }
 
     @pytest.mark.parametrize("flag", PROBES)
     def test_every_flag_matches_whether_its_routes_answer(self, h, flag):
@@ -118,7 +127,7 @@ class TestPartialDeploy:
         client = TestClient(app)
         body = client.get("/v1/health").json()
         assert body["mode"] == "hosted"
-        assert body["features"] == {**ALL_OFF, "sign_in": True, "budget": True}
+        assert body["features"] == {**ALL_OFF, "sign_in": True, "budget": True, "report_lookup": True}
         assert answers(client, *PROBES["ingest_jobs"]) is False  # jobs not mounted: flag and route agree
 
     def test_live_watch_needs_the_job_queue_like_its_routes(self, tmp_path):
@@ -156,7 +165,14 @@ class TestModeIsTheCallers:
 
         body = TestClient(hosted_documentation_app(tmp_path)).get("/v1/health").json()
         assert body["mode"] == "hosted"
-        assert body["features"] == {**ALL_OFF, "sign_in": True, "ingest_jobs": True, "live_watch": True, "budget": True}
+        assert body["features"] == {
+            **ALL_OFF,
+            "sign_in": True,
+            "ingest_jobs": True,
+            "live_watch": True,
+            "budget": True,
+            "report_lookup": True,
+        }
 
 
 def test_features_model_has_one_flag_per_area():

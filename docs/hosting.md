@@ -86,10 +86,20 @@ A signed-in user can watch a report that is still being logged (`POST /v1/report
 | `KHADBOT_WATCH_POLL_INTERVAL_S` | Seconds between metadata reads of a watched report (default 180). |
 | `KHADBOT_WATCH_QUIET_PERIOD_S` | A watch stops when no new boss fight turned up for this long (default 2700). |
 | `KHADBOT_WATCH_MAX_LENGTH_S` | A watch stops after this long in all (default 21600). |
-| `KHADBOT_WATCH_POLL_POINTS` | Points one poll reserves from the WCL budget (default 1, not measured yet; `docs/wcl/costs.md`, "Live watch polls"). Never below 1. |
+| `KHADBOT_WATCH_POLL_POINTS` | Points one poll reserves from the WCL budget (default 1; a poll costs 2.01 points for a raid night, `docs/wcl/costs.md`, "Live watch polls"). Never below 1. |
 | `KHADBOT_WATCH_MAX_FAILURES` | A watch stops after this many failed polls in a row (default 5). |
 
 Polls and the ingests a watch queues are live requests to the WCL budget, which may use the headroom (`KHADBOT_BUDGET_HEADROOM_SHARE`). A poll the budget has no points for is skipped; the watch shows it in `polls_skipped`. Watches are rows in the `watches` table (migration 0007), one active per report.
+
+### Report lookup
+
+`GET /v1/lookup/report?source=<code or URL>` lists a report's boss pulls from WCL's report metadata before anything is loaded (`features.report_lookup`). It reads the metadata ingest uses, through the raw page cache, after the access check: unreadable or missing reports answer 404 `report_not_found`. A caller with a WCL sign-in fetches on their own token, anyone else on the app's. A fetch reserves points from the WCL budget; with none free the route answers 429 `budget_exhausted` with `wait_s` and `Retry-After` and queues nothing.
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_LOOKUP_META_MAX_AGE_S` | How long cached metadata of a log that may still be live stands before the next lookup fetches it again (default 120). |
+| `KHADBOT_LOOKUP_SETTLED_AFTER_S` | Metadata fetched at least this long after the log's last fight is of a finished log and stands for good (default 21600). |
+| `KHADBOT_LOOKUP_POINTS` | Points one lookup reserves from the WCL budget (default 2, measured at 2.01 for a raid night; never below 1; `docs/wcl/report-data.md`, "Report metadata"). |
 
 ### WCL replay
 

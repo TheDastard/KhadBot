@@ -142,6 +142,10 @@ class AuthService:
             clock=clock,
         )
 
+    def wcl_client(self) -> WarcraftLogsClient:
+        """A WCL client on the app's credentials (not entered yet; use it as ``async with``)."""
+        return self._wcl_client()
+
     def __repr__(self) -> str:
         return "AuthService(<redacted>)"
 

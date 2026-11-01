@@ -51,7 +51,9 @@ def test_every_error_response_uses_the_error_body():
             for status, response in op["responses"].items():
                 if status.startswith(("4", "5")):
                     schema = response["content"]["application/json"]["schema"]
-                    assert schema == {"$ref": "#/components/schemas/ErrorBody"}, (path, status)
+                    # A 429 also says how long to wait: BudgetWaitBody is an ErrorBody with a wait_s.
+                    allowed = "BudgetWaitBody" if status == "429" else "ErrorBody"
+                    assert schema == {"$ref": f"#/components/schemas/{allowed}"}, (path, status)
 
 
 def test_every_path_is_versioned_and_local_mode_is_read_only():

@@ -312,6 +312,37 @@
         "title": "BudgetResponse",
         "type": "object"
       },
+      "BudgetWaitBody": {
+        "description": "The answer when the WCL budget has no points for a request now: how long until it would.",
+        "properties": {
+          "code": {
+            "examples": [
+              "report_not_found",
+              "pull_not_found",
+              "unresolvable_ref",
+              "bad_window"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "wait_s": {
+            "description": "Seconds until the budget would have the points; try again then",
+            "title": "Wait S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "wait_s"
+        ],
+        "title": "BudgetWaitBody",
+        "type": "object"
+      },
       "CachedFindings": {
         "description": "Cached findings for a pull; ``stale`` when the pull's events or encounter file changed since.",
         "properties": {
@@ -758,6 +789,12 @@
             "default": false,
             "description": "Live report watch",
             "title": "Live Watch",
+            "type": "boolean"
+          },
+          "report_lookup": {
+            "default": false,
+            "description": "Report lookup: a report's boss pulls before any is loaded, GET /v1/lookup/report",
+            "title": "Report Lookup",
             "type": "boolean"
           },
           "reviews": {
@@ -1379,6 +1416,162 @@
           "late_ms"
         ],
         "title": "LateCooldown",
+        "type": "object"
+      },
+      "LookupGroup": {
+        "description": "One encounter and difficulty of the night.",
+        "properties": {
+          "best_fight": {
+            "description": "The group's best pull: its first kill, else the one with the lowest fight %",
+            "title": "Best Fight",
+            "type": "integer"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "pulls": {
+            "description": "Time order; ordering kills first is the client's job",
+            "items": {
+              "$ref": "#/components/schemas/LookupPull"
+            },
+            "title": "Pulls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "encounter_name",
+          "difficulty",
+          "difficulty_name",
+          "pulls",
+          "best_fight"
+        ],
+        "title": "LookupGroup",
+        "type": "object"
+      },
+      "LookupPull": {
+        "description": "One boss pull of a looked-up report, from the report's metadata; nothing about it has to be loaded.",
+        "properties": {
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The boss's health left, 0-100",
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WCL's fight percentage left, 0-100; the primary figure",
+            "title": "Boss Pct"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "fight": {
+            "description": "WCL fight ID; the pull page is /r/{code}/p/{fight}",
+            "title": "Fight",
+            "type": "integer"
+          },
+          "label": {
+            "description": "\"P<ordinal>\": a display label only",
+            "title": "Label",
+            "type": "string"
+          },
+          "ordinal": {
+            "description": "1-based within its group, time order",
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "ready": {
+            "description": "Whether the pull's digest is already written, so the pull page opens at once",
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fight",
+          "ordinal",
+          "label",
+          "outcome",
+          "duration_ms",
+          "boss_pct",
+          "boss_hp_pct",
+          "ready"
+        ],
+        "title": "LookupPull",
+        "type": "object"
+      },
+      "LookupZone": {
+        "description": "The raid zone WCL files the report under.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "LookupZone",
         "type": "object"
       },
       "Me": {
@@ -2502,6 +2695,72 @@
         "title": "ReportList",
         "type": "object"
       },
+      "ReportLookup": {
+        "description": "A report's boss pulls, grouped by encounter and difficulty, as WCL lists them now.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "focus_fight": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The fight a URL's #fight= named, when it names a boss pull here",
+            "title": "Focus Fight"
+          },
+          "groups": {
+            "description": "In the order first pulled",
+            "items": {
+              "$ref": "#/components/schemas/LookupGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "started_at": {
+            "description": "When the report was started (UTC)",
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "zone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LookupZone"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "started_at",
+          "zone",
+          "focus_fight",
+          "groups"
+        ],
+        "title": "ReportLookup",
+        "type": "object"
+      },
       "TrendRow": {
         "properties": {
           "boss_hp_pct": {
@@ -3448,6 +3707,93 @@
         "summary": "Job Events",
         "tags": [
           "jobs"
+        ]
+      }
+    },
+    "/v1/lookup/report": {
+      "get": {
+        "description": "A report's boss pulls from Warcraft Logs, grouped by encounter and difficulty, before any is loaded. A URL with\n``#fight=N`` also names ``focus_fight``. The caller must be able to read the report.",
+        "operationId": "lookup_report_v1_lookup_report_get",
+        "parameters": [
+          {
+            "description": "A report code or warcraftlogs.com URL",
+            "in": "query",
+            "name": "source",
+            "required": true,
+            "schema": {
+              "description": "A report code or warcraftlogs.com URL",
+              "maxLength": 500,
+              "minLength": 1,
+              "title": "Source",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportLookup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not a report code or URL (bad_source)"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Report missing or not readable by the caller (report_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Missing or invalid query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free now (budget_exhausted); see wait_s"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer (wcl_unavailable)"
+          }
+        },
+        "summary": "Lookup Report",
+        "tags": [
+          "lookup"
         ]
       }
     },

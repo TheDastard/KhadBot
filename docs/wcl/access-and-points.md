@@ -70,6 +70,19 @@ and 2026-10-25. WCL's documentation pages refuse scripted fetches, so check them
   free to send any request, even one the user pays for in full.
 - The limit applies per window; `rateLimitData.pointsResetIn` says when the current one ends.
 
+### Reading the counter
+
+`rateLimitData` (schema page `ratelimitdata.doc.html`; read on the app token):
+
+- `limitPerHour`, `pointsSpentThisHour` and `pointsResetIn` (seconds) are the application counter.
+- `databaseLimitPerHour` and `databasePointsSpentThisHour` are the database-point counter. KhadBot's account, on the
+  current limits, reads a database limit of 250.
+- `userHasRemainingPoints` and `userPointsResetIn` describe the signed-in user's pool.
+- `currentRequest` is a JSON breakdown of the request the read is part of: `total` (application plus user points,
+  including the 1-point minimum), `application`, `user` and `database`. Asked in the same request as a query, it
+  gives that query's own cost. User and database figures show without opting in to the new limits. On the app token
+  the `user` part is charged to the application: `total` is what `pointsSpentThisHour` grows by.
+
 ### Commercial use
 
 An app that uses database-point fields needs WCL's explicit approval before it is commercialised.
@@ -77,6 +90,5 @@ An app that uses database-point fields needs WCL's explicit approval before it i
 ### Not yet known
 
 - The size of a user's pool, and whether it differs by the user's own subscription.
-- What `rateLimitData` reports on the new scheme: whether it shows user and database points, and whether a read
-  with a user token shows that user's pool or the application's.
+- Whether a `rateLimitData` read with a user token shows that user's pool or the application's.
 - Which label each field carries. The schema marks them one by one; the lists above are WCL's examples.

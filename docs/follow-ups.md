@@ -258,6 +258,10 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   the report query doesn't ask WCL for them. Add them to the report query (checking the field names against the
   WCL schema, `docs/wcl/report-data.md`) and fill them in `read_models.report_row`; the WCL budget's per-guild allowance
   needs the guild.
+- **Report lookup leftovers.** `api/jobs.parse_source` and `wcl.reports.parse_report_source` parse the same
+  code-or-URL input twice; make the ingest route use the shared one. A live watch's poll writes `report.json` without
+  `khadbotFetchedAt`, so the next lookup fetches it once more. `ready` reads the whole report through
+  `SqlSource.pulls`; a query for the projected fight IDs alone would be lighter.
 - **Read-model rows of removed pulls stay.** The writer replaces one pull's rows at a time; a fight that drops
   out of a report on re-ingest, or a deleted report, keeps its rows until something deletes them (retention).
 - **Retention gaps.** The records cleanup, the bucket rules and the backfill cover blobs only. Still open: the
@@ -339,6 +343,10 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   retry shows the backoff left).
 - Hosted API: a second user's ingest of a report whose ingest is already running gets 409 `ingest_in_progress`
   rather than following the first user's job.
+
+- **Live watch poll cost.** The report metadata query a watch poll sends costs 2.01 points for a raid night
+  (`docs/wcl/report-data.md`, "Report metadata"), but `KHADBOT_WATCH_POLL_POINTS` defaults to 1. Set it to 2 with
+  the next watch change.
 
 ### Local test environment
 

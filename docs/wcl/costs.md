@@ -53,14 +53,11 @@ machine; read them as relative, not as a benchmark.
 A live report watch (`jobs/watch.py`) sends the report metadata query (`GET_REPORT_META`) every
 `KHADBOT_WATCH_POLL_INTERVAL_S` seconds (180 by default), so a 6-hour night is at most 120 polls.
 
-- **Not measured yet.** The budget reserves 1 point per poll (`KHADBOT_WATCH_POLL_POINTS`). The only documented figures
-  are that a request costs at least 1 point, a `rateLimitData` read costs 1 and a one-page request of a small events
-  spec costs about 1 ("Measured cost" above). The metadata query returns `masterData` actors and abilities, which are
-  large for a raid, so it may cost more than 1; a watch's polls are then 120 times that.
-- Estimate: 1 to 3 points a poll, so 120 to 360 points over the longest watch (3% to 10% of an hour's 3,600), against
-  about 180 points for the ingest of a 25-pull night.
-- To measure it (this spends WCL points, about 20: it prints the estimate and waits for a typed `yes`), on a public
-  report:
+- **Cost.** The query costs 2.01 points for a finished raid night (`report-data.md`, "Report metadata"), so the
+  longest watch's polls cost about 240 points (7% of an hour's 3,600), against about 180 for the ingest of a
+  25-pull night. The budget reserves `KHADBOT_WATCH_POLL_POINTS` per poll, 1 by default (`docs/follow-ups.md`).
+- To measure a poll of a live log directly (this spends WCL points, about 20: it prints the estimate and waits for a
+  typed `yes`), on a public report:
 
       uv run python scripts/wcl/measure_watch_poll.py --code <report code> --polls 3
 

@@ -14,7 +14,13 @@ import pytest
 import respx
 
 from khadbot.encounter.ingest import ingest_report
-from khadbot.encounter.ingest.fetch import FETCHED_WITH_KEY, RawPageCache, UserTokenRejectedError, query_wcl
+from khadbot.encounter.ingest.fetch import (
+    FETCHED_AT_KEY,
+    FETCHED_WITH_KEY,
+    RawPageCache,
+    UserTokenRejectedError,
+    query_wcl,
+)
 from khadbot.encounter.ingest.wcl_queries import GET_REPORT_META
 from khadbot.encounter.store import ParquetEventStore
 from khadbot.storage import LocalBlobStore
@@ -120,7 +126,8 @@ class TestUserTokenIngest:
         assert cache.fetched_with(CODE) == "user"
         stored = cache.report_meta(CODE)
         assert stored is not None and stored[FETCHED_WITH_KEY] == "user"
-        assert {k: v for k, v in stored.items() if k != FETCHED_WITH_KEY} == meta
+        assert FETCHED_AT_KEY in stored
+        assert {k: v for k, v in stored.items() if k not in (FETCHED_WITH_KEY, FETCHED_AT_KEY)} == meta
 
     async def test_app_token_ingest_records_app(self, router, meta, stores):
         user_route = router.post(GRAPHQL_USER_URL).mock(side_effect=graphql_handler(meta))
