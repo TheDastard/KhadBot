@@ -16,6 +16,7 @@
 import { isApiError } from "@khadbot/api-client";
 import type { ReactNode } from "react";
 
+import { PullNotLoaded } from "@/components/open-pull/pull-not-loaded";
 import { ErrorState } from "@/components/shared/error-state";
 import { NotAvailable } from "@/components/shared/not-available";
 import { SkeletonBlock, SkeletonCard } from "@/components/shared/skeletons";
@@ -24,7 +25,7 @@ import { useFeature } from "@/lib/capabilities";
 import { useFocus } from "@/lib/focus";
 import { usePullDigest } from "@/lib/queries";
 
-import { PullBodySlot, PullNotLoadedSlot, PullTimelineSlot } from "./slots";
+import { PullBodySlot, PullTimelineSlot } from "./slots";
 
 const NOT_LOADED = new Set(["pull_not_found", "report_not_found"]);
 
@@ -73,8 +74,8 @@ function PullRouteFor({ code, fight }: { code: string; fight: number }) {
         return (
           <>
             <TopBar breadcrumb={<Breadcrumb items={[{ label: "Raids", href: "/" }, { label: "Opening a pull" }]} />} />
-            {/* Slot: pull-not-loaded. Replace with the opening-a-pull component (components/open-pull/). */}
-            <PullNotLoadedSlot code={code} fight={fight} />
+            {/* Slot: pull-not-loaded (components/open-pull/). Keyed so another pull starts afresh. */}
+            <PullNotLoaded key={`${code}:${fight}`} code={code} fight={fight} />
           </>
         );
       }

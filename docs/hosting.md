@@ -255,7 +255,7 @@ The browser loads one third-party script, Wowhead's tooltips (`docs/game-art.md`
         mise run dev:seed -- --only SYNTH01     # second terminal
         mise run test:e2e
 
-   Its setup signs in the test users `e2e-alice` and `e2e-bob` with `test-session --storage-state` (files in `apps/web/e2e/.auth/`, gitignored: they hold live cookies), each able to read the seeded reports. It reuses the web dev server on :3000, or starts one. No test reaches a host other than this machine: the fixture aborts any other request.
+   Its setup signs in the test users `e2e-alice` and `e2e-bob` with `test-session --storage-state` (files in `apps/web/e2e/.auth/`, gitignored: they hold live cookies), each able to read the seeded reports. `open-pull.spec.ts` opens real pulls through replay and so needs `E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg` with the second report readable but not seeded, on a stack where its pulls are not loaded yet (`mise run stack:reset`); without that those three tests skip and its mocked state screens still run. It reuses the web dev server on :3000, or starts one. No test reaches a host other than this machine: the fixture aborts any other request.
 
 2. Local mode: `mise run test:e2e:local` starts `main.py serve` on `127.0.0.1:8001` over `.khadbot_fixture_data` (`mise run gen:fixture-data` once) and its own web dev server on :3000 pointed at it, so stop any other web dev server first (`dev:all -- --no-web` keeps the rest of the dev loop).
 
