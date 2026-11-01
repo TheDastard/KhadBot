@@ -234,7 +234,7 @@ BlameBy = Literal["cast_target", "aggro_holder"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
 Difficulty = Literal["lfr", "normal", "heroic", "mythic"]
 
-# WCL fight ``difficulty`` codes. Heroic (4) and Mythic (5) are confirmed on recorded reports (docs/wcl-api.md).
+# WCL fight ``difficulty`` codes. Heroic (4) and Mythic (5) are confirmed on recorded reports (docs/wcl/report-data.md).
 WCL_DIFFICULTY: dict[int, Difficulty] = {1: "lfr", 3: "normal", 4: "heroic", 5: "mythic"}
 _DIFFICULTY_ORDER: list[Difficulty] = ["lfr", "normal", "heroic", "mythic"]
 

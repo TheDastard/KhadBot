@@ -17,7 +17,7 @@ Two more variants carry their own baseline, the requests they would replace, mea
              (per filter, so enemy Casts split by encounter) with every pull's fight ID, rows split back by their
              ``fight`` field;
   healonly   the Healing spec on the measured pull: baseline unfiltered; variant with ``--heal-filter``, which must
-             keep exactly the ``heal`` rows. The filter syntax for event type is not confirmed (docs/wcl-api.md
+             keep exactly the ``heal`` rows. The filter syntax for event type is not confirmed (docs/wcl/report-data.md
              lists only ``ability.id IN (...)``), so there is no default and a probe request runs first.
 
 For each it reports points spent (``rateLimitData`` before and after, app token), requests, pages, bytes, events
@@ -77,7 +77,7 @@ DEFAULT_FIGHT = 26
 # The follow-up's bar for building a merged fetch: at least this share of points or wall time saved.
 SAVING_THRESHOLD_PCT = 15.0
 
-# docs/wcl-api.md "Measured cost": a request costs about 2 points plus about 1 per extra page.
+# docs/wcl/costs.md "Measured cost": a request costs about 2 points plus about 1 per extra page.
 POINTS_PER_REQUEST = 2
 POINTS_PER_EXTRA_PAGE = 1
 
@@ -606,7 +606,7 @@ def stream_cost_ceiling(streams: int, max_pages: int) -> int:
 def baseline_estimate(n_specs: int) -> list[str]:
     return [
         f"Baseline: {n_specs} requests (the current specs), fetched concurrently.",
-        "  Documented: about 14 points per pull on average (docs/wcl-api.md, 2026-10-11, 25-pull night: 348 points).",
+        "  Documented: about 14 points per pull on average (docs/wcl/costs.md, 2026-10-11, 25-pull night: 348 points).",
         "  This pull is longer than average; Healing alone cost 10 points on it (9 pages) in that run.",
         "  Expect roughly 14 to 30 points. The upper end is not documented.",
     ]
@@ -646,7 +646,7 @@ def healonly_estimate(heal_filter: str, max_pages: int) -> list[str]:
     return [
         f"Variant 'healonly': the Healing spec unfiltered (baseline), then filtered with {heal_filter!r}.",
         "  First a 1-second probe (about 2 points) to see whether the API accepts the filter.",
-        "  Baseline: on trMgApZCVYkv3jdq:26 Healing took 9 pages and 10 points (docs/wcl-api.md).",
+        "  Baseline: on trMgApZCVYkv3jdq:26 Healing took 9 pages and 10 points (docs/wcl/costs.md).",
         f"  Variant ceiling under --max-pages {max_pages}: {stream_cost_ceiling(1, max_pages)} points. "
         "Expected: fewer pages than the baseline if the filter works.",
     ]
@@ -1056,7 +1056,7 @@ def report_scope(result: Comparison) -> str:
 
 
 def render_report(result: Comparison, today: date | None = None) -> str:
-    """The markdown block to paste into docs/wcl-api.md."""
+    """The markdown block to paste into docs/wcl/probes.md."""
     base = result.baseline
     lines = [
         f"### Merged-filter measurement ({(today or date.today()).isoformat()}, {report_scope(result)})",

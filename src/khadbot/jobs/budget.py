@@ -5,7 +5,7 @@ The WCL budget policy: pure functions over a ``BudgetState`` that decide which i
 WarcraftLogs points now, which wait, and until when. ``jobs/budget_store.py`` keeps the state in one place, applies
 these functions under a lock, and reads WCL's ``rateLimitData``; nothing here does I/O or reads the clock.
 
-How WCL charges (``docs/wcl-api.md``, "Rate limits and point types"):
+How WCL charges (``docs/wcl/access-and-points.md``, "Rate limits and point types"):
 
 - The limit belongs to the account that owns the API client, per 60-minute window (``pointsResetIn``).
 - Current scheme: every request spends the application points, whoever's token sends it. The budget probe measured

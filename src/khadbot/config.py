@@ -190,7 +190,7 @@ class BudgetConfig:
     """
     The hosted WCL budget manager (``jobs/budget.py``): how WCL charges the client's account, the allowances that
     share its hourly points, and the cost estimate a job reserves before it runs. Local mode has no budget. The
-    numbers come from ``docs/wcl-api.md``; the allowances are defaults until the free tier is decided.
+    numbers come from ``docs/wcl/``; the allowances are defaults until the free tier is decided.
     """
 
     # How WCL charges the account that owns the client ("Rate limits and point types"). "new" once it opts in.
@@ -259,7 +259,7 @@ class WatchConfig:
     # A watch stops after this long with no new boss fight, and after this long in all.
     quiet_period_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_QUIET_PERIOD_S", "2700")))
     max_length_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_MAX_LENGTH_S", "21600")))
-    # Points one metadata read reserves from the budget. docs/wcl-api.md has no measurement of this query yet; WCL
+    # Points one metadata read reserves from the budget. docs/wcl/costs.md has no measurement of this query yet; WCL
     # charges every request at least 1 point.
     poll_points: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_POLL_POINTS", "1")))
     # A watch stops after this many failed reads in a row.

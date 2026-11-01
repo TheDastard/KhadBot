@@ -433,7 +433,7 @@ needs a re-ingest (the "Re-ingest: yes" rows), because that refetches from WCL.
 
 WCL bills by points, with a budget of 3,600 points per hour for the app. With the default filters a pull costs about
 14 points, so a full raid night is a small share of the hourly budget. Raw pages dominate disk use: a night is
-hundreds of MB of JSON and tens of MB of parquet. Measured costs and their method are in `docs/wcl-api.md`.
+hundreds of MB of JSON and tens of MB of parquet. Measured costs and their method are in `docs/wcl/costs.md`.
 
 Stored records, measured on a copy of a real 21-pull night (a kill and wipes of one raid, real encounter files and
 registries): 1.66 MB of `records/` against 23.2 MB of `annotated/` and 29.4 MB of `events/` for the same night, about

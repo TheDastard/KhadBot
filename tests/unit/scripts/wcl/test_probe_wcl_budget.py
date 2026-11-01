@@ -333,7 +333,7 @@ def test_report_has_no_token_and_states_counters():
 
 def test_estimate_states_its_sources():
     text = "\n".join(pb.estimate_lines(11, "ABC123:3"))
-    assert "docs/wcl-api.md" in text and "14 points" in text and "no points" in text
+    assert "docs/wcl/" in text and "14 points" in text and "no points" in text
 
 
 # ---------------------------------------------------------------------------

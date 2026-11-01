@@ -10,7 +10,7 @@ twice back to back and takes the difference as the read's own cost, then subtrac
 This script SPENDS WCL POINTS (about 2 for the baseline reads plus, per poll, the query and 2 reads: roughly 4 to 6 a
 poll if the query costs 1 to 3). It prints an estimate and waits for you to type ``yes``. It never prints a token.
 It uses the app's own token (client credentials), so the report must be public; a signed-in user's token spends the
-same application points on WCL's current limits (``docs/wcl-api.md``, "Budget probe results"). Needs
+same application points on WCL's current limits (``docs/wcl/probes.md``, "Budget probe results"). Needs
 WARCRAFTLOGS_CLIENT_ID / WARCRAFTLOGS_CLIENT_SECRET (from the environment or the nearest ``.env``).
 
     uv run python scripts/wcl/measure_watch_poll.py --code <report code> [--polls 3]
@@ -87,7 +87,7 @@ async def main(code: str, polls: int, assume_yes: bool) -> int:
     print(f"The report lists {result.fights} boss fights.")
     for i, cost in enumerate(result.per_poll, 1):
         print(f"Poll {i}: {cost:g} points")
-    print(f"Mean per poll: {result.mean:g} points. Record it in docs/wcl-api.md with the report code and date.")
+    print(f"Mean per poll: {result.mean:g} points. Record it in docs/wcl/costs.md with the report code and date.")
     return 0
 
 

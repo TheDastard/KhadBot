@@ -9,7 +9,7 @@ Where each value comes from:
 
 - ``AUTHORIZE_URL`` and the authorize parameters (``client_id``, ``redirect_uri``, ``response_type=code``,
   ``code_challenge``, ``code_challenge_method=S256``, ``state``): the live PKCE sign-in in
-  ``scripts/wcl/probe_wcl_budget.py`` (``docs/wcl-api.md``, "Budget probe results"). That sign-in sent no
+  ``scripts/wcl/probe_wcl_budget.py`` (``docs/wcl/probes.md``, "Budget probe results"). That sign-in sent no
   ``scope``, so none is sent unless the caller passes one.
 - ``TOKEN_URL`` (``wcl.client``) and the ``authorization_code`` grant with ``code_verifier`` and the client secret in
   the form body: the same probe. WCL refused the exchange without the secret, so the client is confidential.

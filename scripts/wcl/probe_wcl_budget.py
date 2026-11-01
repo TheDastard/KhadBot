@@ -331,7 +331,7 @@ def verdict(m: Measurement) -> str:
 def estimate_lines(n_requests: int, pull_label: str) -> list[str]:
     return [
         f"Fetch of {pull_label}: {n_requests} requests (the current specs), one page each unless the pull is long.",
-        "  Documented: about 14 points per pull on average (docs/wcl-api.md, 2026-10-11); about 2 points per request",
+        "  Documented: about 14 points per pull on average (docs/wcl/costs.md, 2026-10-11); about 2 points per request",
         "  plus about 1 per extra page. This is a short pull, so expect roughly 10 to 20 points.",
         "  Plus 8 rateLimitData reads whose own cost is unknown (the first four measure it).",
         "  Sign-in itself spends no points.",
@@ -388,7 +388,7 @@ async def run_probe(
 
 
 def render_report(m: Measurement, code: str, fight: int, today: date | None = None) -> str:
-    """The markdown block to paste into docs/wcl-api.md. Contains no token."""
+    """The markdown block to paste into docs/wcl/probes.md. Contains no token."""
     return "\n".join(
         [
             f"### Budget probe ({(today or date.today()).isoformat()}, `{code}:{fight}`, fetched with a user token)",
