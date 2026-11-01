@@ -23,7 +23,7 @@ from helpers.encounter.real_fixtures import REAL_PULLS, REAL_REPORTS, WCL_FIXTUR
 from helpers.encounter.synth import GOLDEN
 
 from khadbot.encounter.config_files import load_cooldowns
-from khadbot.encounter.digest import build_digest, estimate_tokens, render_digest
+from khadbot.encounter.digest import build_digest, build_pull_records, estimate_tokens, render_digest
 from khadbot.encounter.store import ParquetEventStore
 
 pytestmark = pytest.mark.skipif(not REAL_REPORTS, reason="real WCL fixtures not pulled from Git LFS")
@@ -100,6 +100,27 @@ def test_death_rows_carry_the_killing_blow(real_store, pull_key):
     deaths = real_store.events(pull_key, types=["death"]).filter(pl.col("data_type").cast(pl.Utf8) == "Deaths")
     expected = [(e["targetID"], e["killerID"], e["killingAbilityGameID"]) for e in raw]
     assert deaths.select("target_id", "source_id", "ability_id").rows() == expected
+
+
+@pytest.mark.parametrize("pull_key", REAL_PULLS)
+def test_death_records_name_the_recorded_killer(real_store, registry, pull_key):
+    code, fight = pull_key.split(":")
+    raw = sorted(
+        (
+            e
+            for page in sorted((WCL_FIXTURES / code / fight / "Deaths").rglob("page_*.json"))
+            for e in orjson.loads(page.read_bytes())["data"]
+            if e["type"] == "death"
+        ),
+        key=lambda e: e["timestamp"],
+    )
+    names = {a.actor_id: a.name for a in real_store.actors(code)}
+    records = build_pull_records(pull_key, real_store, defensive=registry).deaths
+    # WCL writes killerID -1 when no actor dealt the killing blow; the record then names no killer.
+    expected = [(e["targetID"], e["killerID"] if e["killerID"] >= 0 else None) for e in raw]
+    assert [(d.actor_id, d.killer_id) for d in records] == expected
+    assert any(d.killer_id is not None for d in records)
+    assert all(d.killer_name == (names[d.killer_id] if d.killer_id is not None else None) for d in records)
 
 
 @pytest.mark.parametrize("pull_key", REAL_PULLS)

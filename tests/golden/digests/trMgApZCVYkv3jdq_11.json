@@ -94,6 +94,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 1,
       "ref": "ev:trMgApZCVYkv3jdq:11:win:rage_of_the_shackled:1",
       "t_ms": 135547,
@@ -106,6 +107,8 @@
       "active_defensives": [],
       "actor_id": 33,
       "after_cutoff": false,
+      "killer_id": 100,
+      "killer_name": "Blightscale Rawling",
       "killing_ability_id": 1,
       "killing_ability_name": "Melee",
       "mechanic_ids": [
@@ -166,6 +169,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -224,6 +229,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -283,6 +290,8 @@
       "active_defensives": [],
       "actor_id": 23,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -342,6 +351,8 @@
       "active_defensives": [],
       "actor_id": 41,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -401,6 +412,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -460,6 +473,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1308275,
       "killing_ability_name": "Putrid Membrane",
       "mechanic_ids": [
@@ -519,6 +534,8 @@
       "active_defensives": [],
       "actor_id": 56,
       "after_cutoff": false,
+      "killer_id": 90,
+      "killer_name": "Blightscale Viper",
       "killing_ability_id": 1,
       "killing_ability_name": "Melee",
       "mechanic_ids": [
@@ -579,6 +596,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1308275,
       "killing_ability_name": "Putrid Membrane",
       "mechanic_ids": [
@@ -638,6 +657,8 @@
       "active_defensives": [],
       "actor_id": 42,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1297213,
       "killing_ability_name": "Malignant Shell",
       "mechanic_ids": [
@@ -1270,7 +1291,7 @@
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "9ce1e6be7cb77215bb75b1a30bd4386db9d8f3a6693b91f124ee5948371bf778",
     "pull_hash": "e87b8fcdb6a3be6d",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "trMgApZCVYkv3jdq:11",

@@ -248,10 +248,10 @@ built without a records store (tests, `build_digest`) neither reads nor writes `
 
 | Record | From | Holds |
 |---|---|---|
-| `DeathRecord` per player death (`death:<n>`) | `deaths` | killing blow, overkill, time to die, damage taken, healing and self-damage in the last 10 s, top 5 hits, mechanics involved, defensives active |
+| `DeathRecord` per player death (`death:<n>`) | `deaths` | killing blow and its killer (the death row's `killerID`, none when WCL gives -1), overkill, time to die, damage taken, healing and self-damage in the last 10 s, top 5 hits, mechanics involved, defensives active |
 | `MechanicStat` per mechanic (`mech:<id>`) | `mechanics` | hits, clusters, failures, failures by player, damage, deaths whose window it was in, blame states; the ref also resolves to per-cluster rows |
 | `CooldownUse` per cast (`cd:<spell>:<n>`) | `cooldowns` | category (defensive, offensive, utility), caster, time, phase |
-| `WindowCoverage` per window occurrence (`win:<id>:<n>`) | `cooldowns` | defensive raid cooldowns active at the first hit, covered or not, late ones; defensive file only |
+| `WindowCoverage` per window occurrence (`win:<id>:<n>`) | `cooldowns` | defensive raid cooldowns active at the first hit, the encounter file's expected count, covered or not, late ones; defensive file only |
 | `FriendlyDamage` | `friendly_damage` | damage from the raid's own abilities by class, self-inflicted damage per player, unclassified abilities |
 | `AggroSummary` per boss NPC | `aggro` | melee swings by target (top 3), taunts landed |
 | Unregistered damage | `digest` | damage from abilities the encounter file doesn't name, with each one's share |

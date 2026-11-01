@@ -7,6 +7,10 @@ which built a window only for a player's first death).
 A death's window is the ``window_ms`` before it, clipped to the actor's previous death so a second
 death after a battle res never reuses damage from the first life.
 
+The killer is the death row's own: normalize fills its ``source_id`` from WCL's ``killerID``. WCL writes -1 when
+the killing blow had no actor (environmental damage, some raid-wide wipes); the killer is then None. There is no
+fallback to the killing blow's source, which WCL leaves as -1 in the same cases.
+
 The game strips a dying player's auras a few milliseconds before WCL's death row, so a defensive
 removed just before the death still counts as active when the cooldown was still running: its aura
 was still up on another player, or its registry duration had not run out.
@@ -70,12 +74,12 @@ def death_records(
     deaths = (
         frame.filter(type_is("death") & pl.col("target_id").is_in(pull.friendly_player_ids))
         .sort("seq")
-        .select("t_ms", "target_id", "ability_id", "phase_id")
+        .select("t_ms", "target_id", "ability_id", "phase_id", "source_id")
         .rows()
     )
     self_set = set(self_ids)
     # Each dying actor's rows, once, as Python lists in ``seq`` order (``annotate`` sorts the frame by ``seq``).
-    dying = {actor_id for _, actor_id, _, _ in deaths}
+    dying = {actor_id for _, actor_id, _, _, _ in deaths}
     by_actor: dict[int, dict[str, list]] = {}
     time_sorted: dict[int, bool] = {}
     if dying:
@@ -93,7 +97,7 @@ def death_records(
 
     previous_death: dict[int, int] = {}
     out = []
-    for n, (t, actor_id, death_ability, phase_id) in enumerate(deaths, start=1):
+    for n, (t, actor_id, death_ability, phase_id, death_source) in enumerate(deaths, start=1):
         life_start = previous_death.get(actor_id)
         previous_death[actor_id] = t
         lower = t - window_ms if life_start is None else max(t - window_ms, life_start + 1)
@@ -118,6 +122,7 @@ def death_records(
         killing_blow = damage[-1] if damage else None
         # A death ability of 0 (events normalized before the killing ability was filled in) is unknown too.
         killing_ability = death_ability or (cols["ability_id"][killing_blow] if killing_blow is not None else None)
+        killer = death_source if death_source is not None and death_source >= 0 else None
 
         # A null amount counts as 0; the sort is stable, so equal amounts stay in ``seq`` order.
         top_hits = [
@@ -142,6 +147,8 @@ def death_records(
                 phase_id=phase_id,
                 killing_ability_id=killing_ability,
                 killing_ability_name=abilities.get(killing_ability) if killing_ability is not None else None,
+                killer_id=killer,
+                killer_name=actor_label(names, killer) if killer is not None else None,
                 overkill=cols["overkill"][killing_blow] if killing_blow is not None else None,
                 time_to_die_ms=_time_to_die(times, cols["hp_pct"], life, t),
                 window_ms=window_ms,

@@ -57,7 +57,7 @@ from khadbot.encounter.store import EventStore, split_pull_key
 # Bump when analysis or record-building code changes what PullRecords or the digest hold for the same inputs
 # (anything under encounter/analysis/, build_pull_records, caps, record models). It joins ``produced_from``, so
 # the in-process records key and every cached finding miss. Annotation code has ANNOTATION_VERSION instead.
-RECORDS_VERSION = 1
+RECORDS_VERSION = 2
 
 DEATH_CAP = 10
 MECHANIC_CAP = 8
