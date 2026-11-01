@@ -1,0 +1,166 @@
+// apps/web/e2e/timeline.spec.ts
+//
+// The pull timeline and the zoomed events on the longest fixture pull, H7z1fqDXjRTFnbtg:15 (618 s), on the hosted
+// API with WCL replay. The report must be seeded and readable by the test users:
+//
+//   mise run dev:seed -- --only H7z1fqDXjRTFnbtg
+//   E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg mise run test:e2e -- timeline
+//
+// Screen text is compared with the API's own answers, never with fixed numbers. The last test measures the budgets
+// (hover, click, keyboard step, first render) in the page and prints them as `BUDGET name=ms`.
+
+import { expectAccessible } from "./support/axe";
+import { HOSTED_API } from "./support/env";
+import { expect, test } from "./support/fixtures";
+
+const CODE = "H7z1fqDXjRTFnbtg";
+const FIGHT = 15;
+const PULL = `/r/${CODE}/p/${FIGHT}`;
+
+test.use({ user: "alice" });
+
+async function open(page: import("@playwright/test").Page) {
+  await page.goto(PULL);
+  await expect(page.locator("[data-marker]").first()).toBeVisible();
+}
+
+test("clicking a death marker selects it in the URL", async ({ page }) => {
+  await open(page);
+  const death = page.getByRole("button", { name: /^Death 2,/ });
+  await death.click();
+  await expect(page).toHaveURL(new RegExp(`ref=ev%3A${CODE}%3A${FIGHT}%3Adeath%3A2`));
+  await expect(death).toHaveAttribute("aria-pressed", "true");
+});
+
+test("arrow keys step between markers, Enter selects, Escape clears", async ({ page }) => {
+  await open(page);
+  const group = page.getByRole("group", { name: "Timeline markers" });
+  const first = group.locator("[data-marker][tabindex='0']");
+  await first.focus();
+  const before = await first.getAttribute("data-marker");
+  await page.keyboard.press("ArrowRight");
+  const focused = page.locator("[data-marker]:focus");
+  await expect(focused).toHaveCount(1);
+  expect(await focused.getAttribute("data-marker")).not.toBe(before);
+  // The group is one tab stop.
+  await expect(group.locator("[data-marker][tabindex='0']")).toHaveCount(1);
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/ref=/);
+  await page.keyboard.press("Escape");
+  await expect(page).not.toHaveURL(/ref=/);
+});
+
+test("Z zooms to 10 s and the events table matches the events response", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: /^Death 2,/ }).focus();
+  await page.keyboard.press("z");
+  await expect(page).toHaveURL(/t=\d+-\d+/);
+  const [, from, to] = /t=(\d+)-(\d+)/.exec(page.url())!;
+  expect(Number(to) - Number(from)).toBe(10_000);
+  const region = page.getByTestId("zoomed-events");
+  await expect(region.getByRole("heading", { name: /^Events / })).toBeVisible();
+
+  const api = await page.request.get(
+    `${HOSTED_API}/v1/reports/${CODE}/pulls/${FIGHT}/events?t_from_ms=${from}&t_to_ms=${to}&types=damage&types=death`,
+  );
+  expect(api.status()).toBe(200);
+  const body = (await api.json()) as { rows: unknown[]; total: number };
+  await expect(region.getByTestId("row-count")).toHaveText(`${body.rows.length} of ${body.total} row${body.total === 1 ? "" : "s"}`);
+  await expect(region.locator("tbody tr")).toHaveCount(body.rows.length);
+
+  await region.getByRole("button", { name: "Clear zoom" }).click();
+  await expect(page).not.toHaveURL(/t=/);
+  await expect(region).toHaveCount(0);
+});
+
+test("brushing a window zooms to it, 30 s at most", async ({ page }) => {
+  await open(page);
+  const group = page.getByRole("group", { name: "Timeline markers" });
+  const box = (await group.boundingBox())!;
+  const y = box.y + 15; // the phases lane has no markers
+  await page.mouse.move(box.x + box.width * 0.3, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.5, y, { steps: 8 });
+  await page.mouse.up();
+  await expect(page).toHaveURL(/t=\d+-\d+/);
+  const [, from, to] = /t=(\d+)-(\d+)/.exec(page.url())!;
+  expect(Number(to) - Number(from)).toBeLessThanOrEqual(30_000);
+  await expect(page.getByTestId("zoomed-events")).toBeVisible();
+});
+
+test("a window in the URL shows its events on load", async ({ page }) => {
+  await page.goto(`${PULL}?t=420341-430341`);
+  await expect(page.getByTestId("zoomed-events").getByRole("heading", { name: "Events 7:00.3 – 7:10.3" })).toBeVisible();
+  await expect(page.getByTestId("zoom-window")).toBeVisible();
+});
+
+test("the timeline passes axe in both themes, with the events table open", async ({ page }) => {
+  await page.goto(`${PULL}?t=420341-430341`);
+  await expect(page.getByTestId("zoomed-events").locator("tbody tr").first()).toBeVisible();
+  await expectAccessible(page, { include: "[data-slot='pull-timeline'], [data-testid='zoomed-events']" });
+});
+
+test("budgets: first render, hover, click and step", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, number>;
+    new MutationObserver(() => {
+      if (w.__first === undefined && document.querySelector("[data-marker]")) w.__first = performance.now();
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto(PULL);
+  await expect(page.locator("[data-marker]").first()).toBeVisible();
+  const first = await page.evaluate(() => (window as unknown as Record<string, number>).__first!);
+
+  // Time from an input event's own timestamp to the DOM showing its result.
+  const measure = (kind: "hover" | "click" | "step") =>
+    page.evaluate(
+      (k) =>
+        new Promise<number>((resolve) => {
+          let start = 0;
+          const stamp = (e: Event) => (start = e.timeStamp);
+          const done = () => resolve(performance.now() - start);
+          const check = () => {
+            if (k === "hover" && document.querySelector("[data-slot='tooltip-content']")) return true;
+            if (k === "click" && document.querySelector("[data-lane='death'][aria-pressed='true']")) return true;
+            if (k === "step") {
+              const el = document.activeElement as HTMLElement | null;
+              return !!el?.dataset.marker && el.dataset.marker !== (window as unknown as { __from?: string }).__from;
+            }
+            return false;
+          };
+          const type = k === "hover" ? "pointermove" : k === "click" ? "click" : "keydown";
+          document.addEventListener(type, stamp, { capture: true, once: true });
+          const obs = new MutationObserver(() => {
+            if (start && check()) {
+              obs.disconnect();
+              done();
+            }
+          });
+          obs.observe(document.body, { childList: true, subtree: true, attributes: true });
+        }),
+      kind,
+    );
+
+  const death = page.getByRole("button", { name: /^Death 3,/ });
+  const hoverP = measure("hover");
+  await death.hover();
+  const hover = await hoverP;
+
+  const clickP = measure("click");
+  await death.click();
+  const click = await clickP;
+
+  await death.focus();
+  await page.evaluate(() => {
+    (window as unknown as { __from?: string }).__from = (document.activeElement as HTMLElement).dataset.marker;
+  });
+  const stepP = measure("step");
+  await page.keyboard.press("ArrowRight");
+  const step = await stepP;
+
+  const fixed = (n: number) => Math.round(n);
+  console.log(`BUDGET first_render_ms=${fixed(first)} hover_ms=${fixed(hover)} click_ms=${fixed(click)} step_ms=${fixed(step)}`);
+  expect(first).toBeLessThan(1500);
+  expect(click).toBeLessThan(100);
+  expect(step).toBeLessThan(100);
+});

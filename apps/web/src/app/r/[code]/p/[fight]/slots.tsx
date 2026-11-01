@@ -19,6 +19,7 @@
 import type { ReactNode } from "react";
 
 import { SlotPlaceholder } from "@/components/shared/slot-placeholder";
+import { PullTimeline } from "@/components/timeline/pull-timeline";
 import type { PullDigestData } from "@/lib/queries";
 
 export interface PullSlotProps {
@@ -38,8 +39,8 @@ export function PullNotLoadedSlot(_props: PullSlotProps) {
   );
 }
 
-export function PullTimelineSlot(_props: PullDigestSlotProps) {
-  return <SlotPlaceholder slot="pull-timeline" label="Timeline and zoomed events" minHeight={420} />;
+export function PullTimelineSlot(props: PullDigestSlotProps) {
+  return <PullTimeline {...props} />;
 }
 
 /** The pull page's layout: a 240 px rail, then the main column; under the header, the sections and a 380 px panel. */
