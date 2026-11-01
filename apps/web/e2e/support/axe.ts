@@ -5,6 +5,7 @@
 //
 //   await expectAccessible(page);                       // the page as it is, in both themes
 //   await expectAccessible(page, { include: "main" });  // only part of it
+//   await expectAccessible(page, { ready: () => expect(table).toBeVisible() });  // wait for data after each reload
 //
 // It switches the theme through the stored choice and a reload, so call it last in a test or re-establish state after.
 
@@ -17,6 +18,12 @@ export interface A11yOptions {
   /** Rule IDs to skip, each with a reason in the test (prefer fixing the page). */
   disableRules?: string[];
   themes?: Array<"light" | "dark">;
+  /**
+   * Awaited after each theme's reload, before axe runs: the screen's own "data has arrived" check. `networkidle`
+   * alone can fire before the page has asked for its data (the reload is slow under load), and axe would then check
+   * a skeleton, or a half-rendered table, instead of the screen.
+   */
+  ready?: () => Promise<void>;
 }
 
 const SERIOUS = new Set(["serious", "critical"]);
@@ -32,6 +39,7 @@ export async function expectAccessible(page: Page, options: A11yOptions = {}): P
   await page.setViewportSize({ width: 1440, height: 900 });
   for (const theme of options.themes ?? ["light", "dark"]) {
     await applyTheme(page, theme);
+    await options.ready?.();
     let builder = new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"]);
     if (options.include) builder = builder.include(options.include);
     if (options.disableRules?.length) builder = builder.disableRules(options.disableRules);

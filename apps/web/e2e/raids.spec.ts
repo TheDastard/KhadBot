@@ -103,7 +103,7 @@ test.describe("log search", () => {
     await expectAccessible(page);
   });
 
-  test("the results paint quickly once the lookup answers (cached)", async ({ page }, testInfo) => {
+  test("the results paint quickly once the lookup answers (cached)", { tag: "@budget" }, async ({ page }, testInfo) => {
     // Warm the API's cache, then load fresh and time answer -> painted card in the page's own clock.
     await page.goto(`/?source=${PUBLIC}`);
     await expect(page.getByTestId("night-card")).toBeVisible();

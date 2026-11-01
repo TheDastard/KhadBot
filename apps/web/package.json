@@ -11,7 +11,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "e2e": "playwright test",
+    "e2e": "node e2e/run.mjs",
     "e2e:local": "playwright test --config playwright.local.config.ts"
   },
   "dependencies": {

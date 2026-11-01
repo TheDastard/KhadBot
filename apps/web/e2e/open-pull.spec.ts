@@ -31,7 +31,7 @@ function stepState(page: Page, step: string) {
 }
 
 test.describe("a pull that has to load", () => {
-  test("opens by itself, and a step change reaches the screen within a second", async ({ page }) => {
+  test("opens by itself, and a step change reaches the screen within a second", { tag: "@budget" }, async ({ page }) => {
     await skipIfLoaded(page, 10);
     await page.addInitScript(() => {
       type W = Window & { __events: unknown[]; __dom: unknown[] };

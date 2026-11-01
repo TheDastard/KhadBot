@@ -102,7 +102,7 @@ test("the timeline passes axe in both themes, with the events table open", async
   await expectAccessible(page, { include: "[data-slot='pull-timeline'], [data-testid='zoomed-events']" });
 });
 
-test("budgets: first render, hover, click and step", async ({ page }) => {
+test("budgets: first render, hover, click and step", { tag: "@budget" }, async ({ page }) => {
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, number>;
     new MutationObserver(() => {

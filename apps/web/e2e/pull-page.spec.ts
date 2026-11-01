@@ -137,7 +137,7 @@ test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  test("measures first paint and chip to panel", async ({ page }, testInfo) => {
+  test("measures first paint and chip to panel", { tag: "@budget" }, async ({ page }, testInfo) => {
     const t0 = Date.now();
     await page.goto(pullUrl(LONG.code, LONG.fight));
     await expect(page.getByTestId("pull-header")).toBeVisible();
@@ -178,8 +178,13 @@ test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
 
   test("passes axe in both themes", async ({ page }) => {
     await page.goto(pullUrl(LONG.code, LONG.fight, `?ref=${encodeURIComponent(`ev:${LONG.code}:${LONG.fight}:death:2`)}`));
-    await waitForPage(page);
-    await expect(page.getByTestId("context-panel").locator('[data-panel-kind="death"]')).toBeVisible();
-    await expectAccessible(page);
+    const settled = async () => {
+      await waitForPage(page);
+      await expect(page.getByTestId("context-panel").locator('[data-panel-kind="death"]')).toBeVisible();
+      await expect(page.getByTestId("section-deaths").locator("tbody tr").first()).toBeVisible();
+    };
+    await settled();
+    test.slow(); // the longest pull, reloaded twice and scanned twice by axe: three times the time under load
+    await expectAccessible(page, { ready: settled });
   });
 });

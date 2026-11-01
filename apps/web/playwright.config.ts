@@ -25,7 +25,22 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
+  // The tests tagged @budget measure latency, so they run apart from the rest: `pnpm e2e` (e2e/run.mjs) runs the
+  // chromium project with parallel workers, then this one on a single worker. `dependencies` keeps the order when
+  // the config is used directly (`playwright test`).
+  projects: [
+    {
+      name: "chromium",
+      grepInvert: /@budget/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: "budgets",
+      grep: /@budget/,
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
+    },
+  ],
   webServer: {
     command: "pnpm dev",
     url: WEB_URL,
