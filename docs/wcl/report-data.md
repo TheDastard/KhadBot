@@ -3,7 +3,7 @@
 ## Report metadata (`report.fights`, `report.masterData`)
 
 `GET_REPORT_META` (`encounter/ingest/wcl_queries.py`, operation `GetReportMeta`) reads a report's fights, actors,
-abilities and phase names. It uses no `[Database Points]` field; on the new limits it is user-eligible report data.
+abilities (with each ability's `icon`, `docs/game-art.md`) and phase names. It uses no `[Database Points]` field; on the new limits it is user-eligible report data.
 
 - **Who sends it.** Ingest, once per report; the report lookup (`GET /v1/lookup/report`, `api/raids/lookup.py`),
   on the signed-in user's token when they have one, else the app's; and a live watch poll (`costs.md`, "Live watch

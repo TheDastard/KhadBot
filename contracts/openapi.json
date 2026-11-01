@@ -31,6 +31,37 @@
         "title": "AbilityDamage",
         "type": "object"
       },
+      "AbilityIcon": {
+        "description": "One ability the report names: its game ID, name and icon.",
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WCL's icon name for the ability, lowercase and without a file extension. Null when the cached report metadata predates the icon field (the recorded fixtures).",
+            "title": "Icon"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AbilityIcon",
+        "type": "object"
+      },
       "AggroSummary": {
         "description": "Who one boss NPC attacked and who taunted it, from the Threat data.",
         "properties": {
@@ -3644,6 +3675,28 @@
         "title": "PullTimeline",
         "type": "object"
       },
+      "ReportAbilities": {
+        "description": "The abilities of a report's cached metadata, by game ID.",
+        "properties": {
+          "abilities": {
+            "items": {
+              "$ref": "#/components/schemas/AbilityIcon"
+            },
+            "title": "Abilities",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "abilities"
+        ],
+        "title": "ReportAbilities",
+        "type": "object"
+      },
       "ReportDetail": {
         "properties": {
           "code": {
@@ -5471,6 +5524,69 @@
           }
         },
         "summary": "Get Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/reports/{code}/abilities": {
+      "get": {
+        "description": "The abilities in the report's cached metadata: game ID, name and WCL's icon name. `icon` is null for metadata cached\nbefore the report query asked for it (the recorded fixtures).",
+        "operationId": "get_abilities_v1_reports__code__abilities_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportAbilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No cached metadata for the report, or one the caller cannot read"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Get Abilities",
         "tags": [
           "reports"
         ]

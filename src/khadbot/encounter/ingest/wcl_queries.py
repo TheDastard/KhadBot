@@ -30,6 +30,7 @@ query GetReportMeta($code: String!) {
           gameID
           name
           type
+          icon
         }
       }
       fights(killType: Encounters) {
