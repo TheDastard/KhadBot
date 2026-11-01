@@ -332,9 +332,14 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   21-pull night). Hosted mode reads the read-model tables instead (`night.SqlSource`). If local mode is too slow,
   serve it from the same per-pull inputs (`night.PullFacts`) cached by records hash, rather than raising the LRU
   size (records hold the whole annotated frame).
-- **Typed evidence records.** `GET /v1/evidence/{ref}` returns `record` as an untyped object. If the context
-  panel wants generated types per ref kind, publish one record model per kind (the pull summary, the mechanic
-  detail with its cluster rows, the event row) and make the response a union keyed on `kind`.
+- **Killer instance number.** `DeathRecord.killer_name` is the actor's name without its instance
+  ("Blightscale Rawling", not "Blightscale Rawling #57"): WCL's death rows carry `killerInstance`, but normalize
+  maps only `sourceInstance`, so the death row's `source_instance` is null. Mapping it changes the events hash of
+  every pull, so do it with the next normalize change.
+- **Other occurrences in the damage-window panel.** The panel's line about the window's other occurrences
+  ("Occurrences 1 and 2 were covered by Time Dilation") needs each occurrence's active cooldowns, which only its
+  own `win` ref carries; the timeline's `WindowMarker` has `covered` alone. The panel can resolve the sibling refs
+  (one request each); if that is too slow, add `defensive_cooldowns_active` to `WindowMarker`.
 
 - Hosted API: `GET /v1/reports` lists a user's reports from cached "readable" access rows without re-checking their age,
   so a report made private later stays in that user's list (title and pull counts only) until they open it again and

@@ -398,6 +398,30 @@
         "title": "CachedFindings",
         "type": "object"
       },
+      "CooldownEvidence": {
+        "description": "A ``cd`` ref: one cast of a cooldown-file spell.",
+        "properties": {
+          "kind": {
+            "const": "cd",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/CooldownUse"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "CooldownEvidence",
+        "type": "object"
+      },
       "CooldownList": {
         "description": "Every cooldown file entry by spell ID, whatever the report or encounter (``GET /v1/cooldowns``).",
         "properties": {
@@ -540,6 +564,30 @@
           "phase_id"
         ],
         "title": "CooldownUse",
+        "type": "object"
+      },
+      "DeathEvidence": {
+        "description": "A ``death`` ref: one player death with its window, top hits, killer and defensives.",
+        "properties": {
+          "kind": {
+            "const": "death",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/DeathRecord"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "DeathEvidence",
         "type": "object"
       },
       "DeathMarker": {
@@ -834,6 +882,236 @@
         "title": "ErrorBody",
         "type": "object"
       },
+      "EventEvidence": {
+        "description": "An ``event`` ref: one annotated event.",
+        "properties": {
+          "kind": {
+            "const": "event",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/EventRecord"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "EventEvidence",
+        "type": "object"
+      },
+      "EventRecord": {
+        "additionalProperties": false,
+        "description": "What an ``event`` ref resolves to (``event_row``): one annotated event with actor names instead of IDs. Fields\nthat are null on the event are absent.",
+        "properties": {
+          "ability": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability"
+          },
+          "ability_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ability Id"
+          },
+          "absorbed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absorbed"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "blamed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blamed"
+          },
+          "extra_ability_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Ability Id"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hp Pct"
+          },
+          "mechanic_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mechanic Id"
+          },
+          "overheal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overheal"
+          },
+          "overkill": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overkill"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "stack": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stack"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "window_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Id"
+          }
+        },
+        "required": [
+          "ref",
+          "seq",
+          "t_ms",
+          "type"
+        ],
+        "title": "EventRecord",
+        "type": "object"
+      },
       "EventsPage": {
         "description": "Event rows exactly as their ``event`` refs resolve, capped (see ``truncated`` and ``total``).",
         "properties": {
@@ -882,28 +1160,39 @@
         "type": "object"
       },
       "Evidence": {
-        "description": "The record a ref names, exactly as the analyst's verify step resolves it.",
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/RefKind"
+        "description": "The record a ref names, exactly as the analyst's verify step resolves it, typed by ``kind``. Plan refs have no\nmember: the route answers them 501 ``plan_refs_unavailable`` until raid plans exist.",
+        "discriminator": {
+          "mapping": {
+            "cd": "#/components/schemas/CooldownEvidence",
+            "death": "#/components/schemas/DeathEvidence",
+            "event": "#/components/schemas/EventEvidence",
+            "mech": "#/components/schemas/MechanicEvidence",
+            "pull": "#/components/schemas/PullEvidence",
+            "win": "#/components/schemas/WindowEvidence"
           },
-          "record": {
-            "additionalProperties": true,
-            "title": "Record",
-            "type": "object"
-          },
-          "ref": {
-            "title": "Ref",
-            "type": "string"
-          }
+          "propertyName": "kind"
         },
-        "required": [
-          "ref",
-          "kind",
-          "record"
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/DeathEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/MechanicEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/CooldownEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/WindowEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/EventEvidence"
+          },
+          {
+            "$ref": "#/components/schemas/PullEvidence"
+          }
         ],
-        "title": "Evidence",
-        "type": "object"
+        "title": "Evidence"
       },
       "Features": {
         "description": "The optional areas of the API and whether this server offers each. A flag is true only when the area's routes are\nmounted, so a client that hides what is off never links to a route that answers 404.",
@@ -1739,6 +2028,146 @@
         "title": "Me",
         "type": "object"
       },
+      "MechanicCluster": {
+        "description": "One cluster of a mechanic's hits; resolved as part of the mechanic's ``mech:<id>`` ref.",
+        "properties": {
+          "blame_dist_yd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blame Dist Yd"
+          },
+          "blame_reach_yd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blame Reach Yd"
+          },
+          "blame_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "beyond_reach",
+                  "in_reach",
+                  "dead",
+                  "alive",
+                  "no_position",
+                  "no_holder"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blame State"
+          },
+          "blamed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blamed"
+          },
+          "cluster": {
+            "title": "Cluster",
+            "type": "integer"
+          },
+          "damage": {
+            "title": "Damage",
+            "type": "integer"
+          },
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "failed_players": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Players",
+            "type": "array"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "phase_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Id"
+          },
+          "players": {
+            "title": "Players",
+            "type": "integer"
+          },
+          "t_ms": {
+            "title": "T Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cluster",
+          "t_ms",
+          "end_ms",
+          "phase_id",
+          "hits",
+          "players",
+          "damage",
+          "failures",
+          "failed_players"
+        ],
+        "title": "MechanicCluster",
+        "type": "object"
+      },
+      "MechanicEvidence": {
+        "description": "A ``mech`` ref: the mechanic's stat and one row per cluster of its hits.",
+        "properties": {
+          "kind": {
+            "const": "mech",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/MechanicRecord"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "MechanicEvidence",
+        "type": "object"
+      },
       "MechanicMarker": {
         "description": "One cluster of a mechanic's hits. Its ``ref`` is the mechanic's ``mech`` ref (clusters have none).",
         "properties": {
@@ -1793,6 +2222,111 @@
           "ref"
         ],
         "title": "MechanicMarker",
+        "type": "object"
+      },
+      "MechanicRecord": {
+        "additionalProperties": false,
+        "description": "What a ``mech`` ref resolves to (``mechanic_detail``): the stat plus one row per cluster.",
+        "properties": {
+          "blame_dist_yd": {
+            "additionalProperties": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "propertyNames": {
+              "enum": [
+                "beyond_reach",
+                "in_reach",
+                "dead",
+                "alive",
+                "no_position",
+                "no_holder"
+              ]
+            },
+            "title": "Blame Dist Yd",
+            "type": "object"
+          },
+          "blame_states": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "beyond_reach",
+                "in_reach",
+                "dead",
+                "alive",
+                "no_position",
+                "no_holder"
+              ]
+            },
+            "title": "Blame States",
+            "type": "object"
+          },
+          "cluster_rows": {
+            "items": {
+              "$ref": "#/components/schemas/MechanicCluster"
+            },
+            "title": "Cluster Rows",
+            "type": "array"
+          },
+          "clusters": {
+            "title": "Clusters",
+            "type": "integer"
+          },
+          "damage_taken": {
+            "title": "Damage Taken",
+            "type": "integer"
+          },
+          "deaths_in_window": {
+            "title": "Deaths In Window",
+            "type": "integer"
+          },
+          "failures": {
+            "title": "Failures",
+            "type": "integer"
+          },
+          "failures_by_player": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Failures By Player",
+            "type": "object"
+          },
+          "hits": {
+            "title": "Hits",
+            "type": "integer"
+          },
+          "mechanic_id": {
+            "title": "Mechanic Id",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "mechanic_id",
+          "clusters",
+          "hits",
+          "failures",
+          "failures_by_player",
+          "damage_taken",
+          "deaths_in_window",
+          "cluster_rows"
+        ],
+        "title": "MechanicRecord",
         "type": "object"
       },
       "MechanicStat": {
@@ -2540,6 +3074,165 @@
         "title": "PullDigest",
         "type": "object"
       },
+      "PullEvidence": {
+        "description": "A ``pull`` ref: the pull summary.",
+        "properties": {
+          "kind": {
+            "const": "pull",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/PullRecord"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "PullEvidence",
+        "type": "object"
+      },
+      "PullRecord": {
+        "additionalProperties": false,
+        "description": "What a ``pull`` ref resolves to (``pull_summary``).",
+        "properties": {
+          "aggro": {
+            "items": {
+              "$ref": "#/components/schemas/AggroSummary"
+            },
+            "title": "Aggro",
+            "type": "array"
+          },
+          "anomalies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Anomalies",
+            "type": "array"
+          },
+          "boss_hp_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Hp Pct"
+          },
+          "boss_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boss Pct"
+          },
+          "coverage": {
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "cutoff_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cutoff Ms"
+          },
+          "deaths": {
+            "title": "Deaths",
+            "type": "integer"
+          },
+          "deaths_before_cutoff": {
+            "title": "Deaths Before Cutoff",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "title": "Encounter Name",
+            "type": "string"
+          },
+          "friendly_damage": {
+            "$ref": "#/components/schemas/FriendlyDamage"
+          },
+          "outcome": {
+            "enum": [
+              "kill",
+              "wipe"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "phase_reached": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Reached"
+          },
+          "pull_key": {
+            "title": "Pull Key",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "unregistered": {
+            "items": {
+              "$ref": "#/components/schemas/UnregisteredAbility"
+            },
+            "title": "Unregistered",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ref",
+          "pull_key",
+          "encounter_name",
+          "outcome",
+          "duration_ms",
+          "boss_pct",
+          "boss_hp_pct",
+          "phase_reached",
+          "cutoff_ms",
+          "deaths",
+          "deaths_before_cutoff",
+          "coverage",
+          "anomalies",
+          "aggro",
+          "friendly_damage",
+          "unregistered"
+        ],
+        "title": "PullRecord",
+        "type": "object"
+      },
       "PullStatus": {
         "enum": [
           "fetching",
@@ -2734,20 +3427,6 @@
         ],
         "title": "PullTimeline",
         "type": "object"
-      },
-      "RefKind": {
-        "description": "The kind of record an evidence ref names (the part after ``ev:<report>:<fight>:``, or ``plan``).",
-        "enum": [
-          "death",
-          "mech",
-          "cd",
-          "win",
-          "event",
-          "pull",
-          "plan"
-        ],
-        "title": "RefKind",
-        "type": "string"
       },
       "ReportDetail": {
         "properties": {
@@ -3319,6 +3998,30 @@
         "title": "WindowCoverage",
         "type": "object"
       },
+      "WindowEvidence": {
+        "description": "A ``win`` ref: one occurrence of a damage window and the defensive raid cooldowns that covered it.",
+        "properties": {
+          "kind": {
+            "const": "win",
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/WindowCoverage"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "record"
+        ],
+        "title": "WindowEvidence",
+        "type": "object"
+      },
       "WindowMarker": {
         "properties": {
           "covered": {
@@ -3699,7 +4402,7 @@
     },
     "/v1/evidence/{ref}": {
       "get": {
-        "description": "The record a ref names (URL-encode the ref), as the analyst's verify step resolves it.",
+        "description": "The record a ref names (URL-encode the ref), as the analyst's verify step resolves it. ``kind`` says which record\nmodel ``record`` is: one per ref kind, so a client narrows on it.",
         "operationId": "get_evidence_v1_evidence__ref__get",
         "parameters": [
           {

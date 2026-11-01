@@ -29,7 +29,6 @@ from khadbot.api.schemas import (
     Health,
     NightSummary,
     PullTimeline,
-    RefKind,
     ReportDetail,
     ReportList,
 )
@@ -180,7 +179,10 @@ def get_events(
     tags=["evidence"],
 )
 def get_evidence(ref: str, ctx: Ctx) -> Evidence:
-    """The record a ref names (URL-encode the ref), as the analyst's verify step resolves it."""
+    """
+    The record a ref names (URL-encode the ref), as the analyst's verify step resolves it. ``kind`` says which record
+    model ``record`` is: one per ref kind, so a client narrows on it.
+    """
     try:
         parsed = parse_ref(ref)
     except UnresolvableRef as exc:
@@ -192,7 +194,7 @@ def get_evidence(ref: str, ctx: Ctx) -> Evidence:
             record = ctx.data.resolve(ref)
     except UnresolvableRef as exc:
         raise ApiError(404, "unresolvable_ref", str(exc)) from None
-    return Evidence(ref=parsed.raw, kind=RefKind(parsed.kind), record=record)
+    return Evidence.model_validate({"kind": parsed.kind, "ref": parsed.raw, "record": record})
 
 
 @router.get(

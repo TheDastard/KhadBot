@@ -3,7 +3,7 @@ tests/unit/api/test_app.py
 
 The app as a whole: the committed OpenAPI contract matches the API (regenerate with
 ``uv run python scripts/dev/gen_contracts.py``),
-``RefKind`` is published and matches the ref grammar, every error response is documented as ``ErrorBody``, and
+``Evidence`` is a union over the ref grammar's resolvable kinds, every error response is documented as ``ErrorBody``, and
 ``create_app`` takes extra routers.
 """
 
@@ -18,7 +18,6 @@ from fastapi.testclient import TestClient
 
 from khadbot.api import create_app, openapi_document
 from khadbot.api.app import hosted_documentation_app
-from khadbot.api.schemas import RefKind
 from khadbot.encounter import evidence
 from khadbot.encounter.analyst.verify import check_finding
 from khadbot.encounter.models import Finding
@@ -36,11 +35,21 @@ def test_contract_is_independent_of_the_data_directory(tmp_path):
     assert openapi_document(hosted_documentation_app(tmp_path)) == openapi_document()
 
 
-def test_ref_kinds_match_the_ref_grammar():
-    assert [k.value for k in RefKind] == list(get_args(evidence.RefKind))
-    schema = orjson.loads(CONTRACT.read_bytes())["components"]["schemas"]
-    assert schema["RefKind"]["enum"] == [k.value for k in RefKind]
-    assert schema["Evidence"]["properties"]["kind"] == {"$ref": "#/components/schemas/RefKind"}
+def test_evidence_is_a_union_discriminated_on_every_resolvable_ref_kind():
+    # One member per kind of the ref grammar that resolves; plan refs answer 501 and have none.
+    resolvable = [k for k in get_args(evidence.RefKind) if k != "plan"]
+    assert list(evidence.RECORD_MODELS) == resolvable
+    schemas = orjson.loads(CONTRACT.read_bytes())["components"]["schemas"]
+    discriminator = schemas["Evidence"]["discriminator"]
+    assert discriminator["propertyName"] == "kind"
+    assert sorted(discriminator["mapping"]) == sorted(resolvable)
+    assert sorted(m["$ref"] for m in schemas["Evidence"]["oneOf"]) == sorted(discriminator["mapping"].values())
+    for kind, target in discriminator["mapping"].items():
+        member = schemas[target.rsplit("/", 1)[1]]
+        assert member["properties"]["kind"]["const"] == kind
+        assert set(member["required"]) == {"kind", "ref", "record"}
+        record = member["properties"]["record"]["$ref"].rsplit("/", 1)[1]
+        assert record == evidence.RECORD_MODELS[kind].__name__
 
 
 def test_every_error_response_uses_the_error_body():

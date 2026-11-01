@@ -328,3 +328,46 @@ def test_cors_allows_only_the_local_dev_origins(client):
 @pytest.mark.parametrize("path", ["/v1/health", "/v1/reports"])
 def test_only_get_is_served(client, path):
     assert client.post(path).status_code == 405
+
+
+def test_every_ref_of_the_long_fixture_pull_resolves_to_its_typed_record(real_dataset):
+    """
+    Every ref on H7z1fqDXjRTFnbtg:15 answers a typed record. Events are sampled over HTTP, and one event of every
+    shape (type, failure flag and set of non-null fields) is checked against the model directly.
+    """
+    from khadbot.encounter.evidence import RECORD_MODELS, event_row
+
+    ds = real_dataset
+    r = records(ds, 15)
+    key = r.pull.pull_key
+    refs = [f"ev:{key}:pull", *(d.ref for d in r.deaths), *(m.ref for m in r.mechanics)]
+    refs += [c.ref for c in r.cooldowns] + [w.ref for w in r.windows]
+    seqs = r.annotated.frame["seq"].to_list()
+    refs += [f"ev:{key}:event:{seq}" for seq in seqs[:: max(1, len(seqs) // 40)]]
+    data = ds.encounter_data()
+    seen = set()
+    for ref in refs:
+        response = evidence(ds.client, ref)
+        assert response.status_code == 200, (ref, response.text)
+        body = response.json()
+        assert body["ref"] == ref and body["record"] == data.resolve(ref)
+        model = RECORD_MODELS[body["kind"]]
+        assert model.model_validate(body["record"]).model_dump(mode="json") == body["record"]
+        seen.add(body["kind"])
+    assert seen == set(RECORD_MODELS)
+    event_model = RECORD_MODELS["event"]
+    shapes: dict[tuple, dict] = {}
+    for row in r.annotated.frame.iter_rows(named=True):
+        shapes.setdefault((row["type"], bool(row.get("is_failure")), *(v is None for v in row.values())), row)
+    assert len(shapes) > 10
+    for row in shapes.values():
+        shown = event_row(r, row)
+        assert event_model.model_validate(shown).model_dump(mode="json") == shown
+
+
+def test_death_evidence_names_the_killer(real_dataset):
+    ds = real_dataset
+    r = records(ds, 15)
+    death = next(d for d in r.deaths if d.killer_id is not None)
+    record = evidence(ds.client, death.ref).json()["record"]
+    assert (record["killer_id"], record["killer_name"]) == (death.killer_id, death.killer_name)
