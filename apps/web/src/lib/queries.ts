@@ -8,7 +8,7 @@
 "use client";
 
 import { unwrap, type ApiGet } from "@khadbot/api-client";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { api, healthApi } from "./api";
 
@@ -45,6 +45,9 @@ export function usePullDigest(code: string, fight: number, options: { full?: boo
         }),
       ),
     retry: (count, error) => count < 2 && !isClientError(error),
+    // "Show everything" changes the key: keep the page on screen (the capped digest) while the full one loads,
+    // rather than swapping the whole pull page for its skeleton.
+    placeholderData: keepPreviousData,
   });
 }
 
