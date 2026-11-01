@@ -1,0 +1,13 @@
+{
+  "name": "khadbot-workspace",
+  "private": true,
+  "description": "KhadBot's TypeScript workspace: apps/web and packages/api-client (see .claude/rules/web.md).",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "gen": "pnpm --filter @khadbot/api-client gen",
+    "check": "pnpm --filter @khadbot/api-client check && pnpm -r run lint && pnpm -r run typecheck && pnpm -r run test"
+  }
+}

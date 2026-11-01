@@ -1,0 +1,262 @@
+/*
+ * apps/web/src/styles/globals.css
+ *
+ * Every colour, font, radius and focus ring of the dashboard, from the design canvas's "Spec and questions" page,
+ * defined once. Components use these tokens through Tailwind (bg-s1, text-mut, text-q-epic, text-cls-druid, ...) and
+ * never write a literal colour. Light is :root; dark is the `.dark` class on <html> (lib/theme.ts sets it).
+ *
+ * Three groups:
+ * - The 17 canvas tokens (--bg ... --badt), then shadcn/ui's variable names mapped onto them (the spec's last column).
+ * - The fight % quality scale (--q-*), bar colours exactly as the canvas draws them, plus --q-*-text for text where
+ *   a bar colour falls under 4.5:1 on the card surfaces (Rare and Epic in dark; Poor, Uncommon, Rare, Epic,
+ *   Legendary and Artifact in light). Where the bar colour already passes, the text token is the same value.
+ * - The class colours (--cls-<class>), the values on the canvas's "Pull investigation" artboard: darkened in light
+ *   for 4.5:1, the game colours in dark with Death Knight and Shaman lightened.
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+
+  /* Canvas tokens (light) */
+  --bg: #eef0f3;
+  --s1: #ffffff;
+  --s2: #f5f6f8;
+  --s3: #e9ecf1;
+  --ink: #1b2230;
+  --mut: #5a6374;
+  --line: #d9dde4;
+  --acc: #a44a14;
+  --acct: #fbeadf;
+  --info: #17737a;
+  --infot: #dff1f2;
+  --ok: #276e3e;
+  --okt: #e3f1e7;
+  --warn: #8a5700;
+  --warnt: #f8edd5;
+  --bad: #b3261e;
+  --badt: #fbe4e2;
+
+  /* Fight % quality scale (light darkens the pale ones), bars */
+  --q-poor: #8a8a8a;
+  --q-common: #4b5059;
+  --q-uncommon: #1c9a00;
+  --q-rare: #0070dd;
+  --q-epic: #a335ee;
+  --q-legendary: #d96d00;
+  --q-artifact: #85691f;
+  /* ... and text, at least 4.5:1 on s1, s2 and s3 */
+  --q-poor-text: #696969;
+  --q-common-text: #4b5059;
+  --q-uncommon-text: #167a00;
+  --q-rare-text: #0067cb;
+  --q-epic-text: #9831dd;
+  --q-legendary-text: #a55300;
+  --q-artifact-text: #81661e;
+
+  /* Class colours (light) */
+  --cls-deathknight: #c41e3a;
+  --cls-demonhunter: #a330c9;
+  --cls-druid: #ab5307;
+  --cls-evoker: #297767;
+  --cls-hunter: #5c723e;
+  --cls-mage: #257388;
+  --cls-monk: #007a49;
+  --cls-paladin: #975773;
+  --cls-priest: #6b6b6b;
+  --cls-rogue: #706b2e;
+  --cls-shaman: #0069d0;
+  --cls-warlock: #6363ae;
+  --cls-warrior: #836648;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bg: #0d0d0e;
+  --s1: #151516;
+  --s2: #1b1b1d;
+  --s3: #252528;
+  --ink: #e7e7e4;
+  --mut: #a2a2a8;
+  --line: #2d2d31;
+  --acc: #f0975a;
+  --acct: #2d221b;
+  --info: #62c1c8;
+  --infot: #142729;
+  --ok: #6cc58a;
+  --okt: #15261a;
+  --warn: #e5b04f;
+  --warnt: #2a2311;
+  --bad: #f27d74;
+  --badt: #311b1a;
+
+  /* In-game quality colours */
+  --q-poor: #9d9d9d;
+  --q-common: #ffffff;
+  --q-uncommon: #1eff00;
+  --q-rare: #0070dd;
+  --q-epic: #a335ee;
+  --q-legendary: #ff8000;
+  --q-artifact: #e6cc80;
+  --q-poor-text: #9d9d9d;
+  --q-common-text: #ffffff;
+  --q-uncommon-text: #1eff00;
+  --q-rare-text: #3b91e5;
+  --q-epic-text: #ba68f2;
+  --q-legendary-text: #ff8000;
+  --q-artifact-text: #e6cc80;
+
+  --cls-deathknight: #d7687b;
+  --cls-demonhunter: #bd6ad8;
+  --cls-druid: #ff7c0a;
+  --cls-evoker: #3f9987;
+  --cls-hunter: #aad372;
+  --cls-mage: #3fc7eb;
+  --cls-monk: #00ff98;
+  --cls-paladin: #f48cba;
+  --cls-priest: #ffffff;
+  --cls-rogue: #fff468;
+  --cls-shaman: #368ee4;
+  --cls-warlock: #8788ee;
+  --cls-warrior: #c69b6d;
+}
+
+/* shadcn/ui's names, mapped onto the canvas tokens (the spec's "shadcn variable" column) */
+:root,
+.dark {
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--s1);
+  --card-foreground: var(--ink);
+  --popover: var(--s1);
+  --popover-foreground: var(--ink);
+  --muted: var(--s2);
+  --muted-foreground: var(--mut);
+  --secondary: var(--s2);
+  --secondary-foreground: var(--ink);
+  --accent: var(--s3);
+  --accent-foreground: var(--ink);
+  --primary: var(--acc);
+  --primary-foreground: var(--s1);
+  --destructive: var(--bad);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--info);
+  --radius: 0.125rem;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-ink: var(--ink);
+  --color-mut: var(--mut);
+  --color-line: var(--line);
+  --color-acc: var(--acc);
+  --color-acct: var(--acct);
+  --color-info: var(--info);
+  --color-infot: var(--infot);
+  --color-ok: var(--ok);
+  --color-okt: var(--okt);
+  --color-warn: var(--warn);
+  --color-warnt: var(--warnt);
+  --color-bad: var(--bad);
+  --color-badt: var(--badt);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-q-poor: var(--q-poor);
+  --color-q-common: var(--q-common);
+  --color-q-uncommon: var(--q-uncommon);
+  --color-q-rare: var(--q-rare);
+  --color-q-epic: var(--q-epic);
+  --color-q-legendary: var(--q-legendary);
+  --color-q-artifact: var(--q-artifact);
+  --color-q-poor-text: var(--q-poor-text);
+  --color-q-common-text: var(--q-common-text);
+  --color-q-uncommon-text: var(--q-uncommon-text);
+  --color-q-rare-text: var(--q-rare-text);
+  --color-q-epic-text: var(--q-epic-text);
+  --color-q-legendary-text: var(--q-legendary-text);
+  --color-q-artifact-text: var(--q-artifact-text);
+
+  --color-cls-deathknight: var(--cls-deathknight);
+  --color-cls-demonhunter: var(--cls-demonhunter);
+  --color-cls-druid: var(--cls-druid);
+  --color-cls-evoker: var(--cls-evoker);
+  --color-cls-hunter: var(--cls-hunter);
+  --color-cls-mage: var(--cls-mage);
+  --color-cls-monk: var(--cls-monk);
+  --color-cls-paladin: var(--cls-paladin);
+  --color-cls-priest: var(--cls-priest);
+  --color-cls-rogue: var(--cls-rogue);
+  --color-cls-shaman: var(--cls-shaman);
+  --color-cls-warlock: var(--cls-warlock);
+  --color-cls-warrior: var(--cls-warrior);
+
+  /* 2 px corners everywhere, 0 for full-bleed bars (no pills or circles) */
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+
+  /* Fonts come from next/font (app/fonts.ts), which sets these three variables on <html> */
+  --font-display: var(--font-source-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-plex-sans), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, Consolas, Menlo, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html {
+    background: var(--bg);
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  a {
+    color: var(--info);
+  }
+  /* The focus ring: 2 px --info, 2 px offset, on every control, chip and marker */
+  :focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+  }
+}

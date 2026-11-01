@@ -1,0 +1,25 @@
+{
+  "name": "@khadbot/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The KhadBot API client every TypeScript app uses: types generated from contracts/openapi.json and a typed fetch wrapper.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "gen": "node scripts/gen.mjs",
+    "check": "node scripts/gen.mjs --check",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}

@@ -1,0 +1,6 @@
+# The TypeScript workspace (.claude/rules/web.md): apps under apps/, shared packages under packages/.
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  unrs-resolver: false

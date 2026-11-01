@@ -75,3 +75,17 @@ env/
 # Claude Code task worktrees
 # -----------------------------------------------------------------------------
 .claude/worktrees/
+
+
+# -----------------------------------------------------------------------------
+# TypeScript workspace (apps/, packages/)
+# -----------------------------------------------------------------------------
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+playwright-report/
+playwright-report-local/
+test-results/
+# Playwright storage-state files hold live test-session cookies
+apps/web/e2e/.auth/
