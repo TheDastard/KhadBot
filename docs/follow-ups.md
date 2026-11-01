@@ -323,6 +323,19 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   menu as a sheet under the top bar, the phone chip and type sizes, and phone-width Playwright and axe runs. The
   desktop screens are built with flex, grid and the tokens and no fixed page widths, so this adds layouts rather
   than reworking them.
+- **The web app isn't deployed.** There is no deploy pipeline or staging yet, so the web app has no container file
+  or platform service. When the pipeline lands, add the web app as its own service (a `deploy/` container file for
+  `next build` and `next start`, `NEXT_PUBLIC_API_BASE` set per environment at build time, its origin in the API's
+  `KHADBOT_WEB_ORIGINS`), deployed to staging with the API.
+- **No Content-Security-Policy yet.** The web app sends no CSP header. Add one with the deploy: `docs/game-art.md`
+  lists the hosts Wowhead's script needs (`script-src`, `connect-src`, `img-src`, `style-src` with inline styles),
+  plus the API's origin in `connect-src`.
+- **Fonts cover Latin only.** `app/fonts.ts` bundles the Fontsource `latin` subsets; names with characters outside
+  Latin-1 (Polish, Czech, Cyrillic) fall back to the system font. Add the `latin-ext` (and `cyrillic`) files if
+  players notice.
+- **The two end-to-end suites share port 3000.** `test:e2e:local` starts its own web server on 3000 (local-mode CORS
+  allows only that port), so the dev loop's web server must be stopped first (`dev:all -- --no-web`). If running both
+  together matters, let `main.py serve` allow another web port and give the local suite that port.
 
 ### Dashboard API
 
@@ -382,9 +395,6 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   botocore error, but while SeaweedFS is still starting the error has `response=None`, so it raises
   `AttributeError: 'NoneType' object has no attribute 'get'`. Rerunning works. Use
   `(getattr(exc, "response", None) or {})` and retry until the gateway answers.
-- **Playwright storage-state files hold a live session cookie.** `test-session --storage-state FILE` writes one
-  (owner-only where the platform allows); the docs say to keep them out of the repo, but no `.gitignore` entry
-  does. Add one for the path the web app's Playwright setup uses.
 - **WCL's real answer for a missing report isn't recorded.** WCL replay answers an unknown report code with its
   own GraphQL error ("WCL replay has no report ..."), worded to avoid "private", "forbidden" and "rate limit". If
   WCL's real message contains "private", the client classifies it as a private report instead, and a live watch

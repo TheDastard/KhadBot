@@ -63,8 +63,8 @@ config/
 contracts/           # openapi.json generated from the API (the frontend's types come from it)
 scripts/             # dev/ (setup, dev loop runner, clean, distclean, contract generator), data/ (fixture data builder, WCL fixture
                      # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
-apps/                # TypeScript apps (pnpm workspace): web/ now; desktop/ and discord/ later. Not created yet
-packages/            # api-client/: the client generated from contracts/openapi.json. Not created yet
+apps/                # TypeScript apps (pnpm workspace): web/ (Next.js dashboard; e2e/ holds Playwright); desktop/ and discord/ later
+packages/            # api-client/: types generated from contracts/openapi.json and the typed fetch client
 deploy/              # Dockerfile, compose stack, its env file and the dev loop's env example (dev.env.example); docs/hosting.md describes running and configuring them
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
@@ -90,22 +90,27 @@ Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `m
 the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
 `install:cli`); name new tasks the same way.
 
-A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, dependencies, hooks, `.env`, `deploy/dev.env`, and a check that Docker's engine is running; `-WithDocker` also installs Docker Desktop through winget). After that
+A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Python and pnpm dependencies, hooks, `.env`, `deploy/dev.env`, and a check that Docker's engine is running; `-WithDocker` also installs Docker Desktop through winget, `-WithPlaywright` Playwright's Chromium). After that
 `uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
 `mise trust`.
 
 | Task | mise | uv |
 |---|---|---|
 | Install everything | `mise run install` | `uv sync --extra dev` |
+| Install the TypeScript workspace / Playwright's Chromium | `mise run install:web`, `mise run install:playwright` | `pnpm install --frozen-lockfile` |
 | Lint + typecheck + layer rule + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run lint-imports && uv run pytest tests/unit` |
 | Layer rule only | `mise run lint:imports` | `uv run lint-imports` |
 | Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
 | Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
+| Web gate: api-client drift check, ESLint, tsc, Vitest | `mise run check:web` | `pnpm run check` |
+| Both gates (a change that touches Python and the web) | `mise run check:all` | `mise run check`, then `mise run check:web` |
+| Regenerate the API client's types (after `gen:contracts`) | `mise run gen:types` | `pnpm --filter @khadbot/api-client gen` |
+| Web end-to-end tests: on the dev loop with SYNTH01 seeded; on `main.py serve` (docs/hosting.md, "The web app") | `mise run test:e2e`, `mise run test:e2e:local` | `pnpm --filter @khadbot/web e2e`, `... e2e:local` |
 | Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
-| Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload (needs Docker; port 8000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
-| Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
+| Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload, the web dev server (needs Docker; ports 8000 and 3000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
+| Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:web`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
 | Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
 | Same, then delete `.venv` | `mise run clean:all` | `scripts/dev/clean.ps1`, then `scripts/dev/distclean.ps1` |
 

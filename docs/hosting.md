@@ -222,7 +222,7 @@ The full experience runs hosted mode on your machine: Postgres and the bucket in
     mise run dev:seed -- --only SYNTH01   # in a second terminal; without --only, every recorded report
     mise run dev:smoke      # health, a signed-out 404, a night summary, and a queued job the worker finishes
 
-`dev:all` prints `dev: ready at http://127.0.0.1:8000` when the API answers and keeps running; the API's and the worker's logs share the terminal with `[api]` and `[worker]` prefixes. Ctrl-C stops both. The pieces run on their own too: `dev:infra` (the Docker services, the bucket and migrations, then exits), `dev:api` and `dev:worker` (each in the foreground, with reload). The web dev server joins `dev:all` when the web app exists.
+`dev:all` prints `dev: ready at http://127.0.0.1:8000` when the API answers and keeps running; the API's, the worker's and the web dev server's logs share the terminal with `[api]`, `[worker]` and `[web]` prefixes. Ctrl-C stops them all. The pieces run on their own too: `dev:infra` (the Docker services, the bucket and migrations, then exits), `dev:api` and `dev:worker` (each in the foreground, with reload) and `dev:web` (the web dev server). `dev:all -- --no-web` leaves the web dev server out, and it is left out with a note when the workspace's packages aren't installed (`mise run install:web`).
 
 **Settings.** `deploy/dev.env` (gitignored; `setup.ps1` creates it from `deploy/dev.env.example`, or copy it by hand) holds the same throwaway values as `deploy/stack.env` with `127.0.0.1` in place of the container host names. Use `127.0.0.1`, not `localhost`, for Postgres and the bucket: on Windows the connection pool stalls on its IPv6 attempt for `localhost`. The runner lays dev.env over the main checkout's `.env` (found the way the app finds it, so a worktree needs none of its own), which still supplies the WCL credentials, `LLM_PROVIDER` and the rest. With no WCL credentials anywhere, placeholders let the API start; everything but signing in to Warcraft Logs then works. The worker asks WCL for an app token when it starts (no points); a worker started without real credentials logs a warning that it could not read WCL's rate limit and carries on.
 
@@ -237,6 +237,29 @@ The full experience runs hosted mode on your machine: Postgres and the bucket in
 **Switches for development.** WCL replay answers WCL from the recorded fixture reports, so ingest and live watch spend no WCL points: uncomment `KHADBOT_WCL_REPLAY` in `deploy/dev.env` (see "WCL replay" under "Environment variables" above). Test sessions are described under "Test sessions" below.
 
 **Time to start.** With the images pulled and the volumes in place, `dev:all` has the infrastructure ready in about 3 seconds and the API healthy about 8 seconds after the command (measured on the maintainer's Windows machine, 2026-10-31). The first run also pulls the Postgres and SeaweedFS images, which takes around a minute depending on the connection.
+
+### The web app
+
+The dashboard (`apps/web`, `.claude/rules/web.md`) is a Next.js app served by its dev server on `http://localhost:3000`. `NEXT_PUBLIC_API_BASE` names the API it talks to, with no default in code: `dev:all` and `dev:web` set `http://localhost:8000`, the dev loop's API, and `mise run web:dev` defaults to the same. Use `localhost`, not `127.0.0.1`, for the API: the session cookie (from sign-in or a test session) is set for `localhost`, and the API's `KHADBOT_WEB_ORIGINS` in `deploy/dev.env` lists `http://localhost:3000`.
+
+Against local mode, point it at `main.py serve` instead (`NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000 mise run web:dev` after `mise run serve:fixtures`): it reads `/v1/health`, finds sign-in off, and labels the header "Local". It sends no cookie to such a server, which allows only uncredentialed `GET`s from `http://localhost:3000` and `http://127.0.0.1:3000`.
+
+The browser loads one third-party script, Wowhead's tooltips (`docs/game-art.md`); everything else comes from the API. Fonts are bundled from npm, so neither the dev server nor a build reaches Google Fonts.
+
+**End-to-end tests.** Playwright drives Chromium (`mise run install:playwright` once, or `setup.ps1 -WithPlaywright`). Two suites:
+
+1. Hosted, on the dev loop with WCL replay and test sessions:
+
+        # deploy/dev.env: uncomment KHADBOT_WCL_REPLAY=tests/fixtures/encounter/wcl
+        mise run dev:all                        # the API, worker and web dev server
+        mise run dev:seed -- --only SYNTH01     # second terminal
+        mise run test:e2e
+
+   Its setup signs in the test users `e2e-alice` and `e2e-bob` with `test-session --storage-state` (files in `apps/web/e2e/.auth/`, gitignored: they hold live cookies), each able to read the seeded reports. It reuses the web dev server on :3000, or starts one. No test reaches a host other than this machine: the fixture aborts any other request.
+
+2. Local mode: `mise run test:e2e:local` starts `main.py serve` on `127.0.0.1:8001` over `.khadbot_fixture_data` (`mise run gen:fixture-data` once) and its own web dev server on :3000 pointed at it, so stop any other web dev server first (`dev:all -- --no-web` keeps the rest of the dev loop).
+
+The `web` CI workflow (`.github/workflows/web.yml`) runs `check:web` on Linux and Windows, and both suites on Linux: the dev loop with SYNTH01, then the local suite over `QkVa6GHRK8yfrTbw` only.
 
 ## Test sessions
 
