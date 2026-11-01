@@ -784,3 +784,13 @@ In `WindowCoverage`, after `covered`:
 (The plan's `WindowCoverage` still shows the older `cooldowns_active`; as built the fields are
 `defensive_cooldowns_active`, `covered`, `expected_defensive_cooldowns` and `defensive_cooldowns_late`.)
 `RECORDS_VERSION` is 2.
+
+### Portal plan, section 4.2 (API surface): display names, cooldowns and players
+
+Three read routes, mounted in every mode (`api/names.py`):
+
+| Endpoint | Returns |
+|---|---|
+| `GET /v1/encounters/{encounter_id}/names?difficulty=<WCL code>` | `EncounterNames {encounter_id, difficulty, difficulty_name, encounter_name, phases, mechanics, damage_windows}`. `phases` maps phase IDs to `PhaseName {name, short_name}` (file order); `short_name` is the text before the name's first `": "`, else the whole name, derived by the API rather than authored. `mechanics` and `damage_windows` map IDs to names from the encounter file's view for that difficulty. Without a file for it every map is empty and `encounter_name` is null, never an error. No report access check: encounter files are config. `PullDigest` is unchanged. |
+| `GET /v1/cooldowns` | `CooldownList {cooldowns}`: every cooldown-file spell ID to `CooldownName {name, category, verified}`, `category` being the file's own (`defensive`, `offensive`, `utility`). Depends on no report or encounter: no report gate, `Cache-Control: public, max-age=86400` and an ETag of the cooldown files' content, 304 on `If-None-Match`. |
+| `GET /v1/reports/{code}/players` | `PlayerList {code, players: Player[]}` by actor ID; `Player {id, name, class_name}` from the cached report metadata's actors with `type` Player that appear in at least one fight's `friendlyPlayers` (bystanders WCL lists without a fight are left out). `class_name` is WCL's `subType` when it is one of `PlayerClass` (`DeathKnight, DemonHunter, Druid, Evoker, Hunter, Mage, Monk, Paladin, Priest, Rogue, Shaman, Warlock, Warrior`), else null (WCL writes `Unknown`). Gated on report access; 404 `report_not_found` without cached metadata. |

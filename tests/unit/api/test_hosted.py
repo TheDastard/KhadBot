@@ -30,6 +30,7 @@ REPORT_ROUTES = [
     f"/v1/reports/{CODE}/pulls/1/timeline",
     f"/v1/reports/{CODE}/pulls/1/events?t_from_ms=0&t_to_ms=1000",
     f"/v1/reports/{CODE}/pulls/1/findings",
+    f"/v1/reports/{CODE}/players",
     "/v1/evidence/" + quote(f"ev:{CODE}:1:pull", safe=""),
 ]
 
@@ -108,6 +109,11 @@ class TestReportAccess:
 
     def test_health_stays_open(self, h):
         assert h.actor().get("/v1/health").json()["status"] == "ok"
+
+    def test_cooldown_names_need_no_sign_in(self, h):
+        resp = h.actor().get("/v1/cooldowns")
+        assert resp.status_code == 200
+        assert resp.json()["cooldowns"]
 
     def test_report_list_is_the_users_own(self, h):
         h.ingest_offline()

@@ -398,6 +398,23 @@
         "title": "CachedFindings",
         "type": "object"
       },
+      "CooldownList": {
+        "description": "Every cooldown file entry by spell ID, whatever the report or encounter (``GET /v1/cooldowns``).",
+        "properties": {
+          "cooldowns": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CooldownName"
+            },
+            "title": "Cooldowns",
+            "type": "object"
+          }
+        },
+        "required": [
+          "cooldowns"
+        ],
+        "title": "CooldownList",
+        "type": "object"
+      },
       "CooldownMarker": {
         "properties": {
           "caster": {
@@ -439,6 +456,35 @@
           "ref"
         ],
         "title": "CooldownMarker",
+        "type": "object"
+      },
+      "CooldownName": {
+        "description": "A cooldown file entry's display name, the file it is in and whether it has been checked against the game.",
+        "properties": {
+          "category": {
+            "enum": [
+              "defensive",
+              "offensive",
+              "utility"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "verified"
+        ],
+        "title": "CooldownName",
         "type": "object"
       },
       "CooldownUse": {
@@ -688,6 +734,79 @@
           "after_cutoff"
         ],
         "title": "DeathRecord",
+        "type": "object"
+      },
+      "EncounterNames": {
+        "description": "Display names for the IDs records carry: phases, mechanics and damage windows from the encounter file's view for\none difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).\nCooldown names are ``GET /v1/cooldowns``.",
+        "properties": {
+          "damage_windows": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Damage Windows",
+            "type": "object"
+          },
+          "difficulty": {
+            "title": "Difficulty",
+            "type": "integer"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "encounter_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounter Name"
+          },
+          "mechanics": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Mechanics",
+            "type": "object"
+          },
+          "phases": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PhaseName"
+            },
+            "title": "Phases",
+            "type": "object"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "difficulty",
+          "difficulty_name",
+          "encounter_name",
+          "phases",
+          "mechanics",
+          "damage_windows"
+        ],
+        "title": "EncounterNames",
         "type": "object"
       },
       "ErrorBody": {
@@ -2094,6 +2213,92 @@
         "title": "PhaseMarker",
         "type": "object"
       },
+      "PhaseName": {
+        "description": "A phase's name from the encounter file, and the part before its first \": \" (the whole name when it has none).",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short_name": {
+            "title": "Short Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "short_name"
+        ],
+        "title": "PhaseName",
+        "type": "object"
+      },
+      "Player": {
+        "description": "A player actor of the report. Records name players by ``name``; deaths also carry ``actor_id`` (``id``).",
+        "properties": {
+          "class_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "DeathKnight",
+                  "DemonHunter",
+                  "Druid",
+                  "Evoker",
+                  "Hunter",
+                  "Mage",
+                  "Monk",
+                  "Paladin",
+                  "Priest",
+                  "Rogue",
+                  "Shaman",
+                  "Warlock",
+                  "Warrior"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class_name"
+        ],
+        "title": "Player",
+        "type": "object"
+      },
+      "PlayerList": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/Player"
+            },
+            "title": "Players",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "players"
+        ],
+        "title": "PlayerList",
+        "type": "object"
+      },
       "PlayerSelfDamage": {
         "properties": {
           "abilities": {
@@ -3403,6 +3608,95 @@
         ]
       }
     },
+    "/v1/cooldowns": {
+      "get": {
+        "description": "Every cooldown file spell by spell ID: its name, the file it is in (``category``) and whether it has been checked\nagainst the game. Records carry cooldowns, death defensives and window cooldowns as spell IDs; join them here. It\ndepends on no report or encounter and changes only when a cooldown file does: cache it for a day and revalidate\nwith its ETag.",
+        "operationId": "list_cooldowns_v1_cooldowns_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CooldownList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Not modified: the list matches the If-None-Match ETag"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "List Cooldowns",
+        "tags": [
+          "encounters"
+        ]
+      }
+    },
+    "/v1/encounters/{encounter_id}/names": {
+      "get": {
+        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces. An encounter or difficulty without an encounter file answers an empty lookup, not an\nerror. Cooldown names are ``GET /v1/cooldowns``.",
+        "operationId": "get_names_v1_encounters__encounter_id__names_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "encounter_id",
+            "required": true,
+            "schema": {
+              "title": "Encounter Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "WCL difficulty code (1 LFR, 3 Normal, 4 Heroic, 5 Mythic)",
+            "in": "query",
+            "name": "difficulty",
+            "required": true,
+            "schema": {
+              "description": "WCL difficulty code (1 LFR, 3 Normal, 4 Heroic, 5 Mythic)",
+              "title": "Difficulty",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncounterNames"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          }
+        },
+        "summary": "Get Names",
+        "tags": [
+          "encounters"
+        ]
+      }
+    },
     "/v1/evidence/{ref}": {
       "get": {
         "description": "The record a ref names (URL-encode the ref), as the analyst's verify step resolves it.",
@@ -4149,6 +4443,69 @@
           }
         },
         "summary": "Get Night",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/v1/reports/{code}/players": {
+      "get": {
+        "description": "The report's player actors that took part in at least one fight (a fight's ``friendlyPlayers``), with their class\n(null when WCL gives ``Unknown`` or a class not in ``PlayerClass``), by actor ID. Bystanders a big report lists\namong its actors without them ever being in a fight are left out.",
+        "operationId": "get_players_v1_reports__code__players_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No cached metadata for the report, or one the caller cannot read"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path or query parameter (bad_request)"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+          }
+        },
+        "summary": "Get Players",
         "tags": [
           "reports"
         ]

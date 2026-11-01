@@ -254,15 +254,21 @@ class EncounterData:
             return None
         return next((p for p in pulls if p.fight_id == fight), None)
 
+    def cooldown_registries(self) -> tuple[CooldownRegistry, CooldownRegistry, CooldownRegistry]:
+        """The defensive, offensive and utility cooldown files records are built with (given ones, else ``config/``)."""
+        return (
+            self._defensive or load_cooldowns("defensive"),
+            self._offensive or load_cooldowns("offensive"),
+            self._utility or load_cooldowns("utility"),
+        )
+
     def records(self, pull_key: str) -> PullRecords:
         """Uncapped analysis records for an ingested pull. Raises ``KeyError`` if it is not ingested."""
         pull = self.pull(pull_key)
         if pull is None:
             raise KeyError(f"pull {pull_key} is not in the event store; ingest it first")
         pull_key = pull.pull_key
-        defensive = self._defensive or load_cooldowns("defensive")
-        offensive = self._offensive or load_cooldowns("offensive")
-        utility = self._utility or load_cooldowns("utility")
+        defensive, offensive, utility = self.cooldown_registries()
         friendly = self._friendly or load_friendly_damage()
         enc = load_encounter_view(pull.encounter_id, pull.difficulty, self.enc_root)
         fraction = EncounterConfig().cutoff_fraction if self.cutoff_fraction is None else self.cutoff_fraction
