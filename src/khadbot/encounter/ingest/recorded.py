@@ -44,11 +44,18 @@ def is_recorded(root: Path, code: str) -> bool:
 
 
 def recorded_reports(root: Path, *, exclude: Collection[str] = SYNTHETIC_REPORTS) -> list[str]:
-    """Report codes under ``root`` with real recorded metadata, sorted."""
+    """
+    Report codes under ``root`` with real recorded metadata and at least one fight's pages, sorted. A report with
+    metadata alone (one a recorded search listed, for WCL replay) has nothing to ingest, so it isn't one.
+    """
     root = Path(root)
     if not root.is_dir():
         return []
-    return sorted(p.name for p in root.iterdir() if p.is_dir() and p.name not in exclude and is_recorded(root, p.name))
+    return sorted(
+        p.name
+        for p in root.iterdir()
+        if p.is_dir() and p.name not in exclude and is_recorded(root, p.name) and recorded_fights(root, p.name)
+    )
 
 
 def recorded_fights(root: Path, code: str) -> list[int]:

@@ -1,0 +1,24 @@
+{
+ "data": {
+  "guildData": {
+   "guild": {
+    "id": 27112,
+    "name": "Death and Destruction",
+    "faction": {
+     "id": 2,
+     "name": "Horde"
+    },
+    "server": {
+     "name": "Skullcrusher",
+     "slug": "skullcrusher",
+     "region": {
+      "compactName": "US",
+      "slug": "US"
+     }
+    }
+   }
+  }
+ },
+ "khadbotRecordedAt": "2026-11-01T04:03:08+00:00",
+ "khadbotPoints": 1.0
+}

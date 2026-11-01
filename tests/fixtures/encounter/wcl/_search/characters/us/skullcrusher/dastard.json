@@ -1,0 +1,190 @@
+{
+ "data": {
+  "characterData": {
+   "character": {
+    "id": 4945148,
+    "name": "Dastard",
+    "server": {
+     "name": "Skullcrusher",
+     "slug": "skullcrusher",
+     "region": {
+      "compactName": "US",
+      "slug": "US"
+     }
+    },
+    "recentReports": {
+     "has_more_pages": true,
+     "data": [
+      {
+       "code": "RJ9DPTcaNWL2t1dh",
+       "title": "The Venomous Abyss",
+       "startTime": 1793322662011,
+       "endTime": 1793331064036,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "PXtykQ9xrwgJ81h3",
+       "title": "The Venomous Abyss",
+       "startTime": 1793152785446,
+       "endTime": 1793159347022,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "aD4RqQ2LCTZxmFtG",
+       "title": "The Venomous Abyss",
+       "startTime": 1793149634813,
+       "endTime": 1793152587999,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "4jz8Y92Mp1RDHyc3",
+       "title": "The Venomous Abyss",
+       "startTime": 1792717974141,
+       "endTime": 1792728289070,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "c2Rd93HJg6Tv1kYw",
+       "title": "The Venomous Abyss",
+       "startTime": 1792544933518,
+       "endTime": 1792553472572,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "GaxN3yPwk4YQ16D7",
+       "title": "The Venomous Abyss",
+       "startTime": 1791947603873,
+       "endTime": 1791950318764,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "9MTxgHBPQCY6y24r",
+       "title": "10/13 H UK",
+       "startTime": 1791940932860,
+       "endTime": 1791946103611,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "RCzJy4aH96rYGWpv",
+       "title": "10/13 H VA + H UK",
+       "startTime": 1791940932860,
+       "endTime": 1791946010519,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "6CPTNXqkQ3BjpD4z",
+       "title": "The Venomous Abyss",
+       "startTime": 1791940013509,
+       "endTime": 1791946074085,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "NcZhJxwDP7rA9pbR",
+       "title": "The Venomous Abyss",
+       "startTime": 1791510094988,
+       "endTime": 1791518522014,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "H7z1fqDXjRTFnbtg",
+       "title": "The Venomous Abyss",
+       "startTime": 1791335108734,
+       "endTime": 1791344766268,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "QkVa6GHRK8yfrTbw",
+       "title": "9/29 H VA",
+       "startTime": 1790730348378,
+       "endTime": 1790741148665,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "9B1gcb8nayt2YHmL",
+       "title": "The Venomous Abyss",
+       "startTime": 1790730308294,
+       "endTime": 1790741147298,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "1R2cfLnVqHpCrXbG",
+       "title": "The Venomous Abyss",
+       "startTime": 1790558458692,
+       "endTime": 1790566507326,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      },
+      {
+       "code": "Y1G8Q2Jv6hdXz3fR",
+       "title": "9/24 H VA",
+       "startTime": 1790298206635,
+       "endTime": 1790308990184,
+       "visibility": "public",
+       "zone": {
+        "id": 53,
+        "name": "The Venomous Abyss"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "khadbotRecordedAt": "2026-11-01T04:03:17+00:00",
+ "khadbotPoints": 1.0
+}

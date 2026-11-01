@@ -24,6 +24,7 @@ def _report(root, code, body: bytes, fights=()):
 def test_lfs_pointers_and_missing_metadata_are_not_recorded(tmp_path):
     _report(tmp_path, "REAL", b'{"title": "x"}', fights=[3, 12])
     _report(tmp_path, "POINTER", POINTER)
+    _report(tmp_path, "METAONLY", b'{"title": "listed by a search"}')
     (tmp_path / "NOMETA").mkdir()
     (tmp_path / "notes.txt").write_text("not a report")
     assert is_recorded(tmp_path, "REAL")
@@ -34,8 +35,8 @@ def test_lfs_pointers_and_missing_metadata_are_not_recorded(tmp_path):
 
 
 def test_synthetic_reports_are_excluded_by_default(tmp_path):
-    _report(tmp_path, "SYNTH01", b"{}")
-    _report(tmp_path, "REAL", b"{}")
+    _report(tmp_path, "SYNTH01", b"{}", fights=[1])
+    _report(tmp_path, "REAL", b"{}", fights=[1])
     assert recorded_reports(tmp_path) == ["REAL"]
     assert recorded_reports(tmp_path, exclude=()) == ["REAL", "SYNTH01"]
     assert recorded_reports(tmp_path / "missing") == []
