@@ -6,6 +6,7 @@ report that is still being logged on the caller's own Warcraft Logs token and in
 (``jobs/watch.py``).
 
 - ``POST /v1/reports/{code}/watch``: start a watch (202), or return the caller's own active watch (200).
+- ``GET /v1/watches``: every active watch of the caller's, newest first (the account menu's "Following live").
 - ``GET /v1/reports/{code}/watch``: the caller's active watch of the report, else their latest one.
 - ``DELETE /v1/reports/{code}/watch``: stop it (200). Stopping a watch that already stopped returns it unchanged.
 
@@ -64,6 +65,12 @@ class WatchStatus(BaseModel):
     error: str | None = Field(
         default=None, description="Why the latest poll failed, or why the watch stopped on an error"
     )
+
+
+class WatchList(BaseModel):
+    """The caller's active watches, newest first."""
+
+    watches: list[WatchStatus]
 
 
 def watch_view(rec: WatchRecord, config: WatchConfig) -> WatchStatus:
@@ -146,6 +153,17 @@ async def start_watch(code: str, request: Request, response: Response, user: Sig
     return watch_view(watch, queue.watches.config)
 
 
+@router.get(
+    "/watches",
+    response_model=WatchList,
+    responses={401: {"model": ErrorBody, "description": "Not signed in (not_signed_in)"}},
+)
+async def list_watches(user: SignedIn, queue: Queue) -> WatchList:
+    """Every live watch of yours that is still running, newest first. Stop one with ``DELETE /v1/reports/{code}/watch``."""
+    watches = await queue.watches.store.active_of(user.id)
+    return WatchList(watches=[watch_view(w, queue.watches.config) for w in watches])
+
+
 @router.get("/reports/{code}/watch", response_model=WatchStatus, responses=_ERRORS)
 async def get_watch(code: str, request: Request, user: SignedIn, queue: Queue) -> WatchStatus:
     """Your watch of the report: the active one, else the latest that stopped."""
@@ -168,4 +186,4 @@ async def stop_watch(code: str, request: Request, user: SignedIn, queue: Queue) 
     return watch_view(watch, queue.watches.config)
 
 
-__all__ = ["WatchStatus", "router", "watch_view"]
+__all__ = ["WatchList", "WatchStatus", "router", "watch_view"]

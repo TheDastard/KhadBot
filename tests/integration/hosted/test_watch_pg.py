@@ -155,3 +155,16 @@ def test_a_worker_runs_a_watch_end_to_end(pool, database_url, schema_name, user_
     assert pulls == 2
     assert [p[0] for p in polls] == ["succeeded", "cancelled"]  # the first poll ran; the next was dropped by the stop
     assert polls[1][1] is not None and polls[1][2] == f"watch:{polled.id}" and polls[1][3] == {"watch_id": polled.id}
+
+
+def test_active_of_lists_a_users_running_watches_newest_first(pool, user_id):
+    store = WatchStore(PostgresWatchBackend(pool))
+    now = datetime.now(UTC)
+
+    async def go():
+        await store.start(record(user_id, "old", report_code="AAAAAAAA", started_at=now - timedelta(hours=1)))
+        await store.start(record(user_id, "new", report_code="BBBBBBBB"))
+        await store.start(record(user_id, "gone", report_code="CCCCCCCC", state=WatchState.STOPPED))
+        return await store.active_of(user_id)
+
+    assert [w.id for w in run(go)] == ["new", "old"]

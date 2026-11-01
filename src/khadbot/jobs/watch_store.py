@@ -92,6 +92,8 @@ class WatchTx(Protocol):
 
     def latest_for(self, report_code: str, user_id: str) -> WatchRecord | None: ...
 
+    def active_of(self, user_id: str) -> list[WatchRecord]: ...
+
 
 class WatchBackend(Protocol):
     def transaction(self, *, report: str | None = None, watch_id: str | None = None) -> AbstractContextManager[WatchTx]:
@@ -138,6 +140,10 @@ class WatchStore:
     async def latest_for(self, report_code: str, user_id: str) -> WatchRecord | None:
         """The user's most recent watch of the report, active or not."""
         return await self._run(lambda tx: tx.latest_for(report_code, user_id), report=report_code)
+
+    async def active_of(self, user_id: str) -> list[WatchRecord]:
+        """The user's active watches, newest first. Takes no report lock: it only reads."""
+        return await self._run(lambda tx: tx.active_of(user_id))
 
     async def update(
         self, watch_id: str, change: Callable[[WatchRecord], WatchRecord]
@@ -196,6 +202,10 @@ class _MemoryTx:
         rows = [r for r in self._rows.values() if r.report_code == report_code and r.user_id == user_id]
         return max(rows, key=lambda r: r.started_at, default=None)
 
+    def active_of(self, user_id: str) -> list[WatchRecord]:
+        rows = [r for r in self._rows.values() if r.user_id == user_id and r.active]
+        return sorted(rows, key=lambda r: r.started_at, reverse=True)
+
 
 # ---------------------------------------------------------------------------
 # Postgres backend
@@ -210,6 +220,9 @@ _SELECT_ONE: LiteralString = "SELECT " + _COLUMNS + " FROM watches WHERE id = %s
 _SELECT_ACTIVE: LiteralString = "SELECT " + _COLUMNS + " FROM watches WHERE report_code = %s AND state = 'active'"
 _SELECT_LATEST: LiteralString = (
     "SELECT " + _COLUMNS + " FROM watches WHERE report_code = %s AND user_id = %s ORDER BY started_at DESC LIMIT 1"
+)
+_SELECT_ACTIVE_OF: LiteralString = (
+    "SELECT " + _COLUMNS + " FROM watches WHERE user_id = %s AND state = 'active' ORDER BY started_at DESC"
 )
 _INSERT: LiteralString = (
     "INSERT INTO watches (" + _COLUMNS + ") VALUES "
@@ -286,6 +299,9 @@ class _PostgresTx:
     def latest_for(self, report_code: str, user_id: str) -> WatchRecord | None:
         rows = self._rows(_SELECT_LATEST, (report_code, user_id))
         return rows[0] if rows else None
+
+    def active_of(self, user_id: str) -> list[WatchRecord]:
+        return self._rows(_SELECT_ACTIVE_OF, (user_id,))
 
 
 __all__ = [

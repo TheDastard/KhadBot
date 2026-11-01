@@ -127,3 +127,19 @@ def test_delete_without_a_watch_is_404(h):
     jaina = h.actor("Jaina")
     readable_by(h, "Jaina")
     assert delete(jaina).json()["code"] == "watch_not_found"
+
+
+def test_watches_lists_only_your_active_watches_newest_first(h):
+    other = "SYNTH02"
+    h.wcl.readable[h.token_of("Jaina")] = {CODE, other}
+    readable_by(h, "Thrall")
+    jaina, thrall = h.actor("Jaina"), h.actor("Thrall")
+    assert h.actor().get("/v1/watches").status_code == 401
+    assert jaina.get("/v1/watches").json() == {"watches": []}
+    assert jaina.post(URL).status_code == 202
+    assert jaina.post(f"/v1/reports/{other}/watch").status_code == 202
+    listed = jaina.get("/v1/watches").json()["watches"]
+    assert [w["report_code"] for w in listed] == [other, CODE]  # newest first
+    assert thrall.get("/v1/watches").json() == {"watches": []}  # someone else's watches stay theirs
+    delete(jaina, f"/v1/reports/{other}/watch")
+    assert [w["report_code"] for w in jaina.get("/v1/watches").json()["watches"]] == [CODE]  # stopped ones drop out

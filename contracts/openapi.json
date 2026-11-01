@@ -4239,6 +4239,23 @@
         "title": "UnregisteredAbility",
         "type": "object"
       },
+      "WatchList": {
+        "description": "The caller's active watches, newest first.",
+        "properties": {
+          "watches": {
+            "items": {
+              "$ref": "#/components/schemas/WatchStatus"
+            },
+            "title": "Watches",
+            "type": "array"
+          }
+        },
+        "required": [
+          "watches"
+        ],
+        "title": "WatchList",
+        "type": "object"
+      },
       "WatchStatus": {
         "description": "A live report watch.",
         "properties": {
@@ -6640,6 +6657,38 @@
         "summary": "List Servers",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/v1/watches": {
+      "get": {
+        "description": "Every live watch of yours that is still running, newest first. Stop one with ``DELETE /v1/reports/{code}/watch``.",
+        "operationId": "list_watches_v1_watches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          }
+        },
+        "summary": "List Watches",
+        "tags": [
+          "watch"
         ]
       }
     }

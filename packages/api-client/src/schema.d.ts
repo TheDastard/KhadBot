@@ -557,6 +557,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/watches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Watches
+         * @description Every live watch of yours that is still running, newest first. Stop one with ``DELETE /v1/reports/{code}/watch``.
+         */
+        get: operations["list_watches_v1_watches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2252,6 +2272,14 @@ export interface components {
             share_pct: number;
         };
         /**
+         * WatchList
+         * @description The caller's active watches, newest first.
+         */
+        WatchList: {
+            /** Watches */
+            watches: components["schemas"]["WatchStatus"][];
+        };
+        /**
          * WatchStatus
          * @description A live report watch.
          */
@@ -3920,6 +3948,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_watches_v1_watches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchList"];
+                };
+            };
+            /** @description Not signed in (not_signed_in) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
             };
         };
     };
