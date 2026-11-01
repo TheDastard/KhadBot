@@ -1,0 +1,113 @@
+# The TypeScript workspace (apps/, packages/): the gate and the end-to-end tests.
+#
+# Runs when the workspace, the API contract or this file changes. A contract change that isn't regenerated into
+# packages/api-client fails `check:web` (its drift check).
+#
+# - check-web: `mise run check:web` (drift check, lint, typecheck, Vitest) on Linux and Windows.
+# - e2e: Playwright on Linux against the dev loop: Postgres and SeaweedFS in Docker (the dev loop's own compose
+#   services), the hosted API and worker natively with WCL replay and test sessions, seeded with the synthetic
+#   SYNTH01 report; then the local-mode smoke test against `main.py serve` over a fixture data directory built from
+#   the smallest recorded report (QkVa6GHRK8yfrTbw, about 10 MB of Git LFS pages). No WCL credentials or points.
+
+name: web
+
+on:
+  push:
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "contracts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "mise.toml"
+      - "scripts/dev/dev.py"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "contracts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "mise.toml"
+      - "scripts/dev/dev.py"
+      - ".github/workflows/web.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WARCRAFTLOGS_CLIENT_ID: ci-placeholder
+  WARCRAFTLOGS_CLIENT_SECRET: ci-placeholder
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-web:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+      # Installs Node and pnpm at the versions mise.toml pins.
+      - uses: jdx/mise-action@v5
+      - run: pnpm install --frozen-lockfile
+      - run: mise run check:web
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+      - name: Fetch the one recorded report the local smoke test reads
+        run: git lfs pull --include "tests/fixtures/encounter/wcl/QkVa6GHRK8yfrTbw/**"
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - uses: jdx/mise-action@v5
+      - run: uv sync --locked --extra dev
+      - run: pnpm install --frozen-lockfile
+      - run: mise run install:playwright -- --with-deps
+      - name: Dev loop settings, with WCL replay on
+        run: sed 's|^# KHADBOT_WCL_REPLAY=|KHADBOT_WCL_REPLAY=|' deploy/dev.env.example > deploy/dev.env
+      - name: Start the dev loop (Postgres and the bucket in Docker; the API, worker and web dev server natively)
+        run: |
+          nohup uv run python scripts/dev/dev.py all > dev-loop.log 2>&1 &
+          for i in $(seq 1 180); do grep -q "dev: ready" dev-loop.log && break; sleep 1; done
+          grep -q "dev: ready" dev-loop.log || { cat dev-loop.log; exit 1; }
+      - run: uv run python scripts/dev/dev.py seed --only SYNTH01
+      - run: mise run test:e2e
+      - name: Stop the dev loop
+        if: always()
+        run: |
+          pkill -f "scripts/dev/dev.py all" || true
+          sleep 3
+          docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes || true
+      - run: uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data --only QkVa6GHRK8yfrTbw
+      - run: mise run test:e2e:local
+      - if: failure()
+        run: tail -n 200 dev-loop.log || true
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/playwright-report-local
+            apps/web/test-results
+          retention-days: 7

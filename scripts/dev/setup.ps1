@@ -7,7 +7,9 @@
 #   2. mise's shims folder on the user PATH, so node and pnpm resolve outside `mise run` too. No `mise trust` is
 #      needed: the project's mise.toml uses nothing that requires it.
 #   3. Git LFS hooks, so the recorded WCL fixtures download as real files.
-#   4. Node and pnpm (`mise install`), the Python environment (`mise run install`) and the pre-commit hooks.
+#   4. Node and pnpm (`mise install`), the Python environment (`mise run install`), the TypeScript workspace's
+#      packages (`pnpm install --frozen-lockfile`) and the pre-commit hooks. Playwright's browser for the web app's
+#      end-to-end tests is a large download, so it comes only with -WithPlaywright.
 #      Every worktree shares the main clone's hooks, and `pre-commit install` writes the path of the Python that
 #      ran it into them, so the hooks are installed from the main checkout only. A worktree just checks them;
 #      installing from one would break the hooks for every checkout once that worktree is removed.
@@ -17,16 +19,18 @@
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
 # anything (winget shows its own agreement prompts).
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-WithDocker] [-SkipInstall]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-WithDocker] [-WithPlaywright] [-SkipInstall]
 #   -WithGitHubCli  also install the GitHub CLI (`gh`), which /land uses to watch CI when present
 #   -WithDocker     also install Docker Desktop (winget Docker.DockerDesktop, a large download under Docker's
 #                   subscription agreement). It may then ask for WSL 2, a reboot or Docker's own licence prompt;
 #                   finish those, start Docker Desktop and rerun this script to check the engine.
+#   -WithPlaywright also download Playwright's Chromium (about 150 MB) for `mise run test:e2e`
 #   -SkipInstall    only check and configure; don't install tools or dependencies
 
 param(
     [switch]$WithGitHubCli,
     [switch]$WithDocker,
+    [switch]$WithPlaywright,
     [switch]$SkipInstall
 )
 
@@ -175,6 +179,8 @@ Push-Location (git -C $PSScriptRoot rev-parse --show-toplevel)
 try {
     if ($SkipInstall) {
         if (Test-Path .venv) { Ok ".venv exists" } else { Problem ".venv is missing (run: mise run install)" }
+        if (Test-Path node_modules) { Ok "the TypeScript workspace's packages are installed" }
+        else { Problem "the TypeScript workspace's packages are missing (run: mise run install:web)" }
     } else {
         mise install
         # On a fresh machine the shims folder doesn't exist until mise has installed something, so the earlier
@@ -183,6 +189,14 @@ try {
         if ($LASTEXITCODE -ne 0) { Problem "mise install failed" } else { Ok "Node $(node --version), pnpm $(pnpm --version)" }
         mise run install
         if ($LASTEXITCODE -ne 0) { Problem "mise run install failed" } else { Ok "$(uv run python --version) in .venv" }
+        pnpm install --frozen-lockfile
+        if ($LASTEXITCODE -ne 0) { Problem "pnpm install failed" } else { Ok "the TypeScript workspace's packages are installed" }
+        if ($WithPlaywright) {
+            mise run install:playwright
+            if ($LASTEXITCODE -ne 0) { Problem "Playwright's browser download failed" } else { Ok "Playwright's Chromium is installed" }
+        } else {
+            Write-Host "  note  the web app's end-to-end tests need Playwright's Chromium: rerun with -WithPlaywright, or run: mise run install:playwright"
+        }
     }
 
     $hookPython = Test-PreCommitHook (Join-Path $commonDir "hooks")

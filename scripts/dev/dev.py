@@ -9,10 +9,12 @@ worker run on this machine in hosted mode and restart when a Python or config fi
     uv run python scripts/dev/dev.py worker [args]  # the job worker with --reload
     uv run python scripts/dev/dev.py seed [args]    # load the recorded fixture reports (--only CODE ...)
     uv run python scripts/dev/dev.py smoke          # health, a night summary and a queued job against the loop
-    uv run python scripts/dev/dev.py all            # infra, then the API and the worker together
+    uv run python scripts/dev/dev.py web            # the web dev server on :3000, pointed at the dev loop's API
+    uv run python scripts/dev/dev.py all [--no-web] # infra, then the API, the worker and the web dev server
     uv run python scripts/dev/dev.py session [args] # a test user's session cookie (main.py test-session)
 
-``mise run dev:infra``, ``dev:api``, ``dev:worker``, ``dev:seed``, ``dev:smoke``, ``dev:all`` and ``dev:session`` run these. Settings
+``mise run dev:infra``, ``dev:api``, ``dev:worker``, ``dev:web``, ``dev:seed``, ``dev:smoke``, ``dev:all`` and
+``dev:session`` run these. Settings
 come from deploy/dev.env (copied from deploy/dev.env.example by scripts/dev/setup.ps1) on top of the main checkout's
 .env, which supplies the WCL credentials. See docs/hosting.md, "Local development".
 """
@@ -37,6 +39,8 @@ DEV_ENV = REPO / "deploy" / "dev.env"
 DEV_ENV_EXAMPLE = REPO / "deploy" / "dev.env.example"
 API_HOST = "127.0.0.1"
 API_PORT = 8000
+WEB_PORT = 3000
+WEB_DIR = REPO / "apps" / "web"
 PLACEHOLDER_WCL = {
     "WARCRAFTLOGS_CLIENT_ID": "local-dev-client-id",
     "WARCRAFTLOGS_CLIENT_SECRET": "local-dev-client-secret",
@@ -152,11 +156,14 @@ def port_in_use(port: int) -> bool:
         return sock.connect_ex((API_HOST, port)) == 0
 
 
-def require_free_port(port: int) -> None:
-    if port_in_use(port):
+def require_free_port(port: int, what: str = "the API") -> None:
+    if not port_in_use(port):
+        return
+    if port == API_PORT:
         fail(
             f"port {port} is in use. `mise run stack:up` and the dev loop both want 8000: `mise run stack:down` first."
         )
+    fail(f"port {port} is in use; {what} needs it. Stop whatever listens there first.")
 
 
 def api_port(args: list[str]) -> int:
@@ -257,6 +264,30 @@ def wait_for_health(port: int, procs: dict[str, subprocess.Popen[str]], timeout:
     return None
 
 
+def web_command() -> list[str] | None:
+    """``pnpm --filter @khadbot/web dev``, or None when pnpm or the workspace's packages are missing."""
+    pnpm = shutil.which("pnpm")
+    if pnpm is None or not (WEB_DIR / "node_modules").is_dir():
+        return None
+    return [pnpm, "--filter", "@khadbot/web", "dev"]
+
+
+def web_environment(env: dict[str, str], port: int) -> dict[str, str]:
+    """The web dev server's environment: the API on ``localhost``, the host the session cookie is set for."""
+    return {**env, "NEXT_PUBLIC_API_BASE": f"http://localhost:{port}"}
+
+
+def run_web(env: dict[str, str]) -> None:
+    """Run the web dev server in the foreground (Next reloads on its own)."""
+    command = web_command()
+    if command is None:
+        fail("pnpm or the web packages are missing: run `pnpm install` at the repository root (setup.ps1 does).")
+        return
+    require_free_port(WEB_PORT, "the web dev server")
+    proc = spawn(command, web_environment(env, API_PORT), label=None)
+    sys.exit(supervise({"web": proc}))
+
+
 def run_one(role: str, args: list[str], env: dict[str, str]) -> None:
     """Run the API or the worker in the foreground, with reload."""
     if role == "api":
@@ -266,15 +297,27 @@ def run_one(role: str, args: list[str], env: dict[str, str]) -> None:
 
 
 def run_all(args: list[str], env: dict[str, str]) -> None:
-    """Start the infrastructure, then the API and the worker; Ctrl-C stops both."""
+    """Start the infrastructure, then the API, the worker and (unless ``--no-web``) the web dev server.
+
+    Ctrl-C stops them all. Without pnpm or the workspace's packages the web dev server is left out, with a note.
+    """
+    with_web = "--no-web" not in args
+    args = [a for a in args if a != "--no-web"]
     port = api_port(args)
     require_free_port(port)
+    web = web_command() if with_web else None
+    if with_web and web is None:
+        print("dev: no web dev server (pnpm or apps/web/node_modules is missing; run `pnpm install`)", flush=True)
+    if web is not None:
+        require_free_port(WEB_PORT, "the web dev server")
     started = time.monotonic()
     infra(env)
     procs = {
         "api": spawn(khadbot_command("api", args), env, label="api"),
         "worker": spawn(khadbot_command("worker", []), env, label="worker"),
     }
+    if web is not None:
+        procs["web"] = spawn(web, web_environment(env, port), label="web")
     try:
         took = wait_for_health(port, procs)
     except KeyboardInterrupt:
@@ -287,7 +330,9 @@ def run_all(args: list[str], env: dict[str, str]) -> None:
         sys.exit(supervise_status)
     print(
         f"dev: ready at http://{API_HOST}:{port} (API healthy {took:.1f}s after launch, "
-        f"{time.monotonic() - started:.1f}s from the command); Ctrl-C stops the API and the worker",
+        f"{time.monotonic() - started:.1f}s from the command)"
+        + (f"; the web app at http://localhost:{WEB_PORT}" if "web" in procs else "")
+        + "; Ctrl-C stops them",
         flush=True,
     )
     sys.exit(supervise(procs))
@@ -310,8 +355,13 @@ def stop_on_terminate() -> None:
 
 def main() -> None:
     stop_on_terminate()
+    # The children's output is UTF-8 (Next prints symbols); a Windows console may not be, and a failed print would
+    # stop the thread that drains a child's pipe, which then blocks the child.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
-    parser.add_argument("command", choices=["infra", "api", "worker", "seed", "smoke", "all", "session"])
+    parser.add_argument("command", choices=["infra", "api", "worker", "web", "seed", "smoke", "all", "session"])
     parser.add_argument("args", nargs=argparse.REMAINDER, help="passed to the command (for example --only SYNTH01)")
     parsed = parser.parse_args()
     args = [a for a in parsed.args if a != "--"]
@@ -328,6 +378,8 @@ def main() -> None:
         run(python_script("main.py", "test-session", *args), env)
     elif parsed.command == "all":
         run_all(args, env)
+    elif parsed.command == "web":
+        run_web(env)
     else:
         run_one(parsed.command, args, env)
 
