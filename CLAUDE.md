@@ -79,6 +79,7 @@ Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignore
 - The design and its data contracts come from the "KhadBot Encounter Review Refactor" plan: https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE (read it with the Artifact tool). Section 6 defines the models, file formats, evidence refs and verify rules.
 - `docs/decisions.md` records each design decision and why it was made. When you change a decision, update that file in the same change.
 - `docs/follow-ups.md` tracks open work that is not a plan task yet. Add a gap you are not fixing; remove it in the commit that fixes it.
+- Reference docs (the WCL API reference, `docs/encounter-pipeline.md`, `docs/hosting.md`) describe how things are now; `.claude/rules/docs.md` says how to update them.
 - Path-scoped rules in `.claude/rules/` add detail for the area you are working in.
 
 ## Commands
