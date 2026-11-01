@@ -7,10 +7,10 @@
   actors and players. KhadBot keeps them as `source_instance` / `target_instance`.
 - **Positions**: events with `includeResources` carry `x`, `y`, `facing` and `mapID` for one unit,
   `resourceActor` saying which (1 source, 2 target). 73% of rows in the 62 recorded pulls have one. They cost
-  nothing extra to fetch (already in the raw pages). Measured over the 62 pulls (2026-10-11, scratch spike, not
-  in the codebase): parquet 54.0 MB -> 75.0 MB (+39%); normalize 20.1 s -> 26.1 s in total (about 2 s per
-  night); reading a pull 20 -> 22 ms median; an as-of query for the boss-to-target distance at every swing about
-  8 ms per pull. What the positions are good for is in **Position data** below.
+  nothing extra to fetch (already in the raw pages). Measured over the 62 pulls with a scratch spike outside the
+  codebase: parquet 54.0 MB -> 75.0 MB (+39%); normalize 20.1 s -> 26.1 s in total (about 2 s per night); reading a
+  pull 20 -> 22 ms median; an as-of query for the boss-to-target distance at every swing about 8 ms per pull. What
+  the positions are good for is in **Position data** below.
 - **NPCs have no spawn event.** No fetched data type records an NPC appearing. Its first event (a cast, a melee
   swing, damage, or a player's cast aimed at it) is the earliest sign of it, so its spawn time is unknown, and
   its first position comes from that event, after it may have moved. Something a player carries as a debuff (an
@@ -18,10 +18,10 @@
 - **Some NPCs appear only as targets.** An NPC that deals no damage and never swings shows up only in its own
   casts and in players' casts aimed at it, with no death in the Threat data (the Venomous Heart on Ula'tek).
 
-## Position data (2026-10-16)
+## Position data
 
-Measured on the 47 Heroic Ula'tek pulls from the raw pages in `KHADBOT_DATA_DIR` (scratch scripts, not in the
-codebase; no API calls). The decision that follows from it is in `docs/decisions.md`.
+Measured on the 47 Heroic Ula'tek pulls from the raw pages in `KHADBOT_DATA_DIR`, with scratch scripts outside the
+codebase and no API calls. The decision that follows from it is in `docs/decisions.md`.
 
 ### What carries a position
 
@@ -86,8 +86,8 @@ spot under 2,500; ranged = the rest.
   5- and 7-yard radii below, so a rule should prefer the hit row's own position and treat an older sample as
   uncertain.
 - Ula'tek's stale samples matter less than they look, because her position only changes from one fixed spot to
-  another. Across 74 spot changes, the gap between the last sample at the old spot and the first at the new one is 6.2 s at the
-  median and 58 s at most. Her own cast rows always carry her exact position.
+  another. Across 74 spot changes, the gap between the last sample at the old spot and the first at the new one is
+  6.2 s at the median and 58 s at most. Her own cast rows always carry her exact position.
 
 ### Which questions positions answer
 
@@ -103,10 +103,15 @@ spot under 2,500; ranged = the rest.
 
 | Form | Extra storage on the 47 pulls (events: 2.97 M rows, 38.7 MB) |
 |---|---|
-| Columns on every event row (spike of 2026-10-11, 62 pulls) | +39% |
+| Columns on every event row (the 62-pull spike above) | +39% |
 | Separate per-pull table `t_ms, actor_id, instance, x, y` (2.02 M rows) | +11.5 MB (+30%) |
 | The same, keeping only rows where the position changed | +7.1 MB (+18%), but loses "still there at t" |
 
 A per-pull table reads in about 7 ms. An as-of lookup of 1,000 (actor, time) probes takes 1.5 to 3.3 ms after the
 first call. Normalize already parses every page, so the extra work is about the 2 s per night the columns
 spike measured.
+
+## Open questions
+
+- **Boss size.** Distances are measured from a boss's centre, and Ula'tek's size is not known, so a radius measured
+  from her (Circling Prey's 13 yards) can't be confirmed from positions alone.

@@ -2,11 +2,9 @@
 
 ## Access
 
-- Client-credentials token from `https://www.warcraftlogs.com/oauth/token`; queries go to `/api/v2/client`.
-  Private reports need a user token and `/api/v2/user`.
-- Requests spend rate-limit points; `rateLimitData { limitPerHour pointsSpentThisHour pointsResetIn }` reads the
-  counter. See "Rate limits and point types" below.
-- User sign-in (`wcl/oauth.py`) is the OAuth 2.0 authorization code grant with PKCE:
+- **Endpoints.** A client-credentials token from `https://www.warcraftlogs.com/oauth/token` queries
+  `/api/v2/client`. Private reports need a user token and `/api/v2/user`.
+- **User sign-in** (`wcl/oauth.py`) is the OAuth 2.0 authorization code grant with PKCE:
   - The authorize page is `https://www.warcraftlogs.com/oauth/authorize`, with `client_id`, `redirect_uri`,
     `response_type=code`, `code_challenge`, `code_challenge_method=S256` and `state`. Reading reports needs no
     `scope`; `KHADBOT_WCL_SCOPE` sends one if a later use needs it.
@@ -15,16 +13,17 @@
     exchange without the secret (HTTP 400, `invalid_request`). The response carries a refresh token alongside the
     access token.
   - Access tokens are renewed with the standard `refresh_token` grant. WCL doesn't document whether a refresh
-    returns a new refresh token, so keep the old one when the response has none.
+    returns a new refresh token, so KhadBot keeps the old one when the response has none.
   - The signed-in user is `userData { currentUser { id name } }`, which works on the user endpoint only.
-  - The refresh grant and `currentUser` haven't been exercised against WCL yet (see `docs/follow-ups.md`).
-- Whether a token can read a report: `reportData { report(code) { startTime } }`. A null report or a GraphQL error
-  means it can't; a network failure, an HTTP error or a rate limit leaves the answer unknown.
+- **Whether a token can read a report:** `reportData { report(code) { startTime } }` (operation `ReportReadable`,
+  `wcl/reports.py`). A null report or a GraphQL error means it can't; a network failure, an HTTP error or a rate
+  limit leaves the answer unknown.
+- **The point counter:** `rateLimitData` ("Reading the counter" below). A read costs 1 point (`probes.md`,
+  "Budget probe results").
 
 ## Rate limits and point types
 
-Source: WCL's API client settings page and its "Rate Limits" and "Point Types" documentation, read on 2026-10-24
-and 2026-10-25. WCL's documentation pages refuse scripted fetches, so check them by hand when this matters.
+Source: WCL's API client settings page and its "Rate Limits" and "Point Types" documentation.
 
 ### Limits
 
@@ -32,6 +31,7 @@ and 2026-10-25. WCL's documentation pages refuse scripted fetches, so check them
   on the same account adds no points.
 - **Two schemes.** WCL is moving accounts from its current limits to new ones. An account opts in with "Use New
   Limits" on the client settings page; API keys created on or after 2026-09-29 start on the new scheme.
+  `KHADBOT_WCL_LIMIT_SCHEME` tells the budget which one applies (`docs/hosting.md`).
 
 | Points | Current limits | New limits |
 |---|---|---|
@@ -42,7 +42,6 @@ and 2026-10-25. WCL's documentation pages refuse scripted fetches, so check them
 
 - **Subscriptions raise the limits** of the account that owns the client: Silver ($2 a month) more database
   points, Gold ($5) 3x the API points, Platinum ($10) 9x, Archon Alchemical Society ($25) Platinum's benefits.
-  Prices as listed on 2026-10-25.
 
 ### Point types
 
@@ -87,8 +86,13 @@ and 2026-10-25. WCL's documentation pages refuse scripted fetches, so check them
 
 An app that uses database-point fields needs WCL's explicit approval before it is commercialised.
 
-### Not yet known
+## Open questions
 
-- The size of a user's pool, and whether it differs by the user's own subscription.
-- Whether a `rateLimitData` read with a user token shows that user's pool or the application's.
-- Which label each field carries. The schema marks them one by one; the lists above are WCL's examples.
+- **The new limits.** The size of a user's pool, and whether it differs by the user's own subscription. Whether a
+  `rateLimitData` read with a user token shows that user's pool or the application's. Answering it needs the budget
+  probe (`probes.md`) on an account that has opted in.
+- **Field labels.** The schema labels fields one by one; the point-type lists above are WCL's examples. Check a
+  field's label on its type's schema page before relying on it.
+- **Sign-in.** The refresh grant and `currentUser` follow WCL's documentation and haven't been exercised against WCL
+  (`docs/follow-ups.md`).
+- **The readability check's cost.** `ReportReadable` is not measured; every request costs at least 1 point.
