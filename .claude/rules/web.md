@@ -41,7 +41,7 @@ Each area works in its own directories; wiring into someone else's file is a few
 |---|---|
 | Workspace root files, `packages/api-client/`, `app/layout.tsx`, `app/providers.tsx`, `app/fonts.ts`, `app/page.tsx`, `app/r/[code]/p/[fight]/` (route shells and slots), `lib/`, `styles/`, `components/ui/`, `components/shared/` | Shell |
 | `components/account/` (and the top bar's account slot) | Sign-in and account menu |
-| `components/raids/` (and the `raids-page` slot) | Raids page and log search |
+| `components/raids/` (and the `raids-page` slot, filled; its Guild and Character tab slots are `raids-guild` and `raids-character`) | Raids page and log search |
 | `components/raids/guild/`, `components/raids/character/` (and the Guild and Character tab slots) | Guild and character search |
 | `components/open-pull/` (and the `pull-not-loaded` slot) | Opening a pull |
 | `components/pull/`, `components/panel/` (and the `pull-body` slot) | Pull page and context panel |

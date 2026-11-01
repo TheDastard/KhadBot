@@ -14,7 +14,14 @@ test("the shell says Local and offers no sign-in", async ({ page }) => {
   const header = page.getByRole("banner");
   await expect(page.getByTestId("local-label")).toHaveText("Local");
   await expect(header.locator('[data-slot="account"]')).toHaveCount(0);
-  await expect(page.locator('[data-slot="raids-page"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Raids", level: 1 })).toBeVisible();
+});
+
+test("the Raids page lists the reports on the server, with no search", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.getByTestId("night-card").first()).toBeVisible();
+  await expect(page.getByTestId("night-card").first().getByTestId("pull-chip").first()).toHaveAttribute("href", /^\/r\/[^/]+\/p\/\d+$/);
 });
 
 test("a loaded pull opens without a session", async ({ page }) => {
@@ -31,6 +38,6 @@ test("opening a pull that isn't loaded is not available here", async ({ page }) 
 
 test("passes axe in both themes", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator('[data-slot="raids-page"]')).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Raids", level: 1 })).toBeVisible();
   await expectAccessible(page);
 });

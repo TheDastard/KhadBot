@@ -19,14 +19,14 @@ test.describe("signed out", () => {
     await expect(header).toContainText("Encounter review");
     await expect(page.getByTestId("local-label")).toHaveCount(0);
     await expect(header.locator('[data-slot="account"]')).toHaveCount(1);
-    await expect(page.locator('[data-slot="raids-page"]')).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Raids", level: 1 })).toBeVisible();
     // Only Wowhead's script was asked for off the machine, and it was refused.
     expect([...new Set(blockedHosts)]).toEqual(["wow.zamimg.com"]);
   });
 
   test("passes axe in both themes", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator('[data-slot="raids-page"]')).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Raids", level: 1 })).toBeVisible();
     await expectAccessible(page);
   });
 });
