@@ -41,12 +41,14 @@ from khadbot.api.schemas.pulls import (
     RefKind,
     WindowMarker,
 )
+from khadbot.api.schemas.raids import BudgetWaitBody, LookupGroup, LookupPull, LookupZone, ReportLookup
 from khadbot.api.schemas.reports import GroupInfo, PullSummary, ReportDetail, ReportGroup, ReportInfo, ReportList
 
 __all__ = [
     "API_VERSION",
     "BestPull",
     "BriefingLine",
+    "BudgetWaitBody",
     "CachedFindings",
     "CooldownMarker",
     "Coverage",
@@ -66,6 +68,9 @@ __all__ = [
     "JobFailure",
     "JobPull",
     "JobState",
+    "LookupGroup",
+    "LookupPull",
+    "LookupZone",
     "MechanicMarker",
     "MostFailedMechanic",
     "NightMechanic",
@@ -82,6 +87,7 @@ __all__ = [
     "ReportGroup",
     "ReportInfo",
     "ReportList",
+    "ReportLookup",
     "TrendRow",
     "WindowMarker",
 ]

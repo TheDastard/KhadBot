@@ -27,6 +27,9 @@ class Features(BaseModel):
     budget: bool = Field(default=False, description="The WCL point budget: /v1/budget")
     reviews: bool = Field(default=False, description="Pull reviews on the queue")
     chat: bool = Field(default=False, description="Chat with the conversation agent")
+    report_lookup: bool = Field(
+        default=False, description="Report lookup: a report's boss pulls before any is loaded, GET /v1/lookup/report"
+    )
 
 
 class Health(BaseModel):

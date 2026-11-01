@@ -170,6 +170,10 @@ def create_app(
 
         app.include_router(budget_router)
         offered["budget"] = True
+        from khadbot.api.raids.lookup import router as lookup_router  # report lookup: boss pulls from WCL, hosted only
+
+        app.include_router(lookup_router)
+        offered["report_lookup"] = True
     app.state.mode = mode
     app.state.features = Features(**offered)
     return app

@@ -259,8 +259,8 @@ class WatchConfig:
     # A watch stops after this long with no new boss fight, and after this long in all.
     quiet_period_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_QUIET_PERIOD_S", "2700")))
     max_length_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_MAX_LENGTH_S", "21600")))
-    # Points one metadata read reserves from the budget. docs/wcl/costs.md has no measurement of this query yet; WCL
-    # charges every request at least 1 point.
+    # Points one metadata read reserves from the budget. The query costs 2.01 points for a finished raid night
+    # (docs/wcl/costs.md, "Live watch polls"); raising this default waits for the next watch change (docs/follow-ups.md).
     poll_points: float = field(default_factory=lambda: float(_optional("KHADBOT_WATCH_POLL_POINTS", "1")))
     # A watch stops after this many failed reads in a row.
     max_failures: int = field(default_factory=lambda: int(_optional("KHADBOT_WATCH_MAX_FAILURES", "5")))
@@ -270,6 +270,31 @@ class WatchConfig:
             raise ValueError("WatchConfig's intervals and failure limit must be positive.")
         if self.poll_points < 1:
             raise ValueError("WatchConfig.poll_points must be at least 1: WCL charges every request at least 1 point.")
+
+
+@dataclass(frozen=True)
+class LookupConfig:
+    """
+    Report lookup (``api/raids/lookup.py``): how long a cached report-metadata answer stands while the log may still
+    be live, when a log counts as finished, and what one lookup reserves from the WCL budget. Local mode has no lookup.
+    """
+
+    # A cached answer younger than this is served as is; older, while the log may still be live, it is fetched again.
+    # Two minutes: a player who pastes a log link mid-raid sees the pull that was just logged within a couple of
+    # minutes, and a burst of lookups of one popular log still costs one request.
+    meta_max_age_s: float = field(default_factory=lambda: float(_optional("KHADBOT_LOOKUP_META_MAX_AGE_S", "120")))
+    # A log whose last fight ended this long ago is finished: its cached metadata stands whatever its age, so a
+    # night looked up the next day never costs a second request. Six hours is a watch's maximum length.
+    settled_after_s: float = field(default_factory=lambda: float(_optional("KHADBOT_LOOKUP_SETTLED_AFTER_S", "21600")))
+    # Points one lookup reserves from the budget: one metadata request, measured at 2.01 points for raid nights
+    # (``docs/wcl/report-data.md``, "Report metadata").
+    points: float = field(default_factory=lambda: float(_optional("KHADBOT_LOOKUP_POINTS", "2")))
+
+    def __post_init__(self) -> None:
+        if self.meta_max_age_s < 0 or self.settled_after_s <= 0:
+            raise ValueError("LookupConfig's ages must not be negative, and settled_after_s must be positive.")
+        if self.points < 1:
+            raise ValueError("LookupConfig.points must be at least 1: WCL charges every request at least 1 point.")
 
 
 _LOCAL_HOSTS = ("localhost", "127.0.0.1", "[::1]")

@@ -28,9 +28,11 @@ import contextlib
 import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from khadbot.config import EncounterConfig, get_config
 from khadbot.encounter.ingest.fetch import (
+    FETCHED_AT_KEY,
     FETCHED_WITH_KEY,
     MissingFixtureError,
     ProgressFn,
@@ -73,7 +75,11 @@ async def _report_meta(
     if report is None:
         raise WarcraftLogsAPIError(f"WarcraftLogs report '{code}' was not found.")
     # Which kind of token fetched it, never which user: a report fetched with a user token may be private.
-    report = {**report, FETCHED_WITH_KEY: "user" if token_provider else "app"}
+    report = {
+        **report,
+        FETCHED_WITH_KEY: "user" if token_provider else "app",
+        FETCHED_AT_KEY: datetime.now(UTC).isoformat(),
+    }
     cache.write_report_meta(code, report)
     return report
 

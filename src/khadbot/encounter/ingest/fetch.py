@@ -66,6 +66,9 @@ TokenProvider = Callable[[], Awaitable[str]]
 
 # Key added to the cached report metadata: which kind of token fetched it. Never records which user.
 FETCHED_WITH_KEY = "khadbotFetchedWith"
+# Key added beside it: when the metadata was fetched (ISO 8601, UTC). The report lookup serves a live log's cached
+# metadata only while this is recent; metadata cached without it (older caches, recorded fixtures) is of unknown age.
+FETCHED_AT_KEY = "khadbotFetchedAt"
 
 # ---------------------------------------------------------------------------
 # Errors

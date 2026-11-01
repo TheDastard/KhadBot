@@ -139,8 +139,11 @@ that token, and `points_spent` counts the user's budget; without it they use the
 for every request so it can refresh. On an HTTP 401 it is called once more and the request retried once; a second
 401 raises `UserTokenRejectedError`. When ingest fetches `report.json` it adds one key, `khadbotFetchedWith`, set to
 `"user"` or `"app"`: which kind of token fetched it, never which user. `"user"` means the report may be private. A
-`report.json` without the key (every directory written before it) reads as unrecorded, and a cached `report.json`
-is never rewritten by a later ingest, so the key describes the fetch that wrote the file.
+`report.json` without the key (every directory written before it) reads as unrecorded. A second key,
+`khadbotFetchedAt` (ISO 8601, UTC), says when it was fetched; the report lookup (`api/raids/lookup.py`) serves a live
+log's cached metadata only while that is recent, and metadata without it is of unknown age. A later ingest never
+rewrites a cached `report.json`; the lookup and a live watch do when the cached copy is stale, so both keys describe
+the fetch that wrote the file.
 
 ## 2. Normalize
 
