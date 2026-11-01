@@ -42,6 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from khadbot import wiring
+from khadbot.api.abilities import router as abilities_router
 from khadbot.api.deps import ReportDirectory
 from khadbot.api.names import router as names_router
 from khadbot.api.night import ReadSource
@@ -149,6 +150,7 @@ def create_app(
     # The mode is not among them: the caller names it.
     offered: dict[str, bool] = {}
     app.include_router(router)
+    app.include_router(abilities_router)  # report abilities with WCL's icon names (api/abilities.py), every mode
     app.include_router(names_router)  # display names, cooldowns and players (api/names.py): read routes, every mode
     if auth is not None:
         from khadbot.auth.routes import mount  # hosted only: loads the crypto library

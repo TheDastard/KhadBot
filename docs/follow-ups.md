@@ -326,6 +326,19 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 
 ### Dashboard API
 
+- **Boss and faction art from Blizzard's Game Data API.** Boss portraits, raid images and class icons have no source
+  yet, so the web app shows its fallbacks. The plan is in `docs/game-art.md`: it needs a Battle.net API client the
+  user creates (an authenticator on the account, the API terms, a registered client) and its secret in the hosted
+  secrets; a refresh job resolving each encounter's creature-display render through WCL's `journalID` (recorded in
+  the encounter files, `null` with `verified: false` when unknown) and keeping the URLs at most 30 days; an API route
+  serving the URLs; and Blizzard named as the source. The faction mark is drawn by KhadBot, not taken from Blizzard.
+- **Wowhead script on a client-rendered page.** The script scans links at load; the web app calls
+  `WH.Tooltips.refreshLinks(element)` after rendering, which is in the script's code but not on Wowhead's tooltips page.
+  Confirm it, and the Content-Security-Policy hosts and inline-style allowance, in a browser when the web app builds
+  ability links (`docs/game-art.md`).
+- **WCL ability icons unconfirmed.** `GET_REPORT_META` asks for `masterData.abilities.icon`, but no recording has it;
+  look at the value on the first live report, and re-record metadata only if something needs it.
+
 - **Night summary on large reports in local mode.** `EncounterData` keeps records for 32 pulls, so the night
   summary or the report view of a 47-pull night rebuilds records for most pulls on every request (with the
   annotation cache, about 0.3 s each, behind one lock; with the records store about 0.2 s each, 3.9 s for a
