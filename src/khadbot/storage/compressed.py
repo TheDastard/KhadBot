@@ -34,7 +34,7 @@ def _zstd() -> Any:
 
 # Level 9 gives 27% smaller objects than zstd's default level 3 on the recorded raw pages for about 4x the CPU
 # (58 MB/s against 253 MB/s), which is still far faster than WCL delivers pages. Decompression speed does not depend
-# on the level. docs/wcl-api.md ("Raw page compression") has the measurements.
+# on the level. docs/wcl/costs.md ("Raw page compression") has the measurements.
 DEFAULT_LEVEL = 9
 
 

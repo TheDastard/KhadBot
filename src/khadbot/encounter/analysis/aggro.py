@@ -7,7 +7,7 @@ the player it is attacking, and a taunt shows as the taunt debuff landing on the
 ``aggro_bands`` turns those into spans of "this NPC instance was on this player": a band starts at a
 swing or taunt on a new player and ends at the next switch, the NPC's death, ``AGGRO_QUIET_MS`` without
 a swing or taunt, or the pull end. Merged per NPC actor and player, this rule reproduces WCL's own
-threat table on the reference pull (see docs/wcl-api.md). ``aggro_summaries`` is the digest view.
+threat table on the reference pull (see docs/wcl/report-data.md). ``aggro_summaries`` is the digest view.
 """
 
 from __future__ import annotations

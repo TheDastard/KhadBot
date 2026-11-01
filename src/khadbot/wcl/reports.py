@@ -4,7 +4,7 @@ wcl/reports.py
 Whether a WCL token can read a report: one small query for the report's start time, on the app token (public
 reports) or a user's token (also the reports that user may see). The ``auth`` package caches the answers.
 
-``report(code) { startTime }`` is the cheapest field ingest's metadata query already uses (``docs/wcl-api.md``,
+``report(code) { startTime }`` is the cheapest field ingest's metadata query already uses (``docs/wcl/report-data.md``,
 "Report metadata"), so the probe asks for nothing unconfirmed.
 """
 

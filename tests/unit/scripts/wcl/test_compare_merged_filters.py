@@ -309,7 +309,7 @@ def test_stream_cost_ceiling_uses_documented_model():
 def test_estimates_state_their_sources():
     _, _, specs = synth_inputs()
     text = "\n".join(cmf.baseline_estimate(len(specs)))
-    assert "docs/wcl-api.md" in text and "14 points" in text
+    assert "docs/wcl/" in text and "14 points" in text
     text = "\n".join(cmf.variant_estimate(cmf.build_variants(specs)["hostility"], 60))
     assert "probe" in text and "Ceiling" in text and "unknown" in text
 
@@ -652,7 +652,7 @@ def test_estimates_for_paired_variants():
     text = "\n".join(cmf.crossfight_estimate(_crossfight(specs), 60))
     assert "2 pulls" in text and "documented model" in text and "ceiling" in text
     text = "\n".join(cmf.healonly_estimate("F", 60))
-    assert "probe" in text and "'F'" in text and "docs/wcl-api.md" in text
+    assert "probe" in text and "'F'" in text and "docs/wcl/" in text
 
 
 def test_load_pull_reads_fixture_metadata(tmp_path):

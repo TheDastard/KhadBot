@@ -82,7 +82,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   25-pull nights (about five on WCL's new 1,000-point limit), and raid nights cluster on the same evenings.
   WoWAnalyzer's server sends a signed-in user's requests to `/api/v2/user` with that user's token and uses the app
   token only for visitors who aren't signed in. Steps:
-  1. Whose budget a user-token request spends: answered by WCL's point-type documentation (`docs/wcl-api.md`,
+  1. Whose budget a user-token request spends: answered by WCL's point-type documentation (`docs/wcl/access-and-points.md`,
      "Rate limits and point types"). On the current scheme every request spends the app's pool, which both probe runs
      showed. On the new scheme a signed-in user's requests to user-eligible fields (report events and metadata)
      spend that user's small pool first, then fall back to the app's. Still open: the pool's size, how
@@ -97,7 +97,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
      on every report and pull route (including evidence refs and job streams) and mount the sign-in routes with
      CORS that allows credentials, `POST` and the `X-KhadBot-CSRF` header for the web origins.
 - **Sign-in details to confirm on the first hosted sign-in.** The refresh grant and the `currentUser` query are
-  from WCL's documentation, not a recorded response (`docs/wcl-api.md`, Access); whether a refresh rotates the
+  from WCL's documentation, not a recorded response (`docs/wcl/access-and-points.md`, Access); whether a refresh rotates the
   refresh token, and the error text for a private or missing report, are unknown. An ingest job retried after a
   401 re-reads the stored token rather than forcing a refresh, so a token WCL revokes before its stated expiry
   fails that job until its expiry passes or the user signs in again. Expired `sessions` and `oauth_states` rows
@@ -115,7 +115,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   - The points per poll are not measured. The estimate is 1 point (`KHADBOT_WATCH_POLL_POINTS`), from the
     documented cost of a small query; the metadata query also lists every actor and ability, so it may cost more.
     `uv run python scripts/wcl/measure_watch_poll.py --code <public report> --polls 3` measures it (about 20 points;
-    it asks for a typed `yes` first). Record the result in `docs/wcl-api.md` and set the default.
+    it asks for a typed `yes` first). Record the result in `docs/wcl/costs.md` and set the default.
   - Whether WCL lists a fight that is still in progress is unverified. The watch ignores a fight whose end is not
     after its start; if WCL lists a running fight with an end time in the future, its pull would be fetched
     early and its raw pages cached as complete. Check on a live report, and if so also wait for a poll in which the
@@ -158,7 +158,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   storing and serving derived data.
 - **Batched fetch gaps.** The batched small-spec fetch (`fetch_batches`, decision D55) is built; what's left:
   - No recorded-fixture test shows batched frames equal per-pull frames. The live probe showed it on a 25-pull
-    night (`docs/wcl-api.md`, "Cross-fight and heal-only results"), but the fixtures hold per-pull pages only. A
+    night (`docs/wcl/probes.md`, "Cross-fight and heal-only results"), but the fixtures hold per-pull pages only. A
     test could build each night's batch streams from those pages (every row carries its `fight`), split them and
     compare the normalized frames, for every fixture night.
   - Live ingests are batched too. Ingest never reads `IngestReport.live`, so a watch poll that finds two or more
@@ -169,7 +169,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   - The saving hasn't been measured on a real ingest through the shipped code path, only with the probe script.
     Measuring it spends WCL points.
 - **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
-  filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl-api.md`, "Merged-filter results"):
+  filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl/probes.md`, "Merged-filter results"):
   - One request per hostility with no `dataType` is refused (internal server error), so that merge is out.
   - Merging same-type requests (the two Buffs requests as one, ability IDs unioned) gave identical normalized
     frames but saved 14% of points (21 against 24.31), under the 15% bar, and 58% of wall time on one run that
@@ -181,8 +181,8 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   - A merged request needs its pages' data type taken from the rows, and normalize, the truncation anomaly and
     the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
 - **Filter Healing to fewer row types.** Healing is the largest spec. `type = "heal"` saved 2 of 10 points on
-  `trMgApZCVYkv3jdq:26` (2026-10-20, `docs/wcl-api.md`, "Cross-fight and heal-only results"), but Healing carries
-  rows other code reads (`docs/wcl-api.md`, "Events"). Rebuilding the seven recorded fixture pulls' records
+  `trMgApZCVYkv3jdq:26` (2026-10-20, `docs/wcl/probes.md`, "Cross-fight and heal-only results"), but Healing carries
+  rows other code reads (`docs/wcl/report-data.md`, "Events"). Rebuilding the seven recorded fixture pulls' records
   without non-heal Healing rows (2026-10-24) cost friendly damage its whole `redistribution` class (30 to 40% of
   friendly damage on four pulls), took a Tempered in Battle top hit and 6 to 8% of window damage from two deaths
   on `QkVa6GHRK8yfrTbw:14`, lost 73 position samples, and dropped Anti-Magic Shell from two deaths' active
@@ -225,7 +225,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   - How the raid split, how many groups there were and who was in each.
   - Who wasn't with their assigned subgroup. This needs raid-plan assignments (plan section 14).
   Hit rows give exact positions; other samples are 0.1 s old at the median and 0.5 s at p95
-  (`docs/wcl-api.md`, "Position data").
+  (`docs/wcl/positions.md`, "Position data").
 - **Wrong-target damage.** Show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
   Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/decisions.md`, "Log
   investigations"; proposed contract text in `docs/plan-changes.md` under `encounter/spike-logs`): fetch
@@ -233,7 +233,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   files (spans from a damage window, a phase or an NPC's lifetime), an `off_target_share_gt {value}` failure rule
   and a `KILL TARGETS` digest section. Steps:
   1. With WCL credentials, check DamageDone on one long recorded pull: the event fields (`targetInstance`,
-     `amount`, `absorbed`), pages, size and points. Record them in `docs/wcl-api.md`.
+     `amount`, `absorbed`), pages, size and points. Record them in `docs/wcl/report-data.md`.
   2. Add the fetch spec and normalize it (damage rows with a friendly source and an NPC target).
   3. Add the encounter-file block, the rule, the digest section and a `kill:<id>` ref.
   4. Author the Ula'tek entry: the Venomous Heart (game ID 267460) during `rage_of_the_shackled`.
@@ -256,7 +256,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   multi-group report included). Run the hosted tests locally with the LFS pages, or give the job LFS.
 - **Report guild and visibility are not fetched.** `reports.guild_id`, `guild_name` and `visibility` stay empty:
   the report query doesn't ask WCL for them. Add them to the report query (checking the field names against the
-  WCL schema, `docs/wcl-api.md`) and fill them in `read_models.report_row`; the WCL budget's per-guild allowance
+  WCL schema, `docs/wcl/report-data.md`) and fill them in `read_models.report_row`; the WCL budget's per-guild allowance
   needs the guild.
 - **Read-model rows of removed pulls stay.** The writer replaces one pull's rows at a time; a fight that drops
   out of a report on re-ingest, or a deleted report, keeps its rows until something deletes them (retention).

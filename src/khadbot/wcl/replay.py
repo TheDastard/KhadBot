@@ -10,7 +10,7 @@ scripts) opens its own ``WarcraftLogsClient``, and the client picks this transpo
 Everything above it (retries, 401 handling, rate-limit errors, failure codes, the budget, progress) runs as it does
 against real WCL; only the bytes on the wire are recorded ones.
 
-How a request is answered (``docs/wcl-api.md``, "WCL replay"):
+How a request is answered (``docs/wcl/replay.md``, "WCL replay"):
 
 - Token requests: the client-credentials grant gets a placeholder app token locally. Every other grant (the sign-in
   code exchange and refresh) goes to real WCL, and so does the current-user query, so real sign-in keeps working.
@@ -62,7 +62,7 @@ EVENTS_PAGE_OPERATION = "GetEventsPage"
 REPORT_READABLE_OPERATION = "ReportReadable"
 
 REPLAY_APP_TOKEN = "replay-app-token"  # noqa: S105 - a placeholder, never sent anywhere
-POINTS_PER_REQUEST = 1.0  # docs/wcl-api.md: every request costs at least 1; a one-page request costs about 1
+POINTS_PER_REQUEST = 1.0  # docs/wcl/costs.md: every request costs at least 1; a one-page request costs about 1
 
 _OPERATION = re.compile(r"^\s*query\s+(\w+)")
 _PAGE = re.compile(r"page_\d+\.json")

@@ -65,7 +65,7 @@ enemy `Casts` uses `ability.id IN (900101,900201,900401,900501,900601)`; everyth
 
 Seven pulls recorded on 2026-10-11 from three public reports of one guild's Heroic Ula'tek progression
 (encounter 3492, The Venomous Abyss). The full reports live only in `$KHADBOT_DATA_DIR`; these pulls were
-copied from that raw cache. API notes and costs: `docs/wcl-api.md`.
+copied from that raw cache. API notes and costs: `docs/wcl/`.
 
 Each report directory has the full `report.json` (every fight), but only the listed fights have pages, so
 offline ingest must pass `fight_ids`. `bossPercentage` was merged into each `report.json` afterwards
