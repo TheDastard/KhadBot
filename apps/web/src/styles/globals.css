@@ -72,6 +72,10 @@
   --cls-shaman: #0069d0;
   --cls-warlock: #6363ae;
   --cls-warrior: #836648;
+
+  /* Faction colours (the guild header), at least 4.5:1 on s1 */
+  --faction-horde: #a8231d;
+  --faction-alliance: #1f5fa8;
 }
 
 .dark {
@@ -124,6 +128,10 @@
   --cls-shaman: #368ee4;
   --cls-warlock: #8788ee;
   --cls-warrior: #c69b6d;
+
+  /* Faction colours (the guild header) */
+  --faction-horde: #ef6a5f;
+  --faction-alliance: #6fa8ee;
 }
 
 /* shadcn/ui's names, mapped onto the canvas tokens (the spec's "shadcn variable" column) */
@@ -216,6 +224,9 @@
   --color-cls-shaman: var(--cls-shaman);
   --color-cls-warlock: var(--cls-warlock);
   --color-cls-warrior: var(--cls-warrior);
+
+  --color-faction-horde: var(--faction-horde);
+  --color-faction-alliance: var(--faction-alliance);
 
   /* 2 px corners everywhere, 0 for full-bleed bars (no pills or circles) */
   --radius-sm: var(--radius);
