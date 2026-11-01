@@ -79,7 +79,7 @@ Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and ea
 
 ### Live report watch
 
-A signed-in user can watch a report that is still being logged (`POST /v1/reports/{code}/watch`; `GET` shows the watch and `DELETE` stops it). The watch polls the report's metadata on the user's own WCL token and queues an ingest of each new boss fight (`docs/decisions.md`, D64). It runs on the `watch` queue, which workers take jobs from by default; a worker started with `--queues` or `KHADBOT_WORKER_QUEUES` must list `watch` to run polls. Settings, all optional:
+A signed-in user can watch a report that is still being logged (`POST /v1/reports/{code}/watch`; `GET` shows the watch and `DELETE` stops it; `GET /v1/watches` lists the caller's active watches, newest first). The watch polls the report's metadata on the user's own WCL token and queues an ingest of each new boss fight (`docs/decisions.md`, D64). It runs on the `watch` queue, which workers take jobs from by default; a worker started with `--queues` or `KHADBOT_WORKER_QUEUES` must list `watch` to run polls. Settings, all optional:
 
 | Variable | Meaning |
 |---|---|

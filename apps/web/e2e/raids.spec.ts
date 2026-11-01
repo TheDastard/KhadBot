@@ -143,11 +143,11 @@ test.describe("errors, signed in", () => {
 });
 
 test.describe("errors", () => {
-  test("a signed-out visitor's unreadable log shows the private-log spot", async ({ page }) => {
+  test("a signed-out visitor's unreadable log shows the private-log card", async ({ page }) => {
     await page.goto(`/?source=${PRIVATE}`);
     const spot = page.locator('[data-slot="private-log-card"]');
     await expect(spot).toBeVisible();
-    await expect(spot).toContainText("Report not found or private");
+    await expect(spot.getByRole("heading", { name: "This log is private" })).toBeVisible();
   });
 
   test("a busy WarcraftLogs counts down and enables Retry at the end", async ({ page }) => {

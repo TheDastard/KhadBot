@@ -13,8 +13,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
+import { AccountControl } from "@/components/account";
 import { useFeatures } from "@/lib/capabilities";
 
 import { ThemeMenu } from "./theme-menu";
@@ -57,10 +58,16 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
   );
 }
 
-/** The account control's place: empty until the sign-in area fills it. Rendered only when sign-in exists. */
+/** The account control's place: the sign-in button or account menu. Rendered only when sign-in exists. */
 function AccountSlot() {
-  // Slot: account. Replace this line with the sign-in button / account menu (components/account/).
-  return <span data-slot="account" className="inline-block min-h-[34px]" />;
+  // Slot: account. Filled by components/account/ (it reads the URL, hence the Suspense).
+  return (
+    <span data-slot="account" className="inline-flex min-h-[34px] items-center gap-2">
+      <Suspense fallback={<span className="inline-block min-h-[34px]" aria-hidden />}>
+        <AccountControl />
+      </Suspense>
+    </span>
+  );
 }
 
 export function TopBar({ breadcrumb }: { breadcrumb?: ReactNode }) {

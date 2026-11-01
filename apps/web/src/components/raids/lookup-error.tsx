@@ -7,6 +7,7 @@
 
 import type { ApiError } from "@khadbot/api-client";
 
+import { PrivateLogCard } from "@/components/account";
 import { ErrorState } from "@/components/shared/error-state";
 import { formatCountdown } from "@/lib/format";
 import { useSignedIn } from "@/lib/session";
@@ -40,7 +41,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           action={{ label: "Edit the code", onClick: onEditCode }}
         />
       ) : (
-        <PrivateLogSlot code={error.code} onEditCode={onEditCode} />
+        <PrivateLogSlot />
       );
     case "budget_exhausted":
       return (
@@ -96,21 +97,13 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
 }
 
 /**
- * Slot: private-log-card. A signed-out visitor's 404 shows the sign-in task's private-log card here
- * (components/account/): what signing in allows and the "Sign in with Warcraft Logs" button, returning to this
- * search afterwards. Until it exists, the canvas's plain "Report not found or private" error stands in.
+ * Slot: private-log-card. A signed-out visitor's 404 shows the sign-in card from components/account/: what signing in
+ * allows and the "Sign in with Warcraft Logs" button, returning to this search afterwards.
  */
-function PrivateLogSlot({ code, onEditCode }: { code: string; onEditCode: () => void }) {
+function PrivateLogSlot() {
   return (
     <div data-slot="private-log-card">
-      <ErrorState
-        tone="bad"
-        where="Search"
-        code={code}
-        title="Report not found or private"
-        body="WarcraftLogs returned no report for this code. Check the code, or ask the report's owner to make it public."
-        action={{ label: "Edit the code", onClick: onEditCode }}
-      />
+      <PrivateLogCard />
     </div>
   );
 }

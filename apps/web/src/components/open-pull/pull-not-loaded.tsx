@@ -9,8 +9,9 @@ import { unwrap, type ApiGet } from "@khadbot/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { signInHrefHere } from "@/components/account";
 import { useFeature } from "@/lib/capabilities";
-import { api, apiHref } from "@/lib/api";
+import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
 
 import { errorCard } from "./error-cards";
@@ -62,14 +63,9 @@ export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
       phase={phase}
       countdownS={countdownS}
       onStartAgain={open.restart}
-      signInHref={signInHref()}
+      signInHref={signInHrefHere()}
     />
   );
-}
-
-function signInHref(): string {
-  const here = typeof window === "undefined" ? "/" : window.location.pathname + window.location.search;
-  return apiHref("/v1/auth/login", { next: here });
 }
 
 /** The phase to draw: a failed request to open the pull, or a lost connection, outranks what the job last said. */
