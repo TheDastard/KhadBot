@@ -161,6 +161,21 @@ class TestDeathsEdgeCases:
         (d,) = death_records(a, ACTORS, abilities={0: "Unknown Ability"})
         assert (d.killing_ability_id, d.killing_ability_name) == (None, None)
 
+    def test_killer_is_the_death_rows_source(self):
+        a = annotate(make_pull(), make_events([_hit(1_000, 1, 10_000), _death(1_000, 1)]), None, ACTORS)
+        (d,) = death_records(a, ACTORS)
+        names = {x.actor_id: x.name for x in ACTORS}
+        assert (d.killer_id, d.killer_name) == (BOSS, names[BOSS])
+
+    def test_no_killer_when_wcl_names_none(self):
+        # WCL writes killerID -1 when no actor dealt the blow; the killing blow's own source is not used instead.
+        rows = [_hit(1_000, 1, 10_000), {**_death(1_000, 1), "source_id": -1}]
+        a = annotate(make_pull(), make_events(rows), None, ACTORS)
+        (d,) = death_records(a, ACTORS)
+        assert (d.killer_id, d.killer_name) == (None, None)
+        missing = annotate(make_pull(), make_events([{**_death(1_000, 1), "source_id": None}]), None, ACTORS)
+        assert death_records(missing, ACTORS)[0].killer_id is None
+
     def test_window_self_damage_counts_self_inflicted_registry_abilities(self):
         rows = [
             _from(1_000, 3, 3, SELF_BURN, 2_000),
@@ -507,6 +522,8 @@ class TestCooldowns:
         assert [w.occurrence for w in rows] == [1, 2]
         assert rows[0].defensive_cooldowns_active == [900301]
         assert rows[1].ref == f"ev:SYNTH01:{fight}:win:cataclysm:2"
+        (window,) = [w for w in synth_enc.damage_windows if w.id == "cataclysm"]
+        assert {w.expected_defensive_cooldowns for w in rows} == {window.expected_defensive_cooldowns}
 
     def test_externals_do_not_cover_raid_windows(self, synth, synth_defensive, synth_enc):
         # Fight 1's second Cataclysm (40 s) lands while Guardian (external) is on the tank.

@@ -34,6 +34,7 @@
         900301
       ],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 1,
       "ref": "ev:SYNTH01:1:win:cataclysm:1",
       "t_ms": 20000,
@@ -43,6 +44,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 2,
       "ref": "ev:SYNTH01:1:win:cataclysm:2",
       "t_ms": 40000,
@@ -55,6 +57,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
+      "killer_id": 10,
+      "killer_name": "Synthetic Boss",
       "killing_ability_id": 900101,
       "killing_ability_name": "Synth Swirl",
       "mechanic_ids": [
@@ -93,6 +97,8 @@
       ],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 10,
+      "killer_name": "Synthetic Boss",
       "killing_ability_id": 900102,
       "killing_ability_name": "Synth Fire Pool",
       "mechanic_ids": [
@@ -150,6 +156,8 @@
       "active_defensives": [],
       "actor_id": 4,
       "after_cutoff": false,
+      "killer_id": 10,
+      "killer_name": "Synthetic Boss",
       "killing_ability_id": 900102,
       "killing_ability_name": "Synth Fire Pool",
       "mechanic_ids": [
@@ -193,6 +201,8 @@
       "active_defensives": [],
       "actor_id": 1,
       "after_cutoff": true,
+      "killer_id": 10,
+      "killer_name": "Synthetic Boss",
       "killing_ability_id": 900010,
       "killing_ability_name": "Synth Melee",
       "mechanic_ids": [],
@@ -345,7 +355,7 @@
     "offensive_cooldowns_hash": "bee16b79e5c1",
     "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
     "pull_hash": "943507b64b20820d",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "ee9c7763e587"
   },
   "pull_key": "SYNTH01:1",

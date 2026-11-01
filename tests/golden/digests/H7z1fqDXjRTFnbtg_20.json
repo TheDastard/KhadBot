@@ -99,6 +99,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 1,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:1",
       "t_ms": 135500,
@@ -108,6 +109,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 2,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:2",
       "t_ms": 284528,
@@ -117,6 +119,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 3,
       "ref": "ev:H7z1fqDXjRTFnbtg:20:win:rage_of_the_shackled:3",
       "t_ms": 573727,
@@ -129,6 +132,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1292403,
       "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
@@ -189,6 +194,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
+      "killer_id": 250,
+      "killer_name": "Blightscale Shrieker",
       "killing_ability_id": 1313531,
       "killing_ability_name": "Acidic Expulsion",
       "mechanic_ids": [
@@ -252,6 +259,8 @@
       ],
       "actor_id": 16,
       "after_cutoff": false,
+      "killer_id": 250,
+      "killer_name": "Blightscale Shrieker",
       "killing_ability_id": 1313531,
       "killing_ability_name": "Acidic Expulsion",
       "mechanic_ids": [
@@ -313,6 +322,8 @@
       ],
       "actor_id": 11,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1292403,
       "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
@@ -373,6 +384,8 @@
       "active_defensives": [],
       "actor_id": 4,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1286835,
       "killing_ability_name": "Necrotic Vapors",
       "mechanic_ids": [
@@ -433,6 +446,8 @@
       "active_defensives": [],
       "actor_id": 19,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1292403,
       "killing_ability_name": "Caustic Waves",
       "mechanic_ids": [
@@ -492,6 +507,8 @@
       "active_defensives": [],
       "actor_id": 11,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1305878,
       "killing_ability_name": "Volatile Purge",
       "mechanic_ids": [
@@ -550,6 +567,8 @@
       "active_defensives": [],
       "actor_id": 2,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1305878,
       "killing_ability_name": "Volatile Purge",
       "mechanic_ids": [
@@ -609,6 +628,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1307367,
       "killing_ability_name": "Rage of the Shackled",
       "mechanic_ids": [
@@ -667,6 +688,8 @@
       "active_defensives": [],
       "actor_id": 8,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1307367,
       "killing_ability_name": "Rage of the Shackled",
       "mechanic_ids": [
@@ -1328,7 +1351,7 @@
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "b94f0d59330c5501aba7e880d6a0ae91ee7c3f488105eb72dde775c0e1c6a933",
     "pull_hash": "4e84c41650aec139",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:20",

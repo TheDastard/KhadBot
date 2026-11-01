@@ -763,3 +763,24 @@ W0: the read API, the contract with its drift test and the fixture data director
 of the earlier ingest plan: a job is a `jobs` row. Job states are `queued | running | waiting_budget | done | failed |
 cancelled`; per-pull status is `fetching | normalizing | processing | done | failed | cancelled`; the error codes are
 in `JobErrorCode`. Every report route answers 404 for a report the caller cannot read.
+
+## dashboard/round-1
+
+### Refactor plan 6.3 (Analysis records)
+
+In `DeathRecord`, after `killing_ability_name`:
+
+```
+    killer_id: int | None = None     # the death row's killerID; None when WCL gives -1 (no actor)
+    killer_name: str | None = None   # the killer's actor name, without an instance number
+```
+
+In `WindowCoverage`, after `covered`:
+
+```
+    expected_defensive_cooldowns: int   # the encounter file's count that covered is judged by
+```
+
+(The plan's `WindowCoverage` still shows the older `cooldowns_active`; as built the fields are
+`defensive_cooldowns_active`, `covered`, `expected_defensive_cooldowns` and `defensive_cooldowns_late`.)
+`RECORDS_VERSION` is 2.

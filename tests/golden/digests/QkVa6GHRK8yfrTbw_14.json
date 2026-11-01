@@ -76,6 +76,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -135,6 +137,8 @@
       "active_defensives": [],
       "actor_id": 12,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -194,6 +198,8 @@
       "active_defensives": [],
       "actor_id": 9,
       "after_cutoff": false,
+      "killer_id": 173,
+      "killer_name": "Blightscale Viper",
       "killing_ability_id": 1,
       "killing_ability_name": "Melee",
       "mechanic_ids": [
@@ -253,6 +259,8 @@
       "active_defensives": [],
       "actor_id": 11,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -313,6 +321,8 @@
       "active_defensives": [],
       "actor_id": 14,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -373,6 +383,8 @@
       "active_defensives": [],
       "actor_id": 20,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -433,6 +445,8 @@
       "active_defensives": [],
       "actor_id": 10,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -492,6 +506,8 @@
       "active_defensives": [],
       "actor_id": 1,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -552,6 +568,8 @@
       "active_defensives": [],
       "actor_id": 161,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -612,6 +630,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
+      "killer_id": 163,
+      "killer_name": "Gore Rattle",
       "killing_ability_id": 1299206,
       "killing_ability_name": "Rattler Slam",
       "mechanic_ids": [
@@ -1103,7 +1123,7 @@
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "f75b1008260fa2246e19e2551cafca3b99edee25fb79193f49d18c55dea0170e",
     "pull_hash": "708eef03c7353c26",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "QkVa6GHRK8yfrTbw:14",

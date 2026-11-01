@@ -541,6 +541,28 @@
             "title": "After Cutoff",
             "type": "boolean"
           },
+          "killer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Killer Id"
+          },
+          "killer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Killer Name"
+          },
           "killing_ability_id": {
             "anyOf": [
               {
@@ -3059,6 +3081,10 @@
             "title": "Defensive Cooldowns Late",
             "type": "array"
           },
+          "expected_defensive_cooldowns": {
+            "title": "Expected Defensive Cooldowns",
+            "type": "integer"
+          },
           "occurrence": {
             "title": "Occurrence",
             "type": "integer"
@@ -3082,7 +3108,8 @@
           "occurrence",
           "t_ms",
           "defensive_cooldowns_active",
-          "covered"
+          "covered",
+          "expected_defensive_cooldowns"
         ],
         "title": "WindowCoverage",
         "type": "object"

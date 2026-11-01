@@ -105,6 +105,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 1,
       "ref": "ev:trMgApZCVYkv3jdq:18:win:rage_of_the_shackled:1",
       "t_ms": 135531,
@@ -114,6 +115,7 @@
       "covered": false,
       "defensive_cooldowns_active": [],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 2,
       "ref": "ev:trMgApZCVYkv3jdq:18:win:rage_of_the_shackled:2",
       "t_ms": 284540,
@@ -126,6 +128,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 46,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1293146,
       "killing_ability_name": "Serpent's Bite",
       "mechanic_ids": [
@@ -185,6 +189,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -245,6 +251,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -305,6 +313,8 @@
       "active_defensives": [],
       "actor_id": 47,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -366,6 +376,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -426,6 +438,8 @@
       "active_defensives": [],
       "actor_id": 14,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -486,6 +500,8 @@
       "active_defensives": [],
       "actor_id": 23,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -546,6 +562,8 @@
       "active_defensives": [],
       "actor_id": 33,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -606,6 +624,8 @@
       "active_defensives": [],
       "actor_id": 24,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -665,6 +685,8 @@
       "active_defensives": [],
       "actor_id": 42,
       "after_cutoff": false,
+      "killer_id": null,
+      "killer_name": null,
       "killing_ability_id": 1318329,
       "killing_ability_name": "Calcified Corpse",
       "mechanic_ids": [
@@ -1325,7 +1347,7 @@
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "e2ba87617afb16bd6b2426fd15ea0cdd018c015847a2ea15d2b70273a8cc75d9",
     "pull_hash": "d536447964cc6027",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "trMgApZCVYkv3jdq:18",

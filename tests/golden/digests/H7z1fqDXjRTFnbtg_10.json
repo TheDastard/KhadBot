@@ -57,6 +57,8 @@
       "active_defensives": [],
       "actor_id": 10,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -117,6 +119,8 @@
       "active_defensives": [],
       "actor_id": 15,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -177,6 +181,8 @@
       "active_defensives": [],
       "actor_id": 3,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -236,6 +242,8 @@
       "active_defensives": [],
       "actor_id": 8,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -295,6 +303,8 @@
       "active_defensives": [],
       "actor_id": 4,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -354,6 +364,8 @@
       "active_defensives": [],
       "actor_id": 13,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -413,6 +425,8 @@
       "active_defensives": [],
       "actor_id": 6,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -472,6 +486,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -531,6 +547,8 @@
       "active_defensives": [],
       "actor_id": 17,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -590,6 +608,8 @@
       "active_defensives": [],
       "actor_id": 22,
       "after_cutoff": false,
+      "killer_id": 233,
+      "killer_name": "Ula'tek",
       "killing_ability_id": 1301122,
       "killing_ability_name": "Mother's Wrath",
       "mechanic_ids": [
@@ -923,7 +943,7 @@
     "offensive_cooldowns_hash": "dbcbf6e1f8cf",
     "positions_hash": "298e2934044b47a2ff09d6bdd2c4b04e7d10bdc6ec7511ae2cc232482f97034d",
     "pull_hash": "314587a68049c63a",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "1949740e6d48"
   },
   "pull_key": "H7z1fqDXjRTFnbtg:10",

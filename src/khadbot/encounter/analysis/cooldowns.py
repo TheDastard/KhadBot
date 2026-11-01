@@ -136,6 +136,7 @@ def window_coverage(a: Annotated, enc: EncounterFile | None, defensive: Cooldown
                     t_ms=t,
                     defensive_cooldowns_active=active,
                     covered=len(active) >= window.expected_defensive_cooldowns,
+                    expected_defensive_cooldowns=window.expected_defensive_cooldowns,
                     defensive_cooldowns_late=[
                         LateCooldown(spell_id=spell, late_ms=start - t)
                         for spell, start in sorted(late_start.items(), key=lambda kv: (kv[1], kv[0]))

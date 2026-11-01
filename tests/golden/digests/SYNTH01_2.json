@@ -31,6 +31,7 @@
         900301
       ],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 1,
       "ref": "ev:SYNTH01:2:win:cataclysm:1",
       "t_ms": 20000,
@@ -42,6 +43,7 @@
         900301
       ],
       "defensive_cooldowns_late": [],
+      "expected_defensive_cooldowns": 1,
       "occurrence": 2,
       "ref": "ev:SYNTH01:2:win:cataclysm:2",
       "t_ms": 45000,
@@ -54,6 +56,8 @@
       "active_defensives": [],
       "actor_id": 5,
       "after_cutoff": false,
+      "killer_id": 10,
+      "killer_name": "Synthetic Boss",
       "killing_ability_id": 900102,
       "killing_ability_name": "Synth Fire Pool",
       "mechanic_ids": [
@@ -170,7 +174,7 @@
     "offensive_cooldowns_hash": "bee16b79e5c1",
     "positions_hash": "e1b812c9b12f9762eb905fbb733affa95c7e1396f142b7de9b0ddb28c873a8b8",
     "pull_hash": "82035c6b73514e13",
-    "records_version": "1",
+    "records_version": "2",
     "utility_cooldowns_hash": "ee9c7763e587"
   },
   "pull_key": "SYNTH01:2",

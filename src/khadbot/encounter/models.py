@@ -184,6 +184,10 @@ class DeathRecord(BaseModel):
     phase_id: str | None
     killing_ability_id: int | None
     killing_ability_name: str | None
+    # The death row's killer (WCL ``killerID``); None when WCL names none (-1). ``killer_name`` has no instance
+    # number: normalize does not keep WCL's ``killerInstance``.
+    killer_id: int | None = None
+    killer_name: str | None = None
     overkill: int | None
     time_to_die_ms: int | None  # death t_ms minus last t_ms with hp_pct >= 90; None without hp data
     window_ms: int = 10_000
@@ -266,6 +270,7 @@ class WindowCoverage(BaseModel):
     t_ms: int
     defensive_cooldowns_active: list[int]  # defensive raid cooldown spell IDs whose aura was active at t_ms
     covered: bool  # len(defensive_cooldowns_active) >= expected_defensive_cooldowns
+    expected_defensive_cooldowns: int  # the encounter file's count for this window, which ``covered`` is judged by
     # Defensive raid cooldowns not active at t_ms whose aura started during the occurrence (see window_coverage).
     defensive_cooldowns_late: list[LateCooldown] = Field(default_factory=list)
 
