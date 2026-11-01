@@ -677,7 +677,7 @@ src/khadbot/
     __init__.py
     app.py                    # create_app(data, findings, *, data_dir, routers), error body, CORS, OpenAPI document
     routes.py                 # the /v1 read endpoints
-    schemas.py                # response models (the source of contracts/openapi.json), RefKind
+    schemas/                  # response models by area (the source of contracts/openapi.json), RefKind
     night.py                  # NightSummary: per-group aggregates and the templated briefing
     views.py                  # report groups, pull summaries, timeline, event rows, cached findings
   encounter/
