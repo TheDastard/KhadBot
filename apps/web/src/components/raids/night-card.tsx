@@ -6,7 +6,8 @@
 import { EncounterRow } from "./encounter-row";
 import { nightMeta, type Night } from "./night";
 
-export function NightCard({ night }: { night: Night }) {
+/** `meta` replaces the "date · N boss pulls" line (the character search words it "… pulls with <name>"). */
+export function NightCard({ night, meta }: { night: Night; meta?: string }) {
   return (
     <article data-testid="night-card" data-code={night.code} className="rounded-sm border border-line bg-s1">
       <header className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 px-4 py-2.5">
@@ -15,7 +16,7 @@ export function NightCard({ night }: { night: Night }) {
             {night.title ? <b className="text-[15px] font-semibold">{night.title}</b> : null}
             <span className="font-mono text-xs text-mut">{night.code}</span>
           </span>
-          <span className="text-xs text-mut">{nightMeta(night)}</span>
+          <span className="text-xs text-mut">{meta ?? nightMeta(night)}</span>
         </div>
         {/* Slot: night-overview. The night overview's button returns here with that screen; nothing is drawn now. */}
       </header>
