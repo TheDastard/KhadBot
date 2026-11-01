@@ -1597,9 +1597,39 @@
         "title": "IngestRequest",
         "type": "object"
       },
+      "IngestResponse": {
+        "description": "What `POST /v1/reports` answers. `ready` with no job: every pull asked for is already loaded, so open it.\nOtherwise `job` is the ingest to follow: a new one (202), or the queued or running one that already covers the\nrequest, whoever started it (200).",
+        "properties": {
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Job"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ready"
+        ],
+        "title": "IngestResponse",
+        "type": "object"
+      },
       "Job": {
         "description": "An ingest job. Also the payload of the `job.state` and `job.done` stream events.",
         "properties": {
+          "can_cancel": {
+            "default": false,
+            "description": "The caller started this job and it is still active. Anyone who can read the report may follow a job; only its requester may cancel it.",
+            "title": "Can Cancel",
+            "type": "boolean"
+          },
           "cancel_requested": {
             "title": "Cancel Requested",
             "type": "boolean"
@@ -1651,6 +1681,7 @@
                 "type": "null"
               }
             ],
+            "description": "Only for the job's own requester",
             "title": "Points Spent"
           },
           "pulls": {
@@ -1774,6 +1805,58 @@
       "JobPull": {
         "description": "One pull of an ingest, as far as it has reported.",
         "properties": {
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WCL difficulty code",
+            "title": "Difficulty"
+          },
+          "difficulty_name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "lfr",
+                  "normal",
+                  "heroic",
+                  "mythic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Name"
+          },
+          "encounter_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set once the job has read the report's fights",
+            "title": "Encounter Id"
+          },
+          "encounter_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounter Name"
+          },
           "fight": {
             "title": "Fight",
             "type": "integer"
@@ -1805,11 +1888,20 @@
           },
           "status": {
             "$ref": "#/components/schemas/PullStatus"
+          },
+          "steps": {
+            "description": "download, prepare, analyse, in that order",
+            "items": {
+              "$ref": "#/components/schemas/JobStep"
+            },
+            "title": "Steps",
+            "type": "array"
           }
         },
         "required": [
           "pull_key",
           "fight",
+          "steps",
           "stage",
           "pct",
           "status"
@@ -1829,6 +1921,30 @@
         ],
         "title": "JobState",
         "type": "string"
+      },
+      "JobStep": {
+        "description": "One of the three steps of a pull.",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/StepName"
+          },
+          "pct": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Pct",
+            "type": "number"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StepState"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "pct"
+        ],
+        "title": "JobStep",
+        "type": "object"
       },
       "LateCooldown": {
         "properties": {
@@ -3235,6 +3351,7 @@
       },
       "PullStatus": {
         "enum": [
+          "waiting",
           "fetching",
           "normalizing",
           "processing",
@@ -3666,6 +3783,27 @@
         ],
         "title": "ReportLookup",
         "type": "object"
+      },
+      "StepName": {
+        "description": "The three steps a player sees while a pull opens: \"Download the fight\", \"Prepare the events\", \"Find what happened\".",
+        "enum": [
+          "download",
+          "prepare",
+          "analyse"
+        ],
+        "title": "StepName",
+        "type": "string"
+      },
+      "StepState": {
+        "enum": [
+          "waiting",
+          "running",
+          "done",
+          "failed",
+          "skipped"
+        ],
+        "title": "StepState",
+        "type": "string"
       },
       "TrendRow": {
         "properties": {
@@ -4507,7 +4645,7 @@
     },
     "/v1/jobs/{job_id}": {
       "get": {
-        "description": "A job of yours: its state, per-pull progress and typed error.",
+        "description": "A job on a report you can read: its state, per-pull steps and typed error.",
         "operationId": "get_job_v1_jobs__job_id__get",
         "parameters": [
           {
@@ -4549,7 +4687,7 @@
                 }
               }
             },
-            "description": "No such job of yours, or a report you cannot read"
+            "description": "No such job, or a report you cannot read"
           },
           "422": {
             "content": {
@@ -4580,7 +4718,7 @@
     },
     "/v1/jobs/{job_id}/cancel": {
       "post": {
-        "description": "Cancel a job of yours. A queued job is dropped at once; a running one stops at its next page and shows\n``cancel_requested`` until it has. A finished job is returned unchanged.",
+        "description": "Cancel a job you started (403 `not_your_job` for anyone else who follows it). A queued job is dropped at once; a\nrunning one stops at its next page and shows `cancel_requested` until it has. A finished job is returned unchanged.",
         "operationId": "cancel_job_v1_jobs__job_id__cancel_post",
         "parameters": [
           {
@@ -4622,7 +4760,7 @@
                 }
               }
             },
-            "description": "CSRF check failed (csrf_failed)"
+            "description": "CSRF check failed (csrf_failed), or not your job (not_your_job)"
           },
           "404": {
             "content": {
@@ -4632,7 +4770,7 @@
                 }
               }
             },
-            "description": "No such job of yours, or a report you cannot read"
+            "description": "No such job, or a report you cannot read"
           },
           "422": {
             "content": {
@@ -4663,7 +4801,7 @@
     },
     "/v1/jobs/{job_id}/events": {
       "get": {
-        "description": "Follow a job of yours as server-sent events. A reconnecting client gets the current state first.",
+        "description": "Follow a job on a report you can read as server-sent events. A reconnecting client gets the current state first.",
         "operationId": "job_events_v1_jobs__job_id__events_get",
         "parameters": [
           {
@@ -4705,7 +4843,7 @@
                 }
               }
             },
-            "description": "No such job of yours, or a report you cannot read"
+            "description": "No such job, or a report you cannot read"
           },
           "422": {
             "content": {
@@ -4915,7 +5053,7 @@
         ]
       },
       "post": {
-        "description": "Queue an ingest of a report. The caller must be able to read the report (404 ``report_not_found`` otherwise).\nThe job fetches with the caller's own Warcraft Logs token when they have one, else with the app's.",
+        "description": "Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`\notherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job\n(200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued\n(202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's.",
         "operationId": "start_ingest_v1_reports_post",
         "requestBody": {
           "content": {
@@ -4932,17 +5070,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Job"
+                  "$ref": "#/components/schemas/IngestResponse"
                 }
               }
             },
-            "description": "Your own queued or running ingest already covers this request"
+            "description": "Every pull asked for is already loaded (`ready`, no job), or a queued or running ingest already covers the request (`job`, whoever started it)"
           },
           "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Job"
+                  "$ref": "#/components/schemas/IngestResponse"
                 }
               }
             },
@@ -4976,7 +5114,7 @@
                 }
               }
             },
-            "description": "CSRF check failed (csrf_failed)"
+            "description": "CSRF check failed (csrf_failed), or not your job (not_your_job)"
           },
           "404": {
             "content": {
@@ -4986,17 +5124,7 @@
                 }
               }
             },
-            "description": "No such job of yours, or a report you cannot read"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Another user's ingest of this report is running (ingest_in_progress)"
+            "description": "No such job, or a report you cannot read"
           },
           "422": {
             "content": {

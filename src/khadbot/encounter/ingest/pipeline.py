@@ -26,7 +26,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
@@ -144,6 +144,7 @@ async def fetch_report(
     write_manifests: bool = True,
     pull_concurrency: int | None = None,
     batch: bool = True,
+    on_pulls: Callable[[Sequence[Pull]], None] | None = None,
 ) -> FetchedReport:
     """
     Fetch the report metadata and the raw pages of the requested fights of ``code`` (all encounter fights when
@@ -169,6 +170,9 @@ async def fetch_report(
 
     ``batch=False`` fetches every spec per pull, with no cross-fight requests: the shape recorded reports were fetched
     in, which WCL replay answers.
+
+    ``on_pulls`` is called once with the pulls this call fetches, as soon as the report metadata names them and before
+    any page is requested, so a job can describe its pulls (encounter, difficulty) while they load.
     """
     if refresh_meta and offline:
         raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
@@ -193,6 +197,9 @@ async def fetch_report(
             for i in fight_ids:
                 if i not in by_id:
                     failed[f"{code}:{i}"] = "fight not found in report"
+
+        if on_pulls is not None:
+            on_pulls(wanted)
 
         stored = {p.fight_id for p in store.pulls(code)}
         if refresh_meta:

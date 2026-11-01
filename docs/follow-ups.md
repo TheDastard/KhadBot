@@ -344,10 +344,10 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - Hosted API: `GET /v1/reports` lists a user's reports from cached "readable" access rows without re-checking their age,
   so a report made private later stays in that user's list (title and pull counts only) until they open it again and
   the check runs. Filter on `access_recheck_s` if that matters.
-- Hosted API: a failed `rate_limited` job has no `retry_after_s` (the job row keeps no WCL hint; only a job queued for a
-  retry shows the backoff left).
-- Hosted API: a second user's ingest of a report whose ingest is already running gets 409 `ingest_in_progress`
-  rather than following the first user's job.
+- Hosted API: `POST /v1/reports` follows a covering job even when that job has `cancel_requested` set and is only
+  stopping, so a visitor who opens a pull in that moment follows a job that ends cancelled. Start a new job instead.
+- Hosted API: a pull counts as loaded (`ready`) when a records blob exists for it under any inputs, so after a
+  records version bump an already-loaded pull opens through the digest route's rebuild rather than a new job.
 
 - **Live watch poll cost.** The report metadata query a watch poll sends costs 2.01 points for a raid night
   (`docs/wcl/report-data.md`, "Report metadata"), but `KHADBOT_WATCH_POLL_POINTS` defaults to 1. Set it to 2 with

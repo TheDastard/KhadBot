@@ -108,6 +108,26 @@ class TestRunning:
         assert len(env.records.keys("SYNTH01")) == len(PULLS)
         assert set(queue_statuses(connector).values()) == {"succeeded"}
 
+    async def test_one_ingest_describes_its_pulls_and_ends_with_three_done_steps_for_each(self, env):
+        from khadbot.api.jobs import job_view
+
+        queue, backend, _ = make_queue(lambda: env.context)
+        async with queue.open():
+            ingest = (await queue.enqueue(IngestReport(code="SYNTH01", offline=True))).job
+        await drain(queue, backend)
+
+        job = backend.rows[ingest.id]
+        assert sorted(job.progress.info) == PULLS  # described once, before any page was fetched
+        view = job_view(job)
+        assert [p.pull_key for p in view.pulls] == PULLS
+        for pull in view.pulls:
+            assert pull.encounter_name and pull.encounter_id
+            assert [(s.name.value, s.state.value, s.pct) for s in pull.steps] == [
+                ("download", "done", 100.0),
+                ("prepare", "done", 100.0),
+                ("analyse", "done", 100.0),
+            ]
+
     async def test_a_repeat_ingest_finds_everything_stored(self, env):
         queue, backend, _ = make_queue(lambda: env.context)
         async with queue.open():
@@ -171,6 +191,36 @@ class TestFailures:
         job = backend.rows[ingest.id]
         assert job.state is JobState.DONE and job.attempts == 2 and job.error_code is None
         assert resolver.calls == 2
+
+    async def test_a_rate_limit_retries_no_sooner_than_wcl_asked_and_shows_when(self, env):
+        from datetime import UTC, datetime, timedelta
+
+        from khadbot.wcl.client import WarcraftLogsRateLimitError
+
+        self.flaky(env, WarcraftLogsRateLimitError("429", retry_after_s=90), failures=99)
+        queue, backend, connector = make_queue(lambda: env.context)
+        async with queue.open():
+            ingest = (await queue.enqueue(IngestReport(code="SYNTH01", offline=True))).job
+            await queue.run_worker(wait=False, listen_notify=False, install_signal_handlers=False)
+        job = backend.rows[ingest.id]
+        assert (job.state, job.error_code) == (JobState.QUEUED, "wcl_rate_limited")
+        left = (job.progress.retry_at - datetime.now(UTC)).total_seconds()
+        assert 80 < left <= 90  # the backoff here is 0 s: WCL's hint sets the time
+        scheduled = [row["scheduled_at"] for row in connector.jobs.values() if row.get("scheduled_at")]
+        assert scheduled and min(scheduled) > datetime.now(UTC) + timedelta(seconds=80)
+
+    async def test_a_rate_limited_job_that_runs_out_of_retries_keeps_wcls_hint(self, env):
+
+        from datetime import UTC, datetime, timedelta
+
+        queue, backend, _ = make_queue(lambda: env.context)
+        async with queue.open():
+            ingest = (await queue.enqueue(IngestReport(code="SYNTH01", offline=True))).job
+        hint = datetime.now(UTC) + timedelta(seconds=30)
+        await queue.store.begin(ingest.id)
+        await queue.store.finish(ingest.id, JobState.FAILED, error_code="wcl_rate_limited", retry_at=hint)
+        job = backend.rows[ingest.id]
+        assert (job.state, job.error_code, job.progress.retry_at) == (JobState.FAILED, "wcl_rate_limited", hint)
 
     async def test_retries_run_out(self, env):
         self.flaky(env, TransientJobError("renew later"), failures=99)

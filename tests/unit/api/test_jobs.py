@@ -282,3 +282,59 @@ async def test_other_jobs_notifications_do_not_emit_events():
     await store.report_progress("j1", "ABC:2", "normalizing", 0.5)
     assert '"pull_key":"ABC:2"' in await asyncio.wait_for(pending, 2)
     await stream.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Pulls, steps and the retry time
+# ---------------------------------------------------------------------------
+
+
+def test_a_job_lists_the_pulls_it_was_asked_for_before_they_report():
+    view = job_view(record(spec={"fights": [3, 1]}, state=JobState.QUEUED))
+    assert [(p.pull_key, p.status.value) for p in view.pulls] == [("ABC:1", "waiting"), ("ABC:3", "waiting")]
+    assert all([s.state.value for s in p.steps] == ["waiting"] * 3 for p in view.pulls)
+
+
+def test_a_pull_carries_its_encounter_and_difficulty_and_its_steps():
+    from khadbot.jobs.progress import PullInfo
+    from khadbot.jobs.status import JobProgress, PullProgress
+
+    progress = JobProgress(
+        pulls={"ABC:12": PullProgress(stage="normalizing", fraction=0.6)},
+        info={"ABC:12": PullInfo(pull_key="ABC:12", encounter_id=3176, encounter_name="Ula'tek", difficulty=4)},
+    )
+    view = job_view(record(state=JobState.RUNNING, progress=progress))
+    (pull,) = view.pulls
+    assert (pull.encounter_id, pull.encounter_name, pull.difficulty, pull.difficulty_name) == (
+        3176,
+        "Ula'tek",
+        4,
+        "heroic",
+    )
+    assert [(s.name.value, s.state.value) for s in pull.steps] == [
+        ("download", "done"),
+        ("prepare", "running"),
+        ("analyse", "waiting"),
+    ]
+    assert pull.steps[1].pct == 60.0
+
+
+def test_only_the_requester_can_cancel_and_sees_the_points():
+    rec = record(state=JobState.RUNNING, points_spent=12.0)
+    assert (job_view(rec).can_cancel, job_view(rec).points_spent) == (True, 12.0)
+    other = job_view(rec, own=False)
+    assert (other.can_cancel, other.points_spent) == (False, None)
+    assert job_view(record(state=JobState.DONE)).can_cancel is False
+
+
+def test_a_rate_limited_job_shows_the_retry_time_it_stored():
+    from khadbot.jobs.status import JobProgress
+
+    stored = JobProgress(retry_at=NOW + timedelta(seconds=42))
+    queued = record(state=JobState.QUEUED, error_code="wcl_rate_limited", progress=stored)
+    assert failure_for(queued, QueueConfig(), NOW).retry_after_s == pytest.approx(42.0)
+    failed = record(state=JobState.FAILED, error_code="wcl_rate_limited", progress=stored)
+    assert failure_for(failed, QueueConfig(), NOW).retry_after_s == pytest.approx(42.0)
+    assert failure_for(failed, QueueConfig(), NOW + timedelta(seconds=60)).retry_after_s == 0.0
+    no_hint = record(state=JobState.FAILED, error_code="wcl_rate_limited")
+    assert failure_for(no_hint, QueueConfig(), NOW).retry_after_s is None

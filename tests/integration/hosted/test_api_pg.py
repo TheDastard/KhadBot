@@ -79,6 +79,7 @@ def test_the_event_stream_follows_a_job_over_listen_notify(db):
     assert [c.split("\n")[1] for c in chunks] == [
         "event: job.state",
         "event: pull.progress",
+        "event: pull.progress",  # the job ended, which settles the pull's steps
         "event: job.state",
         "event: job.done",
     ]

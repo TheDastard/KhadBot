@@ -16,7 +16,19 @@ from __future__ import annotations
 
 from khadbot.api.schemas.common import API_VERSION, Coverage, DifficultyName, ErrorBody, Outcome
 from khadbot.api.schemas.health import Features, Health
-from khadbot.api.schemas.jobs import IngestRequest, Job, JobErrorCode, JobFailure, JobPull, JobState, PullStatus
+from khadbot.api.schemas.jobs import (
+    IngestRequest,
+    IngestResponse,
+    Job,
+    JobErrorCode,
+    JobFailure,
+    JobPull,
+    JobState,
+    JobStep,
+    PullStatus,
+    StepName,
+    StepState,
+)
 from khadbot.api.schemas.names import (
     CooldownList,
     CooldownName,
@@ -83,11 +95,13 @@ __all__ = [
     "GroupInfo",
     "Health",
     "IngestRequest",
+    "IngestResponse",
     "Job",
     "JobErrorCode",
     "JobFailure",
     "JobPull",
     "JobState",
+    "JobStep",
     "LookupGroup",
     "LookupPull",
     "LookupZone",
@@ -113,6 +127,8 @@ __all__ = [
     "ReportInfo",
     "ReportList",
     "ReportLookup",
+    "StepName",
+    "StepState",
     "TrendRow",
     "WindowEvidence",
     "WindowMarker",

@@ -48,6 +48,7 @@ class Failure:
     code: ErrorCode
     message: str  # safe to show a user: never a token, URL or connection string
     retryable: bool = False
+    retry_after_s: float | None = None  # the wait the service asked for (WCL's Retry-After), when it gave one
 
 
 class JobCancelled(BaseException):  # noqa: N818 - not an error, and it must pass every ``except Exception``
@@ -69,7 +70,12 @@ def classify(exc: BaseException) -> Failure:
     if isinstance(exc, TransientJobError):
         return Failure(ErrorCode.NETWORK, str(exc), retryable=True)
     if isinstance(exc, WarcraftLogsRateLimitError):
-        return Failure(ErrorCode.RATE_LIMITED, "Warcraft Logs rate limited the requests.", retryable=True)
+        return Failure(
+            ErrorCode.RATE_LIMITED,
+            "Warcraft Logs rate limited the requests.",
+            retryable=True,
+            retry_after_s=exc.retry_after_s,
+        )
     if isinstance(exc, WarcraftLogsNetworkError):
         return Failure(ErrorCode.NETWORK, "Warcraft Logs could not be reached.", retryable=True)
     if isinstance(exc, WarcraftLogsPrivateReportError):

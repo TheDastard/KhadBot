@@ -23,6 +23,7 @@ from typing import Self
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.models import FetchSpec
 from khadbot.jobs.failures import JobCancelled
+from khadbot.jobs.progress import PullInfo
 from khadbot.jobs.status import JobStore
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,7 @@ class ProgressWriter:
     """
 
     def __init__(self, store: JobStore, job_id: str, flag: CancelFlag, interval: float = 0.5) -> None:
+        self._described: list[PullInfo] = []
         self._store = store
         self._job_id = job_id
         self._flag = flag
@@ -87,7 +89,17 @@ class ProgressWriter:
         self._pending.pop(pull, None)  # keep the order of the latest updates
         self._pending[pull] = (stage, fraction)
 
+    def describe(self, pulls: Sequence[PullInfo]) -> None:
+        """Note what the job's pulls are; written with the next flush."""
+        self._described.extend(pulls)
+
     async def flush(self) -> None:
+        described, self._described = self._described, []
+        if described:
+            try:
+                await self._store.set_pull_info(self._job_id, described)
+            except Exception:  # noqa: BLE001 - see the class docstring
+                logger.warning("Could not write the pull details of job %s", self._job_id, exc_info=True)
         pending, self._pending = self._pending, {}
         for pull, (stage, fraction) in pending.items():
             try:
