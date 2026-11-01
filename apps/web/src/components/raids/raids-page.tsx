@@ -7,7 +7,6 @@
 
 "use client";
 
-import { SearchIcon } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
@@ -18,6 +17,7 @@ import { useFeatures } from "@/lib/capabilities";
 import { pullPagePath } from "@/lib/refs";
 import { cn } from "@/lib/utils";
 
+import { BeforeSearch } from "./before-search";
 import { LookupError } from "./lookup-error";
 import { useReportLookup } from "./lookup";
 import { NightCard } from "./night-card";
@@ -195,23 +195,6 @@ function LogResults({ source }: { source: string | null }) {
       ) : (
         <NightCard night={night} />
       )}
-    </section>
-  );
-}
-
-function BeforeSearch() {
-  return (
-    <section
-      aria-labelledby="raids-empty-h"
-      className="flex flex-col items-center gap-2.5 rounded-sm border border-dashed border-line bg-s1 px-6 py-8 text-center"
-    >
-      <SearchIcon className="size-10 text-mut" strokeWidth={1.6} aria-hidden />
-      <h2 id="raids-empty-h" className="m-0 font-display text-xl leading-[1.3]">
-        Find a night of raiding
-      </h2>
-      <p className="m-0 max-w-[56ch]">
-        Paste a WarcraftLogs report link, or search by guild or character. Their pulls show up here; open any pull to review it.
-      </p>
     </section>
   );
 }
