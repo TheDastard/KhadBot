@@ -83,7 +83,10 @@ def test_report_groups_and_pull_summaries(dataset, client):
     for group in body["groups"]:
         assert group["total"] == len(group["pulls"])
         assert group["truncated"] is False
-        assert [p["ordinal"] for p in group["pulls"]] == list(range(1, len(group["pulls"]) + 1))
+        places = range(1, len(group["pulls"]) + 1)
+        assert [p["ordinal"] for p in group["pulls"]] == [
+            dataset.ordinal(p["fight"], i) for p, i in zip(group["pulls"], places, strict=True)
+        ]
         for row in group["pulls"]:
             expected = pull_summary(records(dataset, row["fight"]))
             assert row["label"] == f"P{row['ordinal']}"
@@ -371,3 +374,26 @@ def test_death_evidence_names_the_killer(real_dataset):
     death = next(d for d in r.deaths if d.killer_id is not None)
     record = evidence(ds.client, death.ref).json()["record"]
     assert (record["killer_id"], record["killer_name"]) == (death.killer_id, death.killer_name)
+
+
+def test_a_pull_keeps_the_label_the_log_search_gives_it(real_dataset):
+    """Numbered among every pull in the report's cached metadata, not among the loaded ones (P8 stays P8)."""
+    body = real_dataset.client.get(f"/v1/reports/{MULTI_GROUP_REPORT}").json()
+    lookup = real_dataset.ordinals(MULTI_GROUP_REPORT)
+    rows = [p for g in body["groups"] for p in g["pulls"]]
+    assert rows and all(p["ordinal"] == lookup[p["fight"]] and p["label"] == f"P{lookup[p['fight']]}" for p in rows)
+    places = [i for g in body["groups"] for i, _ in enumerate(g["pulls"], start=1)]
+    assert [p["ordinal"] for p in rows] != places  # the fixture loads only some pulls, so the two numberings differ
+
+
+def test_labels_fall_back_to_the_loaded_pulls_without_cached_metadata():
+    from khadbot.api.night import numbered
+
+    class F:
+        def __init__(self, fight_id):
+            self.fight_id = fight_id
+
+    pulls = [F(4), F(9)]
+    assert [n for n, _ in numbered(pulls, {4: 2, 9: 5})] == [2, 5]
+    assert [n for n, _ in numbered(pulls, {4: 2})] == [1, 2]  # one pull unknown: the whole group falls back
+    assert [n for n, _ in numbered(pulls, None)] == [1, 2]

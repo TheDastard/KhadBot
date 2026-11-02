@@ -99,7 +99,8 @@ def test_section_values_match_the_records(dataset):
         # --- trend ---
         assert [t["fight"] for t in section["trend"]] == [r.pull.fight_id for r in group]
         for i, (t, r) in enumerate(zip(section["trend"], group, strict=True), start=1):
-            assert t["ordinal"] == i and t["label"] == f"P{i}"
+            n = dataset.ordinal(r.pull.fight_id, i)
+            assert t["ordinal"] == n and t["label"] == f"P{n}"
             assert t["outcome"] == ("kill" if r.pull.kill else "wipe")
             assert t["boss_hp_pct"] == (0 if r.pull.kill else r.pull.boss_hp_pct)
             assert t["boss_pct"] == r.pull.boss_pct
@@ -156,7 +157,7 @@ def test_section_values_match_the_records(dataset):
                 ),
             )
         assert best["fight"] == pick.pull.fight_id
-        assert best["ordinal"] == group.index(pick) + 1
+        assert best["ordinal"] == dataset.ordinal(pick.pull.fight_id, group.index(pick) + 1)
         assert best["ref"] == f"ev:{pick.pull.pull_key}:pull"
         assert best["phase_reached"] == pick.digest.phase_reached
 

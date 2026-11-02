@@ -36,6 +36,7 @@ from khadbot.encounter.digest import PullRecords
 from khadbot.encounter.evidence import EncounterData, event_row
 from khadbot.encounter.findings import FindingsStore
 from khadbot.encounter.ingest.fetch import RawPageCache
+from khadbot.encounter.ingest.normalize import parse_report_meta
 from khadbot.encounter.models import Pull, PullDigest, make_ref
 from khadbot.storage import InvalidKeyError
 
@@ -83,6 +84,24 @@ class ApiContext:
         except (orjson.JSONDecodeError, AttributeError, InvalidKeyError):
             return None
         return title if isinstance(title, str) else None
+
+    def ordinals(self, code: str) -> dict[int, int]:
+        """
+        Each boss fight's ordinal within its encounter and difficulty in the whole report, from the cached report
+        metadata (``raw/<code>/report.json``; no WCL request), so a loaded pull keeps the label the log search gives
+        it. Empty when the metadata isn't cached or can't be read.
+        """
+        if self.raw is None:
+            return {}
+        try:
+            meta = self.raw.report_meta(code)
+            if not meta:
+                return {}
+            pulls, _ = parse_report_meta(code, meta)
+        except Exception:  # noqa: BLE001 - labels fall back to the loaded pulls' own numbering
+            return {}
+        bosses = sorted((p for p in pulls if p.encounter_id != 0), key=lambda p: (p.start_ms, p.fight_id))
+        return {p.fight_id: i for _, members in group_pulls(bosses) for i, p in enumerate(members, start=1)}
 
     def pulls(self, code: str) -> list[Pull]:
         """The report's stored pulls in time order. Raises ``report_not_found``."""

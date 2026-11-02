@@ -38,7 +38,7 @@ class PullSummary(BaseModel):
     """One pull in a report group. Every value is in the record its ``ref`` (a ``pull`` ref) resolves to."""
 
     fight: int
-    ordinal: int  # 1-based within the group, time order
+    ordinal: int  # 1-based among every pull of the encounter and difficulty in the report (as the lookup numbers it)
     label: str  # "P<ordinal>": a display label only; URLs use ``fight``
     outcome: Outcome
     duration_ms: int

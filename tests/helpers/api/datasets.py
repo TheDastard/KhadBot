@@ -11,6 +11,7 @@ Datasets the API tests run against, each served by ``create_app`` through FastAP
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,6 +68,28 @@ class Dataset:
 
     def digest(self, fight: int) -> PullDigest:
         return build_digest(f"{self.code}:{fight}", self.store, self.enc_root, cache=self.cache, **self.registries)
+
+    def ordinals(self, code: str | None = None) -> dict[int, int]:
+        """
+        Each boss fight's place within its encounter and difficulty in the whole report, read here straight from the
+        cached ``report.json`` (every fight, loaded or not), or empty when it isn't cached. What the API labels by.
+        """
+        path = self.data_dir / "raw" / (code or self.code) / "report.json"
+        if not path.exists():
+            return {}
+        fights = json.loads(path.read_text(encoding="utf-8")).get("fights") or []
+        bosses = sorted((f for f in fights if f.get("encounterID")), key=lambda f: (int(f["startTime"]), f["id"]))
+        seen: dict[tuple, int] = {}
+        out: dict[int, int] = {}
+        for f in bosses:
+            group = (f["encounterID"], f.get("difficulty"))
+            seen[group] = seen.get(group, 0) + 1
+            out[f["id"]] = seen[group]
+        return out
+
+    def ordinal(self, fight: int, place: int, code: str | None = None) -> int:
+        """The ordinal the API gives ``fight``: its place in the whole report, else ``place`` among loaded pulls."""
+        return self.ordinals(code).get(fight, place)
 
     def encounter_data(self) -> EncounterData:
         """A fresh ``EncounterData`` over the same store and files as the app's."""

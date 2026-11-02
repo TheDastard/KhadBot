@@ -102,7 +102,7 @@ def list_reports(ctx: Ctx, directory: Directory, user: Caller) -> ReportList:
 def get_report(code: str, ctx: Ctx) -> ReportDetail:
     """The report's groups in the order first pulled, each with its pull summaries in time order."""
     with ctx.lock:
-        return build_report_detail(read_source(ctx), code)
+        return build_report_detail(read_source(ctx), code, ctx.ordinals(code))
 
 
 @router.get(
@@ -111,7 +111,7 @@ def get_report(code: str, ctx: Ctx) -> ReportDetail:
 def get_night(code: str, ctx: Ctx) -> NightSummary:
     """Report totals plus one section per encounter and difficulty: KPIs, trend, mechanic table and briefing."""
     with ctx.lock:
-        return build_night(read_source(ctx), code)
+        return build_night(read_source(ctx), code, ctx.ordinals(code))
 
 
 @router.get(

@@ -327,15 +327,28 @@ def summarize_pull(f: PullFacts, ordinal: int) -> PullSummary:
     )
 
 
-def build_report_detail(source: ReadSource, code: str) -> ReportDetail:
-    """The report's groups in the order first pulled, each with its pull summaries in time order."""
+def numbered[P: PullFacts](members: list[P], ordinals: dict[int, int] | None) -> list[tuple[int, P]]:
+    """
+    A group's pulls with their ordinals: their place among every pull of the encounter and difficulty in the report
+    (``ordinals``, from its cached metadata) when that names each of them, else their place among the loaded ones.
+    """
+    if ordinals and all(f.fight_id in ordinals for f in members):
+        return [(ordinals[f.fight_id], f) for f in members]
+    return list(enumerate(members, start=1))
+
+
+def build_report_detail(source: ReadSource, code: str, ordinals: dict[int, int] | None = None) -> ReportDetail:
+    """
+    The report's groups in the order first pulled, each with its pull summaries in time order. ``ordinals`` (fight to
+    ordinal within its group, from the report's cached metadata) keeps each pull's label the log search's.
+    """
     groups = [
         ReportGroup(
             encounter_id=eid,
             encounter_name=members[0].encounter_name,
             difficulty=diff,
             difficulty_name=difficulty_name(diff),
-            pulls=[summarize_pull(f, i) for i, f in enumerate(members[:PULL_CAP], start=1)],
+            pulls=[summarize_pull(f, i) for i, f in numbered(members, ordinals)[:PULL_CAP]],
             truncated=len(members) > PULL_CAP,
             total=len(members),
         )
@@ -373,9 +386,11 @@ def _best(members: list[tuple[int, PullFacts]]) -> tuple[int, PullFacts] | None:
     return min(members, key=key)
 
 
-def build_section(pulls: list[PullFacts], findings: dict[str, FindingsState]) -> NightSection:
-    """One section over ``pulls`` (one encounter and difficulty, in time order)."""
-    members = list(enumerate(pulls, start=1))
+def build_section(
+    pulls: list[PullFacts], findings: dict[str, FindingsState], ordinals: dict[int, int] | None = None
+) -> NightSection:
+    """One section over ``pulls`` (one encounter and difficulty, in time order), labelled as ``numbered`` says."""
+    members = numbered(pulls, ordinals)
     first = members[0][1]
     pull_refs = [r.ref for _, r in members]
     m = len(members)
@@ -555,7 +570,7 @@ def briefing(
 # ---------------------------------------------------------------------------
 
 
-def build_night(source: ReadSource, code: str) -> NightSummary:
+def build_night(source: ReadSource, code: str, ordinals: dict[int, int] | None = None) -> NightSummary:
     pulls = source.pulls(code)
     findings = source.findings(pulls)
     kills = sum(1 for p in pulls if p.kill)
@@ -565,5 +580,5 @@ def build_night(source: ReadSource, code: str) -> NightSummary:
         totals=NightTotals(
             pulls=len(pulls), kills=kills, wipes=len(pulls) - kills, duration_ms=sum(p.duration_ms for p in pulls)
         ),
-        sections=[build_section(members, findings) for _, members in group_pulls(pulls)],
+        sections=[build_section(members, findings, ordinals) for _, members in group_pulls(pulls)],
     )

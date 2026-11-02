@@ -60,9 +60,9 @@ def test_night_and_report_detail_match_the_records(dataset, sql_source):
 def test_record_source_matches_the_api(dataset):
     """The routes go through the same builders: what the client gets is the record-backed summary."""
     code = dataset.code
-    night = build_night(RecordsSource(dataset.ctx), code)
+    night = build_night(RecordsSource(dataset.ctx), code, dataset.ctx.ordinals(code))
     assert dataset.client.get(f"/v1/reports/{code}/night").json() == night.model_dump(mode="json")
-    detail = build_report_detail(RecordsSource(dataset.ctx), code)
+    detail = build_report_detail(RecordsSource(dataset.ctx), code, dataset.ctx.ordinals(code))
     assert dataset.client.get(f"/v1/reports/{code}").json() == detail.model_dump(mode="json")
 
 
