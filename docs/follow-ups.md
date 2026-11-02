@@ -336,16 +336,37 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **The two end-to-end suites share port 3000.** `test:e2e:local` starts its own web server on 3000 (local-mode CORS
   allows only that port), so the dev loop's web server must be stopped first (`dev:all -- --no-web`). If running both
   together matters, let `main.py serve` allow another web port and give the local suite that port.
-- **The pull page's full-fixture tests don't run in CI.** `e2e/pull-page.spec.ts` checks every section against the
-  digest of `H7z1fqDXjRTFnbtg:15` only when `E2E_REPORTS` includes that report (seed it with
-  `dev:seed -- --only H7z1fqDXjRTFnbtg`; about 126 MB of Git LFS pages); CI seeds only SYNTH01, so there it runs the
-  SYNTH01 tests. Decide whether CI should fetch the long fixture, or record a smaller pull with deaths past the cutoff.
+- **The pull page's full-fixture tests don't run in CI.** `e2e/pull-page.spec.ts` and `e2e/timeline.spec.ts` check
+  `H7z1fqDXjRTFnbtg:15` only when `E2E_REPORTS` includes that report (their `beforeAll` loads the pull through replay
+  when it isn't loaded, `e2e/support/pulls.ts`; the pages are about 126 MB of Git LFS); CI lists only SYNTH01, so there
+  they run the SYNTH01 tests. Decide whether CI should fetch the long fixture, or record a smaller pull with deaths
+  past the cutoff.
 - **The pull rail lists only loaded pulls.** It reads `GET /v1/reports/{code}`, so pulls of the night that were never
   opened don't appear until the whole-report night overview is built (or the rail reads the lookup route, which can
   spend WCL points).
+- **Pull labels depend on what is loaded.** The Raids page numbers a night's pulls from the report's metadata (the
+  lookup route), the pull page from the loaded pulls only (`GET /v1/reports/{code}`, the read model), so a pull that is
+  P8 in the log search is P1 on its own page while it is the only one loaded. Number the read model's pulls from the
+  report's full fight list (the cached `report.json`), or have the pull page take its label from the lookup.
+- **Signed-out visitors can't open a pull.** Decision D72 has signed-out visitors open public logs on the shared budget,
+  but `POST /v1/reports` needs a session, so a signed-out visitor who opens a pull that isn't loaded gets "Sign in to
+  open this pull" (`not_signed_in`). Loaded pulls of a public log open fine. Either let the API open a public log's
+  pull without a session, charged to the app's budget with a per-visitor limit, or change D72 and the canvas's flow.
+- **Death and mechanic tables are tight at 1024 px.** Beside the 380 px panel the sections column is about 330 px wide,
+  so the Deaths table scrolls in its box, and following a chip scrolls the box to the chip and hides the time and
+  player columns. Let the panel narrow (or overlay) below about 1200 px, or stack the Killed by and mechanics columns.
+- **Budgets at their edge on a dev build.** On the local stack the chip-to-panel time (257 to 321 ms cached, up to
+  883 ms uncached) is over its 100 and 500 ms budgets, and the timeline's first render (1.1 to 1.7 s) and its click
+  and step (up to 117 ms) sit on theirs, so the timeline's `@budget` test fails on some runs (decision D87). Measure a
+  production build (`next build` and `next start`) before tuning, then look at the evidence request and the marker
+  render; never loosen a budget to pass.
+- **The hosted suite times out with default workers.** With Playwright's default workers (half the logical CPUs, 8
+  on a 16-thread machine) one `next dev` server and the API serve every test, and page loads and reloads outlast the
+  30 s test timeout in a different handful of tests each run. With `--workers=4` the same suite passes. Cap the
+  workers in `playwright.config.ts`, or run the suite against a production build.
 - **Timeline markers lack spell IDs.** `MechanicMarker` and `WindowMarker` carry no spell ID, so the timeline's mechanic
   rows and window chips show the neutral square and cooldown markers show the spell's initials, where the canvas
-  draws Wowhead icons. Add the ability ID to both markers (the encounter file knows it) and draw them through
+  draws Wowhead icons. On a long pull the initials boxes of the two cooldown tiers overlap and clip each other. Add the ability ID to both markers (the encounter file knows it) and draw them through
   `AbilityName`. The Focus artboard's timeline that itself zooms to a range is not built either: the timeline always
   shows the whole fight and zoom only opens the events table.
 - **Crowded deaths overlap.** Deaths less than about a pixel apart (fight 15 has several within 0.5 s) share a hit
@@ -438,6 +459,11 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   - Replayed ingest uses the recorded fetch filters, not production's, so replay never exercises a cooldown-registry
     change. Staging, ingesting real reports, does.
   - `deploy/stack.env` has no replay settings; the container stack would need an absolute path to the fixtures.
+- **E2E reports turn public after five minutes.** A test session marks its reports not public with a cached "not
+  readable" record, which stands for `KHADBOT_ACCESS_DENIED_RECHECK_S` (300 s). The next signed-out check asks replay,
+  which reads every recorded report, and caches the report as public for six hours. A suite (or a walk-through) that
+  checks a signed-out private lookup more than five minutes after global setup sees the report as public. Let a test
+  session's mark stand for its `--hours`, or have replay answer "not readable" for codes marked private.
 - **Not verified yet.** Real WCL sign-in through the dev loop (it needs a browser); `dev:smoke` doesn't run in CI
   (the stack job runs `stack:smoke`).
 
