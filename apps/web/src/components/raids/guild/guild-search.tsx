@@ -78,9 +78,8 @@ function GuildForm({ initial }: { initial: GuildQuery | null }) {
     const parsed = parseGuildUrl(value);
     if (parsed) {
       setName(parsed.name);
-      const found = findServer(servers.data, parsed.region, parsed.server);
-      if (found) field.choose(found);
-      else field.setText(parsed.server);
+      // Before the server list has loaded, the field picks the server when it arrives.
+      field.chooseBySlug(parsed.region, parsed.server);
       return;
     }
     setName(value);
