@@ -32,7 +32,7 @@ export function useSearchUrl(tab: "guild" | "character") {
 
 export function ResultsSkeleton({ label }: { label: string }) {
   return (
-    <div aria-busy="true" aria-label={label} className="flex flex-col gap-3">
+    <div role="status" aria-busy="true" aria-label={label} className="flex flex-col gap-3">
       <SkeletonBlock width={220} height={24} />
       <SkeletonCard height={200} />
     </div>

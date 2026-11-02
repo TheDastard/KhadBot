@@ -75,7 +75,7 @@ export function PullTimeline({ code, fight }: PullTimelineProps) {
             action={{ label: "Try again", onClick: () => void timeline.refetch() }}
           />
         ) : !data || !model ? (
-          <div aria-busy="true" aria-label="Loading the timeline">
+          <div role="status" aria-busy="true" aria-label="Loading the timeline">
             <SkeletonBlock height={CHART_HEIGHT} />
           </div>
         ) : (

@@ -204,7 +204,7 @@ function LogResults({ source }: { source: string | null }) {
 
 function ResultsSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Looking up the report" className="flex flex-col gap-3">
+    <div role="status" aria-busy="true" aria-label="Looking up the report" className="flex flex-col gap-3">
       <SkeletonBlock width={220} height={24} />
       <SkeletonCard height={200} />
     </div>

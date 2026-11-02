@@ -43,7 +43,7 @@ export function SkeletonCard({ height = 160, className }: { height?: number; cla
 /** The top bar's height (a 56 px bar) and the page column, while /v1/health is read before the first screen. */
 export function ShellSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading KhadBot">
+    <div role="status" aria-busy="true" aria-label="Loading KhadBot">
       <div className="h-[57px] border-b border-line bg-s1" />
       <div className="mx-auto flex max-w-[1040px] flex-col gap-5 px-8 pt-8">
         <SkeletonBlock width={160} height={34} />

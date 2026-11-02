@@ -441,7 +441,7 @@ export function ErrorView({
 
 export function LoadingView() {
   return (
-    <div aria-busy="true" aria-label="Loading the evidence" className="flex flex-col gap-2.5" data-panel-kind="loading">
+    <div role="status" aria-busy="true" aria-label="Loading the evidence" className="flex flex-col gap-2.5" data-panel-kind="loading">
       <span className="font-mono text-[11px] font-medium tracking-[0.06em] text-acc uppercase">loading</span>
       <SkeletonBlock width="60%" height={20} />
       <SkeletonBlock width="80%" height={12} />

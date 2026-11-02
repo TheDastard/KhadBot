@@ -139,7 +139,7 @@ export function PullRouteSkeleton({ breadcrumb }: { breadcrumb?: ReactNode }) {
   return (
     <>
       <TopBar breadcrumb={breadcrumb} />
-      <div aria-busy="true" aria-label="Loading the pull" className="grid grid-cols-[240px_minmax(0,1fr)]">
+      <div role="status" aria-busy="true" aria-label="Loading the pull" className="grid grid-cols-[240px_minmax(0,1fr)]">
         <div className="flex min-h-[calc(100vh-57px)] flex-col gap-2 border-r border-line bg-s1 px-3 py-5">
           {Array.from({ length: 6 }, (_, i) => (
             <SkeletonBlock key={i} height={44} />
