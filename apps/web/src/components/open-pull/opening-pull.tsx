@@ -9,6 +9,7 @@
 import { CheckIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 
+import { PrivateLogCard } from "@/components/account";
 import { ErrorState } from "@/components/shared/error-state";
 import { FightPct, FightPctBar } from "@/components/shared/fight-pct";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,11 @@ export interface OpeningPullProps {
   onStartAgain: () => void;
   /** Where "Sign in with Warcraft Logs" goes. */
   signInHref: string;
+  /**
+   * The visitor is signed out: a report they can't read shows "This log is private" with sign-in (the API answers
+   * 404 for private and missing alike), as the Raids page does, instead of "Report not found".
+   */
+  signedOut?: boolean;
 }
 
 const DIFFICULTY_WORD: Record<string, string> = { lfr: "LFR", normal: "Normal", heroic: "Heroic", mythic: "Mythic" };
@@ -67,7 +73,7 @@ export function tileMonoLine(code: string, fight: number, tile: PullTileInfo | n
 }
 
 export function OpeningPull(props: OpeningPullProps) {
-  const { code, fight, tile, steps, phase, countdownS, onStartAgain, signInHref } = props;
+  const { code, fight, tile, steps, phase, countdownS, onStartAgain, signInHref, signedOut = false } = props;
   const countdown = countdownS === null ? null : formatCountdown(countdownS);
   const card = cardFor(phase, steps);
   return (
@@ -96,7 +102,9 @@ export function OpeningPull(props: OpeningPullProps) {
         )}
       </div>
 
-      {card ? (
+      {card && signedOut && card.card.code === "report_not_found" ? (
+        <PrivateLogCard />
+      ) : card ? (
         <ErrorCard_
           card={card.card}
           countdownS={countdownS}

@@ -12,6 +12,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/r/ABC/p/12",
+  useSearchParams: () => new URLSearchParams(""),
+}));
+
 afterEach(cleanup);
 
 const TILE: PullTileInfo = {
@@ -105,5 +110,25 @@ describe("states", () => {
     expect(screen.getByRole("link", { name: "Sign in with Warcraft Logs" }).getAttribute("href")).toBe(
       "http://api/v1/auth/login",
     );
+  });
+});
+
+describe("a log the visitor can't read", () => {
+  const notFound: Phase = { kind: "failed", code: "report_not_found", message: "x", step: null };
+
+  it("signed out, says the log is private and offers sign-in back to this pull", () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE", "http://api.test");
+    show(notFound, { signedOut: true });
+    expect(screen.getByRole("heading", { name: "This log is private" })).toBeTruthy();
+    expect(screen.queryByText("Report not found or not shared with your Warcraft Logs account")).toBeNull();
+    const href = screen.getByRole("link", { name: /Sign in with Warcraft Logs/ }).getAttribute("href") ?? "";
+    expect(new URL(href).searchParams.get("next")).toBe("/r/ABC/p/12");
+    vi.unstubAllEnvs();
+  });
+
+  it("signed in, says the report was not found", () => {
+    show(notFound, { signedOut: false });
+    expect(screen.getByText("Report not found or not shared with your Warcraft Logs account")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "This log is private" })).toBeNull();
   });
 });

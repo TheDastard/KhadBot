@@ -13,6 +13,7 @@ import { signInHrefHere } from "@/components/account";
 import { useFeature } from "@/lib/capabilities";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
+import { useSignedIn } from "@/lib/session";
 
 import { errorCard } from "./error-cards";
 import {
@@ -37,8 +38,11 @@ export interface PullNotLoadedProps {
 export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
   const open = useOpenPull(code, fight);
   const canLookUp = useFeature("report_lookup");
+  // A signed-out visitor opens a public log's pull like anyone else; only a log they can't read (404) gets the
+  // private-log card, and only a request the API still refuses signed out (401) the sign-in card.
+  const signedOut = useSignedIn() === false;
   // The lookup answers from the metadata the open request just cached, so it costs no second request. It also runs
-  // when the request was refused (a signed-out visitor's 401), so the tile still names the pull on a public log.
+  // when the request was refused (a 401 or 404), so the tile still names the pull it can.
   const lookup = useQuery({
     queryKey: [...queryKeys.report(code), "lookup"],
     queryFn: () => unwrap(api().GET("/v1/lookup/report", { params: { query: { source: code } } })),
@@ -65,6 +69,7 @@ export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
       countdownS={countdownS}
       onStartAgain={open.restart}
       signInHref={signInHrefHere()}
+      signedOut={signedOut}
     />
   );
 }
