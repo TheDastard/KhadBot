@@ -55,11 +55,16 @@ class IngestReport(BaseModel):
     offline: bool = False  # read the raw page cache only; never call WCL
     refresh_meta: bool = False  # refetch report.json only and update stored pulls
     live: bool = False  # queued by a live report watch: the WCL budget lets it use the headroom ordinary jobs leave
+    # Queued for a signed-out visitor (always app auth): the WCL budget counts it against the visitors' shared
+    # allowance. It changes who pays, not what is fetched, so two specs that differ only here do the same work.
+    visitor: bool = False
 
     @model_validator(mode="after")
     def _refresh_needs_wcl(self) -> IngestReport:
         if self.refresh_meta and self.offline:
             raise ValueError("refresh_meta refetches report metadata from WCL and cannot run offline")
+        if self.visitor and (not isinstance(self.auth, AppAuth) or self.live):
+            raise ValueError("a visitor's ingest fetches with the app's token and is never live")
         return self
 
 

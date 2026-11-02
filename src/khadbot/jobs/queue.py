@@ -125,7 +125,7 @@ def _describe(spec: JobSpec) -> tuple[JobKind, str, str | None]:
 def _locks(spec: JobSpec) -> tuple[str, str | None]:
     """(lock, queueing lock): jobs with one lock never run together; one queueing lock never waits twice."""
     if isinstance(spec, IngestReport):
-        digest = hashlib.sha256(spec.model_dump_json(exclude={"auth"}).encode()).hexdigest()[:12]
+        digest = hashlib.sha256(spec.model_dump_json(exclude={"auth", "visitor"}).encode()).hexdigest()[:12]
         return f"ingest:{spec.code}", f"ingest:{spec.code}:{digest}"
     if isinstance(spec, ProcessPull):
         return f"process:{spec.pull_key}", None
@@ -523,6 +523,7 @@ class JobQueue:
             user_token=isinstance(spec.auth, UserAuth),
             points=budget_policy.estimate_points(pulls, cfg),
             live=spec.live,
+            visitor=spec.visitor,
             asked_at=job.created_at,
         )
 

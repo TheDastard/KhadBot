@@ -5,18 +5,23 @@ Hosted mode's ingest endpoints, over the Postgres job queue (``jobs.queue.JobQue
 single-process, in-memory job registry the first dashboard plan sketched: a job is a ``jobs`` row, so it survives an
 API restart and runs in a worker, and any API instance can follow it.
 
-Routes (all under ``/v1``; every one needs a signed-in user, and the two that change state need the CSRF header):
+Routes (all under ``/v1``; the two that change state need the CSRF header):
 
 - ``POST /reports``: open pulls (or a whole report). Answers ``ready`` with no job when every pull asked for is already
   loaded (200); queues an ingest (202); or returns the queued or running ingest that already covers the request (200),
-  whoever started it, so a second visitor opening a pull that is loading follows the first one's job.
+  whoever started it, so a second visitor opening a pull that is loading follows the first one's job. A signed-out
+  visitor may open one pull of a report they can read, which is a public one: it loads on the app's token and counts
+  against the visitors' shared budget allowance (``Ask.visitor``). Anything more (several pulls, a whole report)
+  needs sign-in (401 ``not_signed_in``).
 - ``GET /jobs/{id}``: the job's state, per-pull steps (download, prepare, analyse) and typed error.
 - ``GET /jobs/{id}/events``: the same as a server-sent event stream.
-- ``POST /jobs/{id}/cancel``: cancel it. Pulls already written stay written; the raw page cache resumes.
+- ``POST /jobs/{id}/cancel``: cancel it (signed in only). Pulls already written stay written; the raw page cache
+  resumes.
 
-Any signed-in user who can read a job's report may read the job and its stream (the access rule every report route
-uses, so losing access to a report ends it); only the user who started a job may cancel it (403 ``not_your_job``),
-and only they see its points spent. A missing job, or a process job, answers 404 ``job_not_found``.
+Anyone who can read a job's report may read the job and its stream, signed in or not (the access rule every report
+route uses, so losing access to a report ends it); only the user who started a job may cancel it (403
+``not_your_job``), and only they see its points spent. A visitor's job has no owner: nobody may cancel it, and it
+runs to the end once queued. A missing job, or a process job, answers 404 ``job_not_found``.
 
 Event stream
 ------------
@@ -48,7 +53,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from khadbot.api.budget import get_budget
-from khadbot.api.deps import SignedIn, csrf, require_readable
+from khadbot.api.deps import Caller, SignedIn, csrf, require_readable
 from khadbot.api.schemas import (
     ErrorBody,
     IngestRequest,
@@ -64,6 +69,8 @@ from khadbot.api.schemas import (
     StepState,
 )
 from khadbot.api.views import ApiError, difficulty_name
+from khadbot.auth.errors import NotSignedInError
+from khadbot.auth.store import User
 from khadbot.config import ApiConfig, QueueConfig
 from khadbot.jobs.budget_store import BudgetManager
 from khadbot.jobs.failures import ErrorCode
@@ -411,13 +418,13 @@ def get_queue(request: Request) -> JobQueue:
 Queue = Annotated[JobQueue, Depends(get_queue)]
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
-    401: {"model": ErrorBody, "description": "Not signed in (not_signed_in)"},
+    401: {"model": ErrorBody, "description": "Signing in is needed for this (not_signed_in)"},
     403: {"model": ErrorBody, "description": "CSRF check failed (csrf_failed), or not your job (not_your_job)"},
     404: {"model": ErrorBody, "description": "No such job, or a report you cannot read"},
     422: {"model": ErrorBody, "description": "Invalid body or parameter (bad_request)"},
     503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
 }
-_READ_ERRORS = {k: v for k, v in _ERRORS.items() if k != 403}
+_READ_ERRORS = {k: v for k, v in _ERRORS.items() if k not in (401, 403)}  # a visitor may read a job
 
 # The events route's response class is an event stream, which FastAPI would also name as the media type of its errors.
 _JSON_ERRORS: dict[int | str, dict[str, Any]] = {
@@ -489,23 +496,26 @@ def _written(request: Request, code: str, fights: list[int] | None) -> bool:
     },
 )
 async def start_ingest(
-    body: IngestRequest, request: Request, response: Response, user: SignedIn, queue: Queue
+    body: IngestRequest, request: Request, response: Response, user: Caller, queue: Queue
 ) -> IngestResponse:
     """
     Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`
     otherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job
     (200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued
-    (202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's.
+    (202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's. A signed-out
+    visitor may open one pull of a public report, on the app's token and the visitors' shared allowance of the
+    budget; a request for more needs sign-in (401 `not_signed_in`).
     """
     code, fights = parse_source(body.source, body.fights)
+    if user is None and (fights is None or len(fights) != 1):
+        raise NotSignedInError("Sign in with Warcraft Logs to load more than one pull at a time.")
     await require_readable(request, code)
     if _written(request, code, fights):
         response.status_code = 200
         return IngestResponse(ready=True, job=None)
-    service = request.app.state.auth
-    auth = UserAuth(user_id=user.id) if await service.tokens.has_tokens(user.id) else AppAuth()
+    spec = await _spec_for(request, user, code, fights)
     try:
-        queued = await queue.enqueue(IngestReport(code=code, fights=fights, auth=auth), requested_by=user.id)
+        queued = await queue.enqueue(spec, requested_by=user.id if user is not None else None)
     except Exception:
         logger.exception("Could not queue an ingest of report %s", code)
         raise ApiError(503, "queue_unavailable", "The job queue is unavailable; try again shortly.") from None
@@ -515,16 +525,30 @@ async def start_ingest(
         queued.job,
         queue.config,
         eta_s=await request_eta(request)(queued.job),
-        own=queued.job.requested_by == user.id,
+        own=_owns(user, queued.job),
     )
     return IngestResponse(ready=False, job=job)
 
 
+async def _spec_for(request: Request, user: User | None, code: str, fights: list[int] | None) -> IngestReport:
+    """The ingest to queue: on the user's own WCL token when they have one, else the app's; a visitor's is marked."""
+    if user is None:
+        return IngestReport(code=code, fights=fights, auth=AppAuth(), visitor=True)
+    service = request.app.state.auth
+    auth = UserAuth(user_id=user.id) if await service.tokens.has_tokens(user.id) else AppAuth()
+    return IngestReport(code=code, fights=fights, auth=auth)
+
+
+def _owns(user: User | None, rec: JobRecord) -> bool:
+    """Whether the caller started the job. A visitor owns nothing, and a job nobody requested has no owner."""
+    return user is not None and rec.requested_by is not None and rec.requested_by == user.id
+
+
 @router.get("/jobs/{job_id}", response_model=Job, responses=_READ_ERRORS)
-async def get_job(job_id: str, request: Request, user: SignedIn, queue: Queue) -> Job:
-    """A job on a report you can read: its state, per-pull steps and typed error."""
+async def get_job(job_id: str, request: Request, user: Caller, queue: Queue) -> Job:
+    """A job on a report you can read, signed in or not: its state, per-pull steps and typed error."""
     rec = await _readable_job(request, queue, job_id)
-    return job_view(rec, queue.config, eta_s=await request_eta(request)(rec), own=rec.requested_by == user.id)
+    return job_view(rec, queue.config, eta_s=await request_eta(request)(rec), own=_owns(user, rec))
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=Job, dependencies=[Depends(csrf)], responses=_ERRORS)
@@ -555,8 +579,11 @@ async def cancel_job(job_id: str, request: Request, user: SignedIn, queue: Queue
         **_JSON_ERRORS,
     },
 )
-async def job_events(job_id: str, request: Request, user: SignedIn, queue: Queue) -> StreamingResponse:
-    """Follow a job on a report you can read as server-sent events. A reconnecting client gets the current state first."""
+async def job_events(job_id: str, request: Request, user: Caller, queue: Queue) -> StreamingResponse:
+    """
+    Follow a job on a report you can read, signed in or not, as server-sent events. A reconnecting client gets the
+    current state first.
+    """
     rec = await _readable_job(request, queue, job_id)
     stream = event_stream(
         queue.store,
@@ -564,7 +591,7 @@ async def job_events(job_id: str, request: Request, user: SignedIn, queue: Queue
         keepalive_s=ApiConfig().sse_keepalive_s,
         config=queue.config,
         eta=request_eta(request),
-        own=rec.requested_by == user.id,
+        own=_owns(user, rec),
     )
     return StreamingResponse(
         stream,

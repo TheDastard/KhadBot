@@ -4,7 +4,7 @@ tests/unit/jobs/test_queue_budget.py
 The queue's job pick-up path with a WCL budget, on procrastinate's in-memory connector: an online ingest reserves
 before it starts and settles to its measured spend; one over its user's allowance goes to ``waiting_budget`` with a
 recheck queued for the window's reset and runs once the window turns; a cancelled waiting job is dropped; offline
-ingests and process jobs reserve nothing.
+ingests and process jobs reserve nothing; signed-out visitors' opens share one allowance.
 """
 
 from __future__ import annotations
@@ -192,3 +192,20 @@ async def test_a_live_ingest_runs_in_the_headroom_an_ordinary_one_waits_for(env,
     state = await manager.state()
     (reservation,) = [r for r in state.reservations if r.ask.job_id == live.id]
     assert reservation.ask.live
+
+
+async def test_a_visitors_opens_share_one_allowance_and_wait_past_it(env, clock, reader):
+    queue, jobs, _, manager = make(env, clock, reader, visitor_share=0.02)  # 20 points for every visitor together
+    async with queue.open():
+        first = (await queue.enqueue(IngestReport(code="SYNTH01", fights=[1], visitor=True))).job
+        second = (await queue.enqueue(IngestReport(code="SYNTH01", fights=[2], visitor=True))).job
+    await drain(queue, jobs)
+
+    assert (first.requested_by, second.requested_by) == (None, None)
+    assert jobs.rows[first.id].state is JobState.DONE  # 18 points of the visitors' 20
+    assert jobs.rows[second.id].state is JobState.WAITING_BUDGET  # another 18 would pass it
+    wait = await manager.wait_of(second.id)
+    assert wait is not None and wait.reason is Block.VISITOR_ALLOWANCE
+    state = await manager.state()
+    (reservation,) = [r for r in state.reservations if r.ask.job_id == first.id]
+    assert reservation.ask.visitor and reservation.ask.user_id is None and not reservation.ask.user_token

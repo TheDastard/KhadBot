@@ -180,7 +180,7 @@ export interface paths {
         };
         /**
          * Get Job
-         * @description A job on a report you can read: its state, per-pull steps and typed error.
+         * @description A job on a report you can read, signed in or not: its state, per-pull steps and typed error.
          */
         get: operations["get_job_v1_jobs__job_id__get"];
         put?: never;
@@ -221,7 +221,8 @@ export interface paths {
         };
         /**
          * Job Events
-         * @description Follow a job on a report you can read as server-sent events. A reconnecting client gets the current state first.
+         * @description Follow a job on a report you can read, signed in or not, as server-sent events. A reconnecting client gets the
+         *     current state first.
          */
         get: operations["job_events_v1_jobs__job_id__events_get"];
         put?: never;
@@ -292,7 +293,9 @@ export interface paths {
          * @description Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`
          *     otherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job
          *     (200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued
-         *     (202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's.
+         *     (202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's. A signed-out
+         *     visitor may open one pull of a public report, on the app's token and the visitors' shared allowance of the
+         *     budget; a request for more needs sign-in (401 `not_signed_in`).
          */
         post: operations["start_ingest_v1_reports_post"];
         delete?: never;
@@ -2761,15 +2764,6 @@ export interface operations {
                     "application/json": components["schemas"]["Job"];
                 };
             };
-            /** @description Not signed in (not_signed_in) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
             /** @description No such job, or a report you cannot read */
             404: {
                 headers: {
@@ -2819,7 +2813,7 @@ export interface operations {
                     "application/json": components["schemas"]["Job"];
                 };
             };
-            /** @description Not signed in (not_signed_in) */
+            /** @description Signing in is needed for this (not_signed_in) */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2884,15 +2878,6 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": string;
-                };
-            };
-            /** @description Not signed in (not_signed_in) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description No such job, or a report you cannot read */
@@ -3117,7 +3102,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Not signed in (not_signed_in) */
+            /** @description Signing in is needed for this (not_signed_in) */
             401: {
                 headers: {
                     [name: string]: unknown;

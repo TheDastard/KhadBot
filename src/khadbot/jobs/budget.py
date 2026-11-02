@@ -23,11 +23,12 @@ The policy:
 - **Settlement.** A finished job is charged its measured spend (the estimate when none was measured); the next
   ``rateLimitData`` read (``sync``) replaces the bucket's count with WCL's own.
 - **Allowances.** Within a window one user may use ``user_share`` and one WCL guild ``guild_share`` of the hourly
-  points, counting held estimates and settled spend, user-token jobs included. A job bigger than an allowance needs
-  that allowance unused.
+  points, counting held estimates and settled spend, user-token jobs included. Every signed-out visitor's job
+  (``Ask.visitor``) counts against one shared allowance, ``visitor_share``, since visitors can't be told apart. A
+  job bigger than an allowance needs that allowance unused.
 - **Headroom.** Ordinary jobs leave ``headroom_share`` of the points free; only live raid ingest may use it.
 - **Line.** A job that can't reserve waits. Waiting jobs are taken round-robin across groups (the WCL guild, else the
-  user, else the report), the least recently served group first, oldest first within a group. A job blocked by the
+  user, else all visitors together, else the report), the least recently served group first, oldest first within a group. A job blocked by the
   shared bucket stops later ordinary jobs from passing it, so a large job is not starved by small ones; a job blocked
   only by its own allowance does not hold up others.
 - **ETA.** A waiting job's ETA comes from the window's reset time and the demand ahead of it in line, per constraint.
@@ -59,6 +60,7 @@ class Block(StrEnum):
     """Why a job cannot reserve now."""
 
     USER_ALLOWANCE = "user_allowance"
+    VISITOR_ALLOWANCE = "visitor_allowance"
     GUILD_ALLOWANCE = "guild_allowance"
     APP_POINTS = "app_points"
     DATABASE_POINTS = "database_points"
@@ -90,15 +92,18 @@ class Ask(BaseModel):
     points: float = Field(ge=0)
     database_points: float = Field(default=0.0, ge=0)
     live: bool = False  # live raid ingest, which may use the headroom
+    visitor: bool = False  # opened by a signed-out visitor: counts against the visitors' shared allowance
     asked_at: datetime
 
     @property
     def group(self) -> str:
-        """The round-robin group: the WCL guild, else the user, else the report."""
+        """The round-robin group: the WCL guild, else the user, else all visitors together, else the report."""
         if self.guild_id:
             return f"guild:{self.guild_id}"
         if self.user_id:
             return f"user:{self.user_id}"
+        if self.visitor:
+            return "visitors"
         return f"report:{self.report_code}"
 
 
@@ -270,11 +275,15 @@ def app_free(state: BudgetState) -> float:
     return state.bucket.limit_per_hour - state.bucket.spent - held(state)
 
 
-def _used(state: BudgetState, *, user_id: str | None = None, guild_id: str | None = None) -> float:
+def _used(
+    state: BudgetState, *, user_id: str | None = None, guild_id: str | None = None, visitors: bool = False
+) -> float:
     return sum(
         r.charge
         for r in state.reservations
-        if (user_id is not None and r.ask.user_id == user_id) or (guild_id is not None and r.ask.guild_id == guild_id)
+        if (user_id is not None and r.ask.user_id == user_id)
+        or (guild_id is not None and r.ask.guild_id == guild_id)
+        or (visitors and r.ask.visitor)
     )
 
 
@@ -321,6 +330,10 @@ def check(ask: Ask, state: BudgetState, cfg: BudgetConfig) -> Block | None:
         cap = cfg.user_share * limit
         if _used(state, user_id=ask.user_id) + min(ask.points, cap) > cap + _EPS:
             return Block.USER_ALLOWANCE
+    if ask.visitor:
+        cap = cfg.visitor_share * limit
+        if _used(state, visitors=True) + min(ask.points, cap) > cap + _EPS:
+            return Block.VISITOR_ALLOWANCE
     if ask.guild_id is not None:
         cap = cfg.guild_share * limit
         if _used(state, guild_id=ask.guild_id) + min(ask.points, cap) > cap + _EPS:
@@ -435,6 +448,11 @@ def _eta(ask: Ask, ahead: list[Ask], state: BudgetState, now: datetime, cfg: Bud
         mine = [a for a in ahead if a.user_id == ask.user_id]
         demand = sum(min(a.points, cap) for a in [*mine, ask])
         etas.append(when(cap, cap - _used(state, user_id=ask.user_id), demand))
+    if ask.visitor:
+        cap = cfg.visitor_share * limit
+        theirs = [a for a in ahead if a.visitor]
+        demand = sum(min(a.points, cap) for a in [*theirs, ask])
+        etas.append(when(cap, cap - _used(state, visitors=True), demand))
     if ask.guild_id is not None:
         cap = cfg.guild_share * limit
         ours = [a for a in ahead if a.guild_id == ask.guild_id]

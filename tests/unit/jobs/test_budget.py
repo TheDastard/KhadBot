@@ -26,6 +26,7 @@ def cfg(**kw) -> BudgetConfig:
         user_tokens_spend_app_budget=True,
         guild_share=0.25,
         user_share=0.10,
+        visitor_share=0.10,
         headroom_share=0.20,
         points_per_pull=7.2,
         points_per_single_pull=14.0,
@@ -39,7 +40,7 @@ def cfg(**kw) -> BudgetConfig:
 
 
 def state(limit: float = 1000.0, spent: float = 0.0) -> BudgetState:
-    """A bucket of ``limit`` points: user allowance 100, guild 250, headroom 200, window resetting at RESET."""
+    """A bucket of ``limit`` points: user and visitor allowances 100, guild 250, headroom 200, resetting at RESET."""
     return BudgetState(bucket=Bucket(limit_per_hour=limit, spent=spent, resets_at=RESET))
 
 
@@ -77,12 +78,17 @@ class TestEstimate:
 
 class TestConfig:
     def test_defaults_are_the_documented_allowances(self, monkeypatch):
-        for key in ("KHADBOT_BUDGET_GUILD_SHARE", "KHADBOT_BUDGET_USER_SHARE", "KHADBOT_BUDGET_HEADROOM_SHARE"):
+        for key in (
+            "KHADBOT_BUDGET_GUILD_SHARE",
+            "KHADBOT_BUDGET_USER_SHARE",
+            "KHADBOT_BUDGET_VISITOR_SHARE",
+            "KHADBOT_BUDGET_HEADROOM_SHARE",
+        ):
             monkeypatch.delenv(key, raising=False)
         monkeypatch.delenv("KHADBOT_WCL_LIMIT_SCHEME", raising=False)
         monkeypatch.delenv("KHADBOT_BUDGET_USER_TOKENS_SPEND_APP", raising=False)
         c = BudgetConfig()
-        assert (c.guild_share, c.user_share, c.headroom_share) == (0.25, 0.10, 0.20)
+        assert (c.guild_share, c.user_share, c.visitor_share, c.headroom_share) == (0.25, 0.10, 0.10, 0.20)
         assert c.scheme is WclLimitScheme.CURRENT and c.user_tokens_spend_app_budget
         assert c.documented_limit_per_hour == 3600.0
 
@@ -94,7 +100,7 @@ class TestConfig:
         with pytest.raises(ValueError, match="KHADBOT_WCL_LIMIT_SCHEME=new"):
             cfg(user_tokens_spend_app_budget=False)
 
-    @pytest.mark.parametrize("field", ["guild_share", "user_share", "headroom_share"])
+    @pytest.mark.parametrize("field", ["guild_share", "user_share", "visitor_share", "headroom_share"])
     def test_a_share_outside_zero_to_one_fails_at_load(self, field):
         with pytest.raises(ValueError, match=field):
             cfg(**{field: 1.5})
@@ -218,6 +224,54 @@ class TestAllowances:
     def test_background_jobs_have_no_user_allowance(self):
         out = admit(state(), ask("bg", 500))
         assert out.granted == ("bg",)
+
+
+class TestVisitorAllowance:
+    """Every signed-out visitor's job shares one allowance (``visitor_share``, 100 of 1000 here)."""
+
+    def test_visitors_together_may_use_exactly_their_allowance(self):
+        s = state()
+        for i in range(5):
+            s = admit(s, ask(f"v{i}", 18, visitor=True, at=i)).state  # five single pulls: 90
+        assert admit(s, ask("v5", 10, visitor=True, at=5)).granted == ("v5",)  # 100 exactly
+
+    def test_one_point_over_the_visitor_allowance_waits_until_the_reset(self):
+        s = admit(state(), ask("a", 90, visitor=True)).state
+        out = admit(s, ask("b", 11, visitor=True, at=1))
+        assert out.granted == ()
+        assert (out.waits["b"].reason, out.waits["b"].eta) == (Block.VISITOR_ALLOWANCE, RESET)
+
+    def test_settled_visitor_spend_counts_toward_the_allowance(self):
+        s = admit(state(), ask("a", 18, visitor=True)).state
+        s = budget.settle(s, "a", 95, T0, cfg())
+        assert admit(s, ask("b", 6, visitor=True, at=1)).waits["b"].reason is Block.VISITOR_ALLOWANCE
+
+    def test_a_full_visitor_allowance_holds_up_no_signed_in_user_or_background_job(self):
+        s = admit(state(), ask("a", 100, visitor=True)).state
+        s = admit(s, ask("b", 18, visitor=True, at=1)).state  # waits on its allowance
+        assert admit(s, ask("u", 50, user="u", at=2)).granted == ("u",)
+        assert admit(s, ask("bg", 50, at=3)).granted == ("bg",)
+
+    def test_signed_in_users_do_not_use_the_visitor_allowance(self):
+        s = admit(state(), ask("u", 100, user="u")).state
+        assert admit(s, ask("v", 100, visitor=True, at=1)).granted == ("v",)
+
+    def test_the_guild_allowance_and_the_shared_bucket_still_apply_to_visitors(self):
+        s = admit(state(), ask("g", 250, user="u", guild="g")).state
+        assert admit(s, ask("v", 18, visitor=True, guild="g", at=1)).waits["v"].reason is Block.GUILD_ALLOWANCE
+        assert admit(full_bucket(), ask("v", 18, visitor=True)).waits["v"].reason is Block.APP_POINTS
+
+    def test_visitors_are_one_round_robin_group(self):
+        assert ask("a", 1, visitor=True).group == ask("b", 1, visitor=True).group == "visitors"
+        assert ask("c", 1, visitor=True, guild="g").group == "guild:g"
+        assert ask("d", 1).group == "report:Rd"
+
+    def test_the_visitor_queue_ahead_counts_against_their_allowance(self):
+        s = admit(state(), ask("a", 100, visitor=True)).state
+        for i in range(3):
+            s = admit(s, ask(f"b{i}", 60, visitor=True, at=i + 1)).state
+        waits = admit(s).waits
+        assert [waits[f"b{i}"].eta for i in range(3)] == [RESET, RESET + timedelta(hours=1), RESET + timedelta(hours=1)]
 
 
 class TestHeadroom:

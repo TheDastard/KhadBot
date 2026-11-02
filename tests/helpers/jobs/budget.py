@@ -61,6 +61,7 @@ def budget_config(**overrides) -> BudgetConfig:
         user_tokens_spend_app_budget=True,
         guild_share=0.25,
         user_share=0.10,
+        visitor_share=0.10,
         headroom_share=0.20,
         points_per_pull=7.2,
         points_per_single_pull=14.0,

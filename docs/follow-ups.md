@@ -348,10 +348,6 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   lookup route), the pull page from the loaded pulls only (`GET /v1/reports/{code}`, the read model), so a pull that is
   P8 in the log search is P1 on its own page while it is the only one loaded. Number the read model's pulls from the
   report's full fight list (the cached `report.json`), or have the pull page take its label from the lookup.
-- **Signed-out visitors can't open a pull.** Decision D72 has signed-out visitors open public logs on the shared budget,
-  but `POST /v1/reports` needs a session, so a signed-out visitor who opens a pull that isn't loaded gets "Sign in to
-  open this pull" (`not_signed_in`). Loaded pulls of a public log open fine. Either let the API open a public log's
-  pull without a session, charged to the app's budget with a per-visitor limit, or change D72 and the canvas's flow.
 - **Death and mechanic tables are tight at 1024 px.** Beside the 380 px panel the sections column is about 330 px wide,
   so the Deaths table scrolls in its box, and following a chip scrolls the box to the chip and hides the time and
   player columns. Let the panel narrow (or overlay) below about 1200 px, or stack the Killed by and mechanics columns.

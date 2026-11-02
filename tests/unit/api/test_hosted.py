@@ -187,13 +187,125 @@ class TestCorsAndCsrf:
 # ---------------------------------------------------------------------------
 
 
-class TestIngestRoutes:
-    def test_signed_out_job_routes_are_401(self, h):
+class TestVisitorOpens:
+    """A signed-out visitor opens one pull of a public report on the app's token, and follows its job."""
+
+    def test_a_visitor_opens_one_pull_of_a_public_report_on_the_app_token(self, h):
+        h.wcl.readable["app"] = {CODE}
+        resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert resp.status_code == 202, resp.text
+        job = resp.json()["job"]
+        assert (job["can_cancel"], job["points_spent"]) == (False, None)
+        row = h.backend.rows[job["id"]]
+        assert (row.requested_by, row.auth_kind) == (None, "app")
+        assert row.spec["visitor"] is True and row.spec["auth"] == {"kind": "app"}
+        assert row.spec["fights"] == [1]
+
+    def test_a_fight_in_the_url_counts_as_the_one_pull(self, h):
+        h.wcl.readable["app"] = {CODE}
+        resp = h.actor().post("/v1/reports", json={"source": f"https://www.warcraftlogs.com/reports/{CODE}#fight=2"})
+        assert resp.status_code == 202
+
+    def test_a_private_report_is_404_for_a_visitor_and_queues_nothing(self, h):
+        h.wcl.readable[h.token_of("Jaina")] = {CODE}  # readable by Jaina only, not public
+        resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+        assert h.backend.rows == {}
+
+    def test_a_missing_report_is_the_same_404(self, h):
+        resp = h.actor().post("/v1/reports", json={"source": "NOSUCH01", "fights": [1]})
+        assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+
+    @pytest.mark.parametrize("body", [{"source": CODE}, {"source": CODE, "fights": [1, 2]}])
+    def test_more_than_one_pull_needs_sign_in(self, h, body):
+        h.wcl.readable["app"] = {CODE}
+        resp = h.actor().post("/v1/reports", json=body)
+        assert (resp.status_code, resp.json()["code"]) == (401, "not_signed_in")
+        assert h.backend.rows == {}
+
+    def test_a_visitor_still_needs_the_csrf_header_and_the_web_origin(self, h):
+        h.wcl.readable["app"] = {CODE}
         visitor = h.actor()
-        assert visitor.post("/v1/reports", json={"source": CODE}).json()["code"] == "not_signed_in"
-        assert visitor.get("/v1/jobs/x").status_code == 401
-        assert visitor.get("/v1/jobs/x/events").status_code == 401
-        assert visitor.post("/v1/jobs/x/cancel").status_code == 401
+        resp = visitor.post("/v1/reports", csrf=False, json={"source": CODE, "fights": [1]})
+        assert (resp.status_code, resp.json()["code"]) == (403, "csrf_failed")
+        foreign = visitor.post(
+            "/v1/reports", json={"source": CODE, "fights": [1]}, headers={"Origin": "https://evil.example"}
+        )
+        assert (foreign.status_code, foreign.json()["code"]) == (403, "csrf_failed")
+        assert h.backend.rows == {}
+
+    def test_a_loaded_pull_is_ready_for_a_visitor(self, h):
+        h.wcl.readable["app"] = {CODE}
+        h.ingest_offline()
+        h.process_offline()
+        resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (resp.status_code, resp.json()) == (200, {"ready": True, "job": None})
+
+    def test_a_visitor_follows_their_job_and_cannot_cancel_it(self, h):
+        h.wcl.readable["app"] = {CODE}
+        visitor = h.actor()
+        job_id = visitor.post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]["id"]
+        got = visitor.get(f"/v1/jobs/{job_id}")
+        assert (got.status_code, got.json()["can_cancel"], got.json()["points_spent"]) == (200, False, None)
+        assert visitor.post(f"/v1/jobs/{job_id}/cancel").status_code == 401
+        assert h.backend.rows[job_id].state is JobState.QUEUED
+
+    def test_a_signed_in_user_follows_a_visitors_job_and_cannot_cancel_it(self, h):
+        h.wcl.readable["app"] = {CODE}
+        job_id = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]["id"]
+        jaina = h.actor("Jaina")
+        again = jaina.post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (again.status_code, again.json()["job"]["id"]) == (200, job_id)  # one job per pull
+        assert again.json()["job"]["can_cancel"] is False
+        denied = jaina.post(f"/v1/jobs/{job_id}/cancel")
+        assert (denied.status_code, denied.json()["code"]) == (403, "not_your_job")
+
+    def test_a_visitor_follows_a_signed_in_users_job_on_a_public_report(self, h):
+        h.wcl.readable["app"] = {CODE}
+        job_id = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]["id"]
+        visitor = h.actor()
+        again = visitor.post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (again.status_code, again.json()["job"]["id"]) == (200, job_id)
+        assert (again.json()["job"]["can_cancel"], again.json()["job"]["points_spent"]) == (False, None)
+        assert visitor.get(f"/v1/jobs/{job_id}").status_code == 200
+
+    def test_a_visitor_cannot_follow_a_job_on_a_private_report(self, h):
+        h.wcl.readable[h.token_of("Jaina")] = {CODE}
+        job_id = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]["id"]
+        for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
+            resp = h.actor().get(url)
+            assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+        resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]})
+        assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+
+    def test_a_visitor_owns_no_job_nobody_requested(self, h):
+        h.wcl.readable["app"] = {CODE}
+        background = asyncio.run(h.queue.enqueue(IngestReport(code=CODE, fights=[3])))
+        assert background.job.requested_by is None
+        resp = h.actor().get(f"/v1/jobs/{background.job.id}")
+        assert (resp.status_code, resp.json()["can_cancel"]) == (200, False)
+
+    def test_a_visitors_job_streams_to_the_end(self, h):
+        h.wcl.readable["app"] = {CODE}
+        visitor = h.actor()
+        job = visitor.post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]
+        worker = h.run_worker()
+        with visitor.client.stream("GET", f"/v1/jobs/{job['id']}/events") as resp:
+            assert resp.status_code == 200
+            text = "".join(resp.iter_text())
+        worker.join(timeout=60)
+        names = [e[1] for e in sse_events(text)]
+        assert names[0] == "job.state" and names[-1] == "job.done"
+        assert "fake-access" not in json.dumps(h.backend.rows[job["id"]].spec)
+
+    def test_a_missing_job_is_404_for_a_visitor(self, h):
+        resp = h.actor().get("/v1/jobs/x")
+        assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
+
+
+class TestIngestRoutes:
+    def test_signed_out_cancel_is_401(self, h):
+        assert h.actor().post("/v1/jobs/x/cancel").status_code == 401
 
     def test_cannot_ingest_a_report_the_user_cannot_read(self, h):
         resp = h.actor("Jaina").post("/v1/reports", json={"source": CODE})

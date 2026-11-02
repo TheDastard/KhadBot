@@ -206,6 +206,9 @@ class BudgetConfig:
     # ingest may use.
     guild_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_GUILD_SHARE", "0.25")))
     user_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_USER_SHARE", "0.10")))
+    # What every signed-out visitor together may use per window. Their opens share one allowance, since nothing
+    # tells two visitors apart.
+    visitor_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_VISITOR_SHARE", "0.10")))
     headroom_share: float = field(default_factory=lambda: float(_optional("KHADBOT_BUDGET_HEADROOM_SHARE", "0.20")))
     # The estimate: a batched pull costs about 7.2 points (a 25-pull night is about 180 after cross-fight batching),
     # a pull fetched alone about 14, and a job adds its report metadata and rate-limit reads (about 1 point each).
@@ -228,7 +231,7 @@ class BudgetConfig:
     reservation_ttl_s: int = field(default_factory=lambda: int(_optional("KHADBOT_BUDGET_RESERVATION_TTL_S", "7200")))
 
     def __post_init__(self) -> None:
-        for name in ("guild_share", "user_share", "headroom_share"):
+        for name in ("guild_share", "user_share", "visitor_share", "headroom_share"):
             if not 0.0 <= getattr(self, name) <= 1.0:
                 raise ValueError(f"BudgetConfig.{name} must be between 0 and 1.")
         if self.headroom_share >= 1.0:

@@ -4975,7 +4975,7 @@
     },
     "/v1/jobs/{job_id}": {
       "get": {
-        "description": "A job on a report you can read: its state, per-pull steps and typed error.",
+        "description": "A job on a report you can read, signed in or not: its state, per-pull steps and typed error.",
         "operationId": "get_job_v1_jobs__job_id__get",
         "parameters": [
           {
@@ -4998,16 +4998,6 @@
               }
             },
             "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Not signed in (not_signed_in)"
           },
           "404": {
             "content": {
@@ -5080,7 +5070,7 @@
                 }
               }
             },
-            "description": "Not signed in (not_signed_in)"
+            "description": "Signing in is needed for this (not_signed_in)"
           },
           "403": {
             "content": {
@@ -5131,7 +5121,7 @@
     },
     "/v1/jobs/{job_id}/events": {
       "get": {
-        "description": "Follow a job on a report you can read as server-sent events. A reconnecting client gets the current state first.",
+        "description": "Follow a job on a report you can read, signed in or not, as server-sent events. A reconnecting client gets the\ncurrent state first.",
         "operationId": "job_events_v1_jobs__job_id__events_get",
         "parameters": [
           {
@@ -5154,16 +5144,6 @@
               }
             },
             "description": "Server-sent events: `job.state` (a Job; always first), `pull.progress` (a JobPull), `job.done` (a Job) and `error` (a JobFailure). The stream closes after `job.done`, `error`, or a `job.state` whose state is `cancelled`."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Not signed in (not_signed_in)"
           },
           "404": {
             "content": {
@@ -5383,7 +5363,7 @@
         ]
       },
       "post": {
-        "description": "Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`\notherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job\n(200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued\n(202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's.",
+        "description": "Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`\notherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job\n(200), also for a caller who did not start it: they may follow it but not cancel it. Otherwise a job is queued\n(202); it fetches with the caller's own Warcraft Logs token when they have one, else with the app's. A signed-out\nvisitor may open one pull of a public report, on the app's token and the visitors' shared allowance of the\nbudget; a request for more needs sign-in (401 `not_signed_in`).",
         "operationId": "start_ingest_v1_reports_post",
         "requestBody": {
           "content": {
@@ -5434,7 +5414,7 @@
                 }
               }
             },
-            "description": "Not signed in (not_signed_in)"
+            "description": "Signing in is needed for this (not_signed_in)"
           },
           "403": {
             "content": {

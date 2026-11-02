@@ -33,6 +33,13 @@ class TestIngestReport:
         with pytest.raises(ValidationError, match="cannot run offline"):
             IngestReport(code="ABC", refresh_meta=True, offline=True)
 
+    def test_a_visitors_ingest_uses_the_app_token_and_is_never_live(self):
+        assert IngestReport(code="ABC", fights=[1], visitor=True).auth == AppAuth()
+        with pytest.raises(ValidationError, match="app's token"):
+            IngestReport(code="ABC", visitor=True, auth=UserAuth(user_id="u-1"))
+        with pytest.raises(ValidationError, match="never live"):
+            IngestReport(code="ABC", visitor=True, live=True)
+
     def test_specs_are_immutable(self):
         with pytest.raises(ValidationError):
             IngestReport(code="ABC").code = "XYZ"

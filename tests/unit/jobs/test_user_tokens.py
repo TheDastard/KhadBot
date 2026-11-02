@@ -80,4 +80,5 @@ def test_spec_carries_only_the_user_id():
         "offline": False,
         "refresh_meta": False,
         "live": False,
+        "visitor": False,
     }
