@@ -1,9 +1,9 @@
 // apps/web/e2e/timeline.spec.ts
 //
 // The pull timeline and the zoomed events on the longest fixture pull, H7z1fqDXjRTFnbtg:15 (618 s), on the hosted
-// API with WCL replay. The report must be seeded and readable by the test users:
+// API with WCL replay. The report must be readable by the test users; the beforeAll below loads the pull through
+// replay if it isn't loaded yet:
 //
-//   mise run dev:seed -- --only H7z1fqDXjRTFnbtg
 //   E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg mise run test:e2e -- timeline
 //
 // Screen text is compared with the API's own answers, never with fixed numbers. The last test measures the budgets
@@ -12,12 +12,18 @@
 import { expectAccessible } from "./support/axe";
 import { HOSTED_API } from "./support/env";
 import { expect, test } from "./support/fixtures";
+import { ensurePullLoaded, LOAD_TIMEOUT_MS } from "./support/pulls";
 
 const CODE = "H7z1fqDXjRTFnbtg";
 const FIGHT = 15;
 const PULL = `/r/${CODE}/p/${FIGHT}`;
 
 test.use({ user: "alice" });
+
+test.beforeAll(async ({ browser }) => {
+  test.setTimeout(LOAD_TIMEOUT_MS);
+  await ensurePullLoaded(browser, CODE, FIGHT);
+});
 
 async function open(page: import("@playwright/test").Page) {
   await page.goto(PULL);

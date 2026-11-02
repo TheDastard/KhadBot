@@ -3,8 +3,8 @@
 // The pull page on the hosted API (the dev loop with WCL replay): the rail, header, main column sections and the
 // context panel. Two targets:
 //   - SYNTH01 fight 1 (always seeded): the page renders, the panel opens, axe passes.
-//   - H7z1fqDXjRTFnbtg fight 15 (the longest recorded pull; seed it and let the test users read it with
-//     `mise run dev:seed -- --only H7z1fqDXjRTFnbtg` and E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg): every section's rows
+//   - H7z1fqDXjRTFnbtg fight 15 (the longest recorded pull; E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg lets the test users
+//     read it, and the describe's beforeAll loads the pull through replay if it isn't loaded): every section's rows
 //     match the digest response, each chip kind opens its panel, reload and Back restore it, and the budgets are
 //     measured (they are printed as test annotations).
 
@@ -13,6 +13,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { expectAccessible } from "./support/axe";
 import { E2E_REPORTS, HOSTED_API } from "./support/env";
 import { expect, test } from "./support/fixtures";
+import { ensurePullLoaded, LOAD_TIMEOUT_MS } from "./support/pulls";
 
 test.use({ user: "alice" });
 
@@ -61,7 +62,11 @@ test.describe("SYNTH01", () => {
 });
 
 test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
-  test.skip(!hasLong, "needs E2E_REPORTS to include H7z1fqDXjRTFnbtg (seeded)");
+  test.skip(!hasLong, "needs E2E_REPORTS to include H7z1fqDXjRTFnbtg");
+  test.beforeAll(async ({ browser }) => {
+    test.setTimeout(LOAD_TIMEOUT_MS);
+    await ensurePullLoaded(browser, LONG.code, LONG.fight);
+  });
   const base = `/v1/reports/${LONG.code}/pulls/${LONG.fight}`;
 
   test("every section's rows match the digest", async ({ page }) => {

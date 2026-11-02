@@ -32,6 +32,7 @@ function stepState(page: Page, step: string) {
 
 test.describe("a pull that has to load", () => {
   test("opens by itself, and a step change reaches the screen within a second", { tag: "@budget" }, async ({ page }) => {
+    test.slow(); // a report's first load under parallel load outlasts the default 30 s
     await skipIfLoaded(page, 10);
     await page.addInitScript(() => {
       type W = Window & { __events: unknown[]; __dom: unknown[] };
@@ -99,6 +100,7 @@ test.describe("a pull that has to load", () => {
   });
 
   test("reloading mid-load picks the job back up", async ({ page }) => {
+    test.slow(); // a report's first load under parallel load outlasts the default 30 s
     await skipIfLoaded(page, 20);
     await page.goto(`/r/${REAL}/p/20`);
     await expect(page.locator('[data-slot="pull-not-loaded"]')).toBeVisible();
@@ -108,6 +110,7 @@ test.describe("a pull that has to load", () => {
   });
 
   test("a second visitor follows the same job", async ({ browser, page }) => {
+    test.slow(); // a report's first load under parallel load outlasts the default 30 s
     await skipIfLoaded(page, 23);
     const bob = await browser.newContext({ storageState: "e2e/.auth/bob.json", viewport: { width: 1440, height: 900 } });
     try {
