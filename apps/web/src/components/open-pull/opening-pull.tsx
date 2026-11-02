@@ -123,7 +123,9 @@ export function OpeningPull(props: OpeningPullProps) {
         <Button asChild variant="outline" size="lg">
           <Link href="/">Back to the search</Link>
         </Button>
-        <span className="text-[13px] text-mut">You can leave; it keeps loading, and opens straight away next time.</span>
+        {phase.kind === "failed" || phase.kind === "stopped" ? null : (
+          <span className="text-[13px] text-mut">You can leave; it keeps loading, and opens straight away next time.</span>
+        )}
       </div>
     </main>
   );

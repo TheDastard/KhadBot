@@ -37,11 +37,12 @@ export interface PullNotLoadedProps {
 export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
   const open = useOpenPull(code, fight);
   const canLookUp = useFeature("report_lookup");
-  // The lookup answers from the metadata the open request just cached, so it costs no second request.
+  // The lookup answers from the metadata the open request just cached, so it costs no second request. It also runs
+  // when the request was refused (a signed-out visitor's 401), so the tile still names the pull on a public log.
   const lookup = useQuery({
     queryKey: [...queryKeys.report(code), "lookup"],
     queryFn: () => unwrap(api().GET("/v1/lookup/report", { params: { query: { source: code } } })),
-    enabled: canLookUp && open.requested,
+    enabled: canLookUp && (open.requested || open.openError !== null),
     staleTime: 60_000,
     retry: false,
   });

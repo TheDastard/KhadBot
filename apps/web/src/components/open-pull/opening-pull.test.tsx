@@ -91,6 +91,7 @@ describe("states", () => {
     show({ kind: "stopped" });
     expect(screen.getByText("This stopped loading")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Start again" })).toBeTruthy();
+    expect(screen.queryByText(/it keeps loading/)).toBeNull();
   });
 
   it("an API that doesn't answer says so", () => {
