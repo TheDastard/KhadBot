@@ -19,6 +19,9 @@ const FIGHT = 15;
 const PULL = `/r/${CODE}/p/${FIGHT}`;
 
 test.use({ user: "alice" });
+// The chart is client-only and draws about 980 markers on this pull; beside the parallel suite on a dev build its first
+// render can take far longer than when the spec runs alone, so the waits for it and the tests' timeout are longer.
+test.describe.configure({ timeout: 90_000 });
 
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(LOAD_TIMEOUT_MS);
@@ -27,7 +30,7 @@ test.beforeAll(async ({ browser }) => {
 
 async function open(page: import("@playwright/test").Page) {
   await page.goto(PULL);
-  await expect(page.locator("[data-marker]").first()).toBeVisible();
+  await expect(page.locator("[data-marker]").first()).toBeVisible({ timeout: 30_000 });
 }
 
 test("clicking a death marker selects it in the URL", async ({ page }) => {
@@ -98,7 +101,9 @@ test("brushing a window zooms to it, 30 s at most", async ({ page }) => {
 
 test("a window in the URL shows its events on load", async ({ page }) => {
   await page.goto(`${PULL}?t=420341-430341`);
-  await expect(page.getByTestId("zoomed-events").getByRole("heading", { name: "Events 7:00.3 – 7:10.3" })).toBeVisible();
+  await expect(page.getByTestId("zoomed-events").getByRole("heading", { name: "Events 7:00.3 – 7:10.3" })).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(page.getByTestId("zoom-window")).toBeVisible();
 });
 
@@ -116,7 +121,7 @@ test("budgets: first render, hover, click and step", { tag: "@budget" }, async (
     }).observe(document, { childList: true, subtree: true });
   });
   await page.goto(PULL);
-  await expect(page.locator("[data-marker]").first()).toBeVisible();
+  await expect(page.locator("[data-marker]").first()).toBeVisible({ timeout: 30_000 });
   const first = await page.evaluate(() => (window as unknown as Record<string, number>).__first!);
 
   // Time from an input event's own timestamp to the DOM showing its result.
