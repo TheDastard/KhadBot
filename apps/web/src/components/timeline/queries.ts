@@ -11,7 +11,7 @@ import { unwrap, type ApiGet } from "@khadbot/api-client";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import { queryKeys } from "@/lib/queries";
+import { pullTimelineQuery, queryKeys } from "@/lib/queries";
 
 export type PullTimelineData = ApiGet<"/v1/reports/{code}/pulls/{fight}/timeline">;
 export type EventsPageData = ApiGet<"/v1/reports/{code}/pulls/{fight}/events">;
@@ -21,13 +21,9 @@ function isClientError(error: unknown): boolean {
   return status >= 400 && status < 500;
 }
 
+/** The timeline's markers (the query is lib/queries.ts's, which the pull route starts beside the digest). */
 export function usePullTimeline(code: string, fight: number) {
-  return useQuery({
-    queryKey: [...queryKeys.pull(code, fight), "timeline"],
-    queryFn: () =>
-      unwrap(api().GET("/v1/reports/{code}/pulls/{fight}/timeline", { params: { path: { code, fight } } })),
-    retry: (count, error) => count < 2 && !isClientError(error),
-  });
+  return useQuery(pullTimelineQuery(code, fight));
 }
 
 export interface EventsQuery {
