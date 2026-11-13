@@ -90,7 +90,7 @@ Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `m
 the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
 `install:cli`); name new tasks the same way.
 
-A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Python and pnpm dependencies, hooks, `.env`, `deploy/dev.env`, and a check that Docker's engine is running; `-WithDocker` also installs Docker Desktop through winget, `-WithPlaywright` Playwright's Chromium). After that
+A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Python and pnpm dependencies, hooks, `.env`, `deploy/dev.env`, a check that Docker's engine is running, and the dev loop's Postgres and SeaweedFS images; `-Full` adds Docker Desktop and WSL 2, Playwright's Chromium and the GitHub CLI, which `-WithDocker`, `-WithPlaywright` and `-WithGitHubCli` add one at a time). After that
 `uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
 `mise trust`.
 

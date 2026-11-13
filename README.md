@@ -42,8 +42,9 @@ works as soon as it's created.
 git clone <repo-url> KhadBot
 cd KhadBot
 
-# 2. Install the tools and dependencies (add -WithGitHubCli for gh)
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1
+# 2. Install the tools and dependencies. -Full adds Docker Desktop (with WSL 2), Playwright's Chromium and gh,
+#    which the dev loop, the end-to-end tests and /land use; -WithDocker, -WithPlaywright and -WithGitHubCli add one each
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 -Full
 
 # 3. Configure your LLM provider and API keys in .env (the script creates it from .env.example)
 # Set LLM_PROVIDER, the matching API key, and WARCRAFTLOGS_CLIENT_ID/SECRET
@@ -51,7 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1
 
 The script skips anything already in place, so it is safe to rerun. It installs Git, uv and mise with winget if
 they're missing, puts mise's shims on your user `PATH`, downloads the LFS fixtures, runs `mise install` and
-`mise run install`, installs the pre-commit hooks, and creates `.env` if there isn't one. In a worktree it only checks
+`mise run install`, installs the TypeScript workspace's packages and the pre-commit hooks, creates `.env` and `deploy/dev.env` if they don't exist, and pulls the dev loop's Postgres and SeaweedFS images when Docker's engine is running. In a worktree it only checks
 the hooks: every worktree shares the main clone's hooks, so they're installed from the main checkout. `-SkipInstall`
 only checks and configures, and lists anything still missing. Open a new shell afterwards so the `PATH` change applies.
 

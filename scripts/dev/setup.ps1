@@ -4,6 +4,8 @@
 #   1. Tools via winget: Git (with Git LFS), uv 0.13 or later, mise, and optionally the GitHub CLI and Docker Desktop.
 #      Docker Desktop is only checked unless -WithDocker is given: the native dev loop (mise run dev:all) runs
 #      Postgres and the bucket in it. The check names what is missing: Docker itself, WSL 2, or a stopped engine.
+#      With -WithDocker a missing WSL 2 is installed too (`wsl --install --no-distribution`; it asks for
+#      elevation and needs a reboot).
 #   2. mise's shims folder on the user PATH, so node and pnpm resolve outside `mise run` too. No `mise trust` is
 #      needed: the project's mise.toml uses nothing that requires it.
 #   3. Git LFS hooks, so the recorded WCL fixtures download as real files.
@@ -15,11 +17,17 @@
 #      installing from one would break the hooks for every checkout once that worktree is removed.
 #   5. .env copied from .env.example if it doesn't exist yet. Fill in its keys yourself. Likewise deploy/dev.env from
 #      deploy/dev.env.example, the dev loop's throwaway settings (no secrets; created in a worktree too).
+#   6. The Postgres and SeaweedFS images the dev loop and the local stack run, pulled when Docker's engine is
+#      running, so the first `mise run dev:all` doesn't stop to download them.
+#
+# Only developer machines run this. A hosted deployment needs none of it: it runs the image built from
+# deploy/Dockerfile with the platform's Postgres, bucket and environment (docs/hosting.md).
 #
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
 # anything (winget shows its own agreement prompts).
 #
-# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-WithGitHubCli] [-WithDocker] [-WithPlaywright] [-SkipInstall]
+# Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup.ps1 [-Full] [-WithGitHubCli] [-WithDocker] [-WithPlaywright] [-SkipInstall]
+#   -Full           everything a full development machine needs: the same as -WithGitHubCli -WithDocker -WithPlaywright
 #   -WithGitHubCli  also install the GitHub CLI (`gh`), which /land uses to watch CI when present
 #   -WithDocker     also install Docker Desktop (winget Docker.DockerDesktop, a large download under Docker's
 #                   subscription agreement). It may then ask for WSL 2, a reboot or Docker's own licence prompt;
@@ -28,6 +36,7 @@
 #   -SkipInstall    only check and configure; don't install tools or dependencies
 
 param(
+    [switch]$Full,
     [switch]$WithGitHubCli,
     [switch]$WithDocker,
     [switch]$WithPlaywright,
@@ -35,6 +44,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Full) {
+    $WithGitHubCli = $true
+    $WithDocker = $true
+    $WithPlaywright = $true
+}
 
 # ── Banner ──────────────────────────────────────────────────────────────────
 Write-Host @'
@@ -120,19 +135,32 @@ function Test-WslReady {
     return ($LASTEXITCODE -eq 0)
 }
 
+$script:NeedsReboot = $false
+if ($WithDocker -and -not $SkipInstall -and -not (Test-WslReady)) {
+    # Docker Desktop's engine runs on WSL 2. --no-distribution installs only the platform, not a Linux distribution.
+    Write-Host "  installing WSL 2 (Windows asks for elevation)..."
+    Start-Process -FilePath "wsl.exe" -ArgumentList "--install", "--no-distribution" -Verb RunAs -Wait
+    $script:NeedsReboot = $true
+    Did "asked Windows to install WSL 2; reboot before starting Docker Desktop"
+}
 if ($WithDocker -and -not (Has docker)) {
     Install-WingetPackage "Docker.DockerDesktop" "Docker Desktop"
     if (Has docker) {
-        Write-Host "  Docker Desktop may now need WSL 2 (wsl --install), a reboot, and its licence prompt on first start." -ForegroundColor Yellow
+        Write-Host "  Docker Desktop shows its licence prompt on first start; start it and rerun this script to check the engine." -ForegroundColor Yellow
     }
 }
+$script:EngineRunning = $false
 if (Has docker) {
     docker info *> $null
-    if ($LASTEXITCODE -eq 0) { Ok "Docker engine running ($(docker version --format '{{.Server.Version}}'))" }
-    elseif (-not (Test-WslReady)) { Problem "Docker is installed but WSL 2 isn't ready (run: wsl --install, reboot, then start Docker Desktop)" }
+    if ($LASTEXITCODE -eq 0) {
+        $script:EngineRunning = $true
+        Ok "Docker engine running ($(docker version --format '{{.Server.Version}}'))"
+    }
+    elseif ($script:NeedsReboot) { Problem "Docker is installed but WSL 2 needs a reboot (reboot, start Docker Desktop, then rerun this script)" }
+    elseif (-not (Test-WslReady)) { Problem "Docker is installed but WSL 2 isn't ready (rerun with -WithDocker, or run: wsl --install --no-distribution, then reboot)" }
     else { Problem "Docker's engine isn't running (start Docker Desktop and wait until it says it is running)" }
 } else {
-    Problem "Docker Desktop is not installed; the dev loop needs it (rerun with -WithDocker, or install Docker.DockerDesktop)"
+    Problem "Docker Desktop is not installed; the dev loop needs it (rerun with -WithDocker or -Full, or install Docker.DockerDesktop)"
 }
 
 # The rest needs git and mise.
@@ -227,6 +255,18 @@ try {
     } else {
         Copy-Item deploy/dev.env.example deploy/dev.env
         Did "created deploy/dev.env from deploy/dev.env.example (the dev loop's settings; WCL credentials stay in .env)"
+    }
+
+    # ── 6. Docker images ────────────────────────────────────────────────────
+    Step "Docker images"
+    if (-not $script:EngineRunning) {
+        Write-Host "  note  skipped: Docker's engine isn't running (the first mise run dev:all pulls them instead)"
+    } elseif ($SkipInstall) {
+        Ok "skipped pulling the dev loop's images (-SkipInstall)"
+    } else {
+        docker compose -f deploy/compose.yaml pull postgres seaweedfs
+        if ($LASTEXITCODE -ne 0) { Problem "docker compose could not pull the Postgres and SeaweedFS images" }
+        else { Ok "Postgres and SeaweedFS images are pulled" }
     }
 } finally {
     Pop-Location

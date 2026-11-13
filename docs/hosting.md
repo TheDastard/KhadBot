@@ -217,7 +217,7 @@ Check it: `curl http://127.0.0.1:8000/v1/health` shows `"mode":"local"` and ever
 
 ### The dev loop (the full experience)
 
-The full experience runs hosted mode on your machine: Postgres and the bucket in Docker, the API and the worker natively, so a Python edit takes effect in seconds and no image is built. It runs the code production runs, against a real database and bucket. Needs Docker Desktop running (`scripts/dev/setup.ps1` checks it; `-WithDocker` installs it) and `uv sync --extra dev` (the reload uses `watchfiles`).
+The full experience runs hosted mode on your machine: Postgres and the bucket in Docker, the API and the worker natively, so a Python edit takes effect in seconds and no image is built. It runs the code production runs, against a real database and bucket. Needs Docker Desktop running (`scripts/dev/setup.ps1` checks it and pulls the images; `-WithDocker` or `-Full` installs it) and `uv sync --extra dev` (the reload uses `watchfiles`).
 
     mise run dev:all        # Postgres and SeaweedFS in Docker, the bucket, migrations, then the API and the worker
     mise run dev:seed -- --only SYNTH01   # in a second terminal; without --only, every recorded report
@@ -247,7 +247,7 @@ Against local mode, point it at `main.py serve` instead (`NEXT_PUBLIC_API_BASE=h
 
 The browser loads one third-party script, Wowhead's tooltips (`docs/game-art.md`); everything else comes from the API. Fonts are bundled from npm, so neither the dev server nor a build reaches Google Fonts.
 
-**End-to-end tests.** Playwright drives Chromium (`mise run install:playwright` once, or `setup.ps1 -WithPlaywright`). Two suites:
+**End-to-end tests.** Playwright drives Chromium (`mise run install:playwright` once, or `setup.ps1 -WithPlaywright` or `-Full`). Two suites:
 
 1. Hosted, on the dev loop with WCL replay and test sessions:
 
