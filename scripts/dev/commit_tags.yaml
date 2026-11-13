@@ -165,6 +165,7 @@ tags:
     paths:
       - src/khadbot/config.py
       - .env.example
+      - tests/unit/test_config_env.py
 
   # ── Hosted mode ──────────────────────────────────────────────────────────
   db:
