@@ -17,6 +17,7 @@ from collections.abc import Sequence
 
 import orjson
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 GRAPH_VERSION = "1"
 VERIFY_RULES_VERSION = 1
@@ -25,11 +26,13 @@ VERIFY_RULES_VERSION = 1
 def tool_fingerprint(tool: BaseTool) -> dict:
     """What the model is told about a tool: its name, description and argument schema."""
     schema = tool.tool_call_schema
-    return {
-        "name": tool.name,
-        "description": tool.description,
-        "schema": schema if isinstance(schema, dict) else schema.model_json_schema(),
-    }
+    if isinstance(schema, dict):
+        arguments = schema
+    elif issubclass(schema, BaseModel):
+        arguments = schema.model_json_schema()
+    else:  # a pydantic.v1 model, which langchain-core's type still allows
+        arguments = schema.schema()
+    return {"name": tool.name, "description": tool.description, "schema": arguments}
 
 
 def prompt_version(
