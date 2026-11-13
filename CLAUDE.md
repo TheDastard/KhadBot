@@ -100,6 +100,7 @@ A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Pyth
 | Install the TypeScript workspace / Playwright's Chromium | `mise run install:web`, `mise run install:playwright` | `pnpm install --frozen-lockfile` |
 | Lint + typecheck + layer rule + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run lint-imports && uv run pytest tests/unit` |
 | Layer rule only | `mise run lint:imports` | `uv run lint-imports` |
+| Commit messages on this branch / list the commit tags | `mise run lint:commits`, `mise run lint:tags` | `uv run python scripts/dev/check_commit_msg.py --range refs/remotes/origin/main..HEAD` |
 | Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
 | Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
 | Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
@@ -150,7 +151,7 @@ Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Ta
 
 ## Git
 
-Commit rules are in `.claude/rules/git-commits.md`. In short: `[KB][<tag>] <Imperative summary>` with a lowercase system or module tag from that file, a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
+Commit rules are in `.claude/rules/git-commits.md`. In short: `[<tag>][<subtag>] <Imperative summary>` with a system tag and, where one fits, a sub-tag from the registry `scripts/dev/commit_tags.yaml` (checked by a commit-msg hook and in CI), a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
 
 Each task gets its own branch and worktree off `main`; `main` stays linear and only fast-forwards to a branch whose CI is green, and the branch and worktree are deleted afterwards. Docs-only changes of any size go straight to `main` (no worktree, no CI wait). Tasks from a plan are executed by subagents, one per task, and the orchestrator integrates them; `/land` marks them done in the planning doc. `/land` (`.claude/skills/land/`) runs the landing sequence. Details are under "Branches and merging" in the same rules file.
 

@@ -1,7 +1,21 @@
 # Recorded WarcraftLogs pages are byte-for-byte API output (and stored in Git LFS); never rewrite them.
 exclude: ^tests/fixtures/encounter/wcl/(?!SYNTH01/)[^/]+/
 
+# `pre-commit install` installs both hooks. Hooks that name no stage run only before the commit, not on its message.
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+
 repos:
+  # Checks the commit message against .claude/rules/git-commits.md and the tags in scripts/dev/commit_tags.yaml.
+  # It runs in pre-commit's own environment, so it works from any shell; keep the PyYAML pin in step with uv.lock.
+  - repo: local
+    hooks:
+      - id: commit-msg
+        name: commit message format and tags
+        language: python
+        additional_dependencies: [pyyaml==6.0.3]
+        entry: python scripts/dev/check_commit_msg.py
+        stages: [commit-msg]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

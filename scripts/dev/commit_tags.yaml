@@ -1,0 +1,406 @@
+# The commit-message tags: the one list scripts/dev/check_commit_msg.py validates against.
+#
+# A commit summary reads `[<tag>] <Summary>` or `[<tag>][<subtag>] <Summary>`. The tag names the system the commit
+# mainly changes and the sub-tag the part of it; .claude/rules/git-commits.md has the rules for choosing them.
+# Two levels only: what a path already says (which boss, which file) belongs in the summary, not a third tag.
+#
+# Every tag also accepts the universal sub-tags `docs`, `tests` and `fixtures` without listing them: that system's
+# own documentation, test infrastructure and fixtures. List one here only to give it paths of its own.
+#
+# Each tag and sub-tag has:
+#   description  what it covers (required)
+#   paths        globs over repo-relative paths, used for two checks:
+#                - every git-tracked file must match some tag's or sub-tag's paths (tests/unit/scripts/dev/
+#                  test_commit_tags.py), so a new package or folder fails the check until it is given a tag;
+#                - the checker warns (never fails) when none of a commit's files match the tag it chose.
+#                `*` matches within one path segment, `**` across segments. A sub-tag's paths count as its tag's.
+#
+# Add a tag when a new top-level package or area appears, and a sub-tag when a part of a system is big enough to be
+# its own sub-package or keeps getting commits of its own. Add it here in the commit that first uses it.
+
+tags:
+  # ── Encounter mode ───────────────────────────────────────────────────────
+  encounter:
+    description: Encounter mode as a whole (setup, mode wiring); its sub-tags cover each stage
+    paths:
+      - src/khadbot/encounter/*.py
+      - tests/unit/encounter/*.py
+      - docs/encounter-pipeline.md
+      - docs/legacy-comparison.md
+    subtags:
+      ingest:
+        description: WCL event queries and fetch, raw page cache, normalize, event store, ingest
+        paths:
+          - src/khadbot/encounter/ingest/**
+          - src/khadbot/encounter/store.py
+          - src/khadbot/encounter/records_store.py
+          - tests/unit/encounter/ingest/**
+      config:
+        description: Encounter-file and cooldown-registry formats and loaders, and the registry builder
+        paths:
+          - src/khadbot/encounter/config_files.py
+          - src/khadbot/encounter/registry_candidates.py
+          - config/registries/**
+          - scripts/data/build_registries.py
+      annotate:
+        description: Phase detection, annotation, failure rules and blame
+        paths:
+          - src/khadbot/encounter/annotate/**
+          - tests/unit/encounter/annotate/**
+      analysis:
+        description: encounter/analysis/ (deaths, mechanics, cooldowns, aggro)
+        paths:
+          - src/khadbot/encounter/analysis/**
+          - tests/unit/encounter/analysis/**
+      digest:
+        description: Pull digest building and rendering, and its CLI commands
+        paths:
+          - src/khadbot/encounter/digest.py
+          - tests/golden/digests/**
+      evidence:
+        description: Evidence refs and resolution
+        paths:
+          - src/khadbot/encounter/evidence.py
+      analyst:
+        description: Analyst query tools, prompts, versioning, verify rules, the analyst and review graphs
+        paths:
+          - src/khadbot/encounter/analyst/**
+          - tests/unit/encounter/analyst/**
+          - config/agents/encounter.yaml
+      findings:
+        description: Findings store and the cached per-pull review
+        paths:
+          - src/khadbot/encounter/findings.py
+      tests:
+        description: Encounter test infrastructure, goldens and perf tests
+        paths:
+          - tests/unit/encounter/conftest.py
+          - tests/golden/**
+      fixtures:
+        description: Recorded and synthetic WCL fixtures, fixture encounter files and registries, and their recorder
+        paths:
+          - tests/fixtures/encounter/**
+          - scripts/data/record_wcl_fixture.py
+          - scripts/data/build_fixture_data.py
+      eval:
+        description: Golden-question eval harness for the analyst
+        paths:
+          - tests/eval/**
+          - tests/golden/questions.yaml
+
+  # ── Authored boss data ───────────────────────────────────────────────────
+  raid:
+    description: >-
+      Authored per-boss encounter files under config/encounters/, one sub-tag per raid zone (named after its folder,
+      without the zone ID). The summary names the boss; the checker warns when a commit changes one boss file and
+      the summary doesn't.
+    paths:
+      - config/encounters/**
+    subtags:
+      venomous-abyss:
+        description: The Venomous Abyss (zone 53)
+        paths:
+          - config/encounters/53-the_venomous_abyss/**
+
+  # ── The coach agent and the model layer ──────────────────────────────────
+  agent:
+    description: The coach agent, its config and prompt assembly
+    paths:
+      - src/khadbot/agent/**
+      - tests/unit/agent/**
+      - tests/integration/agent/**
+    subtags:
+      coach:
+        description: Coach agent, personas, prompt template and config/agents/coach.yaml
+        paths:
+          - src/khadbot/agent/coach.py
+          - src/khadbot/agent/personas.py
+          - src/khadbot/agent/prompt_assembler.py
+          - src/khadbot/agent/agent_config.py
+          - config/agents/coach.yaml
+          - config/personas/**
+          - config/templates/**
+      tools:
+        description: The agent's LangChain tools and their registry (agent/tools/)
+        paths:
+          - src/khadbot/agent/tools/**
+          - tests/unit/agent/tools/**
+          - tests/unit/tools/**
+      rag:
+        description: Retrieval and guide data
+  llm:
+    description: llm_factory.py, model and provider selection, model prices
+    paths:
+      - src/khadbot/llm_factory.py
+      - config/pricing/**
+      - tests/unit/test_llm_factory.py
+      - tests/unit/test_fake_llm.py
+
+  # ── Shared clients and data ──────────────────────────────────────────────
+  wcl:
+    description: The shared WarcraftLogs client (wcl/)
+    paths:
+      - src/khadbot/wcl/**
+      - tests/unit/wcl/**
+      - docs/wcl/**
+    subtags:
+      probes:
+        description: Budget, merged-filter, search-cost and watch-poll probes under scripts/wcl/
+        paths:
+          - scripts/wcl/**
+          - tests/unit/scripts/wcl/**
+  simc:
+    description: SimC generated client data, its codes, parser and pinned download (simc/)
+    paths:
+      - src/khadbot/simc/**
+      - tests/unit/simc/**
+  storage:
+    description: Blob stores the pipeline's caches and event store write through, and their factory (storage/)
+    paths:
+      - src/khadbot/storage/**
+      - tests/unit/storage/**
+      - tests/golden/storage/**
+  config:
+    description: App config (config.py), .env.example and environment variables
+    paths:
+      - src/khadbot/config.py
+      - .env.example
+
+  # ── Hosted mode ──────────────────────────────────────────────────────────
+  db:
+    description: Postgres for hosted mode (db/), its SQL-backed stores and the migrate subcommand
+    paths:
+      - src/khadbot/db/**
+      - tests/unit/db/**
+      - tests/integration/hosted/**
+    subtags:
+      migrations:
+        description: The migration runner and the migrations
+        paths:
+          - src/khadbot/db/migrate.py
+          - src/khadbot/db/migrations/**
+      read-models:
+        description: Read models and their projector
+        paths:
+          - src/khadbot/db/read_models.py
+          - src/khadbot/db/projector.py
+          - src/khadbot/db/queries.py
+  jobs:
+    description: Job specs and functions, and the queue wiring that runs them (jobs/)
+    paths:
+      - src/khadbot/jobs/**
+      - tests/unit/jobs/**
+    subtags:
+      queue:
+        description: The hosted queue, the jobs table, typed failures, cancel, progress and the worker
+        paths:
+          - src/khadbot/jobs/queue.py
+          - src/khadbot/jobs/status.py
+          - src/khadbot/jobs/failures.py
+          - src/khadbot/jobs/progress.py
+          - src/khadbot/jobs/health.py
+      budget:
+        description: The WCL point budget, its store and the usage ledger
+        paths:
+          - src/khadbot/jobs/budget.py
+          - src/khadbot/jobs/budget_store.py
+          - src/khadbot/jobs/usage.py
+          - src/khadbot/jobs/model_prices.py
+      watch:
+        description: The live report watch
+        paths:
+          - src/khadbot/jobs/watch.py
+          - src/khadbot/jobs/watch_store.py
+  auth:
+    description: Hosted sign-in with Warcraft Logs, sessions, stored WCL tokens and report access (auth/)
+    paths:
+      - src/khadbot/auth/**
+      - tests/unit/auth/**
+
+  # ── User-facing apps ─────────────────────────────────────────────────────
+  cli:
+    description: The Rich + prompt_toolkit REPL and its slash commands (cli/)
+    paths:
+      - src/khadbot/cli/**
+      - tests/unit/cli/**
+      - tests/integration/cli/**
+  api:
+    description: The dashboard API (api/), its serve and api subcommands
+    paths:
+      - src/khadbot/api/**
+      - tests/unit/api/**
+    subtags:
+      raids:
+        description: Report lookup, the server list, and guild and character search (api/raids/)
+        paths:
+          - src/khadbot/api/raids/**
+          - tests/unit/api/raids/**
+          - scripts/data/build_server_list.py
+          - scripts/data/record_wcl_search.py
+      contracts:
+        description: The generated contracts/openapi.json and its generator
+        paths:
+          - contracts/**
+          - scripts/dev/gen_contracts.py
+      client:
+        description: The generated API client every TypeScript app uses (packages/api-client/)
+        paths:
+          - packages/**
+  web:
+    description: The dashboard frontend (apps/web/)
+    paths:
+      - apps/web/**
+      - docs/game-art.md
+    subtags:
+      pull:
+        description: The pull page, its header, rail, panels and the opening-a-pull screen
+        paths:
+          - apps/web/src/app/r/**
+          - apps/web/src/components/pull/**
+          - apps/web/src/components/panel/**
+          - apps/web/src/components/open-pull/**
+          - apps/web/src/components/events/**
+      timeline:
+        description: The pull timeline
+        paths:
+          - apps/web/src/components/timeline/**
+      raids:
+        description: The Raids page, log search and the guild and character searches
+        paths:
+          - apps/web/src/components/raids/**
+      account:
+        description: Sign-in and the account menu
+        paths:
+          - apps/web/src/components/account/**
+      ui:
+        description: Shared components, design tokens and styles
+        paths:
+          - apps/web/src/components/ui/**
+          - apps/web/src/components/shared/**
+          - apps/web/src/styles/**
+      e2e:
+        description: The Playwright end-to-end suites and their runner
+        paths:
+          - apps/web/e2e/**
+          - apps/web/playwright*.config.ts
+
+  # ── Deployment ───────────────────────────────────────────────────────────
+  deploy:
+    description: Container image, compose stack and the dev loop (deploy/), the stack tasks and docs/hosting.md
+    paths:
+      - deploy/**
+      - .dockerignore
+      - docs/hosting.md
+      - scripts/data/seed_stack.py
+      - scripts/data/apply_bucket_lifecycle.py
+    subtags:
+      image:
+        description: The container image
+        paths:
+          - deploy/Dockerfile
+          - .dockerignore
+      compose:
+        description: The compose stack, its env file, seeding and bucket rules
+        paths:
+          - deploy/compose.yaml
+          - deploy/stack.env
+          - scripts/data/seed_stack.py
+          - scripts/data/apply_bucket_lifecycle.py
+      dev-loop:
+        description: The native dev loop runner and its env example
+        paths:
+          - scripts/dev/dev.py
+          - deploy/dev.env.example
+          - tests/unit/scripts/dev/test_dev.py
+      tests:
+        description: The stack and queue smoke tests
+        paths:
+          - scripts/dev/stack_smoke.py
+          - scripts/dev/queue_smoke.py
+
+  # ── Repo-wide ────────────────────────────────────────────────────────────
+  repo:
+    description: Package layout, entry point, dependencies, tooling, CI and Claude rules
+    subtags:
+      layout:
+        description: Package layout, the entry point, the composition root and shared top-level modules
+        paths:
+          - main.py
+          - src/khadbot/*.py
+          - tests/unit/test_main*.py
+          - tests/unit/test_optional_groups.py
+          - tests/unit/test_logging_setup.py
+          - tests/unit/conftest.py
+      deps:
+        description: Python and pnpm dependencies and their lock files
+        paths:
+          - pyproject.toml
+          - uv.lock
+          - .python-version
+          - package.json
+          - pnpm-lock.yaml
+          - pnpm-workspace.yaml
+      tooling:
+        description: mise tasks, setup and clean scripts, pre-commit hooks, editor settings, ignore files
+        paths:
+          - mise.toml
+          - .pre-commit-config.yaml
+          - .gitignore
+          - .gitattributes
+          - .vscode/**
+          - scripts/dev/**
+          - tests/unit/scripts/dev/**
+      ci:
+        description: GitHub Actions workflows and the core-install smoke test
+        paths:
+          - .github/**
+          - scripts/dev/core_smoke.py
+      rules:
+        description: CLAUDE.md, .claude/ rules, skills and settings
+        paths:
+          - CLAUDE.md
+          - .claude/**
+      commits:
+        description: The commit-message rules, this tag registry and its checker
+        paths:
+          - scripts/dev/commit_tags.yaml
+          - scripts/dev/check_commit_msg.py
+          - tests/unit/scripts/dev/test_check_commit_msg.py
+          - tests/unit/scripts/dev/test_commit_tags.py
+          - .claude/rules/git-commits.md
+  tests:
+    description: Test infrastructure shared across the app (tests/conftest.py, tests/helpers/) and non-encounter tests
+    paths:
+      - tests/conftest.py
+      - tests/helpers/**
+      - tests/unit/scripts/conftest.py
+      - tests/unit/scripts/data/**
+      - tests/golden/normalized/**
+  fixtures:
+    description: Non-encounter test fixtures
+    paths:
+      - tests/fixtures/*
+  eval:
+    description: Eval tooling shared across the app (the test:eval task, eval markers)
+    paths:
+      - tests/eval/conftest.py
+  docs:
+    description: >-
+      Documentation that belongs to no single system: the README, the decisions log, follow-ups and plans as a whole.
+      A document about one system takes that system's tag with the docs sub-tag ([wcl][docs]).
+    paths:
+      - README.md
+      - docs/**
+    subtags:
+      decisions:
+        description: The decisions log (docs/decisions.md) as a whole
+        paths:
+          - docs/decisions.md
+      follow-ups:
+        description: The follow-ups list (docs/follow-ups.md) as a whole
+        paths:
+          - docs/follow-ups.md
+      plans:
+        description: Planning docs and docs/plan-changes.md
+        paths:
+          - docs/plan-changes.md

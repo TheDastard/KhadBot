@@ -3,71 +3,78 @@
 ## Message format
 
 ```
-[KB][<tag>] <Imperative summary, no trailing period>
+[<tag>][<subtag>] <Imperative summary, no trailing period>
 
 <Body: what changed and why, wrapped at ~72 columns. Paragraphs or
 "- " bullets, matching recent history (`git log -5`).>
 ```
 
-Example: `[KB][encounter-ingest] Add boss health to pulls and digests`.
+Examples: `[encounter][ingest] Add boss health to pulls and digests`, `[deploy][tests] Queue a job in the stack smoke
+test`, `[storage] Add an S3-compatible blob store`.
 
-- The tag names the system or module the commit mainly changes. Exactly one tag, lowercase, from the list below, with no space between `[KB]` and the tag and one space before the summary.
-- When a commit spans several areas, tag the one where the change starts or that it is about; the body covers the rest.
-- The summary starts with a verb: Add, Fix, Update, Remove, Swap, Implement.
-- The body describes the change in project terms (modules, behaviour, reasons), so it still makes sense to someone who has never seen the refactor plan.
+- The tag names the system the commit mainly changes; the sub-tag names the part of it. Both are lowercase, from
+  the registry below, with no space between the brackets and one space before the summary.
+- The sub-tag is optional. Use one whenever the change sits within one registered part of the system; leave it off
+  for a change across the whole system or a system that has no sub-tags.
+- A sub-tag always names a part of its system. Every tag also takes three universal sub-tags without listing
+  them: `docs`, `tests` and `fixtures`, for that system's own documentation, test infrastructure and fixtures
+  (`[wcl][docs]`, `[deploy][tests]`). A feature commit that brings its tests or docs along keeps the feature's tag
+  (`[encounter][ingest]`), not `[...][tests]`.
+- Documentation about one system takes that system's tag: `[wcl][docs] Document WCL rate limits`, not
+  `[docs][wcl]`. The `docs` tag is for documentation that belongs to no single system (the README, the decisions
+  log, follow-ups and plans as a whole).
+- Two levels only. What a path already says (which boss, which file) goes in the summary, not a third tag:
+  `git log -- <path>` gives a file's history exactly.
+- When a commit spans several areas, tag the one where the change starts or that it is about; the body covers the
+  rest.
+- The summary starts with an imperative verb: Add, Fix, Update, Remove, Swap, Implement. Aim for a subject of 72
+  characters or fewer.
+- The body describes the change in project terms (modules, behaviour, reasons), so it still makes sense to someone
+  who has never seen the refactor plan. Every commit has one.
+- There is no project prefix (the old `[KB]`): every commit in this repo is KhadBot's.
 
 ## Tags
 
-Encounter mode (`src/khadbot/encounter/`, its config and data):
+The tags and sub-tags live in one registry, `scripts/dev/commit_tags.yaml`, each with a description and the paths
+it owns. `mise run lint:tags` lists them. The broad shape:
 
-| Tag | Covers |
-|---|---|
-| `encounter` | Work spanning the whole encounter mode (setup, mode wiring) |
-| `encounter-ingest` | WCL event queries and fetch, raw page cache, normalize, event store, ingest |
-| `encounter-config` | Encounter-file and cooldown-registry formats and loaders |
-| `encounter-files` | Authored per-boss encounter data under `config/encounters/` |
-| `encounter-annotate` | Phase detection, annotation, failure rules and blame |
-| `encounter-analysis` | `encounter/analysis/` (deaths, mechanics, cooldowns, aggro) |
-| `encounter-digest` | Pull digest building, rendering and its CLI commands |
-| `encounter-evidence` | Evidence refs and resolution |
-| `encounter-analyst` | Analyst query tools, versioning, verify, analyst graph |
-| `encounter-findings` | Findings store and the cached per-pull review |
-| `encounter-tests` | Encounter test infrastructure, goldens and perf tests |
-| `encounter-fixtures` | Recorded and synthetic WCL fixtures, fixture encounter files and registries (`tests/fixtures/encounter/`) |
-| `encounter-eval` | Golden-question eval harness for the analyst |
+| Tag | Covers | Sub-tags |
+|---|---|---|
+| `encounter` | Encounter mode, its config and data | `ingest`, `config`, `annotate`, `analysis`, `digest`, `evidence`, `analyst`, `findings`, `tests`, `fixtures`, `eval` |
+| `raid` | Authored per-boss encounter files (`config/encounters/`); the summary names the boss | one per raid zone: `venomous-abyss` |
+| `agent` | The coach agent | `coach`, `tools`, `rag` |
+| `llm`, `config` | `llm_factory.py` and model prices; `config.py` and `.env.example` | |
+| `wcl`, `simc`, `storage` | The shared WCL client, SimC data, blob stores | `wcl`: `probes` (`scripts/wcl/`) |
+| `db`, `jobs`, `auth` | Hosted mode | `db`: `migrations`, `read-models`; `jobs`: `queue`, `budget`, `watch` |
+| `cli`, `api`, `web` | The apps | `api`: `raids`, `contracts`, `client`; `web`: `pull`, `timeline`, `raids`, `account`, `ui`, `e2e` |
+| `deploy` | Image, compose stack, dev loop | `image`, `compose`, `dev-loop`, `tests` |
+| `repo` | Repo-wide | `layout`, `deps`, `tooling`, `ci`, `rules`, `commits` |
+| `tests`, `fixtures`, `eval` | Test, fixture and eval infrastructure shared across systems | |
+| `docs` | Documentation that belongs to no single system | `decisions`, `follow-ups`, `plans` |
 
-Rest of the app:
+Any tag also takes `docs`, `tests` and `fixtures`. The registry is the source of truth; this table is a map of it. For tests, fixtures and evals, prefer the system's
+own sub-tag (`[encounter][tests]`) whenever the change belongs to one system; use the top-level `tests`,
+`fixtures` or `eval` only for what is shared or belongs to no single system.
 
-| Tag | Covers |
-|---|---|
-| `coach` | Coach agent, personas, prompt assembly, `config/agents/` |
-| `cli` | Rich + prompt_toolkit REPL |
-| `llm` | `llm_factory.py` and model/provider selection |
-| `app-config` | `config.py`, `.env.example`, environment variables |
-| `agent-tools` | The agent's LangChain tools and their registry (`agent/tools/`) |
-| `wcl-client` | Shared WarcraftLogs client (`wcl/`) |
-| `rag` | Retrieval and guide data |
-| `simc` | SimC generated client data: codes, parser and fetch (`simc/`) |
-| `db` | Postgres for hosted mode (`src/khadbot/db/`): connection pool, migrations, SQL-backed stores, the `migrate` subcommand |
-| `jobs` | Job specs and job functions, and the queue wiring that runs them (`src/khadbot/jobs/`) |
-| `auth` | Hosted sign-in with Warcraft Logs, sessions, stored WCL tokens and report access (`src/khadbot/auth/`), and its migration |
-| `storage` | Blob stores the pipeline's caches and event store write through, and their factory (`storage/`) |
-| `api` | The dashboard API (`src/khadbot/api/`), its `serve` subcommand and the generated `contracts/` |
-| `web` | The dashboard frontend (`apps/web/`) |
-| `deploy` | Container image, compose stack and platform files (`deploy/`, `.dockerignore`), the `stack:` tasks and `docs/hosting.md` |
-| `api-client` | The generated API client every TypeScript app uses (`packages/`) |
+### Adding tags
 
-Repo-wide:
+- If no tag or sub-tag fits, add one to the registry in the same commit rather than stretching an existing one.
+- A new top-level package or folder gets a tag or sub-tag with its paths in the commit that adds it:
+  `tests/unit/scripts/dev/test_commit_tags.py` fails while any tracked file matches no tag.
+- Add a sub-tag when a part of a system becomes its own sub-package (see "Module layout" in CLAUDE.md) or keeps
+  getting commits of its own.
+- A new raid gets a `raid` sub-tag named after its folder without the zone ID (`53-the_venomous_abyss` →
+  `venomous-abyss`), in the commit that adds its first boss file.
+- When you add, rename or remove a tag, update the table above in the same commit.
 
-| Tag | Covers |
-|---|---|
-| `repo` | Package layout, entry point, dependencies, tooling, Claude rules |
-| `tests` | Test infrastructure shared across the app (`tests/conftest.py`, `tests/helpers/fake_llm.py`) and non-encounter tests |
-| `fixtures` | Non-encounter test fixtures |
-| `eval` | Eval tooling shared across the app (the `test:eval` task, eval markers) |
-| `docs` | Commits that change only documentation |
+### Checks
 
-For tests, fixtures and evals, prefer the system's own tag (`encounter-tests`, `encounter-fixtures`, `encounter-eval`) whenever the change belongs to one system. Use the broader `tests`, `fixtures` or `eval` only when it is shared across systems or belongs to no single one. If no tag fits, add one to this list in the same commit rather than stretching an existing tag.
+- The `commit-msg` pre-commit hook (`scripts/dev/check_commit_msg.py`) checks each message as you commit: format,
+  registered tag and sub-tag, imperative summary, body, AI attribution and plan IDs. It warns, without failing,
+  when none of the staged files match the chosen tag's paths, and when a `raid` commit changes one boss file
+  without naming the boss. `fixup!` and `squash!` commits pass it.
+- The `commit-messages` CI job runs the same checks on every commit a push adds, and rejects unfolded `fixup!`
+  commits; `mise run lint:commits` runs them on a branch locally.
 
 ## Never include
 

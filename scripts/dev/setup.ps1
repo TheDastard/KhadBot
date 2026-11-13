@@ -64,10 +64,12 @@ function Add-SessionPath($dir) {
     if ((Test-Path $dir) -and -not (($env:PATH -split ";") -contains $dir)) { $env:PATH = "$dir;$env:PATH" }
 }
 
-# The Python the shared pre-commit hook runs, if the hook exists and that Python is still there.
+# The Python the shared pre-commit hooks run, if both hooks (pre-commit and commit-msg) exist and that Python is
+# still there.
 function Test-PreCommitHook($hooksDir) {
     $hook = Join-Path $hooksDir "pre-commit"
     if (-not (Test-Path $hook)) { return $null }
+    if (-not (Test-Path (Join-Path $hooksDir "commit-msg"))) { return $null }
     $line = Select-String -Path $hook -Pattern "^INSTALL_PYTHON='(.*)'$" | Select-Object -First 1
     if (-not $line) { return $null }
     $python = $line.Matches[0].Groups[1].Value

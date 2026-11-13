@@ -110,6 +110,14 @@ run = "uv run mypy src"
 description = "Check the Python layer rule with import-linter"
 run = "uv run lint-imports"
 
+[tasks."lint:commits"]
+description = "Check this branch's commit messages against the commit rules and the tag registry"
+run = "uv run python scripts/dev/check_commit_msg.py --range refs/remotes/origin/main..HEAD"
+
+[tasks."lint:tags"]
+description = "List the commit tags and sub-tags (scripts/dev/commit_tags.yaml)"
+run = "uv run python scripts/dev/check_commit_msg.py --tags"
+
 
 # ── Web app (apps/web; .claude/rules/web.md) ────────────────────────────────
 # NEXT_PUBLIC_API_BASE picks the API; this task defaults it to the dev loop's. `dev:all` starts the same server.

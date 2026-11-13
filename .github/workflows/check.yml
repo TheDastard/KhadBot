@@ -54,6 +54,39 @@ jobs:
       - run: uv sync --locked --extra dev
       - run: mise run check
 
+  # Commit messages against .claude/rules/git-commits.md and scripts/dev/commit_tags.yaml. The hook checks them
+  # locally, but hooks can be skipped and main only moves to a green commit, so this is the gate. A branch checks
+  # every commit it adds on top of main; main checks what the push added, or only its tip when the push rewrote
+  # history.
+  commit-messages:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          lfs: false
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Pick the commits to check
+        id: range
+        env:
+          BEFORE: ${{ github.event.before }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            range="origin/main..$PR_HEAD"
+          elif [ "$GITHUB_REF" != refs/heads/main ]; then
+            range="origin/main..HEAD"
+          elif git cat-file -e "$BEFORE^{commit}" 2>/dev/null && git merge-base --is-ancestor "$BEFORE" HEAD; then
+            range="$BEFORE..HEAD"
+          else
+            range="HEAD~1..HEAD"
+          fi
+          echo "range=$range" >> "$GITHUB_OUTPUT"
+      - run: uv run --no-project --with pyyaml==6.0.3 python scripts/dev/check_commit_msg.py --range "${{ steps.range.outputs.range }}"
+
   # Tests that need Postgres (the `hosted` marker). They skip without DATABASE_URL, so the `check` job above
   # runs them as skips; this job gives them a real database. The major version is pinned in docs/decisions.md.
   hosted:
