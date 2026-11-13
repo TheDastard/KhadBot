@@ -93,8 +93,14 @@ describe("TimelineChart keyboard", () => {
     expect(screen.getByRole("button", { name: /^Death 2/ }).tabIndex).toBe(0);
   });
 
-  it("mirrors the markers in a list in the same order", () => {
+  it("mirrors the markers in a list in the same order, once it is open", () => {
     setup();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    const details = screen.getByText(/^Markers as a list/).closest("details")!;
+    act(() => {
+      details.open = true;
+      details.dispatchEvent(new Event("toggle"));
+    });
     const items = screen.getAllByRole("listitem").map((li) => li.textContent);
     expect(items[0]).toContain("Death 1");
     expect(items).toHaveLength(4);
