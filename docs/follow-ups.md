@@ -355,15 +355,6 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **Death and mechanic tables are tight at 1024 px.** Beside the 380 px panel the sections column is about 330 px wide,
   so the Deaths table scrolls in its box, and following a chip scrolls the box to the chip and hides the time and
   player columns. Let the panel narrow (or overlay) below about 1200 px, or stack the Killed by and mechanics columns.
-- **Budgets at their edge on a dev build.** On the local stack the chip-to-panel time (257 to 321 ms cached, up to
-  883 ms uncached) is over its 100 and 500 ms budgets, and the timeline's first render (1.1 to 1.7 s) and its click
-  and step (up to 117 ms) sit on theirs, so the timeline's `@budget` test fails on some runs (decision D87). Measure a
-  production build (`next build` and `next start`) before tuning, then look at the evidence request and the marker
-  render; never loosen a budget to pass.
-- **The hosted suite times out with default workers.** With Playwright's default workers (half the logical CPUs, 8
-  on a 16-thread machine) one `next dev` server and the API serve every test, and page loads and reloads outlast the
-  30 s test timeout in a different handful of tests each run. With `--workers=4` the same suite passes. Cap the
-  workers in `playwright.config.ts`, or run the suite against a production build.
 - **Timeline markers lack spell IDs.** `MechanicMarker` and `WindowMarker` carry no spell ID, so the timeline's mechanic
   rows and window chips show the neutral square and cooldown markers show the spell's initials, where the canvas
   draws Wowhead icons. On a long pull the initials boxes of the two cooldown tiers overlap and clip each other. Add the ability ID to both markers (the encounter file knows it) and draw them through
