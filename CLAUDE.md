@@ -112,6 +112,7 @@ A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Pyth
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
 | Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload, the web dev server (needs Docker; ports 8000 and 3000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
 | Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:web`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
+| Compare `.env` and `deploy/dev.env` with their examples by name / append the missing names, commented out | `mise run env:check`, `mise run env:fix` | `uv run python scripts/dev/check_env.py [--fix]` |
 | Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
 | Same, then delete `.venv` / also every `node_modules` and the fixture data | `mise run clean:all`, `mise run clean:deps` | `scripts/dev/clean.ps1 -Venv`, `... -All` |
 

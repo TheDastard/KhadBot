@@ -16,7 +16,8 @@
 #      ran it into them, so the hooks are installed from the main checkout only. A worktree just checks them;
 #      installing from one would break the hooks for every checkout once that worktree is removed.
 #   5. .env copied from .env.example if it doesn't exist yet. Fill in its keys yourself. Likewise deploy/dev.env from
-#      deploy/dev.env.example, the dev loop's throwaway settings (no secrets; created in a worktree too).
+#      deploy/dev.env.example, the dev loop's throwaway settings (no secrets; created in a worktree too). Copies that
+#      already exist are compared with their examples by name (scripts/dev/check_env.py), never by value.
 #   6. The Postgres and SeaweedFS images the dev loop and the local stack run, pulled when Docker's engine is
 #      running, so the first `mise run dev:all` doesn't stop to download them.
 #
@@ -79,12 +80,14 @@ function Add-SessionPath($dir) {
     if ((Test-Path $dir) -and -not (($env:PATH -split ";") -contains $dir)) { $env:PATH = "$dir;$env:PATH" }
 }
 
-# The Python the shared pre-commit hooks run, if both hooks (pre-commit and commit-msg) exist and that Python is
-# still there.
+# The Python the shared pre-commit hooks run, if every hook .pre-commit-config.yaml installs exists and that Python
+# is still there.
 function Test-PreCommitHook($hooksDir) {
     $hook = Join-Path $hooksDir "pre-commit"
     if (-not (Test-Path $hook)) { return $null }
-    if (-not (Test-Path (Join-Path $hooksDir "commit-msg"))) { return $null }
+    foreach ($other in "commit-msg", "post-checkout", "post-merge") {
+        if (-not (Test-Path (Join-Path $hooksDir $other))) { return $null }
+    }
     $line = Select-String -Path $hook -Pattern "^INSTALL_PYTHON='(.*)'$" | Select-Object -First 1
     if (-not $line) { return $null }
     $python = $line.Matches[0].Groups[1].Value
@@ -255,6 +258,15 @@ try {
     } else {
         Copy-Item deploy/dev.env.example deploy/dev.env
         Did "created deploy/dev.env from deploy/dev.env.example (the dev loop's settings; WCL credentials stay in .env)"
+    }
+
+    # Existing copies keep their values, so report the names their examples gained or lost since (names only).
+    $envReport = uv run python scripts/dev/check_env.py --strict 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Ok ".env and deploy/dev.env list every name their examples do"
+    } else {
+        $envReport | ForEach-Object { Write-Host "  note  $_" }
+        Write-Host "  note  mise run env:fix appends the missing names, commented out" -ForegroundColor Yellow
     }
 
     # ── 6. Docker images ────────────────────────────────────────────────────

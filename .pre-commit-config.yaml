@@ -1,11 +1,23 @@
 # Recorded WarcraftLogs pages are byte-for-byte API output (and stored in Git LFS); never rewrite them.
 exclude: ^tests/fixtures/encounter/wcl/(?!SYNTH01/)[^/]+/
 
-# `pre-commit install` installs both hooks. Hooks that name no stage run only before the commit, not on its message.
-default_install_hook_types: [pre-commit, commit-msg]
+# `pre-commit install` installs all four hook types. Hooks that name no stage run only before the commit.
+default_install_hook_types: [pre-commit, commit-msg, post-checkout, post-merge]
 default_stages: [pre-commit]
 
 repos:
+  # After a checkout or pull, warns (never fails) when .env or deploy/dev.env lacks a name its committed example
+  # gained, or keeps one it lost. Compares names only; standard library only.
+  - repo: local
+    hooks:
+      - id: env-sync
+        name: .env names match .env.example
+        language: python
+        entry: python scripts/dev/check_env.py --hook
+        stages: [post-checkout, post-merge]
+        always_run: true
+        pass_filenames: false
+        verbose: true
   # Checks the commit message against .claude/rules/git-commits.md and the tags in scripts/dev/commit_tags.yaml.
   # It runs in pre-commit's own environment, so it works from any shell; keep the PyYAML pin in step with uv.lock.
   - repo: local

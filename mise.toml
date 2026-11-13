@@ -118,6 +118,15 @@ run = "uv run python scripts/dev/check_commit_msg.py --range refs/remotes/origin
 description = "List the commit tags and sub-tags (scripts/dev/commit_tags.yaml)"
 run = "uv run python scripts/dev/check_commit_msg.py --tags"
 
+# Names only: neither task reads out or prints a value. .env is the main checkout's; deploy/dev.env this checkout's.
+[tasks."env:check"]
+description = "Compare .env and deploy/dev.env with their committed examples, by variable name"
+run = "uv run python scripts/dev/check_env.py"
+
+[tasks."env:fix"]
+description = "Append the names .env and deploy/dev.env lack from their examples, commented out"
+run = "uv run python scripts/dev/check_env.py --fix"
+
 
 # ── Web app (apps/web; .claude/rules/web.md) ────────────────────────────────
 # NEXT_PUBLIC_API_BASE picks the API; this task defaults it to the dev loop's. `dev:all` starts the same server.
