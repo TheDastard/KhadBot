@@ -456,6 +456,11 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   New tools go in `agent/tools/` and read data offline pipelines have fetched and cached (character profiles,
   report and encounter data, sims, guides), never an external API. Each needs its pipeline and cache first.
   Bring back the coach's tool routing, argument and tool-error integration tests with them.
+- **Parked agent and CLI tests.** Tests marked `legacy_agent` are known broken and skipped unless run with
+  `-m legacy_agent`: `tests/integration/cli/test_callback_handler_wired.py` (its `FakeListChatModel` can't script
+  tool calls; rewrite on `tests/helpers/fake_llm.py`) and the two LangSmith footer tests in
+  `tests/integration/cli/test_repl_loop.py` (they never set `LANGCHAIN_TRACING_V2=true`). Fix or delete them in the
+  agent refactor, then drop the marker.
 
 ## Encounters
 

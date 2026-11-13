@@ -30,6 +30,10 @@ import pytest
 
 pytest.importorskip("langchain_core", reason="langchain_core required for callback integration tests")
 
+# Broken: FakeListChatModel only takes strings, so it can't script the tool-calling AIMessages these tests need, and
+# the coach has no tools until its refactor. Rewrite on tests/helpers/fake_llm.py then.
+pytestmark = pytest.mark.legacy_agent
+
 from langchain.agents import create_agent  # noqa: E402
 from langchain_core.language_models.fake_chat_models import FakeListChatModel  # noqa: E402
 from langchain_core.messages import AIMessage  # noqa: E402
