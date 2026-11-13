@@ -8,11 +8,19 @@
 //   full  "1" shows everything after the death cutoff ("Show everything")
 //
 // Every change is a history push, so Back undoes it. Other query parameters are kept as they are.
+//
+// A change is a shallow push (`window.history.pushState`, which Next.js folds into its router and useSearchParams),
+// not a router navigation, so a focus change never asks the server for the page again. Components read the focus
+// through slices (`useFocusRef`, `useFocusFull`, `useFocusWindow`, `useIsFocusedRef`, `useFocusBaseSearch`), each a
+// useSyncExternalStore over the URL that re-renders its component only when that slice changes: selecting a marker
+// or a chip re-renders the timeline's selection, the two chips involved and the panel, not the whole pull page.
+// `<FocusSync />`, mounted once by the pull page, tells the slices about URL changes Next.js makes itself (a Link to
+// another pull, Back and Forward).
 
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useLayoutEffect, useMemo, useSyncExternalStore } from "react";
 
 import { parseRef, type ParsedRef } from "./refs";
 
@@ -84,44 +92,136 @@ export function focusHref(pathname: string, current: URLSearchParams, change: Fo
   return search ? `${pathname}?${search}` : pathname;
 }
 
-export interface UseFocus extends Focus {
-  /** The selected ref, parsed; null when there is none or it has no known shape. */
-  parsedRef: ParsedRef | null;
+// ---------------------------------------------------------------------------
+// The URL as a store
+// ---------------------------------------------------------------------------
+
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  window.addEventListener("popstate", listener);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener("popstate", listener);
+  };
+}
+
+/** The current query string without "?"; empty on the server, so client slices start empty and catch up. */
+function currentSearch(): string {
+  return typeof window === "undefined" ? "" : window.location.search.replace(/^\?/, "");
+}
+
+/** A slice of the focus: its component re-renders only when `select` returns a different primitive. */
+function useSlice<T extends string | boolean | null>(select: (params: URLSearchParams) => T): T {
+  return useSyncExternalStore(
+    subscribe,
+    () => select(new URLSearchParams(currentSearch())),
+    () => select(new URLSearchParams()),
+  );
+}
+
+/**
+ * Keeps the focus slices in step with URL changes Next.js makes (a Link to another pull, Back and Forward). Mount
+ * it once where the focus is read; it renders nothing, and it is the only focus reader useSearchParams re-renders.
+ */
+export function FocusSync(): null {
+  const search = useSearchParams().toString();
+  useLayoutEffect(() => notify(), [search]);
+  return null;
+}
+
+/** Push an href on the current page (a focus change, or an evidence chip's) without a router navigation. */
+export function pushFocusHref(href: string): void {
+  const next = new URL(href, window.location.href);
+  if (next.pathname === window.location.pathname && next.search === window.location.search) return;
+  window.history.pushState(null, "", `${next.pathname}${next.search}${next.hash}`);
+  notify();
+}
+
+/** Apply a change to the current URL with a shallow history push (Back undoes it). */
+export function pushFocus(change: FocusChange): void {
+  pushFocusHref(focusHref(window.location.pathname, new URLSearchParams(currentSearch()), change));
+}
+
+// ---------------------------------------------------------------------------
+// Slices
+// ---------------------------------------------------------------------------
+
+/** The selected ref (`?ref=`), or null. */
+export function useFocusRef(): string | null {
+  return useSlice((p) => parseFocus(p).ref);
+}
+
+/** Whether `evidenceRef` is the selected ref; re-renders only when that answer changes. */
+export function useIsFocusedRef(evidenceRef: string): boolean {
+  return useSlice((p) => parseFocus(p).ref === evidenceRef);
+}
+
+/** "Show everything" (`?full=1`). */
+export function useFocusFull(): boolean {
+  return useSlice((p) => parseFocus(p).full);
+}
+
+/** The zoomed window (`?t=`), or null. */
+export function useFocusWindow(): TimeWindow | null {
+  const text = useSlice((p) => {
+    const t = parseFocus(p).t;
+    return t ? formatWindow(t) : null;
+  });
+  return useMemo(() => parseWindow(text), [text]);
+}
+
+/** The query string without `ref` and `t`, which an evidence chip's href keeps. */
+export function useFocusBaseSearch(): string {
+  return useSlice((p) => {
+    p.delete("ref");
+    p.delete("t");
+    return p.toString();
+  });
+}
+
+export interface FocusActions {
   /** Apply a change with a history push (Back undoes it). */
   setFocus: (change: FocusChange) => void;
   setRef: (ref: string | null) => void;
   setWindow: (t: TimeWindow | null) => void;
   setFull: (full: boolean) => void;
-  /** The href a change would lead to, for links (EvidenceChip uses it). */
+}
+
+const ACTIONS: FocusActions = {
+  setFocus: pushFocus,
+  setRef: (ref) => pushFocus({ ref }),
+  setWindow: (t) => pushFocus({ t }),
+  setFull: (full) => pushFocus({ full }),
+};
+
+/** The focus setters: stable, and holding them never re-renders a component on a focus change. */
+export function useFocusActions(): FocusActions {
+  return ACTIONS;
+}
+
+export interface UseFocus extends Focus, FocusActions {
+  /** The selected ref, parsed; null when there is none or it has no known shape. */
+  parsedRef: ParsedRef | null;
+  /** The href a change would lead to (the current page unless `pathname` is given), for links. */
   hrefFor: (change: FocusChange, pathname?: string) => string;
 }
 
-/** Read and write the pull page's focus in the URL. Use inside a <Suspense> boundary (useSearchParams needs one). */
+/** The whole focus and its setters. Re-renders on any focus change; prefer a slice where one is enough. */
 export function useFocus(): UseFocus {
-  const params = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const search = params.toString();
-
-  const focus = useMemo(() => parseFocus(new URLSearchParams(search)), [search]);
-  const parsedRef = useMemo(() => (focus.ref ? parseRef(focus.ref) : null), [focus.ref]);
-
+  const ref = useFocusRef();
+  const t = useFocusWindow();
+  const full = useFocusFull();
+  const parsedRef = useMemo(() => (ref ? parseRef(ref) : null), [ref]);
   const hrefFor = useCallback(
-    (change: FocusChange, path?: string) => focusHref(path ?? pathname, new URLSearchParams(search), change),
-    [pathname, search],
+    (change: FocusChange, path?: string) =>
+      focusHref(path ?? window.location.pathname, new URLSearchParams(currentSearch()), change),
+    [],
   );
-  const setFocus = useCallback(
-    (change: FocusChange) => router.push(hrefFor(change), { scroll: false }),
-    [router, hrefFor],
-  );
-
-  return {
-    ...focus,
-    parsedRef,
-    setFocus,
-    setRef: useCallback((ref) => setFocus({ ref }), [setFocus]),
-    setWindow: useCallback((t) => setFocus({ t }), [setFocus]),
-    setFull: useCallback((full) => setFocus({ full }), [setFocus]),
-    hrefFor,
-  };
+  return { ref, t, full, parsedRef, hrefFor, ...ACTIONS };
 }
