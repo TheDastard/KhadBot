@@ -10,7 +10,7 @@ import Link from "next/link";
 
 import { FightPct, FightPctBar } from "@/components/shared/fight-pct";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { focusHref, useFocus } from "@/lib/focus";
+import { focusHref, useFocusFull } from "@/lib/focus";
 import { pullPagePath } from "@/lib/refs";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +58,7 @@ function Row({ code, pull, current, full }: { code: string; pull: PullSummary; c
 
 export function PullRail({ code, fight }: { code: string; fight: number }) {
   const detail = useReportDetail(code);
-  const { full } = useFocus();
+  const full = useFocusFull();
   return (
     <aside
       id="pull-list"

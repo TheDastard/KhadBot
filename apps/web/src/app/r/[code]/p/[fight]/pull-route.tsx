@@ -23,7 +23,7 @@ import { NotAvailable } from "@/components/shared/not-available";
 import { SkeletonBlock, SkeletonCard } from "@/components/shared/skeletons";
 import { Breadcrumb, PageColumn, TopBar } from "@/components/shared/top-bar";
 import { useFeature } from "@/lib/capabilities";
-import { useFocus } from "@/lib/focus";
+import { useFocusFull } from "@/lib/focus";
 import { usePullDigest } from "@/lib/queries";
 
 import { PullTimelineSlot } from "./slots";
@@ -58,7 +58,7 @@ export function PullRoute({ code, fightParam }: { code: string; fightParam: stri
 }
 
 function PullRouteFor({ code, fight }: { code: string; fight: number }) {
-  const { full } = useFocus();
+  const full = useFocusFull();
   const canOpen = useFeature("ingest_jobs");
   const digest = usePullDigest(code, fight, { full });
 

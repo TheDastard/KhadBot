@@ -8,16 +8,20 @@
 "use client";
 
 import { isApiError } from "@khadbot/api-client";
+import { useMemo } from "react";
 
 import { usePullContext } from "@/components/pull/use-pull-context";
 import { useEvidence } from "@/components/pull/queries";
-import { useFocus } from "@/lib/focus";
+import { useFocusActions, useFocusRef } from "@/lib/focus";
+import { parseRef } from "@/lib/refs";
 
 import { renderEvidence } from "./registry";
 import { EmptyView, ErrorView, LoadingView, PlanView } from "./views";
 
 export function ContextPanel({ code, fight }: { code: string; fight: number }) {
-  const { ref, parsedRef, setRef } = useFocus();
+  const ref = useFocusRef();
+  const parsedRef = useMemo(() => (ref ? parseRef(ref) : null), [ref]);
+  const { setRef } = useFocusActions();
   const evidence = useEvidence(ref);
   // Names come from the pull the ref belongs to, which is the page's pull unless a finding cites another one.
   const owner = parsedRef && parsedRef.kind !== "plan" ? parsedRef : { report: code, fight };

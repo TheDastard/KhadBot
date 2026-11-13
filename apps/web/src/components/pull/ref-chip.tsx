@@ -6,10 +6,9 @@
 "use client";
 
 import { EvidenceChip } from "@/components/shared/evidence-chip";
-import { useFocus } from "@/lib/focus";
+import { useIsFocusedRef } from "@/lib/focus";
 
 export function RefChip({ evidenceRef, label }: { evidenceRef: string; label: string }) {
-  const { ref } = useFocus();
-  const selected = ref === evidenceRef;
+  const selected = useIsFocusedRef(evidenceRef);
   return <EvidenceChip evidenceRef={evidenceRef} label={selected ? "Selected" : label} selected={selected} />;
 }

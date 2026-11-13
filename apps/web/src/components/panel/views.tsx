@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { spellIdOf, type Names } from "@/components/pull/names";
 import { useLazyDigest, type EvidenceData } from "@/components/pull/queries";
-import { windowAround, useFocus } from "@/lib/focus";
+import { useFocusActions, windowAround } from "@/lib/focus";
 import { formatClockTenths, formatNumber, formatPct } from "@/lib/format";
 import { buildRef, parseRef } from "@/lib/refs";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ function MechChip({ code, fight, id, names }: { code: string; fight: number; id:
 // ---------------------------------------------------------------------------
 
 export function DeathView({ record: d, evidenceRef, code, fight, names, onClose }: ViewProps<"death">) {
-  const { setWindow } = useFocus();
+  const { setWindow } = useFocusActions();
   const n = /:death:(\d+)$/.exec(evidenceRef)?.[1];
   const seconds = (d.window_ms ?? 10_000) / 1000;
   return (

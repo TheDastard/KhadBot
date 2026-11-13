@@ -10,7 +10,7 @@
 import type { ReactNode } from "react";
 
 import { ContextPanel } from "@/components/panel/context-panel";
-import { useFocus } from "@/lib/focus";
+import { FocusSync, useFocusFull } from "@/lib/focus";
 import type { PullDigestData } from "@/lib/queries";
 
 import { PullHeader } from "./header";
@@ -32,7 +32,7 @@ export function PullPage({
   /** The timeline and zoomed events (components/timeline/), placed under the header. */
   timeline: ReactNode;
 }) {
-  const { full } = useFocus();
+  const full = useFocusFull();
   const context = usePullContext(code, fight);
   const findings = usePullFindings(code, fight);
   const { names, summary } = context;
@@ -40,6 +40,7 @@ export function PullPage({
 
   return (
     <div data-slot="pull-body" className="grid min-h-[calc(100vh-57px)] grid-cols-[240px_minmax(0,1fr)] items-stretch">
+      <FocusSync />
       <PullRail code={code} fight={fight} />
       <main className="flex min-w-0 flex-col gap-4 px-7 pt-6 pb-16">
         <PullHeader code={code} fight={fight} digest={digest} context={context} />

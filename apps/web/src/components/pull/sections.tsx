@@ -9,7 +9,7 @@
 import { AbilityName } from "@/components/shared/ability-name";
 import { PlayerName } from "@/components/shared/player-name";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { useFocus } from "@/lib/focus";
+import { useIsFocusedRef } from "@/lib/focus";
 import { formatClockTenths, formatNumber } from "@/lib/format";
 import type { PullDigestData } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,6 @@ export function DeathsSection({
   before,
   full,
 }: SectionProps & { total: number | null; before: number | null; full: boolean }) {
-  const { ref: selected } = useFocus();
   const shown = digest.deaths.length;
   const note =
     total === null
@@ -62,40 +61,44 @@ export function DeathsSection({
           </tr>
         </thead>
         <tbody>
-          {digest.deaths.map((d) => {
-            const isSelected = selected === d.ref;
-            return (
-              <tr
-                key={d.ref}
-                data-after-cutoff={d.after_cutoff || undefined}
-                aria-selected={isSelected || undefined}
-                className={cn("border-t border-line align-top", d.after_cutoff && "text-mut", isSelected && "bg-acct")}
-              >
-                <td className="px-2 py-1.5 font-mono text-mut">{deathNumber(d.ref) ?? ""}</td>
-                <td className="px-2 py-1.5 font-mono">{formatClockTenths(d.t_ms)}</td>
-                <td className="px-2 py-1.5 font-medium">
-                  <PlayerName name={d.name} code={code} />
-                </td>
-                <td className="px-2 py-1.5">
-                  {d.killing_ability_name ? (
-                    <AbilityName spellId={spellIdOf(d.killing_ability_id)} name={d.killing_ability_name} />
-                  ) : (
-                    "Unknown"
-                  )}
-                  <span className="block text-xs text-mut">{d.killer_name ?? ""}</span>
-                </td>
-                <td className="px-2 py-1.5 text-mut">
-                  {d.mechanic_ids.length ? d.mechanic_ids.map((m) => names.mechanic(m)).join(", ") : "—"}
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  <RefChip evidenceRef={d.ref} label="death" />
-                </td>
-              </tr>
-            );
-          })}
+          {digest.deaths.map((d) => (
+            <DeathRow key={d.ref} code={code} death={d} names={names} />
+          ))}
         </tbody>
       </TableBox>
     </SectionCard>
+  );
+}
+
+/** One death; only this row re-renders when the selection moves to or from it. */
+function DeathRow({ code, death: d, names }: { code: string; death: PullDigestData["deaths"][number]; names: Names }) {
+  const isSelected = useIsFocusedRef(d.ref);
+  return (
+    <tr
+      data-after-cutoff={d.after_cutoff || undefined}
+      aria-selected={isSelected || undefined}
+      className={cn("border-t border-line align-top", d.after_cutoff && "text-mut", isSelected && "bg-acct")}
+    >
+      <td className="px-2 py-1.5 font-mono text-mut">{deathNumber(d.ref) ?? ""}</td>
+      <td className="px-2 py-1.5 font-mono">{formatClockTenths(d.t_ms)}</td>
+      <td className="px-2 py-1.5 font-medium">
+        <PlayerName name={d.name} code={code} />
+      </td>
+      <td className="px-2 py-1.5">
+        {d.killing_ability_name ? (
+          <AbilityName spellId={spellIdOf(d.killing_ability_id)} name={d.killing_ability_name} />
+        ) : (
+          "Unknown"
+        )}
+        <span className="block text-xs text-mut">{d.killer_name ?? ""}</span>
+      </td>
+      <td className="px-2 py-1.5 text-mut">
+        {d.mechanic_ids.length ? d.mechanic_ids.map((m) => names.mechanic(m)).join(", ") : "—"}
+      </td>
+      <td className="px-2 py-1.5 text-right">
+        <RefChip evidenceRef={d.ref} label="death" />
+      </td>
+    </tr>
   );
 }
 

@@ -9,7 +9,7 @@
 import { FightPct } from "@/components/shared/fight-pct";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useFocus } from "@/lib/focus";
+import { useFocusActions, useFocusFull } from "@/lib/focus";
 import { formatClock, formatPct } from "@/lib/format";
 import type { PullDigestData } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -86,7 +86,8 @@ export function PullHeader({
   digest: PullDigestData;
   context: PullContext;
 }) {
-  const { full, setFull } = useFocus();
+  const full = useFocusFull();
+  const { setFull } = useFocusActions();
   const { group, summary, names } = context;
   const kill = digest.outcome === "kill";
   const title = [
