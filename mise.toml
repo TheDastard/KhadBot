@@ -234,11 +234,15 @@ run = "uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_d
 
 # ── Cleanup ─────────────────────────────────────────────────────────────────
 [tasks.clean]
-description = "Remove caches and build output (keeps .venv, .env and .khadbot_data/)"
+description = "Remove Python caches and the web app's build and test output (keeps .venv, node_modules, .env and .khadbot_data/)"
 run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/clean.ps1"
 
 # Stops processes running from the venv (e.g. ruff.exe held open by the editor), then retries the delete.
 [tasks."clean:all"]
 description = "clean, then delete .venv (stops processes holding it open)"
-depends = ["clean"]
-run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/distclean.ps1 -Venv .venv"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/clean.ps1 -Venv"
+
+# Back to a fresh clone's state, apart from .env, deploy/dev.env and .khadbot_data/; reinstall with setup.ps1.
+[tasks."clean:deps"]
+description = "clean, then delete .venv, every node_modules and .khadbot_fixture_data"
+run = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/clean.ps1 -All"

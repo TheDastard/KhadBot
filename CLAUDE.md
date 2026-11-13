@@ -61,7 +61,7 @@ config/
   encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
   registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
 contracts/           # openapi.json generated from the API (the frontend's types come from it)
-scripts/             # dev/ (setup, dev loop runner, clean, distclean, contract generator), data/ (fixture data builder, WCL fixture
+scripts/             # dev/ (setup, dev loop runner, clean, contract generator), data/ (fixture data builder, WCL fixture
                      # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
 apps/                # TypeScript apps (pnpm workspace): web/ (Next.js dashboard; e2e/ holds Playwright); desktop/ and discord/ later
 packages/            # api-client/: types generated from contracts/openapi.json and the typed fetch client
@@ -113,7 +113,7 @@ A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Pyth
 | Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload, the web dev server (needs Docker; ports 8000 and 3000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
 | Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:web`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
 | Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
-| Same, then delete `.venv` | `mise run clean:all` | `scripts/dev/clean.ps1`, then `scripts/dev/distclean.ps1` |
+| Same, then delete `.venv` / also every `node_modules` and the fixture data | `mise run clean:all`, `mise run clean:deps` | `scripts/dev/clean.ps1 -Venv`, `... -All` |
 
 Add `--no-cov` to pytest for faster local runs; coverage is on by default in `addopts`.
 
