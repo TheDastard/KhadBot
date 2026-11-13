@@ -7,7 +7,7 @@
 
 import { defineConfig, devices } from "@playwright/test";
 
-import { HOSTED_API, WEB_URL } from "./e2e/support/env";
+import { E2E_WORKERS, HOSTED_API, WEB_URL } from "./e2e/support/env";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -16,7 +16,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // Capped (E2E_WORKERS, default 4): one dev server and one API serve every worker (e2e/support/env.ts).
+  workers: E2E_WORKERS,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   timeout: 30_000,
   expect: { timeout: 10_000 },

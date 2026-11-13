@@ -36,6 +36,14 @@ export const AUTH_DIR = path.join(WEB_ROOT, "e2e", ".auth");
  */
 export const E2E_REPORTS = (process.env.E2E_REPORTS ?? "SYNTH01").split(",").filter(Boolean);
 
+/**
+ * Parallel workers for the functional pass. Every worker shares one `next dev` server, one API and one machine;
+ * Playwright's default (half the logical CPUs) overloads them, and page loads outlast the test timeout in a
+ * different handful of tests each run. Four keep the suite green on a 16-thread machine; override with
+ * `E2E_WORKERS` (the web CI workflow sets 2 for its 4-CPU runner). The budget pass always runs on one worker.
+ */
+export const E2E_WORKERS = Number.parseInt(process.env.E2E_WORKERS ?? "", 10) || 4;
+
 /** Test users with a session each (`main.py test-session`), and their storage-state files. */
 export const USERS = {
   alice: path.join(AUTH_DIR, "alice.json"),

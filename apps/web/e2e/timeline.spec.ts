@@ -7,7 +7,7 @@
 //   E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg mise run test:e2e -- timeline
 //
 // Screen text is compared with the API's own answers, never with fixed numbers. The last test measures the budgets
-// (hover, click, keyboard step, first render) in the page and prints them as `BUDGET name=ms`.
+// (hover, click, keyboard step, first render) in the page, prints them as `BUDGET name=ms` and enforces them.
 
 import { expectAccessible } from "./support/axe";
 import { HOSTED_API } from "./support/env";
@@ -175,6 +175,7 @@ test("budgets: first render, hover, click and step", { tag: "@budget" }, async (
   const fixed = (n: number) => Math.round(n);
   console.log(`BUDGET first_render_ms=${fixed(first)} hover_ms=${fixed(hover)} click_ms=${fixed(click)} step_ms=${fixed(step)}`);
   expect(first).toBeLessThan(1500);
+  expect(hover).toBeLessThan(100);
   expect(click).toBeLessThan(100);
   expect(step).toBeLessThan(100);
 });

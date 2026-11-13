@@ -70,6 +70,8 @@ jobs:
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
       CI: "true"
+      # The hosted suite's parallel workers (apps/web/e2e/support/env.ts; default 4): two on the 4-CPU runner.
+      E2E_WORKERS: "2"
     steps:
       - uses: actions/checkout@v7
         with:

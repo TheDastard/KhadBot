@@ -6,7 +6,7 @@
 //   - H7z1fqDXjRTFnbtg fight 15 (the longest recorded pull; E2E_REPORTS=SYNTH01,H7z1fqDXjRTFnbtg lets the test users
 //     read it, and the describe's beforeAll loads the pull through replay if it isn't loaded): every section's rows
 //     match the digest response, each chip kind opens its panel, reload and Back restore it, and the budgets are
-//     measured (they are printed as test annotations).
+//     measured and enforced (they are printed as test annotations).
 
 import type { APIRequestContext, Page } from "@playwright/test";
 
@@ -179,6 +179,10 @@ test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
       description: `first paint ${paint} ms; chip to panel uncached ${uncached.toFixed(0)} ms, cached ${cached.toFixed(0)} ms`,
     });
     console.log(testInfo.annotations.at(-1)?.description);
+    // The budgets (docs/decisions.md): first paint under 1.5 s, chip to panel under 500 ms uncached and 100 ms cached.
+    expect(paint).toBeLessThan(1500);
+    expect(uncached).toBeLessThan(500);
+    expect(cached).toBeLessThan(100);
   });
 
   test("passes axe in both themes", async ({ page }) => {
