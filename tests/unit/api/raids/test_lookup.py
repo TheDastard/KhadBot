@@ -31,6 +31,7 @@ from khadbot.auth.store import MemoryAuthStore
 from khadbot.config import AuthConfig, LookupConfig
 from khadbot.encounter.ingest.fetch import FETCHED_AT_KEY, FETCHED_WITH_KEY
 from khadbot.encounter.models import Pull
+from khadbot.jobs.budget import Ask
 from khadbot.jobs.budget_store import BudgetManager, MemoryBudgetBackend
 from khadbot.wcl.oauth import TokenSet
 from khadbot.wcl.replay import ReplayTransport
@@ -303,6 +304,18 @@ def test_no_points_free_answers_429_with_the_wait(tmp_path):
     assert env.transport.count("GetReportMeta") == 0
     assert env.cache.report_meta(SYNTH) is None
     assert asyncio.run(env.budget.state()).reservations == ()  # the lookup does not wait in line or hold points
+
+
+def test_a_signed_out_lookup_counts_against_the_visitor_allowance(tmp_path):
+    env = Env(tmp_path, limit=100.0)
+    asyncio.run(env.budget.sync())
+    cap = 0.10 * 100.0  # budget_config's visitor_share of the hour
+    held = Ask(job_id="visitor-job", report_code="OTHER", points=cap, visitor=True, asked_at=env.moment())
+    assert "visitor-job" in asyncio.run(env.budget.request(held)).granted
+    resp = lookup(env.browser(), SYNTH)  # most of the hour is free, but the visitors' share is used up
+    assert resp.status_code == 429 and resp.json()["code"] == "budget_exhausted"
+    assert env.transport.count("GetReportMeta") == 0
+    assert lookup(env.browser("Jaina"), SYNTH).status_code == 200  # a signed-in caller has their own allowance
 
 
 def test_best_fight_is_the_first_kill_else_the_lowest_fight_percent():

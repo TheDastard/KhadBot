@@ -92,6 +92,7 @@ async def wcl_request(
         user_token=provider is not None,
         points=points,
         database_points=database_points,
+        visitor=user is None,  # signed-out callers share the visitors' allowance
         asked_at=now(),
     )
     admission = await budget.request(ask)

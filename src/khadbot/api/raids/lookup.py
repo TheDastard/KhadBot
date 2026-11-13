@@ -223,6 +223,7 @@ async def _fetch(
         user_id=user.id if user is not None else None,
         user_token=provider is not None,
         points=config.points,
+        visitor=user is None,  # signed-out callers share the visitors' allowance
         asked_at=now(),
     )
     admission = await budget.request(ask)
