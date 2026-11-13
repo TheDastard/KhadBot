@@ -1,6 +1,6 @@
 // apps/web/e2e/raids.spec.ts
 //
-// The Raids page and the log search on the hosted API (the dev loop with WCL replay): trMgApZCVYkv3jdq is a recorded
+// The Raids page and the log search on the hosted API (the dev loop with WCL replay): QkVa6GHRK8yfrTbw is a recorded
 // public report the replay answers on the app token; SYNTH01 (seeded) is readable by the test users only. Every chip
 // is compared with the lookup's own answer, never with hard-coded numbers.
 //
@@ -15,7 +15,7 @@ import { expect, test } from "./support/fixtures";
 
 type Lookup = components["schemas"]["ReportLookup"];
 
-const PUBLIC = "trMgApZCVYkv3jdq";
+const PUBLIC = "QkVa6GHRK8yfrTbw";
 const PRIVATE = "SYNTH01";
 const UNKNOWN = "ZZZZZZZZZZZZZZZZ";
 

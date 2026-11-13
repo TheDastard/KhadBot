@@ -10,7 +10,7 @@
 // (hover, click, keyboard step, first render) in the page, prints them as `BUDGET name=ms` and enforces them.
 
 import { expectAccessible } from "./support/axe";
-import { HOSTED_API } from "./support/env";
+import { E2E_REPORTS, HOSTED_API } from "./support/env";
 import { expect, test } from "./support/fixtures";
 import { ensurePullLoaded, LOAD_TIMEOUT_MS } from "./support/pulls";
 
@@ -22,6 +22,9 @@ test.use({ user: "alice" });
 // The chart is client-only and draws about 980 markers on this pull; beside the parallel suite on a dev build its first
 // render can take far longer than when the spec runs alone, so the waits for it and the tests' timeout are longer.
 test.describe.configure({ timeout: 90_000 });
+// The report is 126 MB of Git LFS pages that CI does not pull: without it in E2E_REPORTS the whole file skips, and the
+// beforeAll below does not run.
+test.skip(!E2E_REPORTS.includes(CODE), `needs E2E_REPORTS to include ${CODE}`);
 
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(LOAD_TIMEOUT_MS);

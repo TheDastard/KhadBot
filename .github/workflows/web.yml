@@ -8,6 +8,10 @@
 #   services), the hosted API and worker natively with WCL replay and test sessions, seeded with the synthetic
 #   SYNTH01 report; then the local-mode smoke test against `main.py serve` over a fixture data directory built from
 #   the smallest recorded report (QkVa6GHRK8yfrTbw, about 10 MB of Git LFS pages). No WCL credentials or points.
+#   The checkout skips LFS and the job pulls only what the suites read: QkVa6GHRK8yfrTbw (the public report the Raids
+#   and signed-out specs use, and the local suite's) and every report's metadata file (about 3 MB), which the
+#   guild and character searches need to list their nights. Specs that need the 126 MB H7z1fqDXjRTFnbtg skip
+#   because it is not in E2E_REPORTS.
 
 name: web
 
@@ -76,8 +80,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           lfs: false
-      - name: Fetch the one recorded report the local smoke test reads
-        run: git lfs pull --include "tests/fixtures/encounter/wcl/QkVa6GHRK8yfrTbw/**"
+      - name: Fetch the recorded report the suites read, and every report's metadata
+        run: git lfs pull --include "tests/fixtures/encounter/wcl/QkVa6GHRK8yfrTbw/**,tests/fixtures/encounter/wcl/*/report.json"
       - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true

@@ -4,7 +4,7 @@
 // opens one pull of a public log on KhadBot's own budget and follows it to the pull page, which keeps the label the
 // log search gave the pull; a log they can't read shows the private-log card, not the loading screen's sign-in card.
 //
-// trMgApZCVYkv3jdq is the Raids spec's recorded public report: replay answers its metadata on the app token and has
+// QkVa6GHRK8yfrTbw is the Raids spec's recorded public report: replay answers its metadata on the app token and has
 // the pages of the fights recorded under tests/fixtures/encounter/wcl/<code>/<fight>/. It must never be in
 // E2E_REPORTS: global setup marks every listed report not public. SYNTH01 (seeded) is readable by the test users
 // only. When every recorded pull of the public report is loaded the test skips; `mise run stack:reset` starts again.
@@ -19,7 +19,7 @@ import { expect, test } from "./support/fixtures";
 
 type Lookup = components["schemas"]["ReportLookup"];
 
-const PUBLIC = "trMgApZCVYkv3jdq";
+const PUBLIC = "QkVa6GHRK8yfrTbw";
 const PRIVATE = "SYNTH01";
 
 /** The fights of a report that replay has recorded pages for. */
