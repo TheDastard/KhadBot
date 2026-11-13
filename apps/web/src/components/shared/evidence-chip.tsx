@@ -3,16 +3,18 @@
 // A link to a piece of evidence: it opens the ref's pull page with `?ref=` set (the context panel shows the record),
 // keeping the current `full` setting. The visible label is short ("P2 · death 2"); the full ref is the link's title
 // and the end of its accessible name, which starts with the visible text (WCAG 2.5.3). A plan ref stays on the
-// current page. Every chip is a link: Tab reaches it, Enter follows.
+// current page. Every chip is a link: Tab reaches it, Enter follows. A chip for the page it is on changes the focus
+// with a shallow history push (lib/focus.ts), not a router navigation, so the panel opens without a server round
+// trip; a chip for another pull navigates. The chip re-renders only when its href or its selection changes.
 //
 //   <EvidenceChip evidenceRef="ev:H7z1fqDXjRTFnbtg:15:death:2" label="P2 · death 2" />
 
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
-import { focusHref } from "@/lib/focus";
+import { focusHref, pushFocusHref, useFocusBaseSearch } from "@/lib/focus";
 import { parseRef, pullPath, refShortLabel } from "@/lib/refs";
 import { cn } from "@/lib/utils";
 
@@ -35,13 +37,19 @@ export function evidenceHref(evidenceRef: string, pathname: string, current: URL
 
 export function EvidenceChip({ evidenceRef, label, selected = false, className }: EvidenceChipProps) {
   const pathname = usePathname();
-  const params = useSearchParams();
+  const base = useFocusBaseSearch();
   const parsed = parseRef(evidenceRef);
   const text = label ?? (parsed ? refShortLabel(parsed) : evidenceRef);
+  const href = evidenceHref(evidenceRef, pathname, new URLSearchParams(base));
   return (
     <Link
-      href={evidenceHref(evidenceRef, pathname, new URLSearchParams(params.toString()))}
+      href={href}
       scroll={false}
+      onNavigate={(event) => {
+        if (new URL(href, window.location.href).pathname !== pathname) return;
+        event.preventDefault();
+        pushFocusHref(href);
+      }}
       title={evidenceRef}
       aria-label={`${text}: open evidence ${evidenceRef}`}
       aria-current={selected ? "true" : undefined}
