@@ -32,6 +32,10 @@ REFRESH_MARGIN = timedelta(seconds=60)
 
 HttpFactory = Callable[[], httpx.AsyncClient]
 
+# The Fernet key in deploy/stack.env and deploy/dev.env.example. It is public, so it encrypts nothing real: a
+# deployment that is not on plain-HTTP localhost refuses it (``AuthService``).
+EXAMPLE_TOKEN_KEY = "VOE_A5LrGZqB3J5MWl2sCzjk5GqG0lzvkZxzP5pNf1w="
+
 
 # ---------------------------------------------------------------------------
 # Encryption
@@ -222,4 +226,4 @@ class WclTokens:
         return tokens.access_token.get_secret_value()
 
 
-__all__ = ["REFRESH_MARGIN", "TokenCipher", "TokenDecryptError", "WclTokens"]
+__all__ = ["EXAMPLE_TOKEN_KEY", "REFRESH_MARGIN", "TokenCipher", "TokenDecryptError", "WclTokens"]

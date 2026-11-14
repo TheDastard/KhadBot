@@ -43,6 +43,7 @@ TEST_WCL_USER_ID_MIN = -(2**40)
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
 _REPORT_CODE = re.compile(r"^[A-Za-z0-9]{1,40}$")  # the same shape auth.access accepts
 DEFAULT_TTL = timedelta(hours=24)
+MAX_TTL = timedelta(days=7)  # the longest a test session may be asked to last
 
 
 class SessionsDisabledError(ConfigurationError):
@@ -122,9 +123,11 @@ async def issue_session(
 
     Raises:
         SessionsDisabledError: The gate is off.
-        ValueError: A bad user name or report code.
+        ValueError: A bad user name or report code, or a lifetime that is not above zero and at most ``MAX_TTL``.
     """
     require_enabled(config)
+    if not timedelta(0) < ttl <= MAX_TTL:
+        raise ValueError(f"A test session lasts at most {MAX_TTL.days} days, not {ttl}.")
     wcl_user_id = reserved_wcl_user_id(name)
     for code in reports:
         if not _REPORT_CODE.match(code):
@@ -166,6 +169,7 @@ def storage_state(cookie: str, *, domain: str, secure: bool, expires_at: datetim
 
 __all__ = [
     "DEFAULT_TTL",
+    "MAX_TTL",
     "GATE_VARIABLE",
     "TEST_WCL_USER_ID_MAX",
     "TEST_WCL_USER_ID_MIN",

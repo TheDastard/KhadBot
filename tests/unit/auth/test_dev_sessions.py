@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from khadbot.auth import routes
 from khadbot.auth.dev_sessions import (
+    MAX_TTL,
     TEST_WCL_USER_ID_MAX,
     TEST_WCL_USER_ID_MIN,
     SessionsDisabledError,
@@ -34,6 +35,13 @@ from khadbot.errors import ConfigurationError
 ON = DevSessionsConfig(enabled=True)
 OFF = DevSessionsConfig(enabled=False)
 CODE = "AbC123xyz"
+
+
+@pytest.fixture
+def service(service):
+    """The sign-in service of a deployment where test sessions are on (``KHADBOT_TEST_SESSIONS``)."""
+    service.sessions.test_users = True
+    return service
 
 
 @pytest.fixture
@@ -225,3 +233,27 @@ async def test_storage_state_is_a_playwright_cookie_document(store, clock):
         "secure": False,
         "sameSite": "Lax",
     }
+
+
+# ---------------------------------------------------------------------------
+# With the switch off
+# ---------------------------------------------------------------------------
+
+
+class TestSwitchedOff:
+    async def test_a_session_issued_while_on_signs_nobody_in_once_the_switch_is_off(self, store, service):
+        issued = await issue_session(store, ON, "alice")
+        assert (await service.current_user(issued.cookie)).id == issued.user.id
+        service.sessions.test_users = False  # the deployment was restarted without KHADBOT_TEST_SESSIONS
+        assert await service.current_user(issued.cookie) is None
+
+    async def test_real_users_are_not_affected(self, store, service, clock):
+        user = store.upsert_user(777, "Khadgar", clock.now)
+        cookie = await service.sessions.create(user.id)
+        service.sessions.test_users = False
+        assert (await service.current_user(cookie)).id == user.id
+
+    @pytest.mark.parametrize("ttl", [timedelta(0), timedelta(hours=-1), MAX_TTL + timedelta(seconds=1)])
+    async def test_a_lifetime_outside_the_allowed_range_is_refused(self, store, ttl):
+        with pytest.raises(ValueError, match="at most"):
+            await issue_session(store, ON, "alice", ttl=ttl)

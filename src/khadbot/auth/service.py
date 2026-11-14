@@ -32,8 +32,8 @@ from khadbot.auth.clock import Clock, utc_now
 from khadbot.auth.errors import LoginError
 from khadbot.auth.sessions import SessionManager, digest, new_secret
 from khadbot.auth.store import AuthStore, LoginState, User
-from khadbot.auth.tokens import TokenCipher, TokenDecryptError, WclTokens
-from khadbot.config import AuthConfig, is_local_http
+from khadbot.auth.tokens import EXAMPLE_TOKEN_KEY, TokenCipher, TokenDecryptError, WclTokens
+from khadbot.config import AuthConfig, DevSessionsConfig, is_local_http
 from khadbot.errors import ConfigurationError
 from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsClient
 from khadbot.wcl.oauth import (
@@ -94,9 +94,11 @@ class AuthService:
         http: Builds the HTTP client for token requests.
         wcl_client: Builds an unentered ``WarcraftLogsClient`` for GraphQL (identity and access checks).
         clock: The current UTC time.
+        test_sessions: Whether test users' sessions sign anyone in; None reads ``KHADBOT_TEST_SESSIONS``.
 
     Raises:
-        ConfigurationError: No token key, an invalid key, or a plain-HTTP redirect URL that isn't localhost.
+        ConfigurationError: No token key, an invalid key, the repository's example key on a deployment that is
+            not plain-HTTP localhost, or a plain-HTTP redirect URL that isn't localhost.
     """
 
     def __init__(
@@ -109,6 +111,7 @@ class AuthService:
         http: Callable[[], httpx.AsyncClient] | None = None,
         wcl_client: Callable[[], WarcraftLogsClient] | None = None,
         clock: Clock = utc_now,
+        test_sessions: bool | None = None,
     ) -> None:
         if not config.redirect_uri.startswith("https://") and not is_local_http(config.redirect_uri):
             raise ConfigurationError(
@@ -116,6 +119,11 @@ class AuthService:
             )
         if not client_id or not client_secret:
             raise ConfigurationError("Hosted sign-in needs WARCRAFTLOGS_CLIENT_ID and WARCRAFTLOGS_CLIENT_SECRET.")
+        if config.cookie_secure and EXAMPLE_TOKEN_KEY in config.token_keys:
+            raise ConfigurationError(
+                "KHADBOT_TOKEN_KEYS holds the example key from deploy/stack.env, which is public. Generate a key "
+                "for this deployment."
+            )
         self.config = config
         self.store = store
         self._cipher = TokenCipher(config.token_keys)
@@ -132,6 +140,7 @@ class AuthService:
             idle=timedelta(hours=config.session_idle_hours),
             max_age=timedelta(days=config.session_max_days),
             clock=clock,
+            test_users=DevSessionsConfig().enabled if test_sessions is None else test_sessions,
         )
         self.access = ReportAccess(
             store,

@@ -13,6 +13,7 @@ from helpers.auth.fake_wcl import FAKE_CLIENT_ID, FAKE_CLIENT_SECRET
 
 from khadbot.auth.service import AuthService, safe_next_path
 from khadbot.auth.store import MemoryAuthStore
+from khadbot.auth.tokens import EXAMPLE_TOKEN_KEY
 from khadbot.config import AuthConfig, is_local_http
 from khadbot.errors import ConfigurationError
 
@@ -78,3 +79,23 @@ def test_api_origin():
 )
 def test_safe_next_path(value, expected):
     assert safe_next_path(value) == expected
+
+
+def test_the_example_key_is_refused_off_localhost(auth_config, store):
+    """The key in deploy/stack.env is public: fine for the local stack, never for a deployment with Secure cookies."""
+    local = replace(auth_config, token_keys=(EXAMPLE_TOKEN_KEY,))
+    AuthService(store, local, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET)  # plain-HTTP localhost
+    deployed = replace(local, redirect_uri="https://api.example.test/v1/auth/callback")
+    with pytest.raises(ConfigurationError, match="example key"):
+        AuthService(store, deployed, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET)
+
+
+def test_test_users_follow_the_switch(auth_config, store, monkeypatch):
+    def make(**kw):
+        return AuthService(store, auth_config, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET, **kw)
+
+    monkeypatch.delenv("KHADBOT_TEST_SESSIONS", raising=False)
+    assert make().sessions.test_users is False
+    monkeypatch.setenv("KHADBOT_TEST_SESSIONS", "1")
+    assert make().sessions.test_users is True
+    assert make(test_sessions=False).sessions.test_users is False

@@ -52,7 +52,14 @@ def app(store, wcl) -> FastAPI:
         web_origins=("http://localhost:3000",),
         token_keys=(Fernet.generate_key().decode(),),
     )
-    service = AuthService(store, config, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET, clock=Clock())
+    service = AuthService(
+        store,
+        config,
+        client_id=FAKE_CLIENT_ID,
+        client_secret=FAKE_CLIENT_SECRET,
+        clock=Clock(),
+        test_sessions=True,  # the stack turns the switch on (KHADBOT_TEST_SESSIONS)
+    )
     app = FastAPI()
     routes.mount(app, service)
 

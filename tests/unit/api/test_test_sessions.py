@@ -25,6 +25,7 @@ ON = DevSessionsConfig(enabled=True)
 
 @pytest.fixture
 def h(tmp_path, service, wcl, auth_store, clock) -> Harness:
+    service.sessions.test_users = True  # the switch is on in this deployment (KHADBOT_TEST_SESSIONS)
     return build_harness(tmp_path, service, wcl, auth_store, clock)
 
 

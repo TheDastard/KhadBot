@@ -35,10 +35,25 @@ def digest(value: str) -> str:
 
 
 class SessionManager:
-    """Creates, resolves and revokes sessions."""
+    """
+    Creates, resolves and revokes sessions.
 
-    def __init__(self, store: AuthStore, *, idle: timedelta, max_age: timedelta, clock: Clock = utc_now) -> None:
+    ``test_users`` says whether a test user's session (``auth.dev_sessions``; a WCL user ID that is not positive)
+    may sign anyone in. Off, such a session resolves to nobody, so sessions issued while the development switch
+    was on stop working when it is turned off.
+    """
+
+    def __init__(
+        self,
+        store: AuthStore,
+        *,
+        idle: timedelta,
+        max_age: timedelta,
+        clock: Clock = utc_now,
+        test_users: bool = False,
+    ) -> None:
         self._store = store
+        self.test_users = test_users
         self.idle = idle
         self.max_age = max_age
         self._clock = clock
@@ -72,6 +87,8 @@ class SessionManager:
         user = await asyncio.to_thread(self._store.get_user, record.user_id)
         if user is None:
             return None
+        if user.wcl_user_id <= 0 and not self.test_users:
+            return None  # a test user's session, and test sessions are off here
         if now - record.last_seen_at >= TOUCH_INTERVAL:
             expires = min(now + self.idle, record.created_at + self.max_age)
             await asyncio.to_thread(self._store.touch_session, id_hash, now, expires)

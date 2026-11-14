@@ -199,11 +199,17 @@ def announce_wcl_replay() -> None:
     Log at start-up that WCL replay is on, and how it answers; nothing when it is off.
 
     Raises:
-        ConfigurationError: Replay is on and its settings can't work.
+        ConfigurationError: Replay is on and its settings can't work, or this is a hosted deployment that is not
+            on plain-HTTP localhost: replay answers access checks from the recordings, so it must never run there.
     """
     cfg = wcl_replay()
     if cfg is None:
         return
+    if DatabaseConfig().hosted and AuthConfig().cookie_secure:
+        raise ConfigurationError(
+            "KHADBOT_WCL_REPLAY is set on a deployment whose KHADBOT_WCL_REDIRECT_URI is not plain-HTTP localhost. "
+            "WCL replay is a development switch: unset it."
+        )
     from khadbot.wcl.replay import check_config, describe
 
     check_config(cfg)
