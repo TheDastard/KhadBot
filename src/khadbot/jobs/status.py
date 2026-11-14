@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Literal, LiteralString, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 from khadbot.jobs.failures import ErrorCode
+from khadbot.jobs.listener import SharedListener
 from khadbot.jobs.progress import PullInfo
 from khadbot.jobs.specs import IngestReport
 
@@ -649,6 +650,10 @@ class PostgresJobBackend:
 
     def __init__(self, pool: ConnectionPool) -> None:
         self._pool = pool
+        # One LISTEN connection for the whole process, however many event streams follow jobs (jobs/listener.py).
+        self._listener = SharedListener(
+            lambda: _pg_listen(str(self._pool.conninfo), dict(getattr(self._pool, "kwargs", None) or {}))
+        )
 
     @contextmanager
     def transaction(self, *, job_id: str | None = None, report: str | None = None) -> Iterator[JobTx]:
@@ -667,7 +672,7 @@ class PostgresJobBackend:
         return bool(row and row[0])
 
     def listen(self) -> AbstractAsyncContextManager[AsyncIterator[str]]:
-        return _pg_listen(str(self._pool.conninfo), dict(getattr(self._pool, "kwargs", None) or {}))
+        return self._listener.subscribe()
 
 
 class _PostgresTx:

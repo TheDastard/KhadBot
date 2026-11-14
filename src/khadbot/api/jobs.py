@@ -29,7 +29,8 @@ Event stream
 is replayed. After that: ``pull.progress`` (a ``JobPull``) when a pull's stage, percentage or status changes,
 ``job.state`` when the job's state, stage, percentage or error changes, and, last, ``job.done`` (a ``Job``) or
 ``error`` (a ``JobFailure``) before the stream closes. A cancelled job ends with its ``job.state`` event alone.
-Events carry increasing ``id`` values within one connection. A comment line is sent every
+Events carry increasing ``id`` values within one connection. An API process keeps at most
+``KHADBOT_SSE_MAX_STREAMS`` streams open; the next answers 503 ``too_many_streams``. A comment line is sent every
 ``KHADBOT_SSE_KEEPALIVE_S`` seconds, and each one also re-reads the job, so a lost notification delays the stream by
 at most that long.
 
@@ -585,16 +586,31 @@ async def job_events(job_id: str, request: Request, user: Caller, queue: Queue) 
     current state first.
     """
     rec = await _readable_job(request, queue, job_id)
+    settings = ApiConfig()
+    state = request.app.state
+    if getattr(state, "job_streams", 0) >= settings.sse_max_streams:
+        raise ApiError(
+            503, "too_many_streams", "Too many live job streams are open. Read the job with GET /v1/jobs/{id} for now."
+        )
     stream = event_stream(
         queue.store,
         job_id,
-        keepalive_s=ApiConfig().sse_keepalive_s,
+        keepalive_s=settings.sse_keepalive_s,
         config=queue.config,
         eta=request_eta(request),
         own=_owns(user, rec),
     )
+
+    async def counted() -> AsyncIterator[str]:
+        state.job_streams = getattr(state, "job_streams", 0) + 1
+        try:
+            async for chunk in stream:
+                yield chunk
+        finally:
+            state.job_streams -= 1
+
     return StreamingResponse(
-        stream,
+        counted(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )

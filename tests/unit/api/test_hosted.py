@@ -455,6 +455,20 @@ class TestIngestRoutes:
         text = jaina.get(f"/v1/jobs/{job['id']}/events").text  # a reconnect after the end: current state, no replay
         assert [e[1] for e in sse_events(text)] == ["job.state", "job.done"]
 
+    def test_open_streams_are_capped_and_counted_down_when_they_close(self, h, monkeypatch):
+        jaina = h.actor("Jaina")
+        h.wcl.readable[h.token_of("Jaina")] = {CODE}
+        job = jaina.post("/v1/reports", json={"source": CODE}).json()["job"]
+        h.run_worker().join(timeout=60)
+        monkeypatch.setenv("KHADBOT_SSE_MAX_STREAMS", "3")
+        h.app.state.job_streams = 3  # three streams are open in this process
+        refused = jaina.get(f"/v1/jobs/{job['id']}/events")
+        assert refused.status_code == 503 and refused.json()["code"] == "too_many_streams"
+        assert jaina.get(f"/v1/jobs/{job['id']}").status_code == 200  # the job itself can still be read
+        h.app.state.job_streams = 2
+        assert jaina.get(f"/v1/jobs/{job['id']}/events").status_code == 200
+        assert h.app.state.job_streams == 2  # the stream that just ran to its end was counted and released
+
     def test_a_failed_job_ends_with_a_typed_error_event(self, h):
         jaina = h.actor("Jaina")
         h.wcl.readable[h.token_of("Jaina")] = {"NOPAGES"}

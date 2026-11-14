@@ -427,6 +427,8 @@ class ApiConfig:
 
     # How often an idle job event stream sends a comment line, and re-reads the job in case a notification was lost.
     sse_keepalive_s: float = field(default_factory=lambda: float(_optional("KHADBOT_SSE_KEEPALIVE_S", "15")))
+    # Job event streams one API process keeps open at once; the next one is refused (503 too_many_streams).
+    sse_max_streams: int = field(default_factory=lambda: int(_optional("KHADBOT_SSE_MAX_STREAMS", "500")))
 
 
 @dataclass(frozen=True)
