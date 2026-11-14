@@ -264,3 +264,25 @@ class TestActiveProcess:
         assert [(j.id, j.pull_key) for j in active] == [("p1", "ABC:1")]
         assert [j.id for j in await store.active_process("XYZ")] == ["p3"]
         assert await store.active_process("NONE") == []
+
+
+class TestVisitorIngests:
+    async def test_counts_the_active_ingests_visitors_opened(self, store):
+        await store.create(ingest("v1", "AAA", fights=[1], visitor=True))
+        await store.create(ingest("v2", "BBB", fights=[2], visitor=True))
+        await store.create(ingest("v3", "CCC", fights=[3], visitor=True))
+        await store.create(ingest("u1", "DDD"))  # background work: nobody requested it, and no visitor either
+        mine = ingest("u2", "EEE", fights=[1], visitor=True).model_copy(update={"requested_by": None})
+        await store.create(mine.model_copy(update={"id": "v4"}))
+        assert await store.active_visitor_ingests() == 4
+        await store.begin("v1")  # running still counts
+        await store.wait_for_budget("v2")  # so does waiting for points
+        assert await store.active_visitor_ingests() == 4
+        await store.finish("v1", JobState.DONE)
+        await store.finish("v3", JobState.FAILED)
+        assert await store.active_visitor_ingests() == 2
+
+    async def test_is_zero_without_visitor_ingests(self, store):
+        await store.create(ingest("u1"))
+        await store.create(process("p1", None))
+        assert await store.active_visitor_ingests() == 0

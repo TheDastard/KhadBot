@@ -15,6 +15,7 @@ from helpers.jobs.store_contract import (  # noqa: F401 - collected here
     TestClaimIngest,
     TestEvents,
     TestLifecycle,
+    TestVisitorIngests,
 )
 
 from khadbot.jobs import IngestReport

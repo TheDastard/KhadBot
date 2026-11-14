@@ -9,6 +9,7 @@ that receives each change in commit order, and two writers racing to start an in
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,6 +21,7 @@ from helpers.jobs.store_contract import (  # noqa: F401 - collected here
     TestChildren,
     TestClaimIngest,
     TestLifecycle,
+    TestVisitorIngests,
     ingest,
 )
 from helpers.jobs.store_contract import TestEvents as ContractEvents
@@ -91,3 +93,36 @@ class TestTable:
             results = list(pool.map(claim, [f"j{i}" for i in range(8)]))
         assert sum(created for _, created in results) == 1
         assert len({job.id for job, _ in results}) == 1
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="psycopg async needs the selector event loop")
+class TestSharedListener:
+    """Every ``store.listen()`` of one store shares a single LISTEN connection (jobs/listener.py)."""
+
+    @staticmethod
+    def _listening(pool) -> int:
+        with pool.connection() as conn:
+            row = conn.execute(
+                "SELECT count(*) FROM pg_stat_activity "
+                "WHERE datname = current_database() AND query = 'LISTEN job_events'"
+            ).fetchone()
+        return int(row[0])
+
+    async def test_many_listeners_hold_one_connection_and_all_hear_a_change(self, store, pool):
+        before = await asyncio.to_thread(self._listening, pool)
+        async with contextlib.AsyncExitStack() as stack:
+            streams = [await stack.enter_async_context(store.listen()) for _ in range(25)]
+            assert await asyncio.to_thread(self._listening, pool) == before + 1
+            await store.create(ingest("a"))
+            assert [await asyncio.wait_for(anext(s), 5) for s in streams] == ["a"] * 25
+        for _ in range(50):  # the connection is closed once the last listener has left
+            if await asyncio.to_thread(self._listening, pool) == before:
+                break
+            await asyncio.sleep(0.1)
+        assert await asyncio.to_thread(self._listening, pool) == before
+
+    async def test_a_listener_that_arrives_later_reuses_a_fresh_connection(self, store):
+        for job_id in ("a", "b"):
+            async with store.listen() as events:
+                await store.create(ingest(job_id, job_id.upper() * 3))
+                assert await asyncio.wait_for(anext(events), 5) == job_id
