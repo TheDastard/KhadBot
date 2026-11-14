@@ -120,6 +120,10 @@ class AuthStore(Protocol):
 
     def delete_session(self, id_hash: str) -> None: ...
 
+    def delete_user_sessions(self, user_id: str) -> int:
+        """End every session of ``user_id``; returns how many there were."""
+        ...
+
     # WCL tokens
     def put_tokens(self, tokens: StoredTokens) -> None: ...
 
@@ -204,6 +208,13 @@ class MemoryAuthStore:
     def delete_session(self, id_hash: str) -> None:
         with self._lock:
             self.sessions.pop(id_hash, None)
+
+    def delete_user_sessions(self, user_id: str) -> int:
+        with self._lock:
+            mine = [h for h, s in self.sessions.items() if s.user_id == user_id]
+            for id_hash in mine:
+                del self.sessions[id_hash]
+            return len(mine)
 
     def put_tokens(self, tokens: StoredTokens) -> None:
         with self._lock:

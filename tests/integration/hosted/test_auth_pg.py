@@ -123,6 +123,21 @@ def test_sign_in_again_keeps_one_user(client, migrated):
     assert _one(migrated, "SELECT count(*) FROM sessions") == (1,)
 
 
+def test_forget_ends_every_session_of_the_user_and_deletes_their_tokens(client, service, migrated, clock):
+    state = _login(client)
+    client.get("/v1/auth/callback", params={"code": "c", "state": state}, follow_redirects=False)
+    me = client.get("/v1/me").json()["id"]
+    other = service.store.upsert_user(4242, "Jaina", clock())
+    asyncio.run(service.sessions.create(me), loop_factory=asyncio.SelectorEventLoop)  # the same user, another device
+    asyncio.run(service.sessions.create(other.id), loop_factory=asyncio.SelectorEventLoop)
+    assert _one(migrated, "SELECT count(*) FROM sessions") == (3,)
+    assert client.post("/v1/auth/forget", headers={"X-KhadBot-CSRF": "1"}).status_code == 204
+    assert _one(migrated, "SELECT count(*) FROM sessions WHERE user_id = %s", (me,)) == (0,)
+    assert _one(migrated, "SELECT count(*) FROM sessions WHERE user_id = %s", (other.id,)) == (1,)
+    assert _one(migrated, "SELECT count(*) FROM wcl_tokens") == (0,)
+    assert client.get("/v1/me").status_code == 401
+
+
 def test_session_expiry(client, clock):
     state = _login(client)
     client.get("/v1/auth/callback", params={"code": "c", "state": state}, follow_redirects=False)

@@ -23,6 +23,7 @@ import {
   useBudget,
   useReportTitle,
   useSignOut,
+  useSignOutEverywhere,
   useStopWatch,
   useWatches,
   type BudgetData,
@@ -35,6 +36,7 @@ export function AccountMenu({ name }: { name: string }) {
   const budget = useBudget(open && features.budget);
   const watches = useWatches(open && features.live_watch);
   const signOut = useSignOut();
+  const signOutEverywhere = useSignOutEverywhere();
   const followed = features.live_watch ? (watches.data ?? []) : [];
 
   return (
@@ -83,6 +85,21 @@ export function AccountMenu({ name }: { name: string }) {
           >
             Sign out
           </Button>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => signOutEverywhere.mutate()}
+            disabled={signOutEverywhere.isPending}
+            className="mt-1.5 w-full text-mut"
+            title="Signs you out on every device and removes your Warcraft Logs sign-in from KhadBot"
+          >
+            Sign out everywhere
+          </Button>
+          {signOutEverywhere.isError ? (
+            <p role="alert" className="m-0 mt-1.5 text-xs text-mut">
+              That didn’t work. Try again.
+            </p>
+          ) : null}
         </div>
       </PopoverContent>
     </Popover>

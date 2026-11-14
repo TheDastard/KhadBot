@@ -8,6 +8,7 @@ Routes (all under ``/v1``):
 - ``GET /auth/login[?next=/path]``: starts a sign-in and redirects to Warcraft Logs.
 - ``GET /auth/callback``: WCL's redirect back; signs the browser in and redirects to the web app.
 - ``POST /auth/logout``: ends the session (needs the CSRF header).
+- ``POST /auth/forget``: ends every session of the user and deletes their stored WCL tokens (CSRF header).
 - ``GET /me``: the signed-in user.
 
 Cookies are HttpOnly, SameSite=Lax and Secure (off only when the API runs on plain-HTTP localhost). The session
@@ -149,6 +150,19 @@ async def callback(
 async def logout(request: Request, auth: Auth) -> Response:
     """End the session and clear its cookie. Signing out twice is fine."""
     await auth.logout(request.cookies.get(SESSION_COOKIE))
+    response = Response(status_code=204, headers=_NO_STORE)
+    _clear_cookie(response, auth, SESSION_COOKIE)
+    return response
+
+
+@router.post("/auth/forget", status_code=204, responses=_ERRORS, dependencies=[Depends(require_csrf)])
+async def forget(user: CurrentUser, auth: Auth) -> Response:
+    """
+    Sign out everywhere and remove the stored Warcraft Logs sign-in: deletes the caller's WCL tokens and ends every
+    session of theirs, on every device. Ingests and watches of theirs that need their own token stop with
+    `wcl_not_signed_in`. Signing in again starts afresh.
+    """
+    await auth.forget(user.id)
     response = Response(status_code=204, headers=_NO_STORE)
     _clear_cookie(response, auth, SESSION_COOKIE)
     return response

@@ -113,6 +113,10 @@ class PostgresAuthStore:
         with self._pool.connection() as conn:
             conn.execute("DELETE FROM sessions WHERE id_hash = %s", (id_hash,))
 
+    def delete_user_sessions(self, user_id: str) -> int:
+        with self._pool.connection() as conn:
+            return conn.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,)).rowcount
+
     # WCL tokens ----------------------------------------------------------
 
     def put_tokens(self, tokens: StoredTokens) -> None:

@@ -97,6 +97,25 @@ export function useSignOut() {
 }
 
 /**
+ * Sign out on every device and remove the stored Warcraft Logs sign-in (`POST /v1/auth/forget`), then go to Raids,
+ * signed out. Loads and live follows that needed the visitor's own Warcraft Logs sign-in stop.
+ */
+export function useSignOutEverywhere() {
+  const client = useQueryClient();
+  const router = useRouter();
+  return useMutation({
+    mutationFn: () => unwrap(api().POST("/v1/auth/forget")),
+    onSuccess: () => {
+      signingOut = true;
+      window.setTimeout(() => (signingOut = false), 1000);
+      client.setQueryData(endedKey, false);
+      forgetSession(client);
+      router.push("/");
+    },
+  });
+}
+
+/**
  * Watches for a 401 on any call while someone is signed in, which means the session ended: the shared `me` query is
  * emptied (so Raids and the menu agree they are signed out) and `useSessionEnded` turns true. Mount it once, in the
  * top bar's account control.

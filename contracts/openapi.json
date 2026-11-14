@@ -4649,6 +4649,61 @@
         ]
       }
     },
+    "/v1/auth/forget": {
+      "post": {
+        "description": "Sign out everywhere and remove the stored Warcraft Logs sign-in: deletes the caller's WCL tokens and ends every\nsession of theirs, on every device. Ingests and watches of theirs that need their own token stop with\n`wcl_not_signed_in`. Signing in again starts afresh.",
+        "operationId": "forget_v1_auth_forget_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Sign-in failed (invalid_state, wcl_denied, sign_in_failed)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not signed in (not_signed_in)"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "CSRF check failed (csrf_failed)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid query parameter (bad_request)"
+          }
+        },
+        "summary": "Forget",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/login": {
       "get": {
         "description": "Start a Warcraft Logs sign-in: redirects the browser to WCL. ``next`` is a path to return to afterwards.",

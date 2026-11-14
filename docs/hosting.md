@@ -289,6 +289,10 @@ It is a development switch and refuses to run unless `KHADBOT_TEST_SESSIONS` is 
 
 Test users have a negative WCL user ID (-1 down to -(2^40), derived from the name). Warcraft Logs account IDs are positive, and sign-in refuses a non-positive ID, so a real account can never be a test user. A test user holds no Warcraft Logs tokens, so its jobs use the app's auth (which WCL replay answers). The session cookie is never logged and only its SHA-256 is stored. The smoke tests (`stack:smoke` in the image, `dev:smoke` natively) start their own session this way for the user `smoke`; the old fixed `KHADBOT_STACK_SMOKE_SESSION` value is gone.
 
+## Signing out everywhere
+
+`POST /v1/auth/forget` (the account menu's "Sign out everywhere") deletes the caller's stored Warcraft Logs tokens and ends every session of theirs, on every device. Ingests and live watches of theirs that fetch on their own token then stop with `wcl_not_signed_in`; signing in again stores new tokens. `POST /v1/auth/logout` ends only the session that calls it and keeps the tokens, so queued jobs still run.
+
 ## Rotating the token key
 
 `KHADBOT_TOKEN_KEYS` lists Fernet keys, newest first: the first encrypts, every key decrypts. To replace a key (on a schedule, or because one may have leaked):

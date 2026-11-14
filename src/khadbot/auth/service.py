@@ -276,6 +276,15 @@ class AuthService:
         """End the session. The user's WCL tokens stay, so their queued jobs can still run."""
         await self.sessions.revoke(session_id)
 
+    async def forget(self, user_id: str) -> None:
+        """
+        Delete the user's stored WCL tokens and end every session of theirs. Jobs they queued on their own token
+        then fail with ``wcl_not_signed_in``; signing in again stores new tokens.
+        """
+        await self.tokens.forget(user_id)
+        ended = await self.sessions.revoke_all(user_id)
+        logger.info("User %s removed their Warcraft Logs sign-in; %d session(s) ended", user_id, ended)
+
     async def current_user(self, session_id: str | None) -> User | None:
         """The user a session cookie belongs to, or None."""
         return await self.sessions.resolve(session_id)

@@ -145,7 +145,7 @@ test.describe("signed in, a followed log and signing out", () => {
     await page.goto(`/?source=${PRIVATE}`);
     await expect(page.getByTestId("night-card")).toBeVisible();
     await page.getByTestId("account-button").click();
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole("heading", { name: "Raids", level: 1 })).toBeVisible();
     await expect(page.getByRole("banner").getByRole("link", { name: "Sign in with Warcraft Logs" })).toBeVisible();

@@ -99,5 +99,9 @@ class SessionManager:
         if session_id:
             await asyncio.to_thread(self._store.delete_session, digest(session_id))
 
+    async def revoke_all(self, user_id: str) -> int:
+        """End every session of ``user_id``, on every device; returns how many there were."""
+        return await asyncio.to_thread(self._store.delete_user_sessions, user_id)
+
 
 __all__ = ["TOUCH_INTERVAL", "SessionManager", "digest", "new_secret"]

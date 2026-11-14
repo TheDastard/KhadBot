@@ -8,6 +8,7 @@ CSRF check, cookie attributes, and that no token, code or cookie value reaches a
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import logging
@@ -289,6 +290,32 @@ class TestLogout:
 
     def test_logout_signed_out_is_fine(self, client):
         assert client.post("/v1/auth/logout", headers=CSRF).status_code == 204
+
+    def test_forget_ends_every_session_and_deletes_the_tokens(self, client, store, service):
+        sign_in(client)
+        user_id = next(iter(store.users.values())).id
+        other_device = asyncio.run(service.sessions.create(user_id))
+        assert len(store.sessions) == 2 and store.tokens
+        resp = client.post("/v1/auth/forget", headers=CSRF)
+        assert resp.status_code == 204
+        assert not store.sessions and not store.tokens
+        assert asyncio.run(service.current_user(other_device)) is None  # the other device is signed out too
+        assert client.get("/v1/me").status_code == 401
+        assert store.users  # the account itself stays: signing in again starts afresh
+
+    def test_forget_leaves_other_users_alone(self, client, store, service, clock):
+        other = store.upsert_user(4242, "Jaina", clock.now)
+        theirs = asyncio.run(service.sessions.create(other.id))
+        sign_in(client)
+        assert client.post("/v1/auth/forget", headers=CSRF).status_code == 204
+        assert asyncio.run(service.current_user(theirs)) is not None
+
+    def test_forget_needs_a_session_and_the_csrf_header(self, client, store):
+        assert client.post("/v1/auth/forget", headers=CSRF).status_code == 401
+        sign_in(client)
+        resp = client.post("/v1/auth/forget")
+        assert resp.status_code == 403 and resp.json()["code"] == "csrf_failed"
+        assert store.sessions and store.tokens
 
 
 # ---------------------------------------------------------------------------
