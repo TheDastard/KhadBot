@@ -220,6 +220,31 @@ class TestWorkerCheck:
             main(["worker", "--check"])
 
 
+class TestRotateTokenKeysSubcommand:
+    def test_dispatches(self):
+        with patch("khadbot.main._run_rotate_token_keys") as run:
+            main(["rotate-token-keys"])
+        run.assert_called_once_with()
+
+    def test_refuses_to_run_in_local_mode(self, monkeypatch):
+        monkeypatch.delenv("KHADBOT_MODE", raising=False)
+        with pytest.raises(SystemExit, match="KHADBOT_MODE=hosted"):
+            main(["rotate-token-keys"])
+
+    def test_rotates_and_reports_the_count(self, monkeypatch, capsys):
+        from unittest.mock import AsyncMock, MagicMock
+
+        monkeypatch.setenv("KHADBOT_MODE", "hosted")
+        monkeypatch.setenv("DATABASE_URL", "postgresql://fake:fake@localhost/fake")
+        service = MagicMock()
+        service.tokens.rotate_keys = AsyncMock(return_value=3)
+        with patch("khadbot.wiring.auth_service", return_value=service), patch("khadbot.db.close_pool") as close:
+            main(["rotate-token-keys"])
+        service.tokens.rotate_keys.assert_awaited_once_with()
+        close.assert_called_once_with()
+        assert "3 user(s)" in capsys.readouterr().out
+
+
 class TestUsageSubcommand:
     def test_parses_args(self):
         with patch("khadbot.main._run_usage") as run:

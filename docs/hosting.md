@@ -286,6 +286,16 @@ It is a development switch and refuses to run unless `KHADBOT_TEST_SESSIONS` is 
 
 Test users have a negative WCL user ID (-1 down to -(2^40), derived from the name). Warcraft Logs account IDs are positive, and sign-in refuses a non-positive ID, so a real account can never be a test user. A test user holds no Warcraft Logs tokens, so its jobs use the app's auth (which WCL replay answers). The session cookie is never logged and only its SHA-256 is stored. The smoke tests (`stack:smoke` in the image, `dev:smoke` natively) start their own session this way for the user `smoke`; the old fixed `KHADBOT_STACK_SMOKE_SESSION` value is gone.
 
+## Rotating the token key
+
+`KHADBOT_TOKEN_KEYS` lists Fernet keys, newest first: the first encrypts, every key decrypts. To replace a key (on a schedule, or because one may have leaked):
+
+1. Put the new key first in `KHADBOT_TOKEN_KEYS`, keep the old one after it, and restart the API and the workers.
+2. Run `python main.py rotate-token-keys` (in the image, `khadbot rotate-token-keys`) with the same environment. It re-encrypts every user's stored WCL tokens under the first key, taking each user's refresh lock, and prints how many users it rewrote. Running it twice is safe.
+3. Remove the old key and restart. Tokens the old key alone could read are gone; a user in that state signs in to Warcraft Logs again.
+
+Sign-ins in progress during a restart (the ten-minute OAuth state holds an encrypted verifier) fail once their key is removed and are started again by the user.
+
 ## Retention
 
 What hosted mode keeps, and what removes the rest:

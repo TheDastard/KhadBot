@@ -334,6 +334,29 @@ def _run_usage(since: str, by: str) -> None:
     print(format_usage_report(totals, group, start))
 
 
+def _run_rotate_token_keys() -> None:
+    """Re-encrypt every stored WCL token under the newest key in ``KHADBOT_TOKEN_KEYS``, so older keys can be removed."""
+    from khadbot.config import DatabaseConfig
+
+    if not DatabaseConfig().hosted:
+        sys.exit("Stored WCL tokens are in the hosted database: set KHADBOT_MODE=hosted and DATABASE_URL.")
+    try:
+        from khadbot import wiring
+        from khadbot.db import close_pool
+    except ImportError as exc:
+        sys.exit(missing_group_message("hosted", "rotate-token-keys") + f"\n({exc})")
+    try:
+        service = wiring.auth_service()
+        if service is None:
+            sys.exit("Hosted sign-in is not configured: nothing to rotate.")
+        count = asyncio.run(service.tokens.rotate_keys())
+    except (ConfigurationError, OSError) as exc:
+        sys.exit(str(exc))
+    finally:
+        close_pool()  # an open pool's threads would otherwise fail at interpreter shutdown
+    print(f"Re-encrypted the stored tokens of {count} user(s) under the newest key. Older keys can now be removed.")
+
+
 def _reload_child(argv: list[str]) -> None:
     """The process the reloader (re)starts: the same command, without ``--reload``."""
     main(argv)
@@ -430,6 +453,10 @@ def build_parser() -> argparse.ArgumentParser:
     usage.add_argument(
         "--by", choices=["user", "guild", "kind"], default="kind", help="Group the totals (default: kind)"
     )
+    sub.add_parser(
+        "rotate-token-keys",
+        help="Re-encrypt stored WCL tokens under the newest KHADBOT_TOKEN_KEYS key, so older keys can be removed (hosted mode)",
+    )
     backfill = sub.add_parser(
         "backfill",
         help="Queue low-priority process jobs for an encounter's stored pulls (hosted mode; never spends WCL points)",
@@ -463,7 +490,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         argv_list = list(sys.argv[1:] if argv is None else argv)
         _run_reloading([a for a in argv_list if a != "--reload"])
         return
-    if command in {"api", "migrate", "worker", "backfill", "usage"} and not getattr(args, "check", False):
+    if command in {"api", "migrate", "worker", "backfill", "usage", "rotate-token-keys"} and not getattr(
+        args, "check", False
+    ):
         from khadbot.logging_setup import configure_logging
 
         configure_logging()
@@ -491,6 +520,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         _run_worker_check() if args.check else _run_worker(args.queues, args.concurrency)
     elif command == "usage":
         _run_usage(args.since, args.by)
+    elif command == "rotate-token-keys":
+        _run_rotate_token_keys()
     elif command == "backfill":
         _run_backfill(args.encounter, args.difficulty, args.since, args.dry_run)
     elif command == "test-session":
