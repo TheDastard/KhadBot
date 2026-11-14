@@ -19,7 +19,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from khadbot.api.deps import Caller, Directory, readable_ref, readable_report
+from khadbot.api.deps import ACCESS_BUDGET_RESPONSE, Caller, Directory, readable_ref, readable_report
 from khadbot.api.night import build_night, build_report_detail, read_source
 from khadbot.api.schemas import (
     ErrorBody,
@@ -58,6 +58,7 @@ Ctx = Annotated[ApiContext, Depends(get_context)]
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorBody, "description": "Report or pull not ingested, or a report the caller cannot read"},
     503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
+    **ACCESS_BUDGET_RESPONSE,
 }
 _GATE = [Depends(readable_report)]
 
@@ -175,6 +176,7 @@ def get_events(
         },
         503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
         501: {"model": ErrorBody, "description": "Raid-plan refs cannot be resolved yet"},
+        **ACCESS_BUDGET_RESPONSE,
     },
     tags=["evidence"],
 )

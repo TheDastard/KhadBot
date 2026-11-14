@@ -44,6 +44,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import math
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
@@ -51,12 +52,13 @@ from typing import Annotated, Any
 from urllib.parse import parse_qs, urlsplit
 
 from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from khadbot.api.budget import get_budget
 from khadbot.api.deps import Caller, SignedIn, csrf, require_readable
 from khadbot.api.schemas import (
+    BudgetWaitBody,
     ErrorBody,
     IngestRequest,
     IngestResponse,
@@ -87,6 +89,7 @@ logger = logging.getLogger(__name__)
 _REPORT_CODE = re.compile(r"^[A-Za-z0-9]{1,40}$")
 _WCL_HOST = re.compile(r"^([a-z0-9-]+\.)*warcraftlogs\.com$")
 _REPORT_PATH = re.compile(r"^/reports/([A-Za-z0-9]{1,40})/?$")
+VISITOR_RETRY_S = 30.0  # what a refused visitor is told to wait: about one pull's load
 _TERMINAL = frozenset({StoredState.DONE, StoredState.FAILED, StoredState.CANCELLED})
 
 # ---------------------------------------------------------------------------
@@ -427,6 +430,10 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     403: {"model": ErrorBody, "description": "CSRF check failed (csrf_failed), or not your job (not_your_job)"},
     404: {"model": ErrorBody, "description": "No such job, or a report you cannot read"},
     422: {"model": ErrorBody, "description": "Invalid body or parameter (bad_request)"},
+    429: {
+        "model": BudgetWaitBody,
+        "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s",
+    },
     503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
 }
 _READ_ERRORS = {k: v for k, v in _ERRORS.items() if k not in (401, 403)}  # a visitor may read a job
@@ -435,9 +442,14 @@ _READ_ERRORS = {k: v for k, v in _ERRORS.items() if k not in (401, 403)}  # a vi
 _JSON_ERRORS: dict[int | str, dict[str, Any]] = {
     status: {
         "description": r["description"],
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorBody"}}},
+        "content": {"application/json": {"schema": {"$ref": f"#/components/schemas/{r['model'].__name__}"}}},
     }
     for status, r in _READ_ERRORS.items()
+}
+_JSON_ERRORS[503] = {
+    **_JSON_ERRORS[503],
+    "description": "Warcraft Logs could not answer the access check (wcl_unavailable), or this server has too many "
+    "job streams open (too_many_streams): read the job with GET /v1/jobs/{id} instead",
 }
 
 router = APIRouter(prefix="/v1", tags=["jobs"])
@@ -502,11 +514,14 @@ def _written(request: Request, code: str, fights: list[int] | None) -> bool:
         },
         **_ERRORS,
         400: {"model": ErrorBody, "description": "Not a report code or URL (bad_source, bad_fights)"},
+        429: {
+            "model": BudgetWaitBody,
+            "description": "No WCL points free to check access now (budget_exhausted, with wait_s), or too many "
+            "signed-out visitors' pulls are loading (visitor_queue_full)",
+        },
     },
 )
-async def start_ingest(
-    body: IngestRequest, request: Request, response: Response, user: Caller, queue: Queue
-) -> IngestResponse:
+async def start_ingest(body: IngestRequest, request: Request, response: Response, user: Caller, queue: Queue) -> Any:
     """
     Open pulls of a report, or all of it. The caller must be able to read the report (404 `report_not_found`
     otherwise). A pull that is already loaded answers `ready` with no job. One that is loading answers the running job
@@ -523,8 +538,8 @@ async def start_ingest(
         response.status_code = 200
         return IngestResponse(ready=True, job=None)
     spec = await _spec_for(request, user, code, fights)
-    if user is None:
-        await _visitor_room(queue, spec)
+    if user is None and (refusal := await _visitor_room(queue, spec)) is not None:
+        return refusal
     try:
         queued = await queue.enqueue(spec, requested_by=user.id if user is not None else None)
     except Exception:
@@ -541,19 +556,25 @@ async def start_ingest(
     return IngestResponse(ready=False, job=job)
 
 
-async def _visitor_room(queue: JobQueue, spec: IngestReport) -> None:
+async def _visitor_room(queue: JobQueue, spec: IngestReport) -> JSONResponse | None:
     """
-    Refuse a visitor's new ingest (429 `visitor_queue_full`) while ``KHADBOT_VISITOR_MAX_JOBS`` visitor ingests are
+    The refusal for a visitor's new ingest (429 `visitor_queue_full`, with a wait to suggest), or None. Refused while ``KHADBOT_VISITOR_MAX_JOBS`` visitor ingests are
     already queued, running or waiting for points. A request an active ingest already covers passes: it queues nothing.
     """
     limit = ApiConfig().visitor_max_jobs
     if await queue.store.active_visitor_ingests() < limit:
-        return
+        return None
     for active in await queue.store.active_ingests(spec.code):
         if covers(IngestReport.model_validate(active.spec), spec):
-            return
-    raise ApiError(
-        429, "visitor_queue_full", "Many pulls are being opened right now. Try again shortly, or sign in to open yours."
+            return None
+    return JSONResponse(
+        status_code=429,
+        headers={"Retry-After": str(math.ceil(VISITOR_RETRY_S)), "Cache-Control": "no-store"},
+        content=BudgetWaitBody(
+            code="visitor_queue_full",
+            message="Many pulls are being opened right now. Try again shortly, or sign in to open yours.",
+            wait_s=VISITOR_RETRY_S,
+        ).model_dump(),
     )
 
 

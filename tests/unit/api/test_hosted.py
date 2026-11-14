@@ -214,6 +214,7 @@ class TestVisitorOpens:
         assert [r.status_code for r in opened] == [202, 202, 202]
         full = visitor.post("/v1/reports", json={"source": CODE, "fights": [4]})
         assert (full.status_code, full.json()["code"]) == (429, "visitor_queue_full")
+        assert full.json()["wait_s"] > 0 and int(full.headers["retry-after"]) >= 1
         assert len(h.backend.rows) == 3  # nothing was queued for the fourth
         again = visitor.post("/v1/reports", json={"source": CODE, "fights": [2]})  # already loading: follow it
         assert again.status_code == 200 and again.json()["job"]["id"] == opened[1].json()["job"]["id"]

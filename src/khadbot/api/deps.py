@@ -21,11 +21,11 @@ loads them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol
 
 from fastapi import Depends, Request
 
-from khadbot.api.schemas import GroupInfo, ReportInfo, ReportList
+from khadbot.api.schemas import BudgetWaitBody, GroupInfo, ReportInfo, ReportList
 from khadbot.api.views import difficulty_name
 from khadbot.auth.errors import NotSignedInError
 from khadbot.auth.store import User
@@ -81,6 +81,15 @@ SignedIn = Annotated[User, Depends(signed_in)]
 # ---------------------------------------------------------------------------
 # Report access
 # ---------------------------------------------------------------------------
+
+# What every route behind the access check may answer when the check has to ask WCL and the budget has no point
+# for the caller (auth.access.AccessBudgetError); routes add it to their ``responses``.
+ACCESS_BUDGET_RESPONSE: dict[int | str, dict[str, Any]] = {
+    429: {
+        "model": BudgetWaitBody,
+        "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s",
+    }
+}
 
 
 async def require_readable(request: Request, code: str) -> None:

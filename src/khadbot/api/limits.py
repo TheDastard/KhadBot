@@ -71,6 +71,7 @@ class RequestLimits:
                 "rate_limited",
                 "Too many requests from this address. Try again shortly.",
                 {"retry-after": str(max(1, math.ceil(wait)))},
+                wait_s=wait,
             )
             return
         if not self.max_body_bytes:
@@ -149,8 +150,13 @@ async def _too_large(send: Send, limit: int) -> None:
     await _answer(send, 413, "body_too_large", f"The request body is larger than {limit} bytes.", {})
 
 
-async def _answer(send: Send, status: int, code: str, message: str, headers: dict[str, str]) -> None:
-    body = json.dumps({"code": code, "message": message}).encode()
+async def _answer(
+    send: Send, status: int, code: str, message: str, headers: dict[str, str], *, wait_s: float | None = None
+) -> None:
+    content: dict[str, object] = {"code": code, "message": message}
+    if wait_s is not None:  # every 429 of the API says how long to wait (schemas.BudgetWaitBody)
+        content["wait_s"] = round(wait_s, 1)
+    body = json.dumps(content).encode()
     raw = [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())]
     raw += [(k.encode(), v.encode()) for k, v in headers.items()]
     await send({"type": "http.response.start", "status": status, "headers": raw})

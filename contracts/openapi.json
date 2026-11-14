@@ -4538,7 +4538,7 @@
     }
   },
   "info": {
-    "description": "Access to ingested WarcraftLogs reports: digests, night summaries and evidence; in hosted mode also sign-in and ingest jobs.",
+    "description": "Access to ingested WarcraftLogs reports: digests, night summaries and evidence; in hosted mode also sign-in and ingest jobs. In hosted mode any route may also answer 413 `body_too_large` (a request body over the server's limit) or 429 `rate_limited` with `Retry-After` (too many requests from one address), both with the usual `{code, message}` body.",
     "title": "KhadBot Dashboard API",
     "version": "1.0.0"
   },
@@ -4969,6 +4969,16 @@
             },
             "description": "Invalid path or query parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "501": {
             "content": {
               "application/json": {
@@ -5074,6 +5084,16 @@
             },
             "description": "Invalid body or parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5157,6 +5177,16 @@
             },
             "description": "Invalid body or parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5220,6 +5250,16 @@
             },
             "description": "Invalid body or parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5228,7 +5268,7 @@
                 }
               }
             },
-            "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"
+            "description": "Warcraft Logs could not answer the access check (wcl_unavailable), or this server has too many job streams open (too_many_streams): read the job with GET /v1/jobs/{id} instead"
           }
         },
         "summary": "Job Events",
@@ -5501,6 +5541,16 @@
             },
             "description": "Invalid body or parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access now (budget_exhausted, with wait_s), or too many signed-out visitors' pulls are loading (visitor_queue_full)"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5563,6 +5613,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {
@@ -5627,6 +5687,16 @@
             },
             "description": "Invalid path parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5690,6 +5760,16 @@
             },
             "description": "Invalid path or query parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -5752,6 +5832,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {
@@ -5834,6 +5924,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {
@@ -5994,6 +6094,16 @@
             },
             "description": "Invalid path or query parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -6066,6 +6176,16 @@
             },
             "description": "Invalid path or query parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -6137,6 +6257,16 @@
               }
             },
             "description": "Invalid path or query parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {
@@ -6221,6 +6351,16 @@
             },
             "description": "Invalid parameter (bad_request)"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
+          },
           "503": {
             "content": {
               "application/json": {
@@ -6291,6 +6431,16 @@
               }
             },
             "description": "Invalid parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {
@@ -6392,6 +6542,16 @@
               }
             },
             "description": "Invalid parameter (bad_request)"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetWaitBody"
+                }
+              }
+            },
+            "description": "No WCL points free to check access to the report now (budget_exhausted); see wait_s"
           },
           "503": {
             "content": {

@@ -2771,6 +2771,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Raid-plan refs cannot be resolved yet */
             501: {
                 headers: {
@@ -2858,6 +2867,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -2925,6 +2943,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -2974,7 +3001,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
+            /** @description Warcraft Logs could not answer the access check (wcl_unavailable), or this server has too many job streams open (too_many_streams): read the job with GET /v1/jobs/{id} instead */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3214,6 +3250,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access now (budget_exhausted, with wait_s), or too many signed-out visitors' pulls are loading (visitor_queue_full) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3261,6 +3306,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
@@ -3312,6 +3366,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3361,6 +3424,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3408,6 +3480,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
@@ -3460,6 +3541,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
@@ -3531,6 +3621,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3581,6 +3680,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3629,6 +3737,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
@@ -3687,6 +3804,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
@@ -3774,6 +3900,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
             503: {
                 headers: {
@@ -3839,6 +3974,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */

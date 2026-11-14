@@ -60,6 +60,15 @@ export function errorCard(error: ErrorInput): ErrorCard {
         body: "Something is wrong on our side. Try again later.",
         action: "retry",
       };
+    case "visitor_queue_full":
+      return {
+        tone: "info",
+        where: "Loading",
+        code,
+        title: "Many pulls are loading right now",
+        body: "Try again in a moment, or sign in with Warcraft Logs to load this pull now.",
+        action: "sign-in",
+      };
     case "not_signed_in":
       return {
         tone: "info",

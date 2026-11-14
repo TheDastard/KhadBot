@@ -77,6 +77,7 @@ def test_requests_over_the_rate_are_429_until_the_window_ends():
     assert [client.get("/v1/thing").status_code for _ in range(5)] == [200, 200, 200, 429, 429]
     refused = client.get("/v1/thing")
     assert refused.json()["code"] == "rate_limited" and int(refused.headers["retry-after"]) >= 1
+    assert 0 < refused.json()["wait_s"] <= 60
     clock.now += 61
     assert client.get("/v1/thing").status_code == 200
 

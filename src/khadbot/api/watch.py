@@ -25,7 +25,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
 
-from khadbot.api.deps import SignedIn, csrf, require_readable
+from khadbot.api.deps import ACCESS_BUDGET_RESPONSE, SignedIn, csrf, require_readable
 from khadbot.api.jobs import Queue
 from khadbot.api.schemas import ErrorBody
 from khadbot.api.views import ApiError
@@ -110,6 +110,7 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     },
     422: {"model": ErrorBody, "description": "Invalid parameter (bad_request)"},
     503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
+    **ACCESS_BUDGET_RESPONSE,
 }
 _WRITE_ERRORS: dict[int | str, dict[str, Any]] = {
     **_ERRORS,

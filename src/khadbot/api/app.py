@@ -127,7 +127,9 @@ def create_app(
         title="KhadBot Dashboard API",
         version=API_VERSION,
         description="Access to ingested WarcraftLogs reports: digests, night summaries and evidence; "
-        "in hosted mode also sign-in and ingest jobs.",
+        "in hosted mode also sign-in and ingest jobs. In hosted mode any route may also answer 413 "
+        "`body_too_large` (a request body over the server's limit) or 429 `rate_limited` with `Retry-After` (too "
+        "many requests from one address), both with the usual `{code, message}` body.",
         lifespan=lifespan,
     )
     # Hosted mode serves no local path: its data is in Postgres and the bucket.

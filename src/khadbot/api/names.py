@@ -23,7 +23,7 @@ from typing import Annotated, Any, get_args
 import orjson
 from fastapi import APIRouter, Depends, Query, Request, Response
 
-from khadbot.api.deps import readable_report
+from khadbot.api.deps import ACCESS_BUDGET_RESPONSE, readable_report
 from khadbot.api.routes import Ctx
 from khadbot.api.schemas import (
     CooldownList,
@@ -147,6 +147,7 @@ def list_cooldowns(request: Request, ctx: Ctx) -> Any:
     responses={
         404: {"model": ErrorBody, "description": "No cached metadata for the report, or one the caller cannot read"},
         503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
+        **ACCESS_BUDGET_RESPONSE,
     },
     tags=["reports"],
 )

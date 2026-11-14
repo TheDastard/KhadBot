@@ -19,7 +19,7 @@ from typing import Any
 import orjson
 from fastapi import APIRouter, Depends
 
-from khadbot.api.deps import readable_report
+from khadbot.api.deps import ACCESS_BUDGET_RESPONSE, readable_report
 from khadbot.api.routes import Ctx
 from khadbot.api.schemas import AbilityIcon, ErrorBody, ReportAbilities
 from khadbot.api.views import ApiError
@@ -51,6 +51,7 @@ def normalize_icon(raw: object) -> str | None:
     responses={
         404: {"model": ErrorBody, "description": "No cached metadata for the report, or one the caller cannot read"},
         503: {"model": ErrorBody, "description": "Warcraft Logs could not answer the access check (wcl_unavailable)"},
+        **ACCESS_BUDGET_RESPONSE,
     },
     tags=["reports"],
 )
