@@ -215,8 +215,9 @@ def create_app(
 def _add_hosted_cors(app: FastAPI, config: AuthConfig) -> None:
     """
     The web app's origins, with credentials (the session cookie), the methods the API uses and the CSRF header. The
-    origins are listed, never ``*``: a wildcard origin cannot carry credentials, and listing is what keeps a foreign
-    page from reading the API as the signed-in user.
+    origins are listed, never ``*``: with credentials the middleware would echo any origin that asks, and listing is
+    what keeps a foreign page from reading the API as the signed-in user. ``AuthService`` refuses a list that holds
+    ``*`` or anything that is not an origin (``auth.service.check_web_origins``).
     """
     from khadbot.auth.routes import CSRF_HEADER
 

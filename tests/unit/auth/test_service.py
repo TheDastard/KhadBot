@@ -85,7 +85,9 @@ def test_the_example_key_is_refused_off_localhost(auth_config, store):
     """The key in deploy/stack.env is public: fine for the local stack, never for a deployment with Secure cookies."""
     local = replace(auth_config, token_keys=(EXAMPLE_TOKEN_KEY,))
     AuthService(store, local, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET)  # plain-HTTP localhost
-    deployed = replace(local, redirect_uri="https://api.example.test/v1/auth/callback")
+    deployed = replace(
+        local, redirect_uri="https://api.example.test/v1/auth/callback", web_origins=("https://app.example.test",)
+    )
     with pytest.raises(ConfigurationError, match="example key"):
         AuthService(store, deployed, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET)
 
@@ -99,3 +101,17 @@ def test_test_users_follow_the_switch(auth_config, store, monkeypatch):
     monkeypatch.setenv("KHADBOT_TEST_SESSIONS", "1")
     assert make().sessions.test_users is True
     assert make(test_sessions=False).sessions.test_users is False
+
+
+@pytest.mark.parametrize("origins", [("*",), ("https://*.example.test",), ("app.example.test",), ("https://a.test/x",)])
+def test_web_origins_that_are_not_origins_are_refused(auth_config, origins):
+    with pytest.raises(ConfigurationError, match="KHADBOT_WEB_ORIGINS"):
+        build(replace(auth_config, web_origins=origins))
+
+
+def test_a_deployed_api_needs_https_web_origins(auth_config):
+    deployed = replace(auth_config, redirect_uri="https://api.example.test/v1/auth/callback")
+    build(replace(deployed, web_origins=("https://app.example.test",)))
+    for origins in ((), ("http://localhost:3000",), ("https://app.example.test", "http://app.example.test")):
+        with pytest.raises(ConfigurationError, match="KHADBOT_WEB_ORIGINS"):
+            build(replace(deployed, web_origins=origins))

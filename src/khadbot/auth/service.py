@@ -77,6 +77,31 @@ def safe_next_path(value: str | None) -> str:
     return value
 
 
+def check_web_origins(config: AuthConfig) -> None:
+    """
+    Refuse web origins that would open the API to other sites. Each must be a plain origin (``scheme://host[:port]``):
+    the CORS middleware treats ``*`` as "any origin" and, with credentials, echoes whichever origin asks. A deployment
+    with Secure cookies must list at least one origin, all of them https.
+
+    Raises:
+        ConfigurationError: An entry that is not an origin, or a list that does not fit a real deployment.
+    """
+    for origin in config.web_origins:
+        scheme, sep, host = origin.partition("://")
+        if not sep or scheme not in ("http", "https") or not host or any(c in host for c in "/*? "):
+            raise ConfigurationError(
+                f"KHADBOT_WEB_ORIGINS holds {origin!r}, which is not an origin such as https://app.example.com."
+            )
+    if config.cookie_secure:
+        if not config.web_origins:
+            raise ConfigurationError("KHADBOT_WEB_ORIGINS is empty: list the web app's origin.")
+        plain = [o for o in config.web_origins if not o.startswith("https://")]
+        if plain:
+            raise ConfigurationError(
+                f"KHADBOT_WEB_ORIGINS lists {plain[0]!r} on a deployment with Secure cookies: use the https origin."
+            )
+
+
 # ---------------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------------
@@ -119,6 +144,7 @@ class AuthService:
             )
         if not client_id or not client_secret:
             raise ConfigurationError("Hosted sign-in needs WARCRAFTLOGS_CLIENT_ID and WARCRAFTLOGS_CLIENT_SECRET.")
+        check_web_origins(config)
         if config.cookie_secure and EXAMPLE_TOKEN_KEY in config.token_keys:
             raise ConfigurationError(
                 "KHADBOT_TOKEN_KEYS holds the example key from deploy/stack.env, which is public. Generate a key "
@@ -261,4 +287,4 @@ class AuthService:
         return base.rstrip("/") + next_path
 
 
-__all__ = ["AuthService", "LoginResult", "LoginStart", "safe_next_path"]
+__all__ = ["AuthService", "LoginResult", "LoginStart", "check_web_origins", "safe_next_path"]

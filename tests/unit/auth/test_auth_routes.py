@@ -247,7 +247,11 @@ class TestSessions:
         assert "secure" not in lowered  # plain-HTTP localhost only
 
     def test_cookies_are_secure_off_localhost(self, store, auth_config, clock, wcl):
-        cfg = replace(auth_config, redirect_uri="https://api.example.test/v1/auth/callback")
+        cfg = replace(
+            auth_config,
+            redirect_uri="https://api.example.test/v1/auth/callback",
+            web_origins=("https://app.example.test",),
+        )
         svc = AuthService(store, cfg, client_id=FAKE_CLIENT_ID, client_secret=FAKE_CLIENT_SECRET, clock=clock)
         with TestClient(make_app(svc), base_url="https://api.example.test") as c:
             resp = c.get("/v1/auth/login", follow_redirects=False)
