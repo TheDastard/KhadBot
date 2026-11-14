@@ -107,7 +107,13 @@ def record(**kw) -> JobRecord:
 def test_a_failed_job_shows_a_typed_error(stored, api):
     rec = record(state=JobState.FAILED, error_code=str(stored), error_message="why")
     error = failure_for(rec, QueueConfig(), NOW)
-    assert error is not None and (error.code.value, error.message) == (api, "why")
+    assert error is not None and error.code.value == api
+    if api in ("report_not_found", "wcl_error"):
+        # A private report must read like a missing one, and WCL's own wording stays in the logs.
+        expected = "private to another account" if api == "report_not_found" else "answered with an error"
+        assert expected in error.message
+    else:
+        assert error.message == "why"
 
 
 def test_a_rate_limited_job_waiting_for_a_retry_shows_the_seconds_left():

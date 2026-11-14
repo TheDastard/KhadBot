@@ -72,6 +72,6 @@ def test_a_reader_follows_another_users_job_but_cannot_stop_it(h):
         lambda c: c.post(f"/v1/jobs/{job_id}/cancel", headers=CSRF),
     ):
         resp = call(carol)
-        assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+        assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
     assert alice.get(f"/v1/jobs/{job_id}").status_code == 200
     assert h.backend.rows[job_id].state is JobState.QUEUED

@@ -294,7 +294,7 @@ class TestVisitorOpens:
         job_id = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [1]}).json()["job"]["id"]
         for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
             resp = h.actor().get(url)
-            assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
+            assert (resp.status_code, resp.json()["code"]) == (404, "job_not_found")
         resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1]})
         assert (resp.status_code, resp.json()["code"]) == (404, "report_not_found")
 
@@ -415,7 +415,7 @@ class TestIngestRoutes:
         h.wcl.readable[h.token_of("Jaina")] = {CODE}
         job_id = h.actor("Jaina").post("/v1/reports", json={"source": CODE}).json()["job"]["id"]
         for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
-            assert h.actor("Thrall").get(url).json()["code"] == "report_not_found"
+            assert h.actor("Thrall").get(url).json()["code"] == "job_not_found"
 
     def test_process_jobs_are_not_exposed(self, h):
         h.wcl.readable["app"] = {CODE}
@@ -431,7 +431,7 @@ class TestIngestRoutes:
         h.wcl.readable.clear()
         h.clock.advance(hours=2)  # past the cached answer
         for url in (f"/v1/jobs/{job_id}", f"/v1/jobs/{job_id}/events"):
-            assert jaina.get(url).json()["code"] == "report_not_found"
+            assert jaina.get(url).json()["code"] == "job_not_found"
 
     def test_cancel_drops_a_queued_job(self, h):
         h.wcl.readable["app"] = {CODE}

@@ -21,7 +21,8 @@ Routes (all under ``/v1``; the two that change state need the CSRF header):
 Anyone who can read a job's report may read the job and its stream, signed in or not (the access rule every report
 route uses, so losing access to a report ends it); only the user who started a job may cancel it (403
 ``not_your_job``), and only they see its points spent. A visitor's job has no owner: nobody may cancel it, and it
-runs to the end once queued. A missing job, or a process job, answers 404 ``job_not_found``.
+runs to the end once queued. A missing job, a process job, and a job on a report the caller cannot read all answer
+404 ``job_not_found``.
 
 Event stream
 ------------
@@ -70,7 +71,7 @@ from khadbot.api.schemas import (
     StepState,
 )
 from khadbot.api.views import ApiError, difficulty_name
-from khadbot.auth.errors import NotSignedInError
+from khadbot.auth.errors import NotSignedInError, ReportNotFoundError
 from khadbot.auth.store import User
 from khadbot.config import ApiConfig, QueueConfig
 from khadbot.jobs.budget_store import BudgetManager
@@ -205,9 +206,12 @@ def failure_for(rec: JobRecord, config: QueueConfig, now: datetime, *, eta_s: fl
         # No stored time: the queue waits backoff ** attempts seconds before the next try (jobs.queue's strategy).
         wait = float(config.retry_backoff_s) ** max(rec.attempts, 1)
         retry_after = max(0.0, wait - (now - rec.updated_at).total_seconds())
+    default = _DEFAULT_MESSAGES.get(code, _DEFAULT_MESSAGES[JobErrorCode.internal_error])
+    # A private report reads like a missing one, and WCL's own error text stays in the logs: both show the default.
+    fixed = code in (JobErrorCode.report_not_found, JobErrorCode.wcl_error)
     return JobFailure(
         code=code,
-        message=rec.error_message or _DEFAULT_MESSAGES.get(code, _DEFAULT_MESSAGES[JobErrorCode.internal_error]),
+        message=default if fixed else (rec.error_message or default),
         retry_after_s=retry_after,
     )
 
@@ -456,7 +460,11 @@ async def _ingest_job(queue: JobQueue, job_id: str) -> JobRecord:
 async def _readable_job(request: Request, queue: JobQueue, job_id: str) -> JobRecord:
     """An ingest job the caller may follow: they can read its report (anyone who can may, not only who started it)."""
     rec = await _ingest_job(queue, job_id)
-    await require_readable(request, rec.report_code)
+    try:
+        await require_readable(request, rec.report_code)
+    except ReportNotFoundError:
+        # The same answer as for no job at all: a job ID must not tell that its report exists once it is unreadable.
+        raise ApiError(404, "job_not_found", "No such job.") from None
     return rec
 
 
