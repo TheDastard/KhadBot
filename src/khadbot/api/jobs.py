@@ -77,7 +77,7 @@ from khadbot.jobs.budget_store import BudgetManager
 from khadbot.jobs.failures import ErrorCode
 from khadbot.jobs.queue import JobQueue  # hosted only: this module is imported only when the app has a queue
 from khadbot.jobs.specs import AppAuth, IngestReport, UserAuth
-from khadbot.jobs.status import JobKind, JobRecord, JobStore, PullProgress
+from khadbot.jobs.status import JobKind, JobRecord, JobStore, PullProgress, covers
 from khadbot.jobs.status import JobState as StoredState
 from khadbot.jobs.steps import pull_steps
 
@@ -515,6 +515,8 @@ async def start_ingest(
         response.status_code = 200
         return IngestResponse(ready=True, job=None)
     spec = await _spec_for(request, user, code, fights)
+    if user is None:
+        await _visitor_room(queue, spec)
     try:
         queued = await queue.enqueue(spec, requested_by=user.id if user is not None else None)
     except Exception:
@@ -529,6 +531,22 @@ async def start_ingest(
         own=_owns(user, queued.job),
     )
     return IngestResponse(ready=False, job=job)
+
+
+async def _visitor_room(queue: JobQueue, spec: IngestReport) -> None:
+    """
+    Refuse a visitor's new ingest (429 `visitor_queue_full`) while ``KHADBOT_VISITOR_MAX_JOBS`` visitor ingests are
+    already queued, running or waiting for points. A request an active ingest already covers passes: it queues nothing.
+    """
+    limit = ApiConfig().visitor_max_jobs
+    if await queue.store.active_visitor_ingests() < limit:
+        return
+    for active in await queue.store.active_ingests(spec.code):
+        if covers(IngestReport.model_validate(active.spec), spec):
+            return
+    raise ApiError(
+        429, "visitor_queue_full", "Many pulls are being opened right now. Try again shortly, or sign in to open yours."
+    )
 
 
 async def _spec_for(request: Request, user: User | None, code: str, fights: list[int] | None) -> IngestReport:

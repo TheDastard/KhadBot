@@ -429,6 +429,9 @@ class ApiConfig:
     sse_keepalive_s: float = field(default_factory=lambda: float(_optional("KHADBOT_SSE_KEEPALIVE_S", "15")))
     # Job event streams one API process keeps open at once; the next one is refused (503 too_many_streams).
     sse_max_streams: int = field(default_factory=lambda: int(_optional("KHADBOT_SSE_MAX_STREAMS", "500")))
+    # Ingests opened by signed-out visitors that may be queued, running or waiting for points at once, all visitors
+    # together. The visitor allowance limits their points; this limits how many rows and budget entries they hold.
+    visitor_max_jobs: int = field(default_factory=lambda: int(_optional("KHADBOT_VISITOR_MAX_JOBS", "20")))
 
 
 @dataclass(frozen=True)

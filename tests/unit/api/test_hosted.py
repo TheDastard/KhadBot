@@ -201,6 +201,21 @@ class TestVisitorOpens:
         assert row.spec["visitor"] is True and row.spec["auth"] == {"kind": "app"}
         assert row.spec["fights"] == [1]
 
+    def test_visitors_together_may_queue_only_so_many_pulls(self, h, monkeypatch):
+        monkeypatch.setenv("KHADBOT_VISITOR_MAX_JOBS", "3")
+        h.wcl.readable["app"] = {CODE}
+        visitor = h.actor()
+        opened = [visitor.post("/v1/reports", json={"source": CODE, "fights": [n]}) for n in (1, 2, 3)]
+        assert [r.status_code for r in opened] == [202, 202, 202]
+        full = visitor.post("/v1/reports", json={"source": CODE, "fights": [4]})
+        assert (full.status_code, full.json()["code"]) == (429, "visitor_queue_full")
+        assert len(h.backend.rows) == 3  # nothing was queued for the fourth
+        again = visitor.post("/v1/reports", json={"source": CODE, "fights": [2]})  # already loading: follow it
+        assert again.status_code == 200 and again.json()["job"]["id"] == opened[1].json()["job"]["id"]
+        h.wcl.readable[h.token_of("Jaina")] = {CODE}
+        signed_in = h.actor("Jaina").post("/v1/reports", json={"source": CODE, "fights": [4]})
+        assert signed_in.status_code == 202  # the limit is the visitors' own
+
     def test_a_fight_in_the_url_counts_as_the_one_pull(self, h):
         h.wcl.readable["app"] = {CODE}
         resp = h.actor().post("/v1/reports", json={"source": f"https://www.warcraftlogs.com/reports/{CODE}#fight=2"})

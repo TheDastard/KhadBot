@@ -150,6 +150,8 @@ class JobTx(Protocol):
 
     def active_process(self, report_code: str) -> list[JobRecord]: ...
 
+    def active_visitor_ingests(self) -> int: ...
+
     def children(self, parent_id: str) -> list[JobRecord]: ...
 
 
@@ -426,6 +428,10 @@ class JobStore:
     async def active_ingests(self, report: str) -> list[JobRecord]:
         return await self._run(lambda tx: tx.active_ingests(report), report=report)
 
+    async def active_visitor_ingests(self) -> int:
+        """How many ingests opened by signed-out visitors are queued, running or waiting for points."""
+        return await self._run(lambda tx: tx.active_visitor_ingests())
+
     async def active_process(self, report: str) -> list[JobRecord]:
         """The queued or running process jobs of one report's pulls."""
         return await self._run(lambda tx: tx.active_process(report), report=report)
@@ -577,6 +583,13 @@ class _MemoryTx:
         ]
         return sorted(rows, key=lambda r: r.created_at)
 
+    def active_visitor_ingests(self) -> int:
+        return sum(
+            1
+            for r in self._backend.rows.values()
+            if r.kind is JobKind.INGEST and r.active and r.requested_by is None and r.spec.get("visitor") is True
+        )
+
     def active_process(self, report_code: str) -> list[JobRecord]:
         rows = [
             r
@@ -600,6 +613,10 @@ _COLUMNS: LiteralString = (
     "created_at, started_at, finished_at, updated_at"
 )
 _SELECT_ONE: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE id = %s"
+_COUNT_ACTIVE_VISITOR_INGESTS: LiteralString = (
+    "SELECT count(*) FROM jobs WHERE kind = 'ingest' AND state IN ('queued', 'running', 'waiting_budget') "
+    "AND requested_by IS NULL AND spec->>'visitor' = 'true'"
+)
 _SELECT_ACTIVE_INGESTS: LiteralString = (
     "SELECT " + _COLUMNS + " FROM jobs WHERE kind = 'ingest' AND report_code = %s "
     "AND state IN ('queued', 'running', 'waiting_budget') ORDER BY created_at"
@@ -700,6 +717,10 @@ class _PostgresTx:
 
     def active_ingests(self, report_code: str) -> list[JobRecord]:
         return self._rows(_SELECT_ACTIVE_INGESTS, (report_code,))
+
+    def active_visitor_ingests(self) -> int:
+        row = self._conn.execute(_COUNT_ACTIVE_VISITOR_INGESTS).fetchone()
+        return int(row[0]) if row else 0
 
     def active_process(self, report_code: str) -> list[JobRecord]:
         return self._rows(_SELECT_ACTIVE_PROCESS, (report_code,))
