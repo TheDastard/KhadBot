@@ -201,6 +201,11 @@ class TestVisitorOpens:
         assert row.spec["visitor"] is True and row.spec["auth"] == {"kind": "app"}
         assert row.spec["fights"] == [1]
 
+    def test_an_oversized_body_is_refused_before_it_is_parsed(self, h):
+        resp = h.actor().post("/v1/reports", json={"source": CODE, "fights": [1], "padding": "x" * 100_000})
+        assert (resp.status_code, resp.json()["code"]) == (413, "body_too_large")
+        assert h.backend.rows == {}
+
     def test_visitors_together_may_queue_only_so_many_pulls(self, h, monkeypatch):
         monkeypatch.setenv("KHADBOT_VISITOR_MAX_JOBS", "3")
         h.wcl.readable["app"] = {CODE}

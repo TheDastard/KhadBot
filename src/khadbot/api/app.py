@@ -49,7 +49,7 @@ from khadbot.api.night import ReadSource
 from khadbot.api.routes import router
 from khadbot.api.schemas import API_VERSION, Features
 from khadbot.api.views import ApiContext, ApiError
-from khadbot.config import AuthConfig, EncounterConfig
+from khadbot.config import ApiConfig, AuthConfig, EncounterConfig
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.storage import BlobStore, LocalBlobStore
@@ -141,7 +141,14 @@ def create_app(
     if auth is None:
         app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
     else:
-        _add_hosted_cors(app, auth.config)
+        from khadbot.api.limits import RequestLimits  # the body cap and the per-client request rate (api/limits.py)
+
+        settings = ApiConfig()
+        local = not getattr(auth.config, "cookie_secure", False)
+        app.add_middleware(
+            RequestLimits, max_body_bytes=settings.max_body_bytes, per_minute=settings.rate_limit(local=local)
+        )
+        _add_hosted_cors(app, auth.config)  # added last, so it wraps the limits and their answers carry CORS headers
 
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:

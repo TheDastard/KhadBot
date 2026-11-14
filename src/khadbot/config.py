@@ -11,6 +11,7 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import ClassVar
 
 
 class LLMProvider(StrEnum):
@@ -432,6 +433,21 @@ class ApiConfig:
     # Ingests opened by signed-out visitors that may be queued, running or waiting for points at once, all visitors
     # together. The visitor allowance limits their points; this limits how many rows and budget entries they hold.
     visitor_max_jobs: int = field(default_factory=lambda: int(_optional("KHADBOT_VISITOR_MAX_JOBS", "20")))
+    # The largest request body the API reads (the biggest real one, an ingest request, is a few kilobytes); 0: any.
+    max_body_bytes: int = field(default_factory=lambda: int(_optional("KHADBOT_MAX_BODY_BYTES", "65536")))
+    # Requests one client address may make per minute; 0 turns the limit off. Unset, it is DEFAULT_RATE_LIMIT_PER_MIN
+    # on a real deployment and off on plain-HTTP localhost, where the dev loop and the end-to-end tests run.
+    rate_limit_per_min: int | None = field(
+        default_factory=lambda: int(v) if (v := _optional("KHADBOT_RATE_LIMIT_PER_MIN").strip()) else None
+    )
+
+    DEFAULT_RATE_LIMIT_PER_MIN: ClassVar[int] = 300
+
+    def rate_limit(self, *, local: bool) -> int:
+        """The per-minute request limit in force: the setting, else the default off localhost and none on it."""
+        if self.rate_limit_per_min is not None:
+            return max(0, self.rate_limit_per_min)
+        return 0 if local else self.DEFAULT_RATE_LIMIT_PER_MIN
 
 
 @dataclass(frozen=True)
