@@ -450,6 +450,74 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
 - **Not verified yet.** Real WCL sign-in through the dev loop (it needs a browser); `dev:smoke` doesn't run in CI
   (the stack job runs `stack:smoke`).
 
+### Security review (code level, 2026-11)
+
+Review of `auth/`, `api/`, `jobs/`, `db/`, `storage/`, `wiring.py`, `config.py`, `deploy/`, the workflows and the web
+app's session code. Its high and medium findings and five low ones are fixed on `main` (`docs/decisions.md`, D91 to
+D96), and the locked Python dependencies were upgraded (`pip-audit` finds none). What is still open, most severe
+first:
+
+- **Medium. The per-client rate limit counts the proxy, not the client, until the proxy is trusted.**
+  `api/limits.py` keys on the connection's peer. On a platform every request arrives from its proxy, so the
+  default 300 a minute would be shared by all clients. Set uvicorn's `FORWARDED_ALLOW_IPS` (and confirm the
+  platform's forwarded header) with the staging deploy, before real traffic. The API also starts uvicorn without
+  `limit_concurrency`, and each API process counts on its own.
+- **Low. "Sign out everywhere" is not on the design canvas.** `components/account/account-menu.tsx` adds it as a
+  link-style button under Sign out, with no confirmation step and no end-to-end test. Add it to the canvas (or
+  move it), and cover it in `e2e/account.spec.ts`.
+- **Low. The web app shows our own rate limit as "WarcraftLogs is busy".** `components/open-pull/error-cards.ts`
+  gives 429 `rate_limited` from `api/limits.py` the same card as WCL's rate limit, and screens outside the
+  open-pull flow show their generic error for the new 429s and for 413. Give the API's own limit its own wording.
+- **Low. Visitor ingests name fights nobody checked, and never expire.** `api/jobs.py` (`start_ingest`): a
+  signed-out caller may ask for any fight number; the job fails when it runs. The cap
+  (`KHADBOT_VISITOR_MAX_JOBS`) bounds how many wait, but twenty waiting junk jobs block other visitors until the
+  budget reaches them. Refuse a fight the cached metadata doesn't list, and expire a visitor job that has waited
+  an hour.
+- **Low. An event stream checks access once.** `api/jobs.py` (`job_events`): the check runs when the stream
+  opens, not again. A stream lasts as long as its job (hours in `waiting_budget`). Recheck on the keepalive tick.
+- **Low. One watch per report, held by whoever asks first, and no limit per user.** `api/watch.py`
+  (`start_watch`) and `jobs/watch.py` (`WatchService.start`). Any signed-in user who can read a public report can
+  hold its only watch, so the raid's own members get 409 `watch_in_progress`, and one user may watch any number
+  of reports. Cap active watches per user, and let a later watcher join the running watch.
+- **Low. Search writes one blob per name asked for, kept for good.** `api/raids/search.py` (`guild_identity`,
+  `character_and_listing`), "not found" answers included. Keep "not found" in memory only, or add `search/` to the
+  lifecycle rules.
+- **Low. Nothing audits dependencies.** `uv.lock` had 44 known advisories in 13 packages on 2026-11-13 before the
+  upgrade. Add a CI job that runs `uv export --frozen --all-extras --no-hashes --no-emit-project` and
+  `pip-audit -r <file> --no-deps --disable-pip`, and `pnpm audit`, on a schedule and when a lock file changes.
+  `pnpm audit` on the same day: production dependencies clean, one moderate advisory in a development-only
+  package (`minimatch`, GHSA-g3hv-75wg-m249).
+- **Low. Workflow actions and base images are pinned by tag.** `.github/workflows/*.yml` (`actions/checkout@v7`,
+  `jdx/mise-action@v5`, ...) and `deploy/Dockerfile` (`python:<version>-slim`). The workflows hold no secrets and
+  have read-only permissions, so the exposure is the build itself. Pin to commit SHAs and an image digest when
+  the deploy pipeline (which will hold secrets) is added.
+- **Low. A test session's lifetime is capped in the library, not in the command's help.** `main.py test-session
+  --hours` accepts any number and fails with the library's message above 168.
+- **Low. The contract's 429 body is used for answers that are not about the WCL budget.** `visitor_queue_full`
+  (`api/jobs.py`) and `rate_limited` (`api/limits.py`) carry `wait_s` in a `BudgetWaitBody`, because the contract
+  test requires that schema for every 429. Rename the schema (it is in the generated client) or give those two
+  their own when the next contract change comes.
+- **Low. The interlocks and limits have not run on a real deployment.** The refusal of replay, the example token
+  key and non-https web origins, the default-on rate limit and the stream cap are all keyed on "not plain-HTTP
+  localhost", which only the unit tests have exercised. Confirm each on the first staging deploy, and that the
+  load test's test sessions stop working once `KHADBOT_TEST_SESSIONS` is removed.
+- **Low, suspected. Record builds hold one lock for the whole API.** `api/routes.py`: the read routes build
+  records under `ctx.lock`. A caller cycling through more loaded pulls of public reports than the `EncounterData`
+  cache holds (32) keeps every other read route waiting behind rebuilds. Not measured in hosted mode; include it
+  in the staging load test.
+- **Low. Local mode trusts every request that reaches 127.0.0.1.** `main.py serve` has no `Host` check, so a web
+  page using DNS rebinding could read an ingested data directory through the visitor's browser. Add
+  `TrustedHostMiddleware` for `localhost` and `127.0.0.1` in local mode.
+- **Low. The pre-commit hooks fail from Git Bash on this Windows machine.** `post-checkout`, `post-merge` and
+  `fixup!` commits print `Executable /bin/sh not found` (the commit itself and its checks run). The post-merge
+  env check therefore doesn't run after a fast-forward.
+- **Deferred to the staging pass.** TLS and HSTS; the web app's Content-Security-Policy; the production values of
+  `KHADBOT_WEB_ORIGINS`, `KHADBOT_POST_LOGIN_URL` and the redirect URI; cookie behaviour across the web and API
+  hosts (SameSite=Lax needs them on one site); platform secrets and their rotation; the container's runtime user
+  and file permissions; proxy buffering, body limits and idle timeouts for the event streams; Postgres roles and
+  grants (the migrations set none, so the app runs as whatever role `DATABASE_URL` names); and a real WCL sign-in
+  end to end, which has not been exercised.
+
 ## Agent
 
 - **Agent tools over cached data.** The coach's live-API tools were removed (decision D53), so the coach has none.
