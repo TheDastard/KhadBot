@@ -56,6 +56,7 @@ from khadbot.storage import BlobStore, LocalBlobStore
 
 if TYPE_CHECKING:
     from khadbot.auth.service import AuthService
+    from khadbot.jobs.budget_store import BudgetManager
     from khadbot.jobs.queue import JobQueue
 
 CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
@@ -74,6 +75,7 @@ def create_app(
     auth: AuthService | None = None,
     jobs: JobQueue | None = None,
     reports: ReportDirectory | None = None,
+    budget: BudgetManager | None = None,
 ) -> FastAPI:
     """
     The dashboard API over ``data`` and ``findings``.
@@ -89,6 +91,9 @@ def create_app(
     report route on report access, and sets the CORS policy for the web origins. ``jobs`` (a ``JobQueue``; needs
     ``auth``) mounts the ingest routes and is opened and closed with the app. ``reports`` supplies ``GET /v1/reports``
     for signed-in users; without it every ingested report is listed, which is right only without sign-in.
+    ``budget`` is the WCL budget the lookup, search and budget routes use and that uncached report access checks
+    reserve their points from; ``main.py api`` always passes it. Without it those routes build one from the
+    configuration on first use, and access checks are not counted until ``app.state.budget`` is set.
 
     ``mode`` is what ``GET /v1/health`` reports, given by the entry point: ``local`` for ``main.py serve`` (and the
     API's tests), ``hosted`` for ``main.py api`` in hosted mode and the documentation app. It is a label for people
@@ -100,8 +105,8 @@ def create_app(
     """
     if (mode == "hosted") != (auth is not None):
         raise ValueError(f"mode {mode!r} does not fit auth={'given' if auth is not None else 'missing'}")
-    if auth is None and (jobs is not None or reports is not None):
-        raise ValueError("jobs and reports belong to the hosted API: pass auth with them")
+    if auth is None and (jobs is not None or reports is not None or budget is not None):
+        raise ValueError("jobs, reports and budget belong to the hosted API: pass auth with them")
     root = (Path(data_dir) if data_dir is not None else Path(EncounterConfig().data_dir)).resolve()
     if blobs is None:
         blobs = LocalBlobStore(root) if data_dir is not None else wiring.blob_store()
@@ -131,6 +136,8 @@ def create_app(
         data=data, findings=findings, data_dir=shown_dir, raw=wiring.raw_cache(blobs), read_source=read_source
     )
     app.state.directory = reports
+    if budget is not None:
+        app.state.budget = budget
     if auth is None:
         app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
     else:
@@ -170,7 +177,13 @@ def create_app(
     for extra in routers:
         app.include_router(extra)
     if auth is not None:  # the WCL budget router (api/budget.py): GET /v1/budget, hosted only
+        from khadbot.api.budget import AccessCheckBudget
         from khadbot.api.budget import router as budget_router
+
+        access = getattr(auth, "access", None)  # the documentation app's stand-in service has none
+        if access is not None and access.budget is None:
+            # Uncached access checks ask WCL: they reserve their points like every other request.
+            access.budget = AccessCheckBudget(lambda: getattr(app.state, "budget", None))
 
         app.include_router(budget_router)
         offered["budget"] = True

@@ -125,6 +125,7 @@ def _run_api(host: str, port: int) -> None:
                 from khadbot.api.deps import SqlReportDirectory
                 from khadbot.api.night import SqlSource
                 from khadbot.db import get_pool
+                from khadbot.jobs.budget_store import build_budget_manager
                 from khadbot.jobs.queue import build_queue
             except ImportError as exc:
                 sys.exit(missing_group_message("hosted", "api in hosted mode") + f"\n({exc})")
@@ -136,6 +137,7 @@ def _run_api(host: str, port: int) -> None:
                 auth=wiring.auth_service(),
                 jobs=build_queue(pool=pool),  # the API only queues and cancels; workers run the jobs
                 reports=SqlReportDirectory(pool),
+                budget=build_budget_manager(pool),  # lookups, searches and uncached access checks reserve from it
             )
         else:
             app = create_app(mode="local", findings=wiring.findings_store())  # no hosted settings: the read routes only

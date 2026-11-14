@@ -24,6 +24,7 @@ from helpers.wcl.replay import FAKE_CLIENT_ID, FAKE_CLIENT_SECRET, WCL_FIXTURES,
 from pydantic import SecretStr
 
 from khadbot.api import create_app
+from khadbot.api.budget import ACCESS_CHECK_POINTS
 from khadbot.api.raids.lookup import best_fight, is_fresh
 from khadbot.auth.routes import SESSION_COOKIE
 from khadbot.auth.service import AuthService
@@ -203,8 +204,12 @@ def test_one_lookup_costs_one_metadata_request(env):
     lookup(env.browser(), SYNTH)
     assert env.transport.count("GetReportMeta") == 1
     assert env.transport.operations.count("ReportReadable") == 1  # the access check, answered once
-    state = asyncio.run(env.budget.state())  # the budget settled the estimate for exactly the one fetch
-    assert [(r.ask.points, r.settled) for r in state.reservations] == [(LookupConfig().points, True)]
+    state = asyncio.run(env.budget.state())  # the budget settled the access check's point, then the one fetch
+    assert [(r.ask.points, r.settled) for r in state.reservations] == [
+        (ACCESS_CHECK_POINTS, True),
+        (LookupConfig().points, True),
+    ]
+    assert all(r.ask.visitor for r in state.reservations)  # both count against the visitors' allowance
 
 
 @needs_night
@@ -316,6 +321,20 @@ def test_a_signed_out_lookup_counts_against_the_visitor_allowance(tmp_path):
     assert resp.status_code == 429 and resp.json()["code"] == "budget_exhausted"
     assert env.transport.count("GetReportMeta") == 0
     assert lookup(env.browser("Jaina"), SYNTH).status_code == 200  # a signed-in caller has their own allowance
+
+
+def test_naming_new_report_codes_cannot_spend_past_the_visitor_allowance(tmp_path):
+    env = Env(tmp_path, limit=100.0)
+    asyncio.run(env.budget.sync())
+    visitor = env.browser()
+    answers = [visitor.get(f"/v1/reports/NoSuchReport{i}") for i in range(15)]
+    codes = [a.status_code for a in answers]
+    assert codes == [404] * 10 + [429] * 5  # the visitors' share is 10 points of this hour; each check holds 1
+    assert env.transport.operations.count("ReportReadable") == 10  # the refused checks never reached WCL
+    refused = answers[-1]
+    assert refused.json()["code"] == "budget_exhausted" and refused.json()["wait_s"] >= 0
+    assert int(refused.headers["retry-after"]) >= 1
+    assert env.browser("Jaina").get("/v1/reports/NoSuchReport99").status_code == 404  # a user has their own allowance
 
 
 def test_best_fight_is_the_first_kill_else_the_lowest_fight_percent():

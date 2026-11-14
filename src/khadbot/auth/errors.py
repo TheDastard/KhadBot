@@ -75,7 +75,22 @@ class WclUnavailableError(AuthError):
     code = "wcl_unavailable"
 
 
+class AccessBudgetError(AuthError):
+    """
+    An access check needs to ask WCL and the WCL budget has no point for it now. Nothing was asked or cached; the
+    caller is told when to come back (``wait_s``), never whether the report exists.
+    """
+
+    status = 429
+    code = "budget_exhausted"
+
+    def __init__(self, message: str, *, wait_s: float) -> None:
+        super().__init__(message)
+        self.wait_s = wait_s
+
+
 __all__ = [
+    "AccessBudgetError",
     "AuthError",
     "CsrfError",
     "LoginError",

@@ -35,7 +35,7 @@ Secrets are supplied by the platform's environment, never by the image, a compos
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Bucket credentials, read by boto3 itself. |
 | `KHADBOT_DATA_DIR` | Scratch directory (the image sets `/var/lib/khadbot`). Not used for data in hosted mode. |
 
-In hosted mode the API also reads the sign-in settings (`WARCRAFTLOGS_CLIENT_ID`, `WARCRAFTLOGS_CLIENT_SECRET`, `KHADBOT_TOKEN_KEYS`, `KHADBOT_WCL_REDIRECT_URI`, `KHADBOT_POST_LOGIN_URL`, `KHADBOT_WEB_ORIGINS` and the session and access settings in `.env.example`) and refuses to start without the client credentials and a token key. It calls WCL only to check whether a user may read a report (cached in `report_access`) and to sign users in; it never fetches events. It queues ingests on the job queue and never runs them.
+In hosted mode the API also reads the sign-in settings (`WARCRAFTLOGS_CLIENT_ID`, `WARCRAFTLOGS_CLIENT_SECRET`, `KHADBOT_TOKEN_KEYS`, `KHADBOT_WCL_REDIRECT_URI`, `KHADBOT_POST_LOGIN_URL`, `KHADBOT_WEB_ORIGINS` and the session and access settings in `.env.example`) and refuses to start without the client credentials and a token key. It calls WCL only to check whether a user may read a report (cached in `report_access`) and to sign users in; it never fetches events. An access check that isn't cached costs a WCL request, so it first reserves 1 point from the WCL budget as the caller (a signed-out caller against the visitors' shared allowance); with none free the route answers 429 `budget_exhausted` with `wait_s` and `Retry-After`, without asking WCL. It queues ingests on the job queue and never runs them.
 
 | Variable | Meaning |
 |---|---|

@@ -11,7 +11,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from khadbot.auth.errors import ReportNotFoundError, WclUnavailableError
+from khadbot.auth.errors import AccessBudgetError, ReportNotFoundError, WclUnavailableError
 from khadbot.wcl.client import GRAPHQL_CLIENT_URL
 from khadbot.wcl.oauth import TokenSet
 
@@ -143,3 +143,57 @@ async def test_require_readable(access, wcl, user):
     with pytest.raises(ReportNotFoundError) as exc:
         await access.require_readable(user, "PRIV9")
     assert exc.value.status == 404
+
+
+# ---------------------------------------------------------------------------
+# The WCL budget
+# ---------------------------------------------------------------------------
+
+
+class FakeBudget:
+    """An ``AccessBudget`` that records what was reserved and how each reservation ended."""
+
+    def __init__(self, *, refuse: bool = False) -> None:
+        self.refuse = refuse
+        self.reserved: list[tuple[str | None, str]] = []
+        self.finished: list[bool] = []
+
+    async def reserve(self, user_id: str | None, code: str) -> str:
+        if self.refuse:
+            raise AccessBudgetError("no points", wait_s=42.0)
+        self.reserved.append((user_id, code))
+        return f"r{len(self.reserved)}"
+
+    async def finish(self, reservation: str, *, answered: bool) -> None:
+        self.finished.append(answered)
+
+
+async def test_every_wcl_request_of_a_check_reserves_points_as_the_caller(access, wcl, user):
+    access.budget = budget = FakeBudget()
+    assert await access.can_read(None, "NEW1") is False  # a visitor: the public check only
+    assert await access.can_read(user, "NEW2") is False  # a user: their token, then the public check
+    assert budget.reserved == [(None, "NEW1"), (user, "NEW2"), (user, "NEW2")]
+    assert budget.finished == [True, True, True]  # WCL answered each, so each is charged
+
+
+async def test_a_cached_answer_reserves_nothing(access, wcl):
+    access.budget = budget = FakeBudget()
+    await access.can_read(None, "NEW1")
+    await access.can_read(None, "NEW1")
+    assert len(budget.reserved) == 1 and len(wcl.report_checks) == 1
+
+
+async def test_without_points_the_check_is_refused_before_wcl_is_asked(access, wcl, store):
+    access.budget = FakeBudget(refuse=True)
+    with pytest.raises(AccessBudgetError) as refused:
+        await access.can_read(None, "NEW1")
+    assert refused.value.status == 429 and refused.value.wait_s == 42.0
+    assert wcl.report_checks == [] and store.public_access == {}  # nothing asked, nothing cached
+
+
+async def test_a_request_wcl_never_answered_is_not_charged(access, wcl):
+    access.budget = budget = FakeBudget()
+    wcl.router.post(GRAPHQL_CLIENT_URL).mock(return_value=httpx.Response(503))
+    with pytest.raises(WclUnavailableError):
+        await access.can_read(None, "NEW1")
+    assert budget.finished == [False]

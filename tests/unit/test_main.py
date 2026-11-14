@@ -147,6 +147,7 @@ class TestApiSubcommand:
         ):
             _run_api("0.0.0.0", 8123)
         assert create.call_args.kwargs["mode"] == "hosted"
+        assert create.call_args.kwargs["budget"] is not None  # access checks, lookups and searches reserve from it
 
 
 class TestMigrateSubcommand:

@@ -21,6 +21,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from khadbot.api.deps import auth_service
 from khadbot.api.raids.lookup import (
+    BudgetWaitError,
     build_lookup,
     ready_fights,
     report_metadata,
@@ -31,7 +32,7 @@ from khadbot.api.schemas import (
 )
 from khadbot.api.views import ApiContext, ApiError
 from khadbot.auth.clock import Clock
-from khadbot.auth.errors import WclUnavailableError
+from khadbot.auth.errors import AccessBudgetError, WclUnavailableError
 from khadbot.auth.store import User
 from khadbot.config import LookupConfig
 from khadbot.jobs.budget_store import BudgetManager
@@ -79,6 +80,8 @@ async def build_nights(
                 if not await service.access.can_read(user_id, report.code):
                     return None, True
                 meta = await report_metadata(request, report.code, user, ctx, budget, lookup, now)
+            except AccessBudgetError as exc:  # no points left to check this night: the whole search waits
+                raise BudgetWaitError(exc.wait_s) from None
             except (WclUnavailableError, ApiError) as exc:
                 if isinstance(exc, ApiError) and exc.status not in (404, 503):
                     raise

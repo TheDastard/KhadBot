@@ -26,6 +26,7 @@ otherwise record the callback URL with its authorization code and state.
 from __future__ import annotations
 
 import logging
+import math
 import re
 from typing import Annotated
 
@@ -33,7 +34,7 @@ from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
-from khadbot.auth.errors import AuthError, CsrfError, LoginError, NotSignedInError
+from khadbot.auth.errors import AccessBudgetError, AuthError, CsrfError, LoginError, NotSignedInError
 from khadbot.auth.service import AuthService
 from khadbot.auth.store import User
 from khadbot.errors import ErrorBody
@@ -173,8 +174,12 @@ def mount(app: FastAPI, service: AuthService) -> None:
 
     @app.exception_handler(AuthError)
     async def _auth_error(request: Request, exc: AuthError) -> JSONResponse:
-        return JSONResponse(status_code=exc.status, content={"code": exc.code, "message": exc.message},
-                            headers=_NO_STORE)  # fmt: skip
+        content: dict[str, object] = {"code": exc.code, "message": exc.message}
+        headers = dict(_NO_STORE)
+        if isinstance(exc, AccessBudgetError):  # the same body as the lookup's own 429 (schemas.BudgetWaitBody)
+            content["wait_s"] = exc.wait_s
+            headers["Retry-After"] = str(max(1, math.ceil(exc.wait_s)))
+        return JSONResponse(status_code=exc.status, content=content, headers=headers)
 
 
 def _set_cookie(response: Response, auth: AuthService, key: str, value: str, *, max_age: int, path: str = "/") -> None:
