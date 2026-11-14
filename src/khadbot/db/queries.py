@@ -147,14 +147,18 @@ class UserReports:
 _USER_REPORTS: LiteralString = (
     "SELECT code FROM ("
     "SELECT report_code AS code FROM report_access WHERE user_id = %(user)s AND readable "
-    "UNION SELECT report_code FROM jobs WHERE requested_by = %(user)s AND kind = 'ingest'"
+    "UNION SELECT j.report_code FROM jobs j WHERE j.requested_by = %(user)s AND j.kind = 'ingest' "
+    # An ingest the user asked for lists the report only until an access check says they can no longer read it.
+    "AND NOT EXISTS (SELECT 1 FROM report_access a WHERE a.user_id = j.requested_by "
+    "AND a.report_code = j.report_code AND NOT a.readable)"
     ") mine"
 )
 
 
 def user_reports(conn: Connection[Any], user_id: str, limit: int) -> UserReports:
     """
-    The reports ``user_id`` has opened (a cached "readable" access answer) or ingested (a job they requested), that
+    The reports ``user_id`` has opened (a cached "readable" access answer) or ingested (a job they requested, unless
+    their latest access answer for the report is "not readable": it was made private or they left the guild), that
     have a ``reports`` row (at least one pull was projected), newest report start first.
     """
     params = {"user": user_id, "limit": limit}

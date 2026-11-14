@@ -57,6 +57,11 @@ def test_directory_lists_opened_and_ingested_reports_only(db, synth_dataset):
         assert listed.reports[0].pulls == len(synth_dataset.fights)
         assert listed.reports[0].groups
     assert directory.reports_for(stranger.id, 10).reports == []  # a denied answer is not "opened"
+    # The ingester loses access (the report was made private): their own ingest no longer lists it.
+    auth.put_access(ingester.id, code, AccessRecord(readable=False, via=None, checked_at=now))
+    assert directory.reports_for(ingester.id, 10).reports == []
+    auth.put_access(ingester.id, code, AccessRecord(readable=True, via="user", checked_at=now))
+    assert [r.code for r in directory.reports_for(ingester.id, 10).reports] == [code]
     assert directory.reports_for(opener.id, 0).truncated  # total counts every report, the list is capped
 
 
