@@ -380,3 +380,18 @@ kills).
 - **Review** Turbulent Gusts' 4 s limit (charge both if one partner was immune?); Caustic Residue is in one report.
 - **Not covered:** Venomous Surge cyst placement (needs positions; its `expected_defensive_cooldowns: 1` is a guess)
   and players blown off in the intermission (no log row).
+
+### The Twin Fangs (3421), Heroic
+
+`config/encounters/53-the_venomous_abyss/3421-the_twin_fangs.yaml`, first pass awaiting review, from 12 Heroic pulls
+(three kills).
+
+- **Ravenous Feast double soaks** include planned immunity soaks (no damage) and one tank's repeated, survived double
+  soaks; skipping them needs a hit-type filter or a raid plan. Undersoaks need a second rule or a soak-count field.
+- **Review the thresholds.** Coiling Ichor has no rule (needs positions); Vile Flood counts every tick (`value: 1`
+  would allow the early crossing guides advise); tanks may not be able to dodge their Stir the Depths, Deadly Venom
+  and Vile Flood failures.
+- **Out-of-reach hits** (Concentrated Spittle, Clotted Bolt) also charge non-tanks the bosses turned to as the raid
+  died. Unsoaked globules and Stone Breakers are charged to no one until a raid plan assigns them.
+- **Unchecked:** the Stone Breaker stack rule never fired; the Submerge's start before Sanguine Storm, Uncoiled Wrath
+  and Caustic Rain aren't in the logs; Stir the Depths' cooldown count is a guess.

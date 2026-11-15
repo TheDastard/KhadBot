@@ -1,0 +1,347 @@
+# The Twin Fangs, The Venomous Abyss: Vexhul (NPC 257361) and Ithraz (NPC 257368), fought side by side, with
+# Spawns of Vexhul (NPC 264023) as adds.
+# Open gaps for this file are tracked under "The Twin Fangs" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it. Counts in comments are over the 12 Heroic pulls of xk73VCBywmavDKz9
+# (fights 37 to 42, kill 42), AQpRY9VNDrCGXtBF (fights 32 and 33, kill 33) and xJqFwTPH73CXMkBV (fights 32
+# and 34 to 36, kill 36).
+#
+# The fight is built around Eternal Venom: most of Vexhul's abilities add a permanent stack, the player dies
+# at 9, and only Ravenous Feast takes one away. So every avoidable hit below costs a stack as well as its
+# damage. Failures are charged to the player hit, except the per_cluster rules (blame by nobody) and
+# debuff_stacks_gt, which charge no one.
+encounter_id: 3421
+name: The Twin Fangs
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 1
+
+# WarcraftLogs reports no phases for this encounter. The bosses run one loop twice (Caustic Deluge, Stone
+# Breaker, Venomous Emergence, Coiling Ichor, Stir the Depths, Ravenous Feast, about 68 s per loop), then
+# reach 100 energy and Submerge: Ithraz casts Sanguine Storm and Vexhul Vile Flood 4 s later, and the next
+# loop opens with Caustic Deluge about 29 s after Sanguine Storm. The kills saw two Submerges (at about 150 s
+# and 320 s); the third is the hard enrage, which no pull reached. Each Submerge and the loop after it are a
+# repeat under the same phase IDs.
+phases:
+  - id: p1
+    name: "Stage One: The Twin Fangs"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: submerge
+    name: "Intermission: Submerge"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1306872}   # Sanguine Storm
+    repeat: true
+  - id: stage
+    name: "Stage One: The Twin Fangs (after a Submerge)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1289192}   # Caustic Deluge
+    repeat: true
+
+mechanics:
+  # -- Eternal Venom ---------------------------------------------------------------------------
+  - id: eternal_venom
+    name: Eternal Venom
+    description: >-
+      Permanent stacking DoT behind the fight: most of Vexhul's abilities add a stack, Ravenous Feast removes one,
+      and 9 stacks kill the player. It is not counted itself; the hits that add stacks are.
+    # The permanent stacking DoT behind the fight: the application, logged as Vexhul's (or a Spawn's) cast and
+    # debuff (1290336), its tick (1290480) and the instant kill at 9 stacks (1292348, a death with no damage
+    # row: 41 deaths, 10 of them on the kills). No rule: the hits that add stacks are judged below.
+    difficulties: [heroic]
+    ability_ids: [1290336, 1290480, 1292348]
+    kind: debuff
+    severity: high
+
+  # -- Vexhul ----------------------------------------------------------------------------------
+  - id: caustic_deluge
+    name: Caustic Deluge
+    description: >-
+      Channel on Vexhul's tank with acid splashes around them, each adding an Eternal Venom stack and leaving a
+      Caustic Globule. A splash that hits anyone but the cast's target is that player's failure, once per Deluge.
+    # Cast on Vexhul's tank (1289192, cast and debuff), the 5 s channel on that tank (1289237), and the acid
+    # splashes around them (1289994, a cast and its damage), each of which adds a stack and leaves a Caustic
+    # Globule. A splash that hits anyone but the cast's target is that player's failure, once per Deluge.
+    # Splashes land 2.0 to 6.7 s after the cast.
+    difficulties: [heroic]
+    ability_ids: [1289192, 1289237, 1289994]
+    kind: avoidable
+    failure: {rule: hits_on_non_target, ms: 8000}
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: envenomed
+    name: Envenomed
+    description: >-
+      Stacking debuff each Caustic Deluge tick puts on its target for 90 s; the tanks swap between Deluges. More
+      than 11 stacks means a tank took two Deluges in a row: one failure, charged to no one.
+    # Stacking debuff each Caustic Deluge tick puts on its target (cast and debuff, one ID), lasting 90 s.
+    # A Deluge gives at most 11 stacks and the tanks swap Vexhul between Deluges (about 68 s apart), so more
+    # than 11 means a tank took two Deluges in a row: one failure, charged to no one (1 over the 12 pulls).
+    difficulties: [heroic]
+    ability_ids: [1310360]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 11}
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: caustic_globule
+    name: Caustic Globule
+    description: >-
+      Globule left by each Deluge splash; a player who touches one soaks it alone for one Eternal Venom stack.
+      Soaking is not counted as a failure; a globule nobody touches is.
+    # A player touching a globule (1289201, dealt by the environment) soaks it alone for one stack. A Deluge
+    # leaves one globule per splash; a clean set has 13 touches (11 in AQpRY9VNDrCGXtBF), 2.6 to 14.7 s after
+    # the cast.
+    difficulties: [heroic]
+    ability_ids: [1289201]
+    kind: soak
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: caustic_globule_rupture
+    name: Caustic Globule (unsoaked)
+    description: >-
+      A globule nobody touched ruptures on the whole raid, giving everyone an Eternal Venom stack. One failure per
+      rupture, charged to no one, since nobody owns a globule.
+    difficulties: [heroic]
+    ability_ids: [1290338]
+    kind: avoidable
+    failure: {rule: per_cluster, blame: {by: nobody}}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: venomous_emergence
+    name: Venomous Emergence
+    description: >-
+      Raid-wide hit that gives everyone an Eternal Venom stack as three Spawns of Vexhul surface. It is not
+      counted as a failure.
+    difficulties: [heroic]
+    ability_ids: [1291404, 1308122]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: corrosive_spit
+    name: Corrosive Spit
+    description: >-
+      A Spawn of Vexhul marks a player and spits a line at them. Anyone else in the line takes an Eternal Venom
+      stack: a failure charged to that player.
+    # A Spawn of Vexhul marks a player (debuff 1293979), then spits a line at them (cast 1291478, which names
+    # the marked player; damage 1293295) 30 to 85 ms before the hit. Anyone else in the line takes a stack:
+    # their failure. Spits are at least 938 ms apart, so each spit is its own occurrence.
+    difficulties: [heroic]
+    ability_ids: [1291478, 1293295, 1293979]
+    kind: avoidable
+    failure: {rule: hits_on_non_target, ms: 500}
+    cluster_window_ms: 500
+    severity: medium
+
+  - id: stir_the_depths_waves
+    name: Stir the Depths (waves)
+    description: >-
+      Waves rolling across the platform during Stir the Depths, each hit adding an Eternal Venom stack. Any hit is
+      a failure charged to the player hit, once per wave.
+    difficulties: [heroic]
+    ability_ids: [1292807]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: concentrated_spittle
+    name: Concentrated Spittle
+    description: >-
+      Vexhul's attack on her target when they are out of her reach. Every hit is a failure charged to the player
+      hit, usually a tank, or a player she turned to as the raid died.
+    # Vexhul's attack on her target when they are out of her reach: 17 hits, 10 of them on a tank (2 fatal),
+    # the rest on players she turned to as the raid died (6 fatal).
+    difficulties: [heroic]
+    ability_ids: [1295107]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  # -- Ithraz ----------------------------------------------------------------------------------
+  - id: ravenous_feast
+    name: Ravenous Feast
+    description: >-
+      Ithraz's three strikes, each split among players within 14 yd; a soak removes one stack and gives Feasted,
+      800% more Feast damage for 8 s. A player hit by more than one strike of a Feast fails, once per Feast.
+    # Three strikes about 2 s and 3.5 s after the cast (1290516), each split among the players within 14 yd
+    # (1290662); a soak removes one stack and applies Feasted (1310096, 800% more Feast damage for 8 s). One
+    # soak group per strike: a player hit by more than one strike of a Feast fails, once per Feast. The rule
+    # also counts a player immune to the later strike (a planned immunity soak) and a tank planned to take
+    # two (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1290516, 1290662, 1310096]
+    kind: soak
+    failure: {rule: hits_per_cluster_gt, value: 1}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: stone_breaker
+    name: Stone Breaker
+    description: >-
+      Ithraz's three slams 3 s apart, each adding a stacking debuff that raises Stone Breaker damage; the tanks
+      take alternate sets. A debuff past 3 stacks means one tank took two sets running: one failure, charged to no
+      one.
+    # Three slams 3 s apart (cast 1288538); each names the players it strikes (cast 1289092, also their
+    # stacking debuff, 33% more Stone Breaker damage for 90 s) and hits them (1310371). The tanks take
+    # alternate sets, so a debuff past 3 stacks means one tank took two sets running: one failure, charged
+    # to no one (none over the 12 pulls).
+    difficulties: [heroic]
+    ability_ids: [1288538, 1289092, 1310371]
+    kind: soak
+    failure: {rule: debuff_stacks_gt, value: 3}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: stone_breaker_unsoaked
+    name: Stone Breaker (unsoaked)
+    description: >-
+      A Stone Breaker slam that strikes nobody hits the whole raid instead. One failure per slam, charged to no
+      one: the logs don't say whose turn it was.
+    difficulties: [heroic]
+    ability_ids: [1289153]
+    kind: avoidable
+    failure: {rule: per_cluster, blame: {by: nobody}}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: coiling_ichor
+    name: Coiling Ichor
+    description: >-
+      Debuff on several marked players with damage around each that grows as the circle shrinks over 12 s. No
+      failure is counted: every player is hit at the first tick, before the marked players have left the raid.
+    # Cast (1290809), the debuff on several marked players (1290814) and the damage around each of them
+    # (1290878), which grows as the circle shrinks over 12 s. No rule: every player is hit at the first tick,
+    # before the marked players have left the raid (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1290809, 1290814, 1290878]
+    kind: debuff
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: congealed_gore
+    name: Congealed Gore
+    description: >-
+      Pools left where Coiling Ichor expires that tick on and slow players in them. A single tick is a player
+      crossing a pool; a second tick in one occurrence is a failure, charged to that player.
+    # Pools left where Coiling Ichor expires, for 2 min; one ID covers the tick and the slow. A single tick is
+    # a player crossing a pool (157 of 212 runs of ticks), so a second tick in one occurrence is the failure.
+    difficulties: [heroic]
+    ability_ids: [1292552]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 1}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: clotted_bolt
+    name: Clotted Bolt
+    description: >-
+      Ithraz's attack on his target when they are out of his reach. Every hit is a failure charged to the player
+      hit, usually a tank, or a player he turned to as the raid died.
+    # Ithraz's attack on his target when they are out of his reach; as Concentrated Spittle (19 hits, 13 of
+    # them on a tank, 1 fatal; 6 on other players, 5 fatal).
+    difficulties: [heroic]
+    ability_ids: [1295115]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  # -- Submerge --------------------------------------------------------------------------------
+  - id: vile_flood
+    name: Vile Flood
+    description: >-
+      Vexhul's sweeping beam during Submerge, hitting every 0.5 s while a player stands in it, each hit adding a
+      stack. Any hit is a failure charged to that player, once per sweep.
+    # Vexhul's sweeping beam during Submerge: cast (1294293) and the hit and debuff (1294605), every 0.5 s
+    # while a player stands in it, each adding a stack. Any hit is the player's failure, once per sweep.
+    difficulties: [heroic]
+    ability_ids: [1294293, 1294605]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: sanguine_storm
+    name: Sanguine Storm
+    description: >-
+      Ithraz's gore impacts during Submerge, hitting players within 4 yd. Every hit is a failure, charged to the
+      player hit.
+    # Ithraz's gore impacts during Submerge: cast (1306872) and the hit on players within 4 yd (1306876).
+    difficulties: [heroic]
+    ability_ids: [1306872, 1306876]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  - id: sanguine_gore
+    name: Congealed Gore (Sanguine Storm)
+    description: >-
+      Short pools Sanguine Storm leaves that tick on and slow players in them. A second tick in one occurrence is
+      a failure, charged to that player.
+    # The short pools Sanguine Storm leaves (1306925, tick and slow); as Congealed Gore, a second tick in one
+    # occurrence is the failure.
+    difficulties: [heroic]
+    ability_ids: [1306925]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 1}
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: noxious_slick
+    name: Noxious Slick
+    description: >-
+      Slick left by the Submerge impacts that ticks and raises damage taken. A second tick in one occurrence is a
+      failure, charged to that player.
+    # Slick left by the Submerge impacts (1309471, tick and a damage-taken debuff); as the pools, a second tick
+    # in one occurrence is the failure.
+    difficulties: [heroic]
+    ability_ids: [1309471]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 1}
+    cluster_window_ms: 2000
+    severity: medium
+
+  # -- Arena -----------------------------------------------------------------------------------
+  - id: toxic_fumes
+    name: Toxic Fumes
+    description: "Raid-wide damage every 2 s for the whole fight from the environment. It is not counted as a failure."
+    difficulties: [heroic]
+    ability_ids: [1294976]
+    kind: unavoidable
+    severity: low
+
+  - id: deadly_venom
+    name: Deadly Venom
+    description: >-
+      Venom around the platform that ticks once a second on players standing in it. Each player hit in an
+      occurrence counts one failure, charged to that player.
+    # The venom around the platform, dealt by the environment once a second to a player standing in it (the
+    # same ID as on Ula'tek).
+    difficulties: [heroic]
+    ability_ids: [1297338]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: medium
+
+damage_windows:
+  - id: stir_the_depths
+    name: Stir the Depths
+    # Cast (1290956) and the raid-wide pulse every 2 s for 6 s (1292806), twice per loop; a 3 s window keeps
+    # one cast's pulses as one occurrence. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1290956, 1292806]
+    cluster_window_ms: 3000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                     # both bosses on their tanks
+  - {ability_id: 1310211, name: Ravenous Feast, difficulties: [heroic]}      # immune-only rows of a Feast strike
+  - {ability_id: 1290654, name: Ravenous Feast, difficulties: [heroic]}      # immune-only rows of a Feast strike
+  - {ability_id: 1289154, name: Stone Breaker, difficulties: [heroic]}       # immune-only row of a slam
+  - {ability_id: 1307764, name: Venomous Emergence, difficulties: [heroic]}  # immune-only rows of the raid hit
