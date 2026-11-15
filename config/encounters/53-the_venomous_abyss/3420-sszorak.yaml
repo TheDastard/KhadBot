@@ -1,0 +1,232 @@
+# Sszorak, The Venomous Abyss (NPC 257347).
+# Open gaps for this file are tracked under "Sszorak" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it. Counts in comments are over 24 Heroic pulls: xk73VCBywmavDKz9 fights 18 to 23,
+# 25 to 27 and 30 to 33 (kill 33), AQpRY9VNDrCGXtBF fights 23 and 26 to 30 (kill 30) and xJqFwTPH73CXMkBV
+# fights 26 to 30 (kill 30).
+#
+# Failures are charged to the player responsible, which for most rules is the player who was hit or who
+# carried the debuff. soak_count_lt and debuff_stacks_gt charge no one.
+encounter_id: 3420
+name: Sszorak
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 1
+
+# The fight is one loop: Apex Predator (two Ravage, two Mutilate and a Tempest in a random order), Venomous
+# Surge and Raging Crosswinds, twice, then the intermission at 100 energy, when Sszorak casts Dig In and the
+# Howling Maelstrom winds push the raid into the Viscous Cysts. WarcraftLogs reports it as phase 1 and
+# phase 2 alternating: phase 2 starts on the Dig In cast (111.1 to 111.2 s into every pull that reached it,
+# then every 138 s) and lasts 25 s. WarcraftLogs names the phases "Stage One: Serpent's Bargain" and "Stage
+# Two: Usurper's Reprisal" and lists two more (an intermission and a Stage Three) that no Heroic pull
+# reached. The kills had three intermissions (xk73VCBywmavDKz9) or two; 3 of the 21 wipes ended before the
+# first.
+phases:
+  - id: p1
+    name: "Apex Predator loop"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: intermission
+    name: "Intermission: Howling Maelstrom (Dig In)"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 2}
+    repeat: true
+  - id: loop
+    name: "Apex Predator loop (after an intermission)"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 1}
+    repeat: true
+
+mechanics:
+  # -- Raid-wide pressure ----------------------------------------------------------------------
+  - id: ulateks_presence
+    name: Ula'tek's Presence
+    description: >-
+      Raid-wide damage every 2 s for the whole fight from the environment, the largest source of damage taken. It
+      is not counted as a failure.
+    difficulties: [heroic]
+    ability_ids: [1285965]
+    kind: unavoidable
+    severity: low
+
+  - id: viscous_cyst
+    name: Viscous Cyst
+    description: >-
+      Glob left where each Venomous Surge expires; popping it knocks every player away and gives them a stacking
+      DoT. The raid pops some on purpose, and an early pop can't be told from a planned one, so no failure is
+      counted.
+    # A glob left where each Venomous Surge expires. Popping it (contact, or after 2 min) knocks every
+    # player away and hits them with a stacking DoT on the same ID. The raid pops three on purpose in each
+    # intermission and the spare just after it. The most killing blows of any ability (71), most of them from
+    # a cyst popped before the intermission, which no rule can tell from a planned pop (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1287205]
+    kind: unavoidable
+    cluster_window_ms: 1500
+    severity: high
+
+  # -- Apex Predator ---------------------------------------------------------------------------
+  - id: ravage
+    name: Ravage
+    description: >-
+      Sszorak's tank frontal. Anyone hit other than the cast's target stood in front of the boss: a failure
+      charged to that player.
+    # Tank frontal: the cast (1277002, no target) and a second cast row naming the target, on the same ID as
+    # the hit (1277101). Anyone hit other than that target stood in front of the boss. The hit lands 0 to
+    # 85 ms after the targeted cast row, and the next Apex Predator cast comes 4 s later.
+    difficulties: [heroic]
+    ability_ids: [1277002, 1277101]
+    kind: avoidable
+    failure: {rule: hits_on_non_target, ms: 2000}
+    severity: high
+
+  - id: ravage_debuff
+    name: Ravage (debuff)
+    description: >-
+      Debuff from Ravage making the next Ravage deal 600% more damage for 25 s; the tanks swap between the two
+      Ravages of a combo. A second stack means one tank took both: one failure per such stack, charged to no one.
+    # 600% more damage taken from Ravage for 25 s. The two Ravages of a combo come 4 to 17 s apart, so the
+    # tanks swap between them; a second stack means one tank took both. One failure per such stack,
+    # charged to no one.
+    difficulties: [heroic]
+    ability_ids: [1277105]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 1}
+    severity: high
+
+  - id: mutilate
+    name: Mutilate
+    description: >-
+      Raid frontal aimed at the tank, its damage split between everyone in it. Fewer than 5 players hit, the tank
+      included, is deadly and counts one failure per Mutilate, charged to no one.
+    # Raid frontal aimed at the tank: the cast (1277027), a cast row naming the target (1277031) and the hit
+    # (1285999), split between everyone in it. Fewer than 5 players hit (the tank included, who takes it for
+    # 0) is deadly. All 17 Mutilates that hit 1 to 4 players killed someone; of the 130 that hit 5 to 16, the
+    # three that killed had a soaker who still carried the gash from the one before.
+    difficulties: [heroic]
+    ability_ids: [1277027, 1277031, 1285999]
+    kind: soak
+    failure: {rule: soak_count_lt, value: 5}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: mutilated_gash
+    name: Mutilated Gash
+    description: >-
+      Debuff and DoT on everyone a Mutilate hit, raising the next Mutilate's damage by 500%, so soak groups take
+      every other one. A soaker who takes the next one too is not yet counted as a failure.
+    # Debuff (1277051) and DoT (1285998) on everyone a Mutilate hit, for 22 s; it raises the next Mutilate's
+    # damage by 500%, so each soak group takes every other Mutilate. A soaker who takes the next one too has
+    # no rule (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1277051, 1285998]
+    kind: debuff
+    severity: medium
+
+  - id: tempest
+    name: Tempest
+    description: >-
+      Roaming tornadoes; each contact hits and applies a stacking DoT and slow. Each new debuff is a failure
+      charged to the player hit; a contact while the debuff is up adds a stack but is not counted again.
+    # Tornadoes (cast 1287072) that roam the arena; each contact hits and applies a stacking DoT and slow
+    # (1287083, one ID for both). Each new debuff is a failure charged to the player: a contact while the
+    # debuff is already up adds a stack and isn't counted again. The second most killing blows (42).
+    difficulties: [heroic]
+    ability_ids: [1287072, 1287083]
+    kind: avoidable
+    failure: {rule: aura_applied}
+    severity: high
+
+  - id: corroding_venom
+    name: Corroding Venom
+    description: >-
+      Stacking physical damage taken increase from Sszorak's melee swings on his target. It is not counted as a
+      failure.
+    difficulties: [heroic]
+    ability_ids: [1282873]
+    kind: debuff
+    severity: low
+
+  # -- Venomous Surge --------------------------------------------------------------------------
+  - id: venomous_surge
+    name: Venomous Surge
+    description: >-
+      10 s debuff on two players; when it expires it hits the raid and leaves a Viscous Cyst where the player
+      stands. Cyst placement needs positions, so no failure is counted.
+    # Cast (1305959), the 10 s debuff on two players (1305963) and its DoT (1312156). When it expires it hits
+    # the raid (the venomous_surge damage window) and leaves a Viscous Cyst where the player stands. Where the
+    # cysts go is the raid's plan and needs positions (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1305959, 1305963, 1312156]
+    kind: debuff
+    severity: medium
+
+  - id: caustic_claws
+    name: Caustic Claws
+    description: >-
+      Toxin flung around the boss with Venomous Surge, a heavy hit to players within 6 yd of each impact. Every
+      hit is a failure, charged to the player hit.
+    difficulties: [heroic]
+    ability_ids: [1305998]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  - id: caustic_residue
+    name: Caustic Residue
+    description: >-
+      Acid pool left by each Caustic Claws impact that raises damage taken by 30% and ticks each second. Each
+      player counts one failure per stay in a pool, charged to that player.
+    difficulties: [heroic]
+    ability_ids: [1296667]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: low
+
+  # -- Raging Crosswinds -----------------------------------------------------------------------
+  - id: raging_crosswinds
+    name: Raging Crosswinds
+    description: >-
+      Eight players are marked, four with each direction; 8 s later the marks expire, hitting and launching the
+      marked players and anyone within 6 yd. Bystanders are not yet counted as a failure.
+    # The Altar's cast (1285419), then eight players marked 4 with each direction (cast and debuff 1285425
+    # and 1285453), their DoT (1312219) and the hit when the marks expire 8 s later (1285616), which lands
+    # on the marked players and on anyone within 6 yd and launches them all. Bystanders have no rule
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1285419, 1285425, 1285453, 1312219, 1285616]
+    kind: debuff
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: turbulent_gusts
+    name: Turbulent Gusts
+    description: >-
+      Slow fall on every player the Crosswinds launch; colliding with another launched player removes it. A debuff
+      lasting over 4 s means the player met no one and drifted: a failure charged to that player.
+    # Slow fall on every player the Crosswinds launch; colliding with another launched player removes it.
+    # Of 566 debuffs, 440 ended within 2 s (409 within 1 s: the marked pairs met in the air) and 110 lasted
+    # 4 to 10 s: the player met no one and drifted. A debuff over 4 s is a failure, charged to the player.
+    difficulties: [heroic]
+    ability_ids: [1285447]
+    kind: debuff
+    failure: {rule: debuff_duration_gt, ms: 4000}
+    severity: medium
+
+damage_windows:
+  - id: venomous_surge
+    name: Venomous Surge
+    # Raid-wide hit when each Venomous Surge expires, smaller the farther a player stands from its target;
+    # the two of each cast land together. Four before each intermission. expected_defensive_cooldowns is a
+    # guess (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1306120]
+    cluster_window_ms: 3000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks
+  - {ability_id: 3, name: Falling, difficulties: [heroic]}               # landing 2 s after a Crosswinds launch
+  - {ability_id: 1285444, name: Raging Crosswinds, difficulties: [heroic]}  # environment row for 0 damage

@@ -365,3 +365,18 @@ Heroic pulls (three kills); counts and the unseen abilities are in its comments.
   Spreading Flames; Elemental Explosion's rule is untested on a debuff carried into the next volley.
 - **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback's damage, Haunting Spirits
   (1310561, unexplained deaths in the wipe).
+
+### Sszorak (3420), Heroic
+
+`config/encounters/53-the_venomous_abyss/3420-sszorak.yaml`, first pass awaiting review, from 24 Heroic pulls (three
+kills).
+
+- **Tempest charges nearly everyone**: `aura_applied` gives 15 to 24 players a pull. Decide whether every contact
+  counts or only repeated ones (`debuff_stacks_gt`; stacks reached 2 to 7 a pull).
+- **A Viscous Cyst popped before the intermission** has no rule; it needs a mechanic scoped to some phases, which
+  the format lacks. Who touched the cyst isn't logged, so per_cluster with no blame is the likely shape.
+- **Mutilate double soaks and Raging Crosswinds bystanders** have no rule: the hit opens the gash in the same
+  millisecond, and a mark is removed up to 77 ms before its hit. Aura rules need a minimum aura age or a grace window.
+- **Review** Turbulent Gusts' 4 s limit (charge both if one partner was immune?); Caustic Residue is in one report.
+- **Not covered:** Venomous Surge cyst placement (needs positions; its `expected_defensive_cooldowns: 1` is a guess)
+  and players blown off in the intermission (no log row).
