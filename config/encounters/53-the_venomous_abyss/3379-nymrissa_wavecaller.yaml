@@ -1,0 +1,165 @@
+# Nymrissa Wavecaller, the lair boss of The Tidebound Grotto. WarcraftLogs lists the encounter under zone 53,
+# The Venomous Abyss, so the file lives with that raid's.
+# Open gaps for this file are tracked under "Nymrissa Wavecaller" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it.
+#
+# Everything here was checked against one Heroic pull, a kill (x9bLZvAHpnm4tWF3 fight 4, 364 s, one death).
+# Counts in the comments are over that pull. Several mechanics the guides describe never happened in it
+# (Bubblefin Berserkers and their Pulsing Tides, Shatter, Unending Tides), so their IDs are unknown and they are
+# not in the file.
+#
+# Failures are charged to the player responsible: the player hit, or the player bitten. The missed tank swap
+# counts one failure per occurrence and charges no one.
+encounter_id: 3379
+name: Nymrissa Wavecaller
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 1
+
+# WarcraftLogs reports no phases for this encounter. The fight is one cycle of about 110 s that repeats until
+# the kill: Abyssal Rain, Alluring Bubble and its murloc swarms, Iceblade Flurry, Chilling Frost and its orbs,
+# then Swirling Whirlpools and the Pop! (at 120, 230 and 340 s in the kill).
+phases:
+  - id: p1
+    name: Nymrissa Wavecaller
+    difficulties: [heroic]
+    start: {trigger: pull}
+
+mechanics:
+  # -- The bubble ------------------------------------------------------------------------------
+  - id: alluring_bubble
+    name: Alluring Bubble
+    description: >-
+      Nymrissa forms a bubble and Bubblefin Shorerunner murlocs swarm toward it; one that reaches it becomes a
+      Berserker whose Pulsing Tides hits the raid every 3 s. No failure is counted: no Berserker has been seen
+      in the logs.
+    # Casts 1284015 and 1257717, at 18, 128, 238 and 348 s. Each Shorerunner (NPC 253032) logs one cast of
+    # 1260012 as it spawns: 95 murlocs in waves of 15 about 8 and 52 s after each bubble. No Berserker appears
+    # in the kill, so its NPC and ability IDs are unknown (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1284015, 1257717, 1260012]
+    kind: unavoidable
+    severity: medium
+
+  - id: swirling_whirlpools
+    name: Swirling Whirlpools
+    description: >-
+      Whirlpools surge toward the bubble before each Pop!, leaving one gap to stand in, and hit players in their
+      path. Each player hit by a whirlpool counts one failure, charged to that player.
+    # Cast (1258673) 9 s before each Pop!; hits (1258677) are logged with the environment as their source.
+    # 1 failure in the kill (618k before mitigation, at 339 s).
+    difficulties: [heroic]
+    ability_ids: [1258673, 1258677]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: wild_bite
+    name: Wild Bite
+    description: >-
+      A Shark bites a player the Pop! knocked into the water, leaving a 20 s DoT. Each bite is a failure,
+      charged to the player bitten.
+    # Shark NPC 275082. One ID for the debuff and the damage, about 150k a second before mitigation. 3 bites in
+    # the kill, all within 3.3 s of a Pop! (two at 123 s, one a tank, and one at 343 s).
+    difficulties: [heroic]
+    ability_ids: [1265425]
+    kind: avoidable
+    failure: {rule: aura_applied}
+    severity: high
+
+  # -- Frost orbs ------------------------------------------------------------------------------
+  - id: chilling_frost
+    name: Chilling Frost
+    description: >-
+      Hits three players every 1.5 s for 6 s and slows them; each hit leaves a Frost Orb where the player
+      stands, so the targets move to place them. It is not counted as a failure.
+    # Six casts in the kill.
+    difficulties: [heroic]
+    ability_ids: [1313393]
+    kind: debuff
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: frost_orb
+    name: Frost Orb
+    description: >-
+      Orbs that must be soaked: touching one clings it to the player as a stacking DoT. An orb left untouched
+      Shatters for a raid-wide hit and a 30 s DoT; no failure is counted, as no Shatter has been seen in the
+      logs.
+    # One ID for the hit, the stacking debuff and its DoT, which grows with the stacks. Shatter's ID is unknown.
+    # 41 touches over the six casts; four soakers reached 3 stacks and one of them died to the DoT during
+    # Abyssal Rain (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1313448]
+    kind: soak
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: lingering_frost
+    name: Lingering Frost
+    description: >-
+      Icy patch left where an orb is picked up that ticks each second on players in it and makes them slide.
+      Soakers step onto their own patches, so a hit is not counted as a failure.
+    # A debuff on contact (also logged as a cast on the player) and the tick. 101 contacts on 20 players, 62 of
+    # them under 1 s, and 88 ticks (1.19M damage). Three soakers took 14 to 20 ticks each (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1257654]
+    kind: avoidable
+    cluster_window_ms: 2000
+    severity: low
+
+  # -- Tanking ---------------------------------------------------------------------------------
+  - id: iceblade_flurry
+    name: Iceblade Flurry
+    description: >-
+      Debuff on Nymrissa's current target, then a hit each second for 5 s. Taking it as the tank is not a
+      failure; its stacks are judged as Iceblade Flurry (stacks).
+    # Cast and debuff (1282937) on Nymrissa's current target, then a hit each second for 5 s (1282945). Cast
+    # every 22 s outside the whirlpools, 13 times in the kill.
+    difficulties: [heroic]
+    ability_ids: [1282937, 1282945]
+    kind: unavoidable
+    severity: low
+
+  - id: iceblade_flurry_stacks
+    name: Iceblade Flurry (stacks)
+    description: >-
+      Stacking debuff from each Iceblade Flurry hit, 6 stacks a cast; the tanks swap on each cast. A 7th stack
+      means a tank took two casts in a row: one failure per missed swap, charged to no one.
+    # Debuff 1282947, lasting 40 s; casts come 22 s apart. 1 failure in the kill (the 205 s cast, which took
+    # one tank to 12 stacks).
+    difficulties: [heroic]
+    ability_ids: [1282947]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 6}
+    cluster_window_ms: 2000
+    severity: medium
+
+damage_windows:
+  - id: abyssal_rain
+    name: Abyssal Rain
+    # Cast (1260837) every 33 to 66 s; a raid-wide hit each second for 4 s, then a drench DoT every 2 s for
+    # about 24 s (1260843 for the hits, the DoT and the debuff). Seven casts in the kill. On Heroic each cast
+    # also gives Nymrissa a stack of Wavecaller's Might, which no buff row in the log shows.
+    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1260837, 1260843]
+    cluster_window_ms: 3000
+    expected_defensive_cooldowns: 1
+
+  - id: pop
+    name: Pop!
+    # A whirlpool reaches the bubble: one raid-wide hit and a knockback (1266340, environment source; the
+    # environment's cast 1258150), 300k to 450k before mitigation, at 120, 230 and 340 s. A hit of 0 from
+    # Nymrissa (1258154) lands on one or two players at the same moment; what it marks is unknown.
+    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1266340, 1258150, 1258154]
+    cluster_window_ms: 2000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks
