@@ -336,3 +336,18 @@ kill, so no rule is tested yet: recheck on wipes, more kills and the Mythic pull
   Bite on a tank knocked into the water is that tank's error is for a reviewer.
 - **Guesses**: Abyssal Rain's and Pop!'s defensive counts, and what Pop!'s zero hit marks. Repeating phases on the
   Alluring Bubble and Swirling Whirlpools casts could split the single phase's ~110 s cycle.
+
+### Vashnik the Malignant (3455), Heroic
+
+`config/encounters/53-the_venomous_abyss/3455-vashnik_the_malignant.yaml`, first pass awaiting review, from three Heroic
+kills and no wipes. Failures to review: Plague Froth 177, Plague Wave 221, Stygian Burst 29, the rest under 10.
+
+- **Plague Froth may overcount.** 60 failures are bystanders hit only by the first tick, before anyone could move;
+  `hit_without_aura` has no first-tick grace. Decide whether they count. Plague Wave (about 9 players an eruption,
+  healed through) may not be a failure at all.
+- **Stygian Burst blame.** Carriers in melee hit the tanks repeatedly, so the carrier may be at fault rather than the
+  player hit; a former carrier hit within 1.5 s of the infection ending also counts.
+- **Staggered dispels and add kills** (Exploding Infection, Burning Venom deaths) need a rule kind for two occurrences
+  closer than a limit; Caustic Surge has no stack counts, so `debuff_stacks_gt` can't see the overlap.
+- **Unconfirmed**: the unsoaked Catalytic Bile ID (1282616), Virulent Fumes and Congealing Bolt (not in the Dungeon
+  Journal), Imbibe's cooldown count; the Blood fountain and leaked adds aren't covered (YAML header).

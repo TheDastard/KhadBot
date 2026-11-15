@@ -1,0 +1,243 @@
+# Vashnik the Malignant, The Venomous Abyss.
+# Open gaps for this file are tracked under "Vashnik the Malignant" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it.
+#
+# Everything here was checked against three Heroic kills (xk73VCBywmavDKz9 fight 4, AQpRY9VNDrCGXtBF
+# fight 15, xJqFwTPH73CXMkBV fight 16) and no wipes. Counts in the comments are over those three pulls.
+# All three kills tanked Vashnik between the Shadow and Flame fountains for the whole fight, so he never
+# drank from the Fountain of Blood: its expulsion, its Clotting Venom adds and Siphoning Infection never
+# appear, and no living venom ever reached the Malignant Cavity (no Malignant Burst). Those have no entry
+# here (docs/follow-ups.md).
+#
+# Failures are charged to the player responsible. For most rules that is the player who was hit. Rules
+# that judge the raid as a whole (an unsoaked Catalytic Bile, a tank who took two bites in a row) count one
+# failure per occurrence and charge no one.
+encounter_id: 3455
+name: Vashnik the Malignant
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 1
+
+# A single phase that repeats until Vashnik dies; WarcraftLogs reports no phases for this encounter. Imbibe
+# comes every 84 s (24, 108, 192 and 276 s into all three kills).
+phases:
+  - id: p1
+    name: Vashnik the Malignant
+    difficulties: [heroic]
+    start: {trigger: pull}
+
+mechanics:
+  # -- Raid-wide pressure ----------------------------------------------------------------------
+  - id: toxic_vapor
+    name: Toxic Vapor
+    description: >-
+      The soft enrage: each Imbibe adds a permanent stack of a raid-wide tick every 2 s. It is not counted as a
+      failure.
+    difficulties: [heroic]
+    ability_ids: [1284561]
+    kind: unavoidable
+    severity: low
+
+  - id: malignant_catalyst
+    name: Malignant Catalyst
+    description: >-
+      Raid-wide hit at the end of a 5 s cast every 39 to 45 s, which launches the Catalytic Bile puddles about
+      7 s later. It is not counted as a failure.
+    # Hit 1282525; begincast and cast 1282516, plus a 1282509 cast row at its start.
+    difficulties: [heroic]
+    ability_ids: [1282509, 1282516, 1282525]
+    kind: unavoidable
+    severity: medium
+
+  - id: catalytic_bile
+    name: Catalytic Bile
+    description: >-
+      Bile impacts that players soak, one hit per soaker. A short soak is not counted as a failure here; an
+      impact nobody soaked shows as Catalytic Bile (unsoaked).
+    # 5 to 7 soakers per Catalyst. No failure rule: the number of impacts per Catalyst isn't in the logs, so a
+    # short soak can't be told from fewer impacts.
+    difficulties: [heroic]
+    ability_ids: [1282602]
+    kind: soak
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: catalytic_bile_unsoaked
+    name: Catalytic Bile (unsoaked)
+    description: >-
+      A Catalytic Bile impact that hit no player hits the whole raid instead. Each one is a failure, charged to
+      no one because nobody's soak assignment is in the logs.
+    # Separate ID (1282616). 2 failures, both on the first Catalyst of the pull (42 s; 20 and 23 players hit
+    # in AQpRY9VNDrCGXtBF 15 and xJqFwTPH73CXMkBV 16).
+    difficulties: [heroic]
+    ability_ids: [1282616]
+    kind: avoidable
+    failure:
+      rule: per_cluster
+      blame: {by: nobody}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: virulent_fumes
+    name: Virulent Fumes
+    description: >-
+      Small ticks and a short debuff from the environment, mostly in the 20 s after each Imbibe; the Dungeon
+      Journal doesn't name it. It is not counted as a failure.
+    # Small ticks (at most 12k) and a short debuff (1291461, source Environment) on 33 players, mostly in the
+    # 20 s after each Imbibe. The Dungeon Journal doesn't name it; it may be the fountains' vapor
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1291461, 1291467]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  # -- Tanking ---------------------------------------------------------------------------------
+  - id: dripping_fangs
+    name: Dripping Fangs
+    description: >-
+      Bite on Vashnik's target with a 32 s DoT and Physical damage taken debuff; the tanks swap on each bite. A
+      second stack means a tank took two bites in a row: one failure, charged to no one.
+    # Cast and hit 1280935, debuff 1280934. Bites come about 28 s apart. 3 failures, one in each kill.
+    difficulties: [heroic]
+    ability_ids: [1280935, 1280934]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 1}
+    severity: medium
+
+  # -- Plague Froth ----------------------------------------------------------------------------
+  - id: plague_froth
+    name: Plague Froth
+    description: >-
+      Debuff on 6 or 7 players that ticks on everyone within 4.5 yards of them once a second for 6 s. Carriers
+      take their own ticks; a player without the debuff who is hit stood next to a carrier and fails once per
+      cast, charged to that player.
+    # Debuff 1281913 (8 s; 1281910 is applied and removed in the same millisecond) and ticks 1281925.
+    difficulties: [heroic]
+    ability_ids: [1281910, 1281913, 1281925]
+    kind: avoidable
+    failure: {rule: hit_without_aura, aura_ids: [1281913]}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: plague_wave
+    name: Plague Wave
+    description: >-
+      Waves that erupt in the cardinal directions from each Plague Froth carrier when the debuff expires. Every
+      hit is a failure, one per player per eruption, charged to the player hit.
+    # The waves land over the 2 s after the debuff expires.
+    difficulties: [heroic]
+    ability_ids: [1295798]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: medium
+
+  # -- Adaptive Infection ----------------------------------------------------------------------
+  - id: stygian_infection
+    name: Stygian Infection
+    description: >-
+      Shadow fountain infection on two players per Imbibe; the infected players erupt in Stygian Burst. It is
+      not counted as a failure.
+    # Debuff and DoT 1294994, about 5 s.
+    difficulties: [heroic]
+    ability_ids: [1294994]
+    kind: debuff
+    severity: low
+
+  - id: stygian_burst
+    name: Stygian Burst
+    description: >-
+      Eruptions every 1.5 s from players with Stygian Infection, hitting everyone within 6 yards. A player hit
+      without the infection stood in someone else's burst: one failure per burst, charged to that player.
+    # The carrier who didn't spread out may share the blame (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1302489]
+    kind: avoidable
+    failure: {rule: hit_without_aura, aura_ids: [1294994]}
+    cluster_window_ms: 1000
+    severity: medium
+
+  - id: exploding_infection
+    name: Exploding Infection
+    description: >-
+      Flame fountain infection on two players per Imbibe; dispelling it sets off a Caustic Explosion on the
+      raid, so dispels are staggered. No failure is counted: dispels too close together have no rule yet.
+    # Debuff and DoT 1295173 (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1295173]
+    kind: dispel
+    severity: medium
+
+  - id: caustic_explosion
+    name: Caustic Explosion
+    description: "Raid-wide hit when an Exploding Infection is dispelled or expires. It is not counted as a failure."
+    difficulties: [heroic]
+    ability_ids: [1295209]
+    kind: unavoidable
+    cluster_window_ms: 1000
+    severity: medium
+
+  # -- Adds ------------------------------------------------------------------------------------
+  - id: burning_presence
+    name: Burning Presence
+    description: "Raid-wide pulse every 3 s from each living Burning Venom add. It is not counted as a failure."
+    # Burning Venom is NPC 260905, two per Flame Imbibe.
+    difficulties: [heroic]
+    ability_ids: [1305901]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  - id: caustic_surge
+    name: Caustic Surge
+    description: >-
+      Raid-wide hit and 3 s DoT when a Burning Venom dies; each death adds its own DoT, so the two adds are
+      killed apart. No failure is counted: deaths too close together have no rule yet.
+    # Each death adding its own DoT is the Heroic behaviour (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1285979]
+    kind: unavoidable
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: congealing_bolt
+    name: Congealing Bolt
+    description: >-
+      Bolt from the Shrouded Venom adds that deals damage and applies a stacking dispellable debuff. It is not
+      counted as a failure.
+    # Shrouded Venom (NPC 260895, five per Shadow Imbibe) bolt: damage and a stacking dispellable debuff
+    # (1305833, up to 3 stacks, 21 dispels); 1305826 and 1305832 are its zero-damage companion rows. The
+    # Dungeon Journal doesn't list it.
+    difficulties: [heroic]
+    ability_ids: [1305826, 1305832, 1305833]
+    kind: dispel
+    severity: low
+
+  - id: umbral_ejection
+    name: Umbral Ejection
+    description: >-
+      Shadow venom sprayed where a Shrouded Venom dies, hitting players within 3 yards of an impact. Every hit
+      is a failure, one per player per spray, charged to the player hit.
+    difficulties: [heroic]
+    ability_ids: [1286737]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: low
+
+damage_windows:
+  - id: imbibe
+    name: Imbibe
+    # Vashnik drinks two fountains at 100 energy: the cast (1284663) and one raid-wide expulsion per fountain,
+    # Gloom (1298583, Shadow) and Conflagrating (1298587, Flame), every 84 s. Hemo Expulsion (Blood) never
+    # appears in these kills. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1284663, 1298583, 1298587]
+    cluster_window_ms: 5000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # Vashnik on the tanks
