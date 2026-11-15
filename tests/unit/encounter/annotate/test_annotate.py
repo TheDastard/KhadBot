@@ -308,6 +308,50 @@ def test_hit_while_aura_judges_only_damage_rows():
     assert blamed(run(rows, enc_with([mech(rule, kind="soak")]))) == [(1, 1)]
 
 
+def hit_without(rows, aura_ids=(AURA,), **kw):
+    rule = {"rule": "hit_without_aura", "aura_ids": list(aura_ids)}
+    return blamed(run(rows, enc_with([mech(rule, kind="unavoidable", **kw)])))
+
+
+def test_hit_without_aura():
+    rows = [
+        _held(0, "applydebuff", 1),
+        hit(1_000, 1),  # protected: fine
+        hit(1_000, 2),  # unprotected: failure, charged to the player hit
+        hit(1_500, 2),  # same player, same cluster: judged once
+        hit(1_000, BOSS),  # not a player: never judged
+        _held(2_000, "removedebuff", 1),
+        hit(10_000, 1),  # the aura is gone: failure
+    ]
+    assert hit_without(rows) == [(2, 2), (6, 1)]
+
+
+def test_hit_without_aura_edges():
+    rows = [
+        _held(5_000, "applydebuff", 1),
+        hit(5_000, 1),  # same millisecond as the apply: protected
+        _held(6_000, "applydebuff", 2),
+        hit(7_000, 2),  # the hit consumes the aura in the same millisecond: protected
+        _held(7_000, "removedebuff", 2),
+        hit(7_001, 3, ability=100),  # another player, never protected: failure
+    ]
+    assert hit_without(rows, window_ms=10) == [(5, 3)]
+
+
+def test_hit_without_aura_any_listed_aura_protects():
+    rows = [_held(0, "applybuff", 1, ability=778), hit(1_000, 1), hit(1_000, 2)]
+    assert hit_without(rows, aura_ids=(AURA, 778)) == [(2, 2)]
+    assert hit_without(rows) == [(1, 1), (2, 2)]  # 778 not listed: no protection
+
+
+def test_hit_without_aura_judges_only_damage_rows():
+    # The aura is also one of the mechanic's abilities (Extinguish lists its debuff); aura rows are never failures.
+    rule = {"rule": "hit_without_aura", "aura_ids": [100]}
+    rows = [_aura(0, "applydebuff", 1), hit(500, 1), _aura(500, "removedebuff", 1), hit(500, 2)]
+    assert blamed(run(rows, enc_with([mech(rule, kind="unavoidable")]))) == [(3, 2)]
+
+
+SHELL, BREAKER, POOL, HATCH = 100, 200, 300, 400
 SHELL, BREAKER, POOL, HATCH = 100, 200, 300, 400
 
 
@@ -455,6 +499,64 @@ def test_hits_on_non_tank():
     ]
     a = run(rows, enc_with([mech({"rule": "hits_on_non_tank", "ms": 10_000}, window_ms=1_000)]))
     assert blamed(a) == [(3, 5), (4, 2), (6, 3), (8, 4)]
+
+
+DEVASTATION, BLAST = 300, 100  # the boss's targeted cast and the hit that follows it
+
+
+def _targeted(t, target, src=BOSS, ability=DEVASTATION):
+    return {"t_ms": t, "type": "cast", "source_id": src, "target_id": target, "ability_id": ability}
+
+
+def non_target(rows, ms=5_000):
+    rule = {"rule": "hits_on_non_target", "ms": ms}
+    m = {**mech(rule, window_ms=1_000), "ability_ids": [BLAST, DEVASTATION]}
+    return blamed(run(rows, enc_with([m])))
+
+
+def test_hits_on_non_target_spares_the_casts_target():
+    rows = [
+        _swing(0, 1, src=BOSS),  # player 1 tanks the boss ...
+        {"t_ms": 500, "type": "begincast", "source_id": BOSS, "ability_id": DEVASTATION},  # no target logged
+        _taunt(2_000, 2, npc=BOSS),  # ... player 2 taunts during the cast and holds the boss at the impact
+        _targeted(4_000, 1),  # the cast completes on its original target
+        hit(4_300, 1),  # the cast's target: fine, though no longer the aggro holder
+        hit(4_300, 3),  # too close: failure
+        hit(4_800, 3),  # same player, same cluster: judged once
+        hit(4_300, 2),  # the taunting tank stood in it too: failure
+    ]
+    assert non_target(rows) == [(5, 3), (7, 2)]
+
+
+def test_hits_on_non_target_uses_the_latest_cast_in_the_window():
+    rows = [
+        _targeted(0, 2),  # an older cast, outside the 5 s window of the second impact
+        hit(300, 1),  # the first impact: player 2 was the target, so player 1 fails
+        _targeted(10_000, 1),
+        _targeted(9_000, 3, src=1),  # a friendly cast of the same ID never counts
+        hit(10_300, 1),
+        hit(10_300, 2),
+    ]
+    assert non_target(rows) == [(1, 1), (5, 2)]
+
+
+def test_hits_on_non_target_without_a_cast_is_not_judged():
+    rows = [
+        _targeted(0, 1),  # 9.7 s before the impact, outside the window
+        {**_targeted(9_000, None), "target_id": None},  # a targetless cast names no one
+        hit(9_700, 1),
+        hit(9_700, 2),
+    ]
+    assert non_target(rows) == []
+
+
+def test_per_cluster_blames_nobody():
+    rule = {"rule": "per_cluster", "blame": {"by": "nobody"}}
+    rows = [hit(0, 1), hit(100, 2), hit(1_900, 3), hit(9_000, 4)]
+    a = run(rows, enc_with([mech(rule, window_ms=2_000, kind="debuff")]))
+    # One failure per occurrence, on its first hit, charged to no one and with no blame context.
+    assert blamed(a) == [(0, None), (3, None)]
+    assert a.frame["blame_state"].null_count() == a.frame.height
 
 
 def test_per_cluster_blames_cast_target():

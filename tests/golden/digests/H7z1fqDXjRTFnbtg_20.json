@@ -1342,7 +1342,7 @@
   "outcome": "kill",
   "phase_reached": "p3",
   "produced_from": {
-    "annotation_version": "7",
+    "annotation_version": "8",
     "cutoff_fraction": "0.5",
     "defensive_cooldowns_hash": "14555dc29384",
     "encfile_hash": "1e5398dfceb0",

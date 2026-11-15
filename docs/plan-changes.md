@@ -85,3 +85,78 @@ data gets the anomaly `missing_data_type:DamageDone` and no section.
 
 6.5: new ref kind `kill:<kill_target_id>`, which resolves to the `KillTargetStat` plus
 `span_rows: list[{n, t_ms, end_ms, on_target_pct, failed_players}]`, so every number in the line verifies.
+
+## encounter/failure-rules
+
+Built. Decisions D99 to D102 in `docs/decisions.md`. `ANNOTATION_VERSION` becomes 8.
+
+### Refactor plan 6.2: encounter-file example, phases
+
+In the encounter-file example, after the `p2` phase, add:
+
+```yaml
+  - id: intermission                 # repeating phases end the list; detection walks them again after the last
+    name: Intermission
+    difficulties: [heroic, mythic]
+    repeat: true
+    start: {trigger: wcl_phase, phase: 2}
+  - id: stage
+    name: Stage One again
+    difficulties: [heroic, mythic]
+    repeat: true
+    start: {trigger: wcl_phase, phase: 1}
+```
+
+New paragraph after the example, before "Difficulties":
+
+"**Repeating phases.** Phases with `repeat: true` form the repeating block: one run at the end of a difficulty's
+phase list, never the first phase, whose triggers are `wcl_phase`, `boss_cast` or `boss_aura_applied` (a `time`
+trigger fires once and `boss_hp_below` would refire at once). After the block's last phase fires, detection walks
+the block again from its first phase, each trigger searched after the previous start, so each repeat gives one
+span under the phase's one ID. Listing each repeat as its own phase still works. An unset `repeat` is left out of
+the canonical dump, so files without it keep their `encfile_hash`."
+
+### Refactor plan 6.2: failure-rules table
+
+Replace the `per_cluster` and `hits_on_non_tank` rows and add two rows after `hit_while_aura`, so the table reads
+(other rows unchanged):
+
+| Rule | Params | A failure is | Charged to |
+|---|---|---|---|
+| `per_cluster` | `blame` (required) | One failure per cluster, on its first hit, for mechanics that punish the raid for one player's mistake, or (`by: nobody`) for occurrences that are the whole raid's failure | The player the blame spec points at; no one if it finds nobody or is `by: nobody` |
+| `hits_on_non_tank` | `ms` | Each player hit (judged once per cluster, at their first hit) who was not the aggro holder of the NPC instance that hit them: the latest swing or taunt on that instance in the `ms` before. A hit while the NPC has no holder is a failure. | The player hit |
+| `hits_on_non_target` | `ms` (> 0) | Each player hit (judged once per cluster, at their first hit) other than the friendly target of the latest enemy `cast` of one of the mechanic's own `ability_ids` in the `ms` up to the cluster's first hit (`begincast` rows carry no target and don't count). The completed cast names its original target, so a taunt during the cast doesn't move it. A cluster with no such cast is not judged | The player hit |
+| `hit_without_aura` | `aura_ids` (non-empty) | Each player hit by the mechanic's damage (judged once per cluster, at their first hit) while carrying none of the listed auras. Aura activity as for `hit_while_aura` (both ends inclusive), so a hit that removes the aura in the same millisecond is protected. Aura IDs may also be in `ability_ids`; only damage rows are judged | The player hit |
+
+Replace the blame-spec list's intro and add a third spec:
+
+"**Blame specs** (only on `per_cluster`; `ms` > 0, default 10,000, on the two lookups):
+
+- `{by: nobody}`: no one. Each occurrence is one failure of the whole raid, with `blamed_id` null and no blame
+  context. It takes no other key. Use it when nobody owns the punishment (a droplet nobody stepped on, a fragment
+  that reached its target)."
+
+### Refactor plan 6.2: validation
+
+Replace the validation paragraph's rule list with: "trigger, rule and blame names from the tables above; required
+params present (`debuff_stacks_gt` needs `value` >= 0, `hit_while_aura` and `hit_without_aura` a non-empty
+`aura_ids`, `hits_on_non_target` `ms` > 0); `blame` required by `per_cluster` and rejected elsewhere; `by: nobody`
+rejects `ability_id`, `npc_game_id`, `ms` and `reach_yd`; `aura_ids` required by `hit_while_aura` and
+`hit_without_aura` and rejected elsewhere; `ability_ids` required by `aura_removed_by` and rejected elsewhere, and
+`followed_by_ids` and `on_death` allowed on `aura_removed_by` only; repeating phases form one run at the end of
+each difficulty's phase list, never the first phase, with `wcl_phase`, `boss_cast` or `boss_aura_applied`
+triggers; every difficulty used by an entry has at least one phase." The rest of the paragraph is unchanged.
+
+### Refactor plan 6.3: blame context, anomaly and version
+
+- In "Blame context", replace "for `per_cluster` failures (blame `aggro_holder` or `cast_target`)" with "for
+  `per_cluster` failures whose blame is `aggro_holder` or `cast_target` (`by: nobody` gets none)".
+- Replace "`ANNOTATION_VERSION` (7)" with "`ANNOTATION_VERSION` (8)".
+
+### Refactor plan 6.4: `phase_trigger_unmatched`
+
+In the anomaly codes list, replace the parenthesis after `phase_trigger_unmatched:<phase_id>` with: "(raised for an undetected encounter-file phase that WCL's phase transitions show the pull reached; never compared against `last_phase`). `wcl_phase` phases are judged by how often their WCL phase ID
+occurs among the pull's transitions after 0 ms (the opening transition belongs to the `pull` phase): the n-th
+listed phase with that ID is reached when the ID occurs at least n times, and a repeating one is flagged once when
+the ID occurs more often than spans were detected for it. Listed phases with other triggers are flagged by count,
+as before; repeating phases with other triggers are not judged."

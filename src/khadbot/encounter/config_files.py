@@ -229,8 +229,10 @@ RuleName = Literal[
     "debuff_stacks_gt",
     "hit_while_aura",
     "aura_removed_by",
+    "hit_without_aura",
+    "hits_on_non_target",
 ]
-BlameBy = Literal["cast_target", "aggro_holder"]
+BlameBy = Literal["cast_target", "aggro_holder", "nobody"]
 MechanicKind = Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
 Difficulty = Literal["lfr", "normal", "heroic", "mythic"]
 
@@ -260,8 +262,15 @@ _RULE_PARAM: dict[str, str | None] = {
     "debuff_stacks_gt": "value",
     "hit_while_aura": "aura_ids",
     "aura_removed_by": "ability_ids",
+    "hit_without_aura": "aura_ids",
+    "hits_on_non_target": "ms",
 }
-_BLAME_PARAM: dict[str, str] = {"cast_target": "ability_id", "aggro_holder": "npc_game_id"}
+_BLAME_PARAM: dict[str, str | None] = {"cast_target": "ability_id", "aggro_holder": "npc_game_id", "nobody": None}
+# Rules that judge a hit against the player's auras at the time of the hit.
+_AURA_RULES: frozenset[str] = frozenset({"hit_while_aura", "hit_without_aura"})
+# Triggers a phase in the repeating block may use: each can fire again after the block's last phase. A ``time``
+# trigger fires once, and ``boss_hp_below`` would fire again at once.
+REPEATABLE_TRIGGERS: frozenset[str] = frozenset({"boss_cast", "boss_aura_applied", "wcl_phase"})
 
 
 class _Entry(_Strict):
@@ -295,9 +304,23 @@ class PhaseTrigger(_Strict):
 
 
 class Phase(_Entry):
+    """
+    One phase, started by its trigger. Phases with ``repeat: true`` form the repeating block: a run at the end of
+    the difficulty's phase list, which detection walks again from its first phase after its last one fires.
+    """
+
     id: str
     name: str
     start: PhaseTrigger
+    repeat: bool = False
+
+    @model_serializer(mode="wrap")
+    def _drop_unset_repeat(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Leaving an unset repeat out keeps the content hash of files that don't use it what it was before.
+        data: dict[str, Any] = handler(self)
+        if not data.get("repeat"):
+            data.pop("repeat", None)
+        return data
 
 
 class Blame(_Strict):
@@ -307,6 +330,7 @@ class Blame(_Strict):
     ``cast_target``: the friendly target of the latest enemy cast of ``ability_id`` in the ``ms`` before.
     ``aggro_holder``: the player holding the NPC with ``npc_game_id`` (game ID, since a boss can have two
     actors with one name): the latest melee swing or taunt on it in the ``ms`` before, from the Threat data.
+    ``nobody``: no one; the occurrence is a failure of the whole raid. It takes no other key.
 
     ``reach_yd`` is the NPC's swing reach in yards: the caster of the cast for ``cast_target``, the NPC with
     ``npc_game_id`` for ``aggro_holder``. With it, annotation judges a living blamed player as in or beyond
@@ -322,7 +346,11 @@ class Blame(_Strict):
     @model_validator(mode="after")
     def _required_param(self) -> Blame:
         param = _BLAME_PARAM[self.by]
-        if getattr(self, param) is None:
+        if param is None:
+            extra = sorted(self.model_fields_set - {"by"})
+            if extra:
+                raise ValueError(f"blame '{self.by}' takes no other key (got {', '.join(extra)})")
+        elif getattr(self, param) is None:
             raise ValueError(f"blame '{self.by}' requires '{param}'")
         return self
 
@@ -346,8 +374,13 @@ class FailureRule(_Strict):
             raise ValueError(f"failure rule '{self.rule}' requires '{param}'")
         if self.rule == "debuff_stacks_gt" and (self.value or 0) < 0:
             raise ValueError("failure rule 'debuff_stacks_gt' requires 'value' >= 0")
-        if (self.rule == "hit_while_aura") != (self.aura_ids is not None):
-            raise ValueError("'aura_ids' is required by failure rule 'hit_while_aura' and allowed on no other rule")
+        if (self.rule in _AURA_RULES) != (self.aura_ids is not None):
+            raise ValueError(
+                "'aura_ids' is required by failure rules 'hit_while_aura' and 'hit_without_aura' and allowed on no "
+                "other rule"
+            )
+        if self.rule == "hits_on_non_target" and (self.ms or 0) <= 0:
+            raise ValueError("failure rule 'hits_on_non_target' requires 'ms' > 0")
         if (self.rule == "aura_removed_by") != (self.ability_ids is not None):
             raise ValueError("'ability_ids' is required by failure rule 'aura_removed_by' and allowed on no other rule")
         if self.rule != "aura_removed_by" and (self.followed_by_ids is not None or self.on_death):
@@ -461,6 +494,7 @@ def _check_view(enc: EncounterFile, difficulty: Difficulty) -> None:
     for phase in phases[1:]:
         if phase.start.trigger == "pull":
             raise ValueError(f"{difficulty}: only the first phase may use trigger: pull (phase '{phase.id}')")
+    _check_repeat(phases, difficulty)
     owner: dict[int, str] = {}
     for mech in mechanics:
         for ability_id in mech.ability_ids:
@@ -469,6 +503,30 @@ def _check_view(enc: EncounterFile, difficulty: Difficulty) -> None:
                     f"{difficulty}: ability {ability_id} is in mechanics '{owner[ability_id]}' and '{mech.id}'"
                 )
             owner[ability_id] = mech.id
+
+
+def _check_repeat(phases: list[Phase], difficulty: Difficulty) -> None:
+    """The repeating phases are one run at the end of the list, after the first phase, with triggers that refire."""
+    flags = [p.repeat for p in phases]
+    if not any(flags):
+        return
+    first = flags.index(True)
+    if first == 0:
+        raise ValueError(f"{difficulty}: the first phase '{phases[0].id}' cannot repeat")
+    if not all(flags[first:]):
+        stray = next(p.id for p in phases[first:] if not p.repeat)
+        raise ValueError(f"{difficulty}: repeating phases must end the phase list; '{stray}' follows them")
+    for phase in phases[first:]:
+        if phase.start.trigger not in REPEATABLE_TRIGGERS:
+            raise ValueError(
+                f"{difficulty}: repeating phase '{phase.id}' uses trigger '{phase.start.trigger}'; a repeating "
+                f"phase needs one of {', '.join(sorted(REPEATABLE_TRIGGERS))}"
+            )
+
+
+def repeat_block(enc: EncounterFile) -> list[Phase]:
+    """The phases with ``repeat: true`` (one difficulty's view), in order; empty when none repeat."""
+    return [p for p in enc.phases if p.repeat]
 
 
 def _unique(label: str, ids: list[str], difficulty: Difficulty) -> None:

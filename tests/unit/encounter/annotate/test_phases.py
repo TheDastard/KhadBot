@@ -138,3 +138,108 @@ def test_repeated_transition_ids_count_once():
 def test_every_phase_detected():
     enc = enc_with({"trigger": "boss_cast", "ability_id": 500})
     assert _unmatched(enc, [(1, 0), (2, 10_000)]) == []
+
+
+# ===========================================================================
+# Phases WCL repeats: listed once per repeat, or a repeating block
+# ===========================================================================
+
+STAGE, BREAK = {"trigger": "wcl_phase", "phase": 1}, {"trigger": "wcl_phase", "phase": 2}
+# An alternating fight: stage (WCL 1) from the pull, intermissions (WCL 2) at 20 s and 50 s, stages again after.
+ALTERNATING = [(1, 0), (2, 20_000), (1, 30_000), (2, 50_000), (1, 55_000)]
+
+
+def enc_phases(*phases: tuple[str, dict, bool]):
+    rows = [{"id": "p1", "name": "P1", "start": {"trigger": "pull"}}]
+    rows += [{"id": pid, "name": pid, "start": t, **({"repeat": True} if r else {})} for pid, t, r in phases]
+    return parse_encounter(
+        {
+            "encounter_id": 1,
+            "name": "X",
+            "zone": {"id": 1, "name": "Z"},
+            "file_version": 1,
+            "phases": [{**p, "difficulties": ["heroic"]} for p in rows],
+        }
+    )
+
+
+LISTED = enc_phases(
+    ("int_1", BREAK, False),
+    ("p1_2", STAGE, False),
+    ("int_2", BREAK, False),
+    ("p1_3", STAGE, False),
+    ("int_3", BREAK, False),
+    ("p1_4", STAGE, False),
+)
+REPEATING = enc_phases(("intermission", BREAK, True), ("stage", STAGE, True))
+
+
+def _spans(enc, transitions):
+    pull = make_pull(phase_transitions=transitions)
+    spans = detect_phases(pull, EVENTS, enc, {BOSS})
+    return pull, spans
+
+
+def test_listed_repeats_not_reached_are_not_flagged():
+    # The pull ends in the third stage; the third intermission and fourth stage were never reached.
+    pull, spans = _spans(LISTED, ALTERNATING)
+    assert [s.phase_id for s in spans] == ["p1", "int_1", "p1_2", "int_2", "p1_3"]
+    assert unmatched_phase(spans, LISTED) == "int_3"
+    assert unmatched_phases(pull, spans, LISTED) == []
+
+
+def test_listed_repeat_reached_but_not_detected_is_flagged():
+    # The second intermission's trigger is a boss cast that never happens, so detection stops after p1_2,
+    # though WCL reports a second intermission and a third stage.
+    enc = enc_phases(
+        ("int_1", BREAK, False),
+        ("p1_2", STAGE, False),
+        ("int_2", {"trigger": "boss_cast", "ability_id": 999}, False),
+        ("p1_3", STAGE, False),
+        ("int_3", BREAK, False),
+    )
+    pull, spans = _spans(enc, ALTERNATING)
+    assert [s.phase_id for s in spans] == ["p1", "int_1", "p1_2"]
+    # p1_3 is the second listed WCL-1 phase and WCL 1 recurs twice after the pull: reached. int_3 is the second
+    # listed WCL-2 phase and WCL 2 occurs twice: reached. int_2 has another trigger; WCL saw fewer distinct IDs.
+    assert unmatched_phases(pull, spans, enc) == ["p1_3", "int_3"]
+
+
+def test_opening_transition_is_the_pull_phase():
+    # A transition at 0 ms is the pull start, not a repeat of the first stage.
+    pull, spans = _spans(LISTED, [(1, 0)])
+    assert unmatched_phases(pull, spans, LISTED) == []
+
+
+def test_repeating_block_gives_a_span_per_repeat():
+    pull, spans = _spans(REPEATING, ALTERNATING)
+    assert [(s.phase_id, s.start_ms, s.end_ms) for s in spans] == [
+        ("p1", 0, 20_000),
+        ("intermission", 20_000, 30_000),
+        ("stage", 30_000, 50_000),
+        ("intermission", 50_000, 55_000),
+        ("stage", 55_000, 60_000),
+    ]
+    assert unmatched_phase(spans, REPEATING) == "intermission"  # next in line
+    assert unmatched_phases(pull, spans, REPEATING) == []
+
+
+def test_repeating_block_after_listed_phases():
+    enc = enc_phases(("first_break", BREAK, False), ("stage", STAGE, True), ("intermission", BREAK, True))
+    pull, spans = _spans(enc, ALTERNATING)
+    assert [s.phase_id for s in spans] == ["p1", "first_break", "stage", "intermission", "stage"]
+    assert unmatched_phases(pull, spans, enc) == []
+
+
+def test_repeating_block_with_boss_casts():
+    enc = enc_phases(("cast_phase", {"trigger": "boss_cast", "ability_id": 500}, True))
+    _, spans = _spans(enc, [])
+    assert [(s.phase_id, s.start_ms) for s in spans] == [("p1", 0), ("cast_phase", 10_000), ("cast_phase", 30_000)]
+
+
+def test_repeating_phase_flagged_once_when_wcl_saw_more():
+    # The stage's repeat is a boss cast that never comes, so WCL's later intermission is missed.
+    enc = enc_phases(("intermission", BREAK, True), ("stage", {"trigger": "boss_cast", "ability_id": 999}, True))
+    pull, spans = _spans(enc, ALTERNATING)
+    assert [s.phase_id for s in spans] == ["p1", "intermission"]
+    assert unmatched_phases(pull, spans, enc) == ["intermission"]

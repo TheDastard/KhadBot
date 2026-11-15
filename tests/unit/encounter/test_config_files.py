@@ -551,6 +551,58 @@ class TestEncounterFile:
                 ),
                 "'blame' is required",
             ),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "hit_without_aura"}), "requires 'aura_ids'"),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "hit_without_aura", "aura_ids": []}),
+                "aura_ids",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={
+                        "rule": "hit_without_aura",
+                        "aura_ids": [1],
+                        "blame": {"by": "cast_target", "ability_id": 1},
+                    }
+                ),
+                "'blame' is required",
+            ),
+            (lambda d: d["mechanics"][0].update(failure={"rule": "hits_on_non_target"}), "requires 'ms'"),
+            (
+                lambda d: d["mechanics"][0].update(failure={"rule": "hits_on_non_target", "ms": 0}),
+                "'ms' > 0",
+            ),
+            (
+                lambda d: d["mechanics"][0].update(
+                    failure={"rule": "hits_on_non_target", "ms": 5_000, "aura_ids": [1]}
+                ),
+                "'aura_ids' is required",
+            ),
+            (lambda d: d["mechanics"][0].update(failure={"blame": {"by": "nobody"}, "rule": "any_hit"}), "'blame'"),
+            *(
+                (
+                    lambda d, extra=extra: d["mechanics"][0].update(
+                        failure={"rule": "per_cluster", "blame": {"by": "nobody", **extra}}
+                    ),
+                    rf"blame 'nobody' takes no other key \(got {next(iter(extra))}\)",
+                )
+                for extra in ({"ability_id": 1}, {"npc_game_id": 1}, {"ms": 5_000}, {"reach_yd": 10})
+            ),
+            (lambda d: d["phases"][1].update(repeat=True) or d["phases"][0].update(repeat=True), "first phase"),
+            (
+                lambda d: (
+                    d["phases"][1].update(repeat=True)
+                    or d["phases"].append({**d["phases"][1], "id": "p3", "repeat": False})
+                ),
+                "repeating phases must end the phase list; 'p3' follows them",
+            ),
+            *(
+                (
+                    lambda d, trigger=trigger: d["phases"][1].update(repeat=True, start=trigger),
+                    "repeating phase 'p2' uses trigger",
+                )
+                for trigger in ({"trigger": "time", "t_ms": 1_000}, {"trigger": "boss_hp_below", "pct": 50})
+            ),
+            (lambda d: d["phases"][1].update(repeat="often"), "repeat"),
             (lambda d: d["phases"][0].pop("difficulties"), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=[]), "difficulties"),
             (lambda d: d["mechanics"][0].update(difficulties=["mythic", "mythic"]), "duplicate difficulty"),
@@ -570,6 +622,34 @@ class TestEncounterFile:
         for blame in ({"by": "cast_target", "ability_id": 1}, {"by": "aggro_holder", "npc_game_id": 1}):
             enc_data["mechanics"][0]["failure"] = {"rule": "per_cluster", "blame": {**blame, "reach_yd": 17.5}}
             assert parse_encounter(enc_data).mechanics[0].failure.blame.reach_yd == 17.5
+
+    def test_new_rule_kinds_parse(self, enc_data):
+        rules = [
+            {"rule": "hit_without_aura", "aura_ids": [1, 2]},
+            {"rule": "hits_on_non_target", "ms": 6_000},
+            {"rule": "per_cluster", "blame": {"by": "nobody"}},
+        ]
+        for rule in rules:
+            enc_data["mechanics"][0]["failure"] = rule
+            failure = parse_encounter(enc_data).mechanics[0].failure
+            assert failure.model_dump(exclude_defaults=True, exclude_none=True) == rule
+
+    def test_repeating_phases_parse_and_unset_repeat_stays_out_of_the_hash(self, enc_data):
+        before = parse_encounter(enc_data)
+        assert "repeat" not in before.phases[1].model_dump()
+        enc_data["phases"][1]["repeat"] = False
+        assert encfile_hash(parse_encounter(enc_data)) == encfile_hash(before)
+        enc_data["phases"][1]["repeat"] = True
+        repeating = parse_encounter(enc_data)
+        assert repeating.phases[1].repeat
+        assert encfile_hash(repeating) != encfile_hash(before)
+
+    def test_repeat_is_checked_per_difficulty(self, enc_data):
+        # On heroic the repeating phase ends the list; the mythic-only phase after it doesn't break that.
+        enc_data["phases"] = [{**p, "difficulties": ["heroic", "mythic"]} for p in enc_data["phases"]]
+        enc_data["phases"][1]["repeat"] = True
+        enc_data["phases"].append({**enc_data["phases"][1], "id": "p3", "repeat": True, "difficulties": ["mythic"]})
+        assert parse_encounter(enc_data).for_difficulty("heroic").phases[-1].id == "p2"
 
     def test_same_id_on_disjoint_difficulties(self, enc_data):
         enc_data["phases"] += [{**p, "difficulties": ["heroic"]} for p in enc_data["phases"]]

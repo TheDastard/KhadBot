@@ -346,7 +346,7 @@
   "outcome": "wipe",
   "phase_reached": "p2",
   "produced_from": {
-    "annotation_version": "7",
+    "annotation_version": "8",
     "cutoff_fraction": "0.5",
     "defensive_cooldowns_hash": "14ce0bdd3652",
     "encfile_hash": "d0bb9f7022f3",

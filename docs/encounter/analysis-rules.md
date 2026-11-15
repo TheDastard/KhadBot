@@ -39,10 +39,12 @@ anomaly, who a failure is charged to, and how aggro and positions feed that. The
 - `GET_REPORT_META` requests `report.phases`, and each `Pull` carries its encounter's `wcl_phases` (id, name,
   is_intermission). `phase_reached` is the last detected encounter-file phase; without an encounter file it is WCL's
   name for the last transition, or its ID as text.
-- **`phase_trigger_unmatched:<id>`** (`annotate.unmatched_phases`) is raised for an undetected phase whose
-  `wcl_phase` trigger ID is among the pull's transitions; for phases with other triggers, in file order for as many
-  phases as the pull has distinct WCL transitions beyond those detected. An early wipe that never reached a phase is
-  not an anomaly, and a kill doesn't raise it by itself.
+- **`phase_trigger_unmatched:<id>`** (`annotate.unmatched_phases`) is raised for an undetected `wcl_phase` phase
+  when its WCL phase ID occurs after 0 ms at least as often as phases are listed with that ID up to it, and once
+  for a `repeat: true` phase whose ID occurs more often than spans were detected for it. Phases with other
+  triggers are judged in file order, for as many as the pull has distinct WCL transitions beyond those detected;
+  repeating ones are not judged. An early wipe that never reached a phase is not an anomaly, and a kill doesn't
+  raise it by itself.
 - **`missing_data_type:<T>`** checks only DamageTaken, Casts and Healing, which every real pull has; zero Deaths,
   Interrupts or Dispels rows are legitimate.
 - **`unregistered_damage:<pct>`** is raised only when an encounter file exists and the share is at least 10%.
@@ -55,9 +57,10 @@ and `MechanicCluster.failed_players` count `blamed_id`, and an `event:` ref on a
 Failures are charged by one of three kinds of evidence:
 
 1. **The player hit**: `any_hit`, `hits_per_cluster_gt`, `hit_amount_gt`, `aura_applied`, `debuff_duration_gt`,
-   `hit_while_aura`.
+   `hit_while_aura`, `hit_without_aura`, `hits_on_non_target`.
 2. **No one**: `not_interrupted` (the enemy cast row), `soak_count_lt` (the cluster's first row),
-   `debuff_stacks_gt`, until raid-plan assignments exist.
+   `debuff_stacks_gt`, until raid-plan assignments exist; and `per_cluster` with `blame: {by: nobody}`, for
+   occurrences that are the whole raid's failure.
 3. **The player responsible for an NPC**, from the Threat data only: `per_cluster` with `blame`, and
    `hits_on_non_tank`.
 
@@ -71,6 +74,7 @@ The rules that need explaining:
     `ms` before (from `annotate.aggro_events`, none after the NPC's death). It matches by game ID, since a boss can
     have two actors with one name. This is the **last** aggro holder with no quiet rule, because punishments for
     nobody being in melee happen after the NPC stops swinging.
+  - `{by: nobody}` charges no one and records no blame context; it takes no other key.
   - With no match the failure still counts, charged to no one.
 - **`hit_amount_gt {value}`**: each hit above `value` before mitigation (`unmitigated`, else `amount + absorbed`).
 - **`aura_applied`**: each application of the mechanic's aura on a player. Not a hit; belongs to no cluster.
@@ -83,7 +87,14 @@ The rules that need explaining:
 - **`hit_while_aura {aura_ids}`**: each player hit while carrying any listed aura, judged once per cluster at the
   first hit. An aura is active from its apply (or a refresh or stack with nothing open) to the matching remove,
   inclusive, or to the pull end; a remove with nothing before it counts from the pull start. `aura_ids` is required
-  here and rejected elsewhere.
+  here and on `hit_without_aura`, and rejected elsewhere.
+- **`hit_without_aura {aura_ids}`**: the reverse: each player hit by the mechanic's damage while carrying none of
+  the listed auras, with the same aura spans. There is no grace window, so damage landing just after the aura's
+  remove counts as unprotected.
+- **`hits_on_non_target {ms}`**: per cluster, the latest completed enemy `cast` of one of the mechanic's own
+  `ability_ids` with a friendly target, in the `ms` up to the cluster's first hit, names the target; every other
+  player hit is a failure, judged once per cluster. `begincast` rows carry no target and don't count, and a
+  cluster with no such cast is not judged. The completed cast keeps its target through a taunt during the cast.
 
 ## Aggro
 

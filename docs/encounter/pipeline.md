@@ -152,11 +152,13 @@ fingerprint, so each pull is re-normalized by its next process job.
 files and the friendly-damage registry are not used here.
 
 - **Phases:** ordered triggers (`pull`, `boss_cast`, `boss_aura_applied`, `boss_hp_below`, `time`, `wcl_phase`)
-  become spans; detection stops at the first trigger that never fires.
+  become spans; detection stops at the first trigger that never fires. Phases marked `repeat: true` end the list
+  and are walked again after the last of them fires, so a repeating phase has one span per repeat under one ID.
 - **Mechanics and damage windows:** `ability_id` maps to `mechanic_id` and `window_id`; consecutive hits within
   `cluster_window_ms` form a cluster or a window occurrence.
-- **Failures and blame:** each mechanic's failure rule marks failure rows and the player charged (`blamed_id`).
-  `per_cluster` blame also records where that player was: in or beyond reach, dead, or without a position.
+- **Failures and blame:** each mechanic's failure rule marks failure rows and the player charged (`blamed_id`,
+  null when no one is, as for `per_cluster` with `by: nobody`). `per_cluster` blame on `aggro_holder` or
+  `cast_target` also records where that player was: in or beyond reach, dead, or without a position.
 - **Wipe cutoff:** when cumulative player deaths reach `ceil(cutoff_fraction × raid size)`; kills have none.
 
 The cached frame is the whole event frame plus ten columns (`phase_id`, `mechanic_id`, `cluster_id`, `is_failure`,

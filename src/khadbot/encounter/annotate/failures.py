@@ -4,8 +4,9 @@ encounter/annotate/failures.py
 Failure rules: which rows of a mechanic are failures, and who is charged with each.
 
 Most rules charge the player hit. ``not_interrupted``, ``soak_count_lt`` and ``debuff_stacks_gt`` charge no
-one. ``per_cluster`` charges the player its ``blame`` spec points at, and ``hits_on_non_tank`` judges each
-player against the aggro holder of the NPC instance that hit them. ``aura_removed_by`` charges the player who lost the
+one. ``per_cluster`` charges the player its ``blame`` spec points at (no one with ``by: nobody``),
+``hits_on_non_tank`` judges each player against the aggro holder of the NPC instance that hit them, and
+``hits_on_non_target`` against the target of the enemy cast that started the occurrence. ``aura_removed_by`` charges the player who lost the
 aura, such as the carrier of an egg that a hit broke. Who an NPC is attacking comes from the Threat data
 (``frame.aggro_events``): its melee swings name its target, and a taunt debuff landing on it hands it to the
 taunting player. ``per_cluster`` blame and ``hits_on_non_tank`` read the NPC's latest such event.
@@ -102,6 +103,8 @@ def _blamed(
     The player ``blame`` points at for an occurrence whose first hit is at ``t0`` (None if nobody), and the
     NPC actor IDs whose reach applies: ``npc_ids`` for ``aggro_holder``, the cast's caster for ``cast_target``.
     """
+    if blame.by == "nobody":
+        return None, set()
     if blame.by == "aggro_holder":
         return _aggro_holder(events, npc_ids, t0, blame.ms), npc_ids
     cand = frame.filter(
@@ -115,6 +118,11 @@ def _blamed(
         return None, set()
     target, caster = cand.sort("seq").select("target_id", "source_id").row(-1)
     return target, {caster}
+
+
+def _first_hits(hits: pl.DataFrame) -> pl.DataFrame:
+    """Each player's first hit in each cluster: rules that judge a player once per occurrence look at it."""
+    return hits.sort("seq").filter(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id") == 1)
 
 
 def _occurrences(frame: pl.DataFrame, mech: Mechanic) -> list[tuple[int, int]]:
@@ -196,15 +204,48 @@ def mechanic_failures(
         new_occurrence = (pl.col("t_ms").diff() > mech.cluster_window_ms).fill_null(True)
         return dict.fromkeys(stacks.filter(new_occurrence)["seq"].to_list())
 
-    if rule.rule == "hit_while_aura":
-        # Each player is judged once per cluster, at their first hit, against the listed auras' activity.
+    if rule.rule in ("hit_while_aura", "hit_without_aura"):
+        # Each player is judged once per cluster, at their first hit, against the listed auras' activity: a
+        # failure with one active (hit_while_aura) or with none active (hit_without_aura).
         assert rule.aura_ids is not None  # enforced by FailureRule
         spans = _aura_spans(frame, rule.aura_ids, duration_ms)
-        first_hits = hits.sort("seq").filter(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id") == 1)
+        want = rule.rule == "hit_while_aura"
         return {
             seq: target
-            for seq, t, target in first_hits.select("seq", "t_ms", "target_id").rows()
-            if any(start <= t <= end for start, end in spans.get(target, ()))
+            for seq, t, target in _first_hits(hits).select("seq", "t_ms", "target_id").rows()
+            if any(start <= t <= end for start, end in spans.get(target, ())) == want
+        }
+
+    if rule.rule == "hits_on_non_target":
+        # Each player is judged once per cluster, at their first hit, against the friendly target of the latest
+        # enemy cast of one of the mechanic's abilities in the `ms` up to the cluster's first hit. The cast row
+        # (logged as the cast completes; its begincast has no target) names the player the cast was aimed at,
+        # who stays its target when the other tank taunts during the cast. A cluster with no such cast is not
+        # judged.
+        casts = (
+            frame.filter(
+                type_is("cast")
+                & ~pl.col("source_friendly")
+                & pl.col("target_friendly")
+                & pl.col("ability_id").is_in(mech.ability_ids)
+            )
+            .sort("seq")
+            .select("t_ms", "target_id")
+            .rows()
+        )
+        window = rule.ms or 0
+        target_of: dict[int, int | None] = {}
+        for _, t0, cluster in (
+            hits.group_by("cluster_id")
+            .agg(pl.col("seq").min(), pl.col("t_ms").min())
+            .select("seq", "t_ms", "cluster_id")
+            .rows()
+        ):
+            target_of[cluster] = next((tgt for t, tgt in reversed(casts) if t0 - window <= t <= t0), None)
+        return {
+            seq: target
+            for seq, cluster, target in _first_hits(hits).select("seq", "cluster_id", "target_id").rows()
+            if target_of.get(cluster) is not None and target != target_of[cluster]
         }
 
     if rule.rule == "aura_removed_by":
@@ -252,9 +293,9 @@ def mechanic_failures(
             )
             .sort("_at")
         )
-        first_hits = hits.sort("seq").filter(pl.int_range(1, pl.len() + 1).over("cluster_id", "target_id") == 1)
         judged = (
-            first_hits.with_columns(pl.col("source_instance").fill_null(-1).alias("_inst"))
+            _first_hits(hits)
+            .with_columns(pl.col("source_instance").fill_null(-1).alias("_inst"))
             .sort("t_ms")
             .join_asof(
                 holders,
@@ -347,9 +388,15 @@ def blame_context(
     hit and no cast or resurrect since. Otherwise their latest sample at or before the hit, at most
     ``BLAME_POSITION_MAX_AGE_MS`` old, against the latest sample of the NPCs whose own latest sample is on the
     player's map: ``beyond_reach`` or ``in_reach`` against the blame's ``reach_yd``, ``alive`` when it has none,
-    ``no_position`` when the player has no sample or no NPC is on their map. Other mechanics get no context.
+    ``no_position`` when the player has no sample or no NPC is on their map. Other mechanics, and ``per_cluster``
+    with ``by: nobody`` (nobody to place), get no context.
     """
-    if mech.failure is None or mech.failure.rule != "per_cluster" or mech.failure.blame is None:
+    if (
+        mech.failure is None
+        or mech.failure.rule != "per_cluster"
+        or mech.failure.blame is None
+        or mech.failure.blame.by == "nobody"
+    ):
         return {}
     blame = mech.failure.blame
     npc_ids = _blame_npcs(blame, game_ids)
