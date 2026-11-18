@@ -19,7 +19,7 @@ How to add an entry:
 
 ## encounter/spike-logs
 
-**Proposed, not implemented.** These come from the log investigations recorded in `docs/decisions.md` ("Log
+**Proposed, not implemented.** These come from the log investigations recorded in `docs/encounter/recorded-nights.md` ("Log
 investigations", 2026-10-16). Apply them to the plan only once the code exists. Until then, the plan should only
 mention them as open work.
 

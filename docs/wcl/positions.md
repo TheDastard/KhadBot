@@ -21,7 +21,7 @@
 ## Position data
 
 Measured on the 47 Heroic Ula'tek pulls from the raw pages in `KHADBOT_DATA_DIR`, with scratch scripts outside the
-codebase and no API calls. The decision that follows from it is in `docs/decisions.md`.
+codebase and no API calls. What KhadBot does with it is in `docs/encounter/analysis-rules.md` (positions).
 
 ### What carries a position
 

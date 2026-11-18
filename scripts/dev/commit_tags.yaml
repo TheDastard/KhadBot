@@ -25,7 +25,7 @@ tags:
     paths:
       - src/khadbot/encounter/*.py
       - tests/unit/encounter/*.py
-      - docs/encounter-pipeline.md
+      - docs/encounter/**
       - docs/legacy-comparison.md
     subtags:
       ingest:

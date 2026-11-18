@@ -13,7 +13,7 @@ on the new limits it is user-eligible report data.
   `rateLimitData.currentRequest` asked in the same request (`application` 0, `user` 2.01, `total` 2.01, no database
   points; `access-and-points.md`, "Reading the counter"). The lookup reserves `KHADBOT_LOOKUP_POINTS` (2) from the
   budget and settles that estimate.
-- **Caching.** The answer is cached as `raw/<code>/report.json` in the raw page cache (`docs/encounter-pipeline.md`,
+- **Caching.** The answer is cached as `raw/<code>/report.json` in the raw page cache (`docs/encounter/pipeline.md`,
   stage 1), with two keys of KhadBot's own: `khadbotFetchedWith` (`"user"` or `"app"`: which kind of token fetched
   it) and `khadbotFetchedAt` (when). Ingest never rewrites a cached copy. The lookup serves it while it stands: for
   good when it was fetched at least `KHADBOT_LOOKUP_SETTLED_AFTER_S` (six hours) after the log's last fight, else
@@ -88,7 +88,7 @@ Players count stages, not IDs: "phase 3" on Ula'tek means phase ID 4. On Heroic 
 
 ### Casts and auras
 
-From the 47 Heroic Ula'tek pulls; the encounter details are in `docs/decisions.md`, "Log investigations".
+From the 47 Heroic Ula'tek pulls; the encounter details are in `docs/encounter/recorded-nights.md`, "Log investigations".
 
 - **A channeling NPC logs one `cast`, then nothing until the channel ends.** Its damage carries on, and some
   damage is never cast at all (an enrage). A quiet enemy Casts page doesn't mean the NPC did nothing:

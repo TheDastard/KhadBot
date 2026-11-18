@@ -227,7 +227,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   Hit rows give exact positions; other samples are 0.1 s old at the median and 0.5 s at p95
   (`docs/wcl/positions.md`, "Position data").
 - **Wrong-target damage.** Show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
-  Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/decisions.md`, "Log
+  Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/encounter/recorded-nights.md`, "Log
   investigations"; proposed contract text in `docs/plan-changes.md` under `encounter/spike-logs`): fetch
   friendly DamageDone for the amounts and not the Enemies side of Threat; add a `kill_targets` block to encounter
   files (spans from a damage window, a phase or an NPC's lifetime), an `off_target_share_gt {value}` failure rule
@@ -247,7 +247,7 @@ https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
   findings it is handed if `/review` should report per-pull progress too.
 - **The API doesn't read the read models yet.** `night.SqlSource` serves the report detail and night summary
   from the read-model tables, but `create_app` uses it only when a caller passes `read_source`; the hosted API
-  should pass `SqlSource(get_pool())` (`docs/encounter-pipeline.md`, stage 9).
+  should pass `SqlSource(get_pool())` (`docs/encounter/pipeline.md`, stage 9).
 - **Read-model query plans not yet captured.** The plans of the report, night and progression queries have not
   been read on a seeded database; `pytest tests/integration/hosted -m hosted -s -k query_plans` prints them. Check
   that progression uses `pulls_encounter` once a database holds more than a few nights.
@@ -547,7 +547,7 @@ human task table in `docs/decisions.md`).
 - **Soul Constrictor** soakers are an undetected failure. The `hit_while_aura` rule exists, but the logs don't
   show who soaked while debuffed: Soul Constrictor (1300685) is never reapplied to a player who has it (0 of 2,400
   applications over 209 Coils), every player hit takes the same amount, and the share debuffed per Coils ranges
-  from 0 to 95% (`docs/decisions.md`, "Stack and aura failure rules"). It needs another signal, such as positions
+  from 0 to 95% (`docs/encounter/analysis-rules.md`, "Stack and aura failure rules"). It needs another signal, such as positions
   at the impact, or a soak assignment from a raid plan.
 - **Rage of the Shackled's cast is not in the file.** The channel's cast (1286860) and the Venomous Heart's
   cast (1299526) aren't listed, so the filtered enemy Casts page misses both; the unfiltered page has all 55 of
@@ -579,7 +579,7 @@ human task table in `docs/decisions.md`).
 
 - 2026-10-16: the log didn't lose the enemy casts before the enrage; the boss stopped casting. On
   `H7z1fqDXjRTFnbtg:15` Ula'tek channels Rage of the Shackled from 573.7 to 593.7 s and casts nothing during any
-  channel on record; the enrage at 598.8 s is never cast (`docs/decisions.md`, "Log investigations").
+  channel on record; the enrage at 598.8 s is never cast (`docs/encounter/recorded-nights.md`, "Log investigations").
   What's left is under Ula'tek.
 - 2026-10-11: the legacy comparison is in `docs/legacy-comparison.md`.
 - 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
