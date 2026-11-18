@@ -18,6 +18,10 @@ Three kinds of doc, each with its own rules:
 - **Context for Claude**: `CLAUDE.md`, `.claude/rules/` and `.claude/skills/`. These are loaded into sessions, so
   every line costs tokens on every task it reaches.
 
+`scripts/dev/check_docs.py` (`mise run lint:docs`, and part of `mise run check` through the unit tests) enforces
+the limits below that a script can check: sizes, decision rows, the Resolved section, rule scopes and that every
+relative link and backticked `docs/` or `.claude/` path exists.
+
 ## Keeping docs tight
 
 - **Write for lookup.** Lead with the fact; cut preamble, recaps and "as described above". A reader skims for one

@@ -36,7 +36,7 @@ Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `m
 
 | Task | Command |
 |---|---|
-| Gate for every commit: ruff, mypy, layer rule, unit tests | `mise run check` |
+| Gate for every commit: ruff, mypy, layer rule, unit tests (which include the docs check, `mise run lint:docs`) | `mise run check` |
 | Web gate: api-client drift, ESLint, tsc, Vitest / both gates | `mise run check:web` / `mise run check:all` |
 | Unit tests (add `--no-cov` for speed) | `mise run test:unit` or `uv run pytest tests/unit --no-cov` |
 | Integration tests (needs Ollama or Groq) / golden evals (Anthropic; costs money) | `mise run test:integ` / `mise run test:eval` |

@@ -110,6 +110,10 @@ run = "uv run mypy src"
 description = "Check the Python layer rule with import-linter"
 run = "uv run lint-imports"
 
+[tasks."lint:docs"]
+description = "Check doc sizes, decision rows, rule scopes and doc references (also run by the unit tests)"
+run = "uv run python scripts/dev/check_docs.py"
+
 [tasks."lint:commits"]
 description = "Check this branch's commit messages against the commit rules and the tag registry"
 run = "uv run python scripts/dev/check_commit_msg.py --range refs/remotes/origin/main..HEAD"
