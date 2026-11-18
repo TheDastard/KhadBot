@@ -1,3 +1,8 @@
+---
+name: parallel-work
+description: Coordinate subagents that each work in their own git worktree. Covers when plan tasks go to subagents, creating each task's worktree from the main checkout, what every brief must tell the subagent, integrating their branches one at a time, proving every commit before landing, and removing every worktree and branch afterwards. Use before spawning subagents for plan tasks or any split of work across subagents.
+---
+
 # Parallel work with subagents
 
 How a session that coordinates subagents (the orchestrator) gives each one its own worktree, integrates their

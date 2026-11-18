@@ -4,119 +4,48 @@ Agentic World of Warcraft assistant. It answers questions about a player's chara
 
 ## Architecture
 
-KhadBot has two modes. The user picks one explicitly with `/mode`; there is no LLM router.
+Two modes, picked by the user with `/mode`; there is no LLM router. `session.py` holds the `Session` and `run_turn()`, which routes each message; the CLI is UI only.
 
-- **coach**: a conversational performance coach built with `langchain.agents.create_agent`. Its base prompt, tool subset and personas are declared in `config/agents/coach.yaml`.
-- **encounter**: encounter review over structured WCL data. The pipeline:
-  1. **Ingest** fetches paginated WCL events into a raw page cache, then normalizes them into one parquet file per pull.
-  2. **Annotate** tags events using an encounter file (phases, mechanics, failure rules, damage windows) and the defensive cooldown registry.
-  3. **Digest** builds a deterministic summary per pull.
-  4. **Analyst**, a LangGraph subgraph, investigates through read-only query tools and submits findings with evidence refs. A verify step rejects any finding whose refs don't resolve or whose numbers don't match the records.
-  5. **Findings** are cached per pull, keyed by data, config and prompt hashes.
-  6. **Conversation**, the user-facing agent, answers from findings and asks the analyst for more when needed.
+- **coach**: a conversational coach built with `langchain.agents.create_agent`, declared in `config/agents/coach.yaml`.
+- **encounter**: review over structured WCL data. Ingest fetches WCL events into a raw page cache and normalizes them to parquet per pull; annotate tags them from an encounter file and the cooldown registries; digest builds a deterministic summary; the analyst (a LangGraph subgraph) investigates through read-only query tools and submits findings with evidence refs, which a verify step checks against the records; findings are cached per pull. `docs/encounter/` describes every stage.
 
-  A raid plan can optionally be parsed, confirmed by the user, and scored against pulls.
+Two deployment modes, chosen by configuration and unrelated to `/mode`:
 
-KhadBot runs in one of two deployment modes, chosen by configuration and unrelated to `/mode`:
+- **Local** (default): the CLI on one machine. Blobs are files under `KHADBOT_DATA_DIR` (default `.khadbot_data/`), findings are SQLite, no auth, no Docker.
+- **Hosted** (`KHADBOT_MODE=hosted`): findings and read models in Postgres, blobs in an S3-compatible bucket, a job queue, WCL sign-in. `docs/hosting/` describes it.
 
-- **Local mode** (the default) is the CLI on one machine. It needs no Postgres, object storage or Docker: blobs are files under `KHADBOT_DATA_DIR`, findings are SQLite, there is no auth.
-- **Hosted mode** (`KHADBOT_MODE=hosted`, with `DATABASE_URL` and the `KHADBOT_S3_*` settings) keeps findings and read models in Postgres and blobs in an S3-compatible bucket.
+Every store has a local and a hosted implementation behind one interface; `khadbot/wiring.py`, the composition root, picks them. Nothing below the entry points reads the mode.
 
-Every store has a local and a hosted implementation behind one interface, and `khadbot/wiring.py`, the composition root, picks them. Nothing below the entry points reads the mode.
+## Where things are
 
-`session.py` holds the `Session` (mode, thread ID, persona) and `run_turn()`, which sends each message to the right mode. The CLI is UI only: it calls `run_turn` and registered command handlers.
-
-## Layout
-
-```
-src/khadbot/
-  main.py            # entry point: cli, ingest, digest, serve, api, migrate, worker subcommands
-  wiring.py          # composition root: builds the stores for local or hosted mode
-  errors.py          # exceptions more than one layer raises or catches (ConfigurationError)
-  session.py         # Mode, Session, run_turn()
-  config.py          # frozen dataclasses read from env; get_config() / reset_config()
-  llm_factory.py     # get_llm(provider=None, *, role=None)
-  agent/             # coach agent, agent/persona YAML loading, prompt assembly
-    tools/           # the agent's tool registry (empty until tools over cached data return)
-  encounter/         # models, config_files, registry_candidates, store, digest, evidence, findings, records_store;
-                     # conversation and plan to come
-    ingest/          # WCL queries, paged fetch and raw cache, normalize, ingest_report, offline recorded ingest
-    annotate/        # annotated frame, phases, failure rules and blame, annotate(), annotation cache
-    analysis/        # deaths, mechanics, cooldowns, aggro
-    analyst/         # query tools, prompts, verify rules, versioning, analyst graph, review graph
-  storage/           # BlobStore protocol: local directory, S3-compatible bucket, zstd-compressing wrapper
-  db/                # hosted mode Postgres: pool, migration runner and migrations, findings store, read models
-  jobs/              # job specs and functions (ingest, process, review), progress, token resolution; hosted queue
-                     # (queue.py, the jobs table in status.py, typed failures, cancel and progress writing)
-  auth/              # hosted sign-in: WCL OAuth routes, sessions, encrypted WCL tokens, report access (can_read)
-  wcl/               # the shared WarcraftLogs client
-  simc/              # SimC generated client data: effect codes, table parser, pinned download
-  cli/               # Rich + prompt_toolkit REPL
-    commands/        # slash-command handlers per mode
-  api/               # read-only dashboard API (FastAPI): create_app, /v1 routes, schemas, night summary, raids/ (report lookup, server list, guild and character search)
-config/
-  agents/            # coach.yaml, encounter.yaml
-  personas/          # khadgar, thrall, xalatath
-  templates/         # Jinja system-prompt template
-  encounters/        # <zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml, entries per difficulty
-  registries/        # defensive_cooldowns.yaml, friendly_damage.yaml
-contracts/           # openapi.json generated from the API (the frontend's types come from it)
-scripts/             # dev/ (setup, dev loop runner, clean, contract generator), data/ (fixture data builder, WCL fixture
-                     # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
-apps/                # TypeScript apps (pnpm workspace): web/ (Next.js dashboard; e2e/ holds Playwright); desktop/ and discord/ later
-packages/            # api-client/: types generated from contracts/openapi.json and the typed fetch client
-deploy/              # Dockerfile, compose stack, its env file and the dev loop's env example (dev.env.example); docs/hosting/ describes running and configuring them
-tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
-docs/decisions.md    # design decisions and their reasons
-docs/encounter/      # encounter mode: running the stages, pipeline, analysis rules, analyst, recorded nights
-docs/follow-ups.md   # open work: encounter system and per-encounter gaps
-docs/game-art.md     # where game images and spell tooltips come from (Wowhead in the browser, Blizzard planned)
-docs/wcl/            # the WarcraftLogs API as KhadBot uses it: access and points, report data, search, costs, replay (README indexes it)
-```
-
-Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignored): raw WCL pages, parquet events and per-pull position tables, annotations, persisted pull records, and the findings and checkpoint SQLite databases. Hosted mode (`KHADBOT_MODE=hosted`, `KHADBOT_STORAGE=s3`) keeps the same objects in an S3-compatible bucket and findings and read models in Postgres.
+- `src/khadbot/`: `main.py` (subcommands), `wiring.py`, `session.py`, `config.py`, `llm_factory.py`, and the packages `agent/`, `encounter/` (`ingest/`, `annotate/`, `analysis/`, `analyst/`), `storage/`, `db/`, `jobs/`, `auth/`, `wcl/`, `simc/`, `cli/`, `api/`.
+- `config/`: agents, personas, prompt templates, encounter files (`encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml`), registries, model prices.
+- `apps/web/` (Next.js dashboard) and `packages/api-client/` (generated from `contracts/openapi.json`) form a pnpm workspace.
+- `deploy/` (image, compose stack), `scripts/` (`dev/`, `data/`, `wcl/`), `tests/` (`unit/`, `integration/`, `eval/`, `fixtures/`, `golden/`, `helpers/`).
+- Docs: `docs/decisions.md` (decisions and why), `docs/follow-ups.md` (open work), and the reference docs `docs/encounter/`, `docs/hosting/`, `docs/wcl/`, `docs/game-art.md`.
 
 ## Design reference
 
-- The design and its data contracts come from the "KhadBot Encounter Review Refactor" plan: https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE (read it with the Artifact tool). Section 6 defines the models, file formats, evidence refs and verify rules.
-- `docs/decisions.md` records each design decision and why it was made. When you change a decision, update that file in the same change.
-- `docs/follow-ups.md` tracks open work that is not a plan task yet. Add a gap you are not fixing; remove it in the commit that fixes it.
-- Reference docs (`docs/wcl/`, `docs/game-art.md`, `docs/encounter/`, `docs/hosting/`) describe how things are now; `.claude/rules/docs.md` says how to update them.
-- Path-scoped rules in `.claude/rules/` add detail for the area you are working in.
+- Contracts come from the [Encounter Review Refactor plan](https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE) (read it with the Artifact tool); section 6 defines the models, file formats, evidence refs and verify rules.
+- When you make or change a decision, update `docs/decisions.md` in the same change. Add a gap you are not fixing to `docs/follow-ups.md`; delete it in the commit that fixes it.
+- `.claude/rules/` holds path-scoped rules for each area; `.claude/rules/docs.md` says how to write and update docs.
 
 ## Commands
 
-Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `mise tasks` lists them all. Each runs
-the uv command beside it, which also works on its own. Variants of one task share a `group:` prefix (`test:unit`,
-`install:cli`); name new tasks the same way.
+Tasks live in `mise.toml` and run the same from cmd, PowerShell and Git Bash; `mise tasks` lists them all, each with the uv command it runs. Variants share a `group:` prefix (`test:unit`, `install:cli`). A new machine runs `scripts/dev/setup.ps1` once; after that `uv run` keeps `.venv` in sync.
 
-A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Python and pnpm dependencies, hooks, `.env`, `deploy/dev.env`, a check that Docker's engine is running, and the dev loop's Postgres and SeaweedFS images; `-Full` adds Docker Desktop and WSL 2, Playwright's Chromium and the GitHub CLI, which `-WithDocker`, `-WithPlaywright` and `-WithGitHubCli` add one at a time). After that
-`uv run` keeps `.venv` in sync, so the install tasks are only for a fresh or lighter `.venv`. New worktrees need no
-`mise trust`.
-
-| Task | mise | uv |
-|---|---|---|
-| Install everything | `mise run install` | `uv sync --extra dev` |
-| Install the TypeScript workspace / Playwright's Chromium | `mise run install:web`, `mise run install:playwright` | `pnpm install --frozen-lockfile` |
-| Lint + typecheck + layer rule + unit tests (gate for every commit) | `mise run check` | `uv run ruff check src tests scripts && uv run mypy src && uv run lint-imports && uv run pytest tests/unit` |
-| Layer rule only | `mise run lint:imports` | `uv run lint-imports` |
-| Commit messages on this branch / list the commit tags | `mise run lint:commits`, `mise run lint:tags` | `uv run python scripts/dev/check_commit_msg.py --range refs/remotes/origin/main..HEAD` |
-| Unit tests | `mise run test:unit` | `uv run pytest tests/unit` |
-| Integration tests (needs Ollama or Groq) | `mise run test:integ` | `uv run pytest tests/integration` |
-| Golden evals (Anthropic; costs money) | `mise run test:eval` | `uv run pytest tests/eval -m eval -s --no-cov` |
-| Web gate: api-client drift check, ESLint, tsc, Vitest | `mise run check:web` | `pnpm run check` |
-| Both gates (a change that touches Python and the web) | `mise run check:all` | `mise run check`, then `mise run check:web` |
-| Regenerate the API client's types (after `gen:contracts`) | `mise run gen:types` | `pnpm --filter @khadbot/api-client gen` |
-| Web end-to-end tests: on the dev loop with SYNTH01 seeded; on `main.py serve` (docs/hosting/local.md, "The web app") | `mise run test:e2e`, `mise run test:e2e:local` | `pnpm --filter @khadbot/web e2e`, `... e2e:local` |
-| Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
-| Run the CLI | `mise run cli` | `uv run python main.py cli` |
-| Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload, the web dev server (needs Docker; ports 8000 and 3000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |
-| Dev loop pieces: `dev:infra`, `dev:api`, `dev:worker`, `dev:web`, `dev:seed -- --only CODE`, `dev:smoke` | `mise run dev:<name>` | `uv run python scripts/dev/dev.py <name>` |
-| Compare `.env` and `deploy/dev.env` with their examples by name / append the missing names, commented out | `mise run env:check`, `mise run env:fix` | `uv run python scripts/dev/check_env.py [--fix]` |
-| Remove caches and build output | `mise run clean` | `scripts/dev/clean.ps1` |
-| Same, then delete `.venv` / also every `node_modules` and the fixture data | `mise run clean:all`, `mise run clean:deps` | `scripts/dev/clean.ps1 -Venv`, `... -All` |
-
-Add `--no-cov` to pytest for faster local runs; coverage is on by default in `addopts`.
+| Task | Command |
+|---|---|
+| Gate for every commit: ruff, mypy, layer rule, unit tests | `mise run check` |
+| Web gate: api-client drift, ESLint, tsc, Vitest / both gates | `mise run check:web` / `mise run check:all` |
+| Unit tests (add `--no-cov` for speed) | `mise run test:unit` or `uv run pytest tests/unit --no-cov` |
+| Integration tests (needs Ollama or Groq) / golden evals (Anthropic; costs money) | `mise run test:integ` / `mise run test:eval` |
+| Regenerate the API contract, then the client's types | `mise run gen:contracts`, `mise run gen:types` |
+| Format | `mise run format` |
+| Run the CLI | `mise run cli` |
+| Dev loop: Postgres and bucket in Docker, API and worker native with reload, web dev server | `mise run dev:all` |
+| Web end-to-end tests (dev loop with SYNTH01 seeded / `main.py serve`) | `mise run test:e2e` / `mise run test:e2e:local` |
+| Check `.env` against `.env.example` | `mise run env:check` |
 
 ## Gotchas
 
@@ -126,24 +55,20 @@ Add `--no-cov` to pytest for faster local runs; coverage is on by default in `ad
 - **Python** is 3.14 in `.venv`, pinned by `.python-version`; `requires-python = ">=3.12,<3.15"`; ruff and mypy target 3.12. Don't use syntax newer than 3.12.
 - **uv owns `.venv`.** Don't add Python to `mise.toml`; mise only pins Node and pnpm and runs tasks.
 - **Package name** is `khadbot`, all lowercase, on disk and in git. Windows ignores case but Linux and CI don't, so never create a differently cased path.
-- **Git hooks are shared by every worktree.** `pre-commit install` writes the path of the Python that ran it into `.git/hooks`, so run it only from the main checkout; installed from a worktree, the hooks break for everyone once that worktree is removed. `scripts/dev/setup.ps1` installs them from the main checkout and only checks them in a worktree.
-- **Worktrees have no `.env`.** Tests still pass in one because `load_dotenv` walks up to the main checkout's `.env`; CI has none and sets placeholder WCL credentials instead. Never copy `.env` into a worktree.
+- **Git hooks are shared by every worktree.** `pre-commit install` writes the path of the Python that ran it into `.git/hooks`, so run it only from the main checkout.
+- **Worktrees have no `.env`.** Tests still pass in one because `load_dotenv` walks up to the main checkout's `.env`; CI sets placeholder WCL credentials instead. Never copy `.env` into a worktree.
 - **CI action tags.** Some actions publish no major-version tag (`astral-sh/setup-uv@v10` doesn't resolve); pin those to a full release. A job failing at "Set up job" usually means an action reference didn't resolve.
 
 ## Code conventions
 
-- Layers: each package imports only the packages below it, enforced by `import-linter` (`mise run lint:imports`, part of `mise run check`) with no exceptions listed. From the top: `main`; `api` and `cli`; `jobs` and `agent`; `wiring`; `db`; `encounter`; `wcl` and `simc`; then `config`, `errors`, `storage` and `llm_factory`. `encounter` defines the interfaces `db` implements; only `wiring` and the entry points choose between local and hosted. A new top-level package is added to the contract in `pyproject.toml` in the same commit.
-- Optional dependency groups: core holds what local ingest, digest and the analyst need; `cli`, `api` (FastAPI, uvicorn), `hosted` (Postgres, S3, zstd) and `providers` (OpenAI, Groq, Ollama) are extras, and `dev` includes them all. Import an optional library only on the path that needs it, and when it is missing raise an error that names the group (`errors.missing_group_message`). Add one with `uv add --optional <group>`.
-- Every module starts with a docstring naming its path and purpose, then `from __future__ import annotations`.
-- Separate sections with `# ----` banner comments, as existing modules do.
+- Layers: each package imports only the packages below it, enforced by `import-linter` with no exceptions. From the top: `main`; `api` and `cli`; `jobs` and `agent`; `wiring`; `db`; `encounter`; `wcl` and `simc`; then `config`, `errors`, `storage` and `llm_factory`. `encounter` defines the interfaces `db` implements. A new top-level package joins the contract in `pyproject.toml` in the same commit.
+- Optional dependency groups: core holds what local ingest, digest and the analyst need; `cli`, `api`, `hosted` and `providers` are extras, and `dev` includes them all. Import an optional library only on the path that needs it, and when it is missing raise an error naming the group (`errors.missing_group_message`). Add one with `uv add --optional <group>`.
+- Every module starts with a docstring naming its path and purpose, then `from __future__ import annotations`. Separate sections with `# ----` banner comments.
 - Google-style docstrings. Ruff line length 120, double quotes.
 - Data models use Pydantic v2. App config stays as frozen dataclasses in `config.py`.
 - Tool descriptions live in `@tool` docstrings. Treat docstring edits as prompt changes: they change model behaviour and, for encounter tools, the prompt version and findings cache key.
 - Config files fail fast: invalid YAML or a missing reference raises `ConfigurationError` at load, not at first use.
-- Module layout: make a sub-package when a group of modules forms one stage or concern: three or more modules that
-  change together, that the rest of the code reaches through one or two entry points, and whose internals nothing
-  outside the group imports. Shared contracts (models, the event store, config loaders) stay at the parent level.
-  Below that bar, keep modules in their parent. Tests and test helpers mirror the source layout.
+- Module layout: make a sub-package when three or more modules form one stage or concern, change together, are reached through one or two entry points, and have internals nothing outside imports. Shared contracts stay at the parent level. Tests mirror the source layout.
 - Add dependencies with `uv add` and say why. Never use `pip`.
 
 ## Game data
@@ -152,8 +77,8 @@ Never invent spell IDs, cooldown durations, boss mechanics or WCL API fields. Ta
 
 ## Git
 
-Commit rules are in `.claude/rules/git-commits.md`. In short: `[<tag>][<subtag>] <Imperative summary>` with a system tag and, where one fits, a sub-tag from the registry `scripts/dev/commit_tags.yaml` (checked by a commit-msg hook and in CI), a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
+Commit rules are in `.claude/rules/git-commits.md`: `[<tag>][<subtag>] <Imperative summary>` from the registry `scripts/dev/commit_tags.yaml`, a body explaining what and why, no Claude attribution, no plan-stage IDs. Commit or push only when asked.
 
-Each task gets its own branch and worktree off `main`; `main` stays linear and only fast-forwards to a branch whose CI is green, and the branch and worktree are deleted afterwards. Docs-only changes of any size go straight to `main` (no worktree, no CI wait). Tasks from a plan are executed by subagents, one per task, and the orchestrator integrates them; `/land` marks them done in the planning doc. `/land` (`.claude/skills/land/`) runs the landing sequence. Details are under "Branches and merging" in the same rules file.
+Each task gets its own branch and worktree off `main`; `main` stays linear and only fast-forwards to a branch whose CI is green. Docs-only changes go straight to `main`. `/land` runs the landing sequence.
 
-Work split across subagents follows `.claude/rules/parallel-work.md`. In short: the orchestrator stays in the main checkout (a session inside a worktree pins its subagents there), creates each task's worktree itself with `git worktree add`, has each subagent work there by absolute path instead of `EnterWorktree`, and after landing removes every worktree and branch it created.
+Tasks from a plan are executed by subagents, one per task, never by the orchestrator itself. Before spawning them, load the `parallel-work` skill: it covers worktrees, briefs, integration and cleanup.
