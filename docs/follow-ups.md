@@ -1,598 +1,242 @@
 # KhadBot follow-ups
 
-Open work that is not a task in the plan yet: gaps found while building, ideas worth a later pass, and checks
-still owed. Decisions and their reasons live in `docs/decisions.md`; this file only tracks what is left to do.
+Open work that is not a plan task yet. One item per gap, deleted in the commit that fixes it or decides against
+it (`.claude/rules/docs.md`). Encounter-specific items go under that encounter's heading, which the encounter
+file's header comment points to. Decisions and their reasons are in `docs/decisions.md`.
 
-Add an item when you find a gap you are not fixing now. Remove it (or move it to **Resolved** with a date) in the
-commit that deals with it. Encounter-specific items go under that encounter's heading, which the encounter
-file's header comment points to.
+Current track: the hosted service ([work plan](https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv)), then the web
+dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)) and the agents on the web.
 
-## Encounter system
+## Owed by a person
 
-The current track is the hosted service: hosted backend first, then the web dashboard and the agents on the web.
-Work plan: https://claude.ai/artifact/KaomaNz2SSroTk45DSy9zv (decisions under "Hosted architecture" in
-`docs/decisions.md`). The web dashboard's first round has its own work plan:
-https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7 (decision D72).
+- **Cooldown durations.** Fill `duration_s` in `defensive_cooldowns.yaml` (most are null).
+- **Golden questions and eval thresholds.** `tests/golden/questions.yaml` is empty; `expected_refs_any` can only
+  come from digests of ingested real pulls (the fixture pulls and the full nights in `KHADBOT_DATA_DIR`).
+- **Engineering-principles doc.** The external doc still predates this design.
+- **Plan section 7 wording.** The encounter-file task names the old `config/encounters/<id>.yaml` path; section
+  6.2 has the current layout.
 
-### Data and ingest
+## Cooldown registries
 
-- **Scripted cooldowns the data can't classify.** `defensive_cooldowns.yaml` now holds 61 of the 64 defensive and
-  healing candidates from build 12.1.5.70448 plus Aura Mastery; Power Infusion moved to the offensive file and
-  Innervate to the utility file. The review file's `scripted` list (63 spells) still needs a person: defensive
-  ones such as Survival Instincts, Lichborne, Healing Tide Totem, Vampiric Embrace, Stasis (370537) and Time
-  Spiral.
-- **Offensive cooldowns still open.** `offensive_cooldowns.yaml` holds 40 entries for build 12.1.5.70448:
-  the 44 candidates, which now include spell-modifier auras, minus four already in the defensive file
-  (Vengeance's Metamorphosis, Invoke Chi-Ji, Invoke Niuzao, Aura Mastery) and those left out below, plus
-  Pillar of Frost, Dark Transformation, Breath of Sindragosa, Convoke the Spirits, Zenith and the three
-  warlock summons, entered by hand from their spell data. Still open:
-  - Damage abilities and enemy debuffs on long cooldowns, which the file doesn't cover (it holds buffs):
-    Frostwyrm's Fury, The Hunt, Fury of Elune, Execution Sentence, Divine Toll, Touch of the Magi, Reaper's
-    Mark, Touch of Death. Decide whether the file should take them.
-  - Candidates left out: Nature's Swiftness (132158), Invoke Yu'lon (322118), Avenging Crusader (216331) and
-    Apotheosis (200183) are healing cooldowns, so they belong in the defensive file if anywhere. Incarnation:
-    Guardian of Ursoc (102558) also raises maximum health 30% (`A_INCREASE_HEALTH_PCT`, which the defensive
-    heuristic doesn't read), so like Sentinel it may belong in the defensive file. Heart of the Wild (1261867)
-    is a scripted cast whose same-name auras are older 45 s variants on a 300 s cooldown, so its duration is
-    unknown. Sentinel stays defensive.
-  - Bladestorm: the logs show casts of 446035, which SimC doesn't list as a player spell; its player spell
-    227847 is not a candidate.
-  - Racials (Berserking 26297, Blood Fury 20572 and 33702, Ancestral Call 274738) and potions are cast every
-    pull, but the file is per class. Decide whether they belong in it, with which `class`.
-  - SimC's class, spec and talent tables for this build have no player spell for Icy Veins, Storm, Earth, and
-    Fire, Coordinated Assault, Spearhead, Call of the Wild, Apocalypse, Summon Gargoyle, Feral Spirit, Dark
-    Ascension, Void Eruption, Shadowfiend, Mindbender, Crusade, Fire and Storm Elemental, Cold Blood,
-    Grimoire: Felguard, Warbreaker or Thunderous Roar, and none was cast in the recorded nights. Several names
-    exist only as passive talents. Confirm in game that they are gone or passive in this expansion.
-  - Spell modifiers are read without knowing which spells they change, so the heuristic can't tell a damage
-    modifier from a healing one. Reading spell class flags and labels would separate them.
-- **Divine Protection's logged cast ID.** The recorded nights cast Divine Protection as 403876 (161 casts),
-  never as the defensive file's 498, so those uses aren't counted. Check which spec casts each and list the
-  logged ID, as `offensive_cooldowns.yaml` does for Metamorphosis (200166).
-- **Offensive cooldown analysis.** The digest lists offensive casts only. Not built: usage efficiency (casts
-  against possible casts, which needs verified cooldowns), alignment with burst phases or damage windows, and
-  casts wasted during intermissions.
-- **Utility cooldowns the SimC data can't find.** A person must add these to `utility_cooldowns.yaml`: the
-  battle resurrections (Rebirth and Intercession lost their resurrect effect; Raise Ally shows only as a
-  defensive support candidate and Soulstone as scripted), Mana Tide Totem and Symbol of Hope (not in the
-  tables), Wind Rush Totem (its speed aura is missing), Time Spiral and Rescue.
-- **Utility auras aren't fetched.** Utility casts come from the unfiltered friendly Casts request; no request
-  fetches their auras. Ally-side auras (speed, freedom) would need a third friendly Buffs filter, and enemy-side
-  ones (stuns, roots, slows) a Debuffs request with `hostilityType: Enemies`, which no fixture has recorded, so
-  its page count and point cost are unknown. Nothing reads utility auras yet; add them when an analysis needs
-  durations or who was stunned, after measuring the Enemies Debuffs cost on one long pull.
-- **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 150 defensive, 100 offensive
-  and up to 70 utility cooldowns. The digest shows 30, 15 and 1, and its defensive list stops near 190 s.
-  `cooldown_timeline` returns at most 25 rows (4,000 characters) a call and filters by `phase` only, so most
-  casts are out of reach. Decide between (A) exposing the full stream (filters on category, spell, caster and
-  time, plus paging) and (B) filtering the noise (per-spell summary records with their own ref, casts near
-  deaths, damage windows and phase changes), or both. Keep agent context tight; the dashboard reads
-  `PullRecords.cooldowns`, which is uncapped, and should show as much or as little as the reader asks for.
-  Stream sizes, constraints and open questions:
-  https://claude.ai/code/artifact/5a2d02ed-c264-4e0a-8f2d-a79e0f86fff3
-- **Friendly damage the data found but nobody has classed.** The friendly-damage review file lists seven class
-  abilities with damage on the caster or allies whose class (redistribution, delayed boss, self-inflicted,
-  involuntary) isn't clear from the data: Price of Progress (1233429), Guardian's Hide (1272097), Fiery Rush
-  (365199), Blessing of Dawn (210380), Shadow Mend (186439), Void Leech (451963) and Killing Spree (424564).
-  Class each from a log or in game, or leave it out. Stagger, Roar of Sacrifice and Cauterize were added with
-  proposed classes, unverified.
-- **WCL's limit on filter length.** The defensive Buffs filter now holds 95 IDs (under 1 KB); offensive
-  cooldowns have their own Buffs request and filter. WCL's limit on filter length is not known.
-- **Fetch with the user's WCL token.** Once KhadBot is hosted, the app's 3,600 points an hour cover about ten
-  25-pull nights (about five on WCL's new 1,000-point limit), and raid nights cluster on the same evenings.
-  WoWAnalyzer's server sends a signed-in user's requests to `/api/v2/user` with that user's token and uses the app
-  token only for visitors who aren't signed in. Steps:
-  1. Whose budget a user-token request spends: answered by WCL's point-type documentation (`docs/wcl/access-and-points.md`,
-     "Rate limits and point types"). On the current scheme every request spends the app's pool, which both probe runs
-     showed. On the new scheme a signed-in user's requests to user-eligible fields (report events and metadata)
-     spend that user's small pool first, then fall back to the app's. Still open: the pool's size, how
-     `rateLimitData` reports it, and whether every field ingest uses is labelled user-eligible. A probe on the new
-     scheme settles them.
-  2. Done: `ingest_report` and `fetch_pull` take a `token_provider` and send every request to `/api/v2/user` with
-     it (retrying once on 401); report metadata records `khadbotFetchedWith: "user" | "app"`. With no provider,
-     ingest uses the app token as before.
-  3. Built, not yet wired into routes: `auth.access.ReportAccess.can_read` decides per user whether a report is
-     readable (their token, or the app token for public reports) and caches it in `report_access`; jobs fetch on
-     the user's token through `jobs.UserTokenResolver`. Still open: the hosted API must call `require_readable`
-     on every report and pull route (including evidence refs and job streams) and mount the sign-in routes with
-     CORS that allows credentials, `POST` and the `X-KhadBot-CSRF` header for the web origins.
-- **Sign-in details to confirm on the first hosted sign-in.** The refresh grant and the `currentUser` query are
-  from WCL's documentation, not a recorded response (`docs/wcl/access-and-points.md`, Access); whether a refresh rotates the
-  refresh token, and the error text for a private or missing report, are unknown. An ingest job retried after a
-  401 re-reads the stored token rather than forcing a refresh, so a token WCL revokes before its stated expiry
-  fails that job until its expiry passes or the user signs in again. Expired `sessions` and `oauth_states` rows
-  are deleted only when met (a lookup or the next sign-in); a periodic cleanup belongs with the retention job.
-  `WclTokens.rotate_keys` re-encrypts stored tokens after a new key is added, but no command runs it yet.
-- **Job queue gaps.** (1) A worker that dies without shutting down (killed, out of memory) leaves its job rows
-  `running` and the procrastinate job `doing`: nothing marks them failed or retries them. procrastinate records
-  worker heartbeats and can list stalled jobs (`JobManager.get_stalled_jobs`); a periodic task should fail the
-  `jobs` row and requeue the job. (2) `jobs` rows are never deleted; retention
-  should prune finished ones and procrastinate's (`builtin:remove_old_jobs`). (3) No test runs a fixture report through the
-  compose stack's worker, because the worker uses the configured filters and encounter files and SYNTH01 needs its
-  own; the stack smoke test checks a typed failure instead, and the hosted tests ingest SYNTH01 through a worker with
-  its stores injected. Letting a test point the worker at fixture filters and an encounter directory would close it.
-- **Live watch gaps.** The watch (`jobs/watch.py`, decision D64) is built; what it doesn't do yet:
-  - The points per poll are not measured. The estimate is 1 point (`KHADBOT_WATCH_POLL_POINTS`), from the
-    documented cost of a small query; the metadata query also lists every actor and ability, so it may cost more.
-    `uv run python scripts/wcl/measure_watch_poll.py --code <public report> --polls 3` measures it (about 20 points;
-    it asks for a typed `yes` first). Record the result in `docs/wcl/costs.md` and set the default.
-  - Whether WCL lists a fight that is still in progress is unverified. The watch ignores a fight whose end is not
-    after its start; if WCL lists a running fight with an end time in the future, its pull would be fetched
-    early and its raw pages cached as complete. Check on a live report, and if so also wait for a poll in which the
-    fight's end is unchanged.
-  - A watch ends when its user's sign-in does; it does not fall back to the app token, so a public report of a
-    user who signed out stops being followed. Notifying the user (the web app's live screen reads the watch)
-    is left to that screen.
-  - A watch started on a report that already has fights ingests all of them at once, as live. A long night
-    linked late therefore spends its points from the headroom. Linking could skip fights that ended before
-    the watch started if that proves a problem.
-- **WCL budget gaps.** The budget manager (`jobs/budget.py`, `jobs/budget_store.py`, decision D61) is built;
-  what it doesn't do yet:
-  - A job's measured spend is the change in `pointsSpentThisHour` across its run, so with two jobs fetching at once
-    each is charged the other's points too, and the allowances err high. The bucket itself is corrected by the
-    `rateLimitData` read after every job. Per-request costs (WCL reports none per response) would fix it.
-  - A failed job is charged its whole estimate, even one that failed before any request (a missing sign-in).
-  - A waiting job that is cancelled keeps its place in the budget's line until it is reached (its grant is then
-    released) or a day passes, so it can lengthen other jobs' ETAs meanwhile.
-  - The per-guild allowance and round-robin need the report's WCL guild, which isn't fetched yet (see "Report guild
-    and visibility are not fetched"); until then they fall back to the requesting user, else the report.
-  - On WCL's new limits, the user pool's size and whether `rateLimitData` reports user and database points are
-    unknown. Once measured, set `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` and turn
-    `KHADBOT_BUDGET_USER_TOKENS_SPEND_APP` off, or read the pool from `rateLimitData` if it reports it.
-- **Choose a WCL limit scheme and tier.** KhadBot's client is on WCL's current limit (3,600 points an hour); the
-  new scheme gives 1,000 application points and 250 database points an hour plus each signed-in user's own pool,
-  and new keys start on it, so the current limit may not last. A WCL subscription on the account that owns the
-  client raises the limits: Gold 3x the API points ($5 a month), Platinum 9x ($10). Decide when to opt in, and
-  measure a night's ingest on the new scheme (application, database and user points) before sizing allowances.
-  - Estimate until then: a 25-pull night was about 350 points before cross-fight batching, which saved 172 on the
-    measured night, so about 180 now: about twenty nights an hour on 3,600 points, about five on 1,000.
-  - Ingest reads `reportData.report` metadata (title, zone, `masterData`, `fights`, `phases`) and `events`, which
-    WCL's documentation counts as user-eligible report data, and no rankings or report filtering. Check the
-    schema's label on each of those fields, and on `rateLimitData`, the readability check and `currentUser`.
-  - The probe to run after opting in: the budget probe signed in with an account that doesn't own the client
-    (sign out of Warcraft Logs in the browser first), to see the user pool's size and what `rateLimitData`
-    reports with each token.
-- **WCL approval for commercial use.** Commercialising an app that uses database-point fields needs WCL's
-  explicit approval. Ingest uses none as far as WCL's documentation shows (no rankings or report filtering);
-  confirm against the schema's field labels, and ask WCL before any paid tier, together with the questions on
-  storing and serving derived data.
-- **Batched fetch gaps.** The batched small-spec fetch (`fetch_batches`, decision D55) is built; what's left:
-  - No recorded-fixture test shows batched frames equal per-pull frames. The live probe showed it on a 25-pull
-    night (`docs/wcl/probes.md`, "Cross-fight and heal-only results"), but the fixtures hold per-pull pages only. A
-    test could build each night's batch streams from those pages (every row carries its `fight`), split them and
-    compare the normalized frames, for every fixture night.
-  - Live ingests are batched too. Ingest never reads `IngestReport.live`, so a watch poll that finds two or more
-    new fights fetches them as one batch. That is cheaper, not wrong. Either record it in D55 or send live
-    ingests per pull.
-  - The item below, "Merge fetch filters per pull", is closed by its numbers (the one merge WCL accepted saved
-    14%, under the 15% bar) and can be removed.
-  - The saving hasn't been measured on a real ingest through the shipped code path, only with the probe script.
-    Measuring it spends WCL points.
-- **Merge fetch filters per pull.** Ingest sends one request per fetch spec, about ten per pull, several with no
-  filter. Measured 2026-10-20 on `trMgApZCVYkv3jdq:26` (`docs/wcl/probes.md`, "Merged-filter results"):
-  - One request per hostility with no `dataType` is refused (internal server error), so that merge is out.
-  - Merging same-type requests (the two Buffs requests as one, ability IDs unioned) gave identical normalized
-    frames but saved 14% of points (21 against 24.31), under the 15% bar, and 58% of wall time on one run that
-    followed the baseline fetch of the same pull, so WCL-side caching may explain part of it.
-  - Still open before building a merged fetch: repeat the `datatype` run several times with a cold cache and
-    see whether the time saving holds. Combining friendly and enemy Casts needs `hostilityType` left out, whose
-    behaviour is unknown; a merged filter is also longer, so it runs into WCL's unknown limit on filter length
-    (above).
-  - A merged request needs its pages' data type taken from the rows, and normalize, the truncation anomaly and
-    the raw cache's `_complete` markers are per spec, with the filter hash in the cache path.
-- **Filter Healing to fewer row types.** Healing is the largest spec. `type = "heal"` saved 2 of 10 points on
-  `trMgApZCVYkv3jdq:26` (2026-10-20, `docs/wcl/probes.md`, "Cross-fight and heal-only results"), but Healing carries
-  rows other code reads (`docs/wcl/report-data.md`, "Events"). Rebuilding the seven recorded fixture pulls' records
-  without non-heal Healing rows (2026-10-24) cost friendly damage its whole `redistribution` class (30 to 40% of
-  friendly damage on four pulls), took a Tempered in Battle top hit and 6 to 8% of window damage from two deaths
-  on `QkVa6GHRK8yfrTbw:14`, lost 73 position samples, and dropped Anti-Magic Shell from two deaths' active
-  defensives on `H7z1fqDXjRTFnbtg:20`. That last one is a fixture artifact: the recorded Buffs filter doesn't
-  request 48707, and live ingest does. Healing stays unfiltered for now. The candidate is
-  `type in ("heal", "damage")`, which kept every record and position sample apart from that fixture case, and
-  gives up only `absorbed` and `removebuff` rows: the analyst could no longer name the shield that absorbed a hit,
-  though DamageTaken still gives the absorbed amount. Before setting it in `build_filter`:
-  - Probe it live with `scripts/compare_merged_filters.py --variants healonly --heal-filter`, for the `in (...)`
-    form and its point cost.
-  - Pin recorded ingest to unfiltered Healing, as it pins the Buffs filter (`RECORDED_BUFF_IDS`), or the new
-    filter hash sends it to a Healing directory the fixtures don't have.
-  - Check a live pull that an absorb-shield defensive such as Anti-Magic Shell still shows as active from Buffs
-    rows alone.
+- **Scripted cooldowns the data can't classify.** The review file's `scripted` list (63 spells) needs a person:
+  Survival Instincts, Lichborne, Healing Tide Totem, Vampiric Embrace, Stasis (370537), Time Spiral and others.
+- **Offensive file scope.**
+  - Damage abilities and enemy debuffs on long cooldowns (Frostwyrm's Fury, The Hunt, Fury of Elune, Execution
+    Sentence, Divine Toll, Touch of the Magi, Reaper's Mark, Touch of Death): decide whether the file takes them.
+  - Left-out candidates: Nature's Swiftness, Invoke Yu'lon, Avenging Crusader and Apotheosis are healing
+    cooldowns (defensive file if anywhere); Incarnation: Guardian of Ursoc raises maximum health 30% and may be
+    defensive; Heart of the Wild's duration is unknown.
+  - Bladestorm is cast as 446035, which SimC doesn't list as a player spell.
+  - Racials and potions are cast every pull but the file is per class; decide whether and with which `class`.
+  - SimC has no player spell for Icy Veins, Storm, Earth, and Fire, Coordinated Assault, Summon Gargoyle and about
+    fifteen more, and none was cast on the recorded nights. Confirm in game that they are gone or passive.
+  - The heuristic can't tell a damage spell modifier from a healing one; reading spell class flags would.
+- **Utility cooldowns SimC can't find.** Add by hand: the battle resurrections, Mana Tide Totem, Symbol of Hope,
+  Wind Rush Totem, Time Spiral and Rescue.
+- **Friendly damage nobody has classed.** Price of Progress (1233429), Guardian's Hide (1272097), Fiery Rush
+  (365199), Blessing of Dawn (210380), Shadow Mend (186439), Void Leech (451963), Killing Spree (424564); Stagger,
+  Roar of Sacrifice and Cauterize have proposed classes, unverified.
 
-- **The Coiled Altar's player-on-player damage.** 29M over its 7 recorded pulls comes from players' and pets'
-  ordinary spells hitting other players, which looks like mind control. It is listed as unclassified friendly
-  damage, not registered. When that encounter gets a file, name the mechanic and decide how to tag its damage.
-- **Re-ingest local nights to add positions.** Nights ingested before the position table have none, so their
-  blame context reads `no_position`. Re-ingest each one offline from the raw page cache:
+## Encounter analysis
+
+- **Offensive cooldown analysis.** Only casts are listed: no usage efficiency (needs verified cooldowns), no
+  alignment with burst phases or windows, no casts wasted in intermissions.
+- **Utility auras aren't fetched.** Ally auras need a third Buffs filter, enemy ones an Enemies Debuffs request
+  whose cost no fixture has measured. Add when an analysis needs durations or who was stunned.
+- **The analyst can't reach most cooldown casts.** A 10-minute pull casts about 320 cooldowns; the digest shows 46
+  and `cooldown_timeline` returns at most 25 rows filtered by phase only. Choose between exposing the full stream
+  with filters and paging, per-spell summary records, or both
+  ([sizes and options](https://claude.ai/code/artifact/5a2d02ed-c264-4e0a-8f2d-a79e0f86fff3)).
+- **Wrong-target damage.** Design settled (`docs/encounter/recorded-nights.md`, "Log investigations"; contract text
+  in `docs/plan-changes.md`, `encounter/spike-logs`): (1) check friendly DamageDone's fields, pages and points on
+  one long pull and record them in `docs/wcl/report-data.md`; (2) add the fetch spec; (3) add `kill_targets`, an
+  `off_target_share_gt` rule, a `KILL TARGETS` digest section and a `kill:<id>` ref; (4) author Ula'tek's Venomous
+  Heart entry.
+- **Other uses of positions.** Only per_cluster blame uses them. Not built: who stood in Volatile Purge or a soak,
+  formation checks (stacking, splits, subgroups from a raid plan), an analyst position tool, positions in the
+  dashboard.
+- **Positions on encounters that change maps.** No recorded pull has several maps. When one is recorded, check
+  `mapID` changes at the move; anything over time must split samples at a map change, and blame assumes an NPC
+  stays where it was last sampled.
+- **Failures charged to no one.** Occurrences with no aggro holder and soak failures need raid-plan assignments
+  (plan section 14).
+- **Killer instance number.** Normalize doesn't map `killerInstance`, so `killer_name` has no `#57`. Mapping it
+  changes every pull's events hash; do it with the next normalize change.
+- **The Coiled Altar's player-on-player damage.** 29M over 7 recorded pulls from players' ordinary spells hitting
+  players (likely mind control) is unclassified friendly damage; name the mechanic when the encounter gets a file.
+- **Re-ingest local nights for positions.** Nights ingested before the position table read `no_position`:
   `python main.py ingest <code> --offline` for `H7z1fqDXjRTFnbtg`, `QkVa6GHRK8yfrTbw` and `trMgApZCVYkv3jdq`.
-  It rewrites all 62 pulls with `events_hash` unchanged (43 s on a copy of the data directory).
-- **Other uses of positions.** The position table and lookup helper exist (`analysis/positions.py`); only
-  per_cluster blame uses them so far. Not built yet:
-  - who stood in whose Volatile Purge eruption (about 5 yards);
-  - who stood in a Serpent's Bite soak (about 7 yards of a bitten player) or at a Spectral Coil (about 30
-    yards); the debuffs already mark these players, so positions would only show where they stood;
-  - an analyst query tool for positions, which changes the prompt version;
-  - positions in the dashboard.
-- **Positions on encounters that change maps.** Blame and `distance_yd` handle samples on several maps, but no
-  recorded pull has any. When an encounter that moves players to another floor or area is recorded, check that
-  its `mapID` changes at the move (rather than staying put while coordinates jump), and how often NPCs are
-  sampled after one. Anything built on positions over time (movement, formation, tracks) must split a unit's
-  samples where `map_id` changes. Blame also assumes an NPC stays where it was last sampled on its map, which
-  fails for a boss that relocates within one map between samples.
-- **Formation checks from positions.** Positions are stored, so they can judge where the raid stood as a
-  whole, not just single mechanics:
-  - Who wasn't stacked when a mechanic was baited: each player's distance from the group's centre, or from the
-    stack point, at the moment the mechanic is aimed. This needs no raid plan.
-  - How the raid split, how many groups there were and who was in each.
-  - Who wasn't with their assigned subgroup. This needs raid-plan assignments (plan section 14).
-  Hit rows give exact positions; other samples are 0.1 s old at the median and 0.5 s at p95
-  (`docs/wcl/positions.md`, "Position data").
-- **Wrong-target damage.** Show damage on the wrong target, such as hitting Ula'tek instead of the Venomous
-  Heart during Rage of the Shackled, or ignoring a priority add. Design settled (`docs/encounter/recorded-nights.md`, "Log
-  investigations"; proposed contract text in `docs/plan-changes.md` under `encounter/spike-logs`): fetch
-  friendly DamageDone for the amounts and not the Enemies side of Threat; add a `kill_targets` block to encounter
-  files (spans from a damage window, a phase or an NPC's lifetime), an `off_target_share_gt {value}` failure rule
-  and a `KILL TARGETS` digest section. Steps:
-  1. With WCL credentials, check DamageDone on one long recorded pull: the event fields (`targetInstance`,
-     `amount`, `absorbed`), pages, size and points. Record them in `docs/wcl/report-data.md`.
-  2. Add the fetch spec and normalize it (damage rows with a friendly source and an NPC target).
-  3. Add the encounter-file block, the rule, the digest section and a `kill:<id>` ref.
-  4. Author the Ula'tek entry: the Venomous Heart (game ID 267460) during `rage_of_the_shackled`.
-- **The dashboard API ignores hosted mode.** `create_app` builds a `SqliteFindingsStore` under the data directory
-  unless a store is passed, so a hosted deployment must pass `wiring.findings_store()` itself. The hosted API
-  should do that, and own the pool's lifecycle (`close_pool` on shutdown).
-- **The CLI's `/review` does not use `ReviewPull`.** `/review` runs `ProcessPull` per pull and then the whole
-  review graph, because the answer needs the cross-pull synthesis that `ReviewPull` leaves out. Reviewing each pull
-  with `ReviewPull` first would call the model twice for a pull whose analysis is partial (those are not cached).
-  The queue runs `ReviewPull` per pull and the synthesis afterwards; give the graph a way to synthesize from
-  findings it is handed if `/review` should report per-pull progress too.
-- **The API doesn't read the read models yet.** `night.SqlSource` serves the report detail and night summary
-  from the read-model tables, but `create_app` uses it only when a caller passes `read_source`; the hosted API
-  should pass `SqlSource(get_pool())` (`docs/encounter/pipeline.md`, stage 9).
-- **Read-model query plans not yet captured.** The plans of the report, night and progression queries have not
-  been read on a seeded database; `pytest tests/integration/hosted -m hosted -s -k query_plans` prints them. Check
-  that progression uses `pulls_encounter` once a database holds more than a few nights.
-- **Read-model equality is checked in CI on the synthetic report only.** The CI `hosted` job checks out without
-  Git LFS, so the SQL-against-records equality and progression tests skip the recorded reports there (the
-  multi-group report included). Run the hosted tests locally with the LFS pages, or give the job LFS.
-- **Report guild and visibility are not fetched.** `reports.guild_id`, `guild_name` and `visibility` stay empty:
-  the report query doesn't ask WCL for them. Add them to the report query (checking the field names against the
-  WCL schema, `docs/wcl/report-data.md`) and fill them in `read_models.report_row`; the WCL budget's per-guild allowance
-  needs the guild.
-- **Report lookup leftovers.** `api/jobs.parse_source` and `wcl.reports.parse_report_source` parse the same
-  code-or-URL input twice; make the ingest route use the shared one. A live watch's poll writes `report.json` without
-  `khadbotFetchedAt`, so the next lookup fetches it once more. `ready` reads the whole report through
-  `SqlSource.pulls`; a query for the projected fight IDs alone would be lighter.
-- **Read-model rows of removed pulls stay.** The writer replaces one pull's rows at a time; a fight that drops
-  out of a report on re-ingest, or a deleted report, keeps its rows until something deletes them (retention).
-- **Retention gaps.** The records cleanup, the bucket rules and the backfill cover blobs only. Still open: the
-  expired `sessions` and `oauth_states` rows, finished `jobs` rows and procrastinate's finished jobs
-  (`builtin:remove_old_jobs`), and the read-model rows above. After `raw/` expires, `ingest --offline` and
-  `--refresh-meta` of that report can no longer run; only a fetch from WCL (which spends points) rebuilds events. The
-  lifecycle script and the cleanup have run only against moto and unit fakes: run the script against R2 on staging.
-  A backfill selects every projected pull of the encounter, including pulls that are already current (processing
-  them writes nothing); selecting only stale ones needs the current records hash per pull.
-- **Authored files are re-parsed on every records lookup.** `EncounterData.records` reads the cooldown files, the
-  friendly-damage registry and the encounter file from `config/` each time the in-process cache misses (about
-  115 ms for the registries, tens of ms for the encounter file), which is most of a stored read (about 190 ms a
-  pull against about 40 ms with them preloaded). Cache them by file mtime or content hash without losing "an
-  edit rebuilds on next use".
-- **A stored read still loads the annotated frame.** `RecordsStore.get` returns `PullRecords` with the frame read
-  through the annotation cache (re-annotating if it is missing), even for a caller that wants only the digest or
-  deaths. Make `PullRecords.annotated` lazy if a view needs records without frames, before the read-model tables
-  do it.
+- **A stored read still loads the annotated frame.** `RecordsStore.get` reads it even for callers that want only
+  the digest; make `PullRecords.annotated` lazy if a view needs that.
+- **The CLI's `/review` doesn't use `ReviewPull`.** It needs the cross-pull synthesis `ReviewPull` leaves out; give
+  the graph a way to synthesize from findings it is handed if `/review` should report per-pull progress.
 
-- **No S3 service in CI.** The S3 blob store is covered in CI only by the moto-backed unit tests. The
-  `tests/integration/hosted/test_blob_s3.py` suite runs the same contract against a real S3-compatible service
-  but skips without `KHADBOT_S3_BUCKET`, and the CI `hosted` job has no S3-compatible service container. Add one (SeaweedFS, as in the local stack) (and the
-  bucket, `AWS_*` and `KHADBOT_S3_*` variables) to that job.
-- **No way to move a local data directory into a bucket.** Objects written to `raw/` without going through the
-  compressing store (a plain upload of `.khadbot_data/raw`) have no `.zst` suffix and are not seen by it. A copy
-  command should read every key from the local store and put it through `default_blob_store()`.
+## WCL fetching and points
 
-### Failure rules
+- **Choose a limit scheme and tier.** KhadBot is on the current 3,600 points an hour; the new scheme gives 1,000
+  application and 250 database points plus a per-user pool, and Gold or Platinum subscriptions multiply them.
+  Before opting in, check the user-eligible label on every field ingest reads; after, run the budget probe with a
+  non-owner account to learn the user pool's size and what `rateLimitData` reports, then set
+  `KHADBOT_BUDGET_USER_POINTS_PER_HOUR` and turn `KHADBOT_BUDGET_USER_TOKENS_SPEND_APP` off. A night is about 180
+  points with batching.
+- **WCL approval for commercial use.** Confirm against the schema that ingest uses no database-point fields, and
+  ask WCL before any paid tier, with the questions on storing and serving derived data.
+- **WCL's limit on filter length** is unknown; the defensive Buffs filter holds 95 IDs.
+- **Batched fetch gaps.** No fixture test shows batched frames equal per-pull frames (build batch streams from
+  the recorded pages and compare). Live ingests are batched too; record that in D55 or send them per pull. The
+  saving hasn't been measured through the shipped code path.
+- **Filter Healing to `type in ("heal", "damage")`.** Saves about 20% of Healing's points and kept every record on
+  the fixtures apart from one Buffs-filter artifact. Before setting it: probe the `in (...)` form live, pin recorded
+  ingest to unfiltered Healing, and check an absorb defensive still shows from Buffs alone.
+- **Sign-in details unconfirmed.** Whether a refresh rotates the refresh token, and WCL's error text for a private
+  or missing report, are unrecorded. A retried ingest re-reads the stored token rather than forcing a refresh.
+- **WCL ability icons unconfirmed.** `masterData.abilities.icon` is in the query but no recording has it.
+- **Report guild and visibility are not fetched.** `reports.guild_id`, `guild_name` and `visibility` stay empty, so
+  the per-guild budget allowance and the usage ledger's guild column fall back. Add them to the report query.
+- **Character matching by name.** Metadata gives no server per actor, so a same-named player from another server
+  matches; ask for the actor's `server` if the schema has it.
 
-- **Failures charged to no one.** Occurrences with no aggro holder (an untanked boss at a stage start, a tail
-  never picked up) and soak failures can only be charged once the raid plan's assignments exist (plan section
-  14).
+## Jobs, budget and retention
 
-### Process and repo
+- **Stalled jobs.** A worker that dies (crash, out of memory, `--reload` on Windows) leaves its jobs `running`.
+  Fail and requeue stalled jobs when a worker starts or periodically (`JobManager.get_stalled_jobs`).
+- **Nothing prunes finished rows.** Finished `jobs` rows, procrastinate's jobs (`builtin:remove_old_jobs`), expired
+  `sessions` and `oauth_states`, and read-model rows of pulls that left a report all stay.
+- **Retention gaps.** The lifecycle script and records cleanup have run only against moto and fakes; run the
+  script against R2 on staging. A backfill selects every projected pull, current ones included.
+- **No worker test with a fixture report through the stack.** The worker uses configured filters and SYNTH01
+  needs its own; letting a test point the worker at fixture config would close it.
+- **Live watch gaps.** Poll cost is 2.01 points but `KHADBOT_WATCH_POLL_POINTS` defaults to 1: set 2. Whether WCL
+  lists an in-progress fight with a future end is unverified. A watch stops when its user signs out rather than
+  falling back to the app token. A watch linked late ingests every past fight from the headroom.
+- **WCL budget gaps.** Concurrent jobs are charged each other's points (no per-request cost from WCL). A job that
+  fails before any request is charged its estimate. A cancelled waiting job keeps its place in line until reached.
+- **Usage ledger gaps.** A failed ingest writes no WCL row. No job calls `record_llm_usage` yet. The default
+  `ANTHROPIC_MODEL` (`claude-sonnet-4-20250514`) has no price in `config/pricing/models.yaml`. Nothing warns when
+  prices go stale.
+- **No error tracker**; errors reach the JSON logs only.
+- **Worker health is per machine.** `main.py worker --check` reads a local file; a heartbeat row would show other
+  machines.
 
-- **Golden questions need real refs.** `expected_refs_any` can only be written from digests of ingested real
-  pulls; the golden questions can use the fixture pulls and the full nights in `KHADBOT_DATA_DIR`.
-- **Plan section 7 wording.** The encounter-file task still names the old `config/encounters/<id>.yaml` path;
-  section 6.2 has the current layout.
+## Storage and read models
 
-- **Usage ledger gaps.**
-  - The guild column is null: nothing fills `reports.guild_id` yet, so `usage --by guild` shows one `(none)` group.
-    It fills itself once report metadata projection sets the guild.
-  - An ingest that fails part way writes no WCL row: only a finished run has a measured figure (`points_spent`), the
-    same limit the budget has (it settles a failed job to its estimate).
-  - No job calls `record_llm_usage` yet; the review and conversation jobs must, after each model call, with the
-    model ID the provider reports.
-  - The default `ANTHROPIC_MODEL` (`claude-sonnet-4-20250514`) is not in `config/pricing/models.yaml`, so its calls
-    would be recorded with a null cost. Set a listed model, or add its price from the pricing page.
-  - Prices are checked by hand (`checked:` in the file); nothing warns when they go stale.
-- **No error tracker.** `sentry-sdk` was not added; errors reach the JSON logs only.
-- **Worker health is per machine.** `main.py worker --check` reads a local file, so it fits a container health check
-  but shows nothing about workers on other machines. A heartbeat row would, if a dashboard needs it.
+- **No S3 service in CI.** `tests/integration/hosted/test_blob_s3.py` skips without `KHADBOT_S3_BUCKET`; add a
+  SeaweedFS service and its variables to the `hosted` job.
+- **No way to move a local data directory into a bucket.** A plain upload of `raw/` lacks the `.zst` suffix; a copy
+  command should put every key through `default_blob_store()`.
+- **Read-model query plans not captured.** Run `pytest tests/integration/hosted -m hosted -s -k query_plans` on a
+  seeded database and check progression uses `pulls_encounter`.
+- **Read-model equality runs on SYNTH01 only in CI** (no LFS in the `hosted` job).
+- **Night summary on large reports in local mode.** The 32-pull records LRU makes a 47-pull night rebuild most pulls
+  per request; cache `night.PullFacts` by records hash rather than raising the LRU.
 
-### Web dashboard
+## Hosted API
 
-- **Phone layouts.** The first round builds the canvas's 1440-wide screens only (D72). The 390-wide artboards
-  are still to build: the pull rail as a collapsible selector, the context panel as a bottom sheet, the account
-  menu as a sheet under the top bar, the phone chip and type sizes, and phone-width Playwright and axe runs. The
-  desktop screens are built with flex, grid and the tokens and no fixed page widths, so this adds layouts rather
-  than reworking them.
-- **The web app isn't deployed.** There is no deploy pipeline or staging yet, so the web app has no container file
-  or platform service. When the pipeline lands, add the web app as its own service (a `deploy/` container file for
-  `next build` and `next start`, `NEXT_PUBLIC_API_BASE` set per environment at build time, its origin in the API's
-  `KHADBOT_WEB_ORIGINS`), deployed to staging with the API.
-- **No Content-Security-Policy yet.** The web app sends no CSP header. Add one with the deploy: `docs/game-art.md`
-  lists the hosts Wowhead's script needs (`script-src`, `connect-src`, `img-src`, `style-src` with inline styles),
-  plus the API's origin in `connect-src`.
-- **Fonts cover Latin only.** `app/fonts.ts` bundles the Fontsource `latin` subsets; names with characters outside
-  Latin-1 (Polish, Czech, Cyrillic) fall back to the system font. Add the `latin-ext` (and `cyrillic`) files if
-  players notice.
-- **The two end-to-end suites share port 3000.** `test:e2e:local` starts its own web server on 3000 (local-mode CORS
-  allows only that port), so the dev loop's web server must be stopped first (`dev:all -- --no-web`). If running both
-  together matters, let `main.py serve` allow another web port and give the local suite that port.
-- **The pull page's full-fixture tests don't run in CI.** `e2e/pull-page.spec.ts` and `e2e/timeline.spec.ts` check
-  `H7z1fqDXjRTFnbtg:15` only when `E2E_REPORTS` includes that report (their `beforeAll` loads the pull through replay
-  when it isn't loaded, `e2e/support/pulls.ts`; the pages are about 126 MB of Git LFS); CI lists only SYNTH01, so there
-  they run the SYNTH01 tests. Decide whether CI should fetch the long fixture, or record a smaller pull with deaths
-  past the cutoff.
-- **The pull rail lists only loaded pulls.** It reads `GET /v1/reports/{code}`, so pulls of the night that were never
-  opened don't appear until the whole-report night overview is built (or the rail reads the lookup route, which can
-  spend WCL points).
-- **Death and mechanic tables are tight at 1024 px.** Beside the 380 px panel the sections column is about 330 px wide,
-  so the Deaths table scrolls in its box, and following a chip scrolls the box to the chip and hides the time and
-  player columns. Let the panel narrow (or overlay) below about 1200 px, or stack the Killed by and mechanics columns.
-- **Timeline markers lack spell IDs.** `MechanicMarker` and `WindowMarker` carry no spell ID, so the timeline's mechanic
-  rows and window chips show the neutral square and cooldown markers show the spell's initials, where the canvas
-  draws Wowhead icons. On a long pull the initials boxes of the two cooldown tiers overlap and clip each other. Add the ability ID to both markers (the encounter file knows it) and draw them through
-  `AbilityName`. The Focus artboard's timeline that itself zooms to a range is not built either: the timeline always
-  shows the whole fight and zoom only opens the events table.
-- **Crowded deaths overlap.** Deaths less than about a pixel apart (fight 15 has several within 0.5 s) share a hit
-  area, so a click reaches the later one. Arrow keys and the list reach every marker; a stacked or clustered death
-  lane would fix the pointer.
-- **The character search has no encounter list.** The Encounter select can offer only the encounters seen in the
-  character results so far this visit, because the API serves no list of the current raid's encounters (WCL has no
-  "current zone" field; `docs/wcl/search.md`). Add a route (from the encounter files, or a zone chosen in config) and
-  have the select read it.
+- **Report lookup leftovers.** `api/jobs.parse_source` duplicates `wcl.reports.parse_report_source`. A watch poll
+  writes `report.json` without `khadbotFetchedAt`, so the next lookup refetches. `ready` reads the whole report
+  where a query for projected fight IDs would do.
+- **`GET /v1/reports` doesn't re-check access age**, so a report made private stays listed until reopened.
+- **A cancelling job is followed.** `POST /v1/reports` follows a covering job with `cancel_requested` set; start a
+  new one instead.
+- **`ready` ignores records inputs**, so after a `RECORDS_VERSION` bump a loaded pull opens through the digest
+  route's rebuild.
+- **Encounter list for the character search.** The API serves no list of the current raid's encounters, so the
+  select offers only encounters seen this visit. Add a route from the encounter files.
+- **Damage-window panel's other occurrences** need each occurrence's active cooldowns: resolve sibling refs, or add
+  `defensive_cooldowns_active` to `WindowMarker`.
+- **Blizzard art.** Boss, raid and class images need a Battle.net client the user creates, a refresh job through
+  WCL's `journalID`, and a route (`docs/game-art.md`).
+- **Wowhead script on a client-rendered page.** Confirm `WH.Tooltips.refreshLinks(element)` and the CSP hosts in a
+  browser.
 
-### Dashboard API
+## Web dashboard
 
-- **Boss and faction art from Blizzard's Game Data API.** Boss portraits, raid images and class icons have no source
-  yet, so the web app shows its fallbacks. The plan is in `docs/game-art.md`: it needs a Battle.net API client the
-  user creates (an authenticator on the account, the API terms, a registered client) and its secret in the hosted
-  secrets; a refresh job resolving each encounter's creature-display render through WCL's `journalID` (recorded in
-  the encounter files, `null` with `verified: false` when unknown) and keeping the URLs at most 30 days; an API route
-  serving the URLs; and Blizzard named as the source. The faction mark is drawn by KhadBot, not taken from Blizzard.
-- **Wowhead script on a client-rendered page.** The script scans links at load; the web app calls
-  `WH.Tooltips.refreshLinks(element)` after rendering, which is in the script's code but not on Wowhead's tooltips page.
-  Confirm it, and the Content-Security-Policy hosts and inline-style allowance, in a browser when the web app builds
-  ability links (`docs/game-art.md`).
-- **WCL ability icons unconfirmed.** `GET_REPORT_META` asks for `masterData.abilities.icon`, but no recording has it;
-  look at the value on the first live report, and re-record metadata only if something needs it.
+- **Phone layouts.** The 390-wide artboards: rail selector, panel as bottom sheet, account sheet, phone sizes,
+  phone-width Playwright and axe runs.
+- **Not deployed.** Add the web app as its own service with the deploy pipeline (`NEXT_PUBLIC_API_BASE` per
+  environment, its origin in `KHADBOT_WEB_ORIGINS`), and a Content-Security-Policy with the hosts in
+  `docs/game-art.md`.
+- **"So busy nights mean less waiting"** is left out of the sign-in copy until WCL's user points are on; restore it
+  then.
+- **Fonts cover Latin only.** Add `latin-ext` and `cyrillic` subsets if players notice.
+- **The two e2e suites share port 3000.** Let `main.py serve` allow another web port if both must run together.
+- **The long-pull e2e tests don't run in CI** (`H7z1fqDXjRTFnbtg:15` is 126 MB of LFS). Fetch it in CI or record a
+  smaller pull with deaths past the cutoff.
+- **The pull rail lists only loaded pulls** until the night overview exists.
+- **Tables are tight at 1024 px** beside the 380 px panel; narrow or overlay the panel below about 1200 px.
+- **Timeline markers lack spell IDs**, so mechanics and windows show a neutral square and cooldown initials overlap
+  on long pulls. Add the ability ID to both markers. The timeline's own range zoom isn't built.
+- **Crowded deaths overlap** for the pointer; a stacked or clustered death lane would fix it.
 
-- **Night summary on large reports in local mode.** `EncounterData` keeps records for 32 pulls, so the night
-  summary or the report view of a 47-pull night rebuilds records for most pulls on every request (with the
-  annotation cache, about 0.3 s each, behind one lock; with the records store about 0.2 s each, 3.9 s for a
-  21-pull night). Hosted mode reads the read-model tables instead (`night.SqlSource`). If local mode is too slow,
-  serve it from the same per-pull inputs (`night.PullFacts`) cached by records hash, rather than raising the LRU
-  size (records hold the whole annotated frame).
-- **Killer instance number.** `DeathRecord.killer_name` is the actor's name without its instance
-  ("Blightscale Rawling", not "Blightscale Rawling #57"): WCL's death rows carry `killerInstance`, but normalize
-  maps only `sourceInstance`, so the death row's `source_instance` is null. Mapping it changes the events hash of
-  every pull, so do it with the next normalize change.
-- **Other occurrences in the damage-window panel.** The panel's line about the window's other occurrences
-  ("Occurrences 1 and 2 were covered by Time Dilation") needs each occurrence's active cooldowns, which only its
-  own `win` ref carries; the timeline's `WindowMarker` has `covered` alone. The panel can resolve the sibling refs
-  (one request each); if that is too slow, add `defensive_cooldowns_active` to `WindowMarker`.
+## Dev loop
 
-- Hosted API: `GET /v1/reports` lists a user's reports from cached "readable" access rows without re-checking their age,
-  so a report made private later stays in that user's list (title and pull counts only) until they open it again and
-  the check runs. Filter on `access_recheck_s` if that matters.
-- Hosted API: `POST /v1/reports` follows a covering job even when that job has `cancel_requested` set and is only
-  stopping, so a visitor who opens a pull in that moment follows a job that ends cancelled. Start a new job instead.
-- Hosted API: a pull counts as loaded (`ready`) when a records blob exists for it under any inputs, so after a
-  records version bump an already-loaded pull opens through the digest route's rebuild rather than a new job.
+- **`dev:infra` can fail on its first try.** `create_bucket` calls `.get` on `exc.response`, which is None while
+  SeaweedFS starts; use `getattr(exc, "response", None) or {}` and retry.
+- **WCL's real missing-report answer isn't recorded**, so replay's wording may differ from WCL's (ask before the
+  live call).
+- **A worker start costs about one WCL point** with real credentials (budget sync).
+- **Scripts leave the Postgres pool open** (`scripts/dev/queue_smoke.py`), printing `PythonFinalizationError`.
+- **Test-user ID collisions aren't detected** (a hash into `-1` to `-(2**40)`); a check in `issue_session` would.
+- **WCL replay limits.** The point counter is per process; a short reset period confuses the budget until its next
+  sync; the live report hides fights only in metadata; a stock worker can't replay SYNTH01; replay never exercises
+  a registry change; `deploy/stack.env` has no replay settings.
+- **E2E reports turn public after five minutes** when the cached "not readable" mark expires; let a test session's
+  mark last its `--hours`.
+- **Not verified:** a real WCL sign-in through the dev loop; `dev:smoke` in CI.
 
-- **Live watch poll cost.** The report metadata query a watch poll sends costs 2.01 points for a raid night
-  (`docs/wcl/report-data.md`, "Report metadata"), but `KHADBOT_WATCH_POLL_POINTS` defaults to 1. Set it to 2 with
-  the next watch change.
-- **Encounter list for the character search.** The canvas's encounter picker needs the current raid's encounters.
-  WCL's schema has no "current zone" field and `Zone` has no raid-or-dungeon type (`docs/wcl/search.md`); take the list
-  from the encounter files under `config/encounters/`, or from the zones of the character's nights.
-- **Character matching by name.** Report metadata gives no server per actor, so a character search matches player
-  actors by name; a same-named player from another server in the same report would match too. Ask for the actor's
-  `server` in the report query if WCL's schema has it.
+## Security (code review, 2026-11)
 
-### Local test environment
+The review's high and medium findings are fixed (D91 to D96). Open, most severe first:
 
-- **Reload strands running jobs.** `main.py worker --reload` restarts the worker by killing it (on Windows a signal
-  can't ask it to finish), so a job it was running stays `running` and nothing re-queues it. Today the docs say to
-  cancel it or run `stack:reset`. Re-queue stalled jobs when a worker starts (or use the queue's own stalled-job
-  retry), which would also cover a worker that crashes in production.
-- **`dev:infra` can fail on its first try.** `scripts/dev/dev.py`'s `create_bucket` reads `exc.response` from a
-  botocore error, but while SeaweedFS is still starting the error has `response=None`, so it raises
-  `AttributeError: 'NoneType' object has no attribute 'get'`. Rerunning works. Use
-  `(getattr(exc, "response", None) or {})` and retry until the gateway answers.
-- **WCL's real answer for a missing report isn't recorded.** WCL replay answers an unknown report code with its
-  own GraphQL error ("WCL replay has no report ..."), worded to avoid "private", "forbidden" and "rate limit". If
-  WCL's real message contains "private", the client classifies it as a private report instead, and a live watch
-  would stop with a different reason. Record the real response once (a live call that spends points: ask first) and match it.
-- **A worker start costs about one WCL point.** With real credentials, every worker start (and so every `--reload`
-  restart in the dev loop) syncs the budget from `rateLimitData` (about 1 point, plus a free token request). WCL
-  replay answers both locally; it stays opt-in.
-- **Scripts that leave the Postgres pool open.** `scripts/dev/queue_smoke.py` (and any script that calls
-  `get_pool()` without `close_pool()`) prints a psycopg `PythonFinalizationError` at exit. `test-session` and the
-  seed's smoke-user path now close the pool; do the same in the rest.
-- **Test-user ID collisions aren't detected.** Test users' WCL IDs are a hash of the name into `-1` to `-(2**40)`;
-  two names hashing to one ID would share a user. Vanishingly unlikely; a check in `issue_session` would make it
-  impossible.
-- **WCL replay limits.**
-  - The point counter is per process: the worker's budget syncs from the worker's counter, and the API's access
-    checks count separately.
-  - With a short `KHADBOT_WCL_REPLAY_RESET_S`, the budget assumes an hour after the first reset and only learns of
-    the next reset at its next sync (after each job, and when a worker starts).
-  - The live report reveals fights in its metadata only; events pages of fights not shown yet still answer.
-  - A stock worker can't replay SYNTH01: its synthetic encounter file and filters aren't in `config/`. Tests inject
-    them.
-  - Replayed ingest uses the recorded fetch filters, not production's, so replay never exercises a cooldown-registry
-    change. Staging, ingesting real reports, does.
-  - `deploy/stack.env` has no replay settings; the container stack would need an absolute path to the fixtures.
-- **E2E reports turn public after five minutes.** A test session marks its reports not public with a cached "not
-  readable" record, which stands for `KHADBOT_ACCESS_DENIED_RECHECK_S` (300 s). The next signed-out check asks replay,
-  which reads every recorded report, and caches the report as public for six hours. A suite (or a walk-through) that
-  checks a signed-out private lookup more than five minutes after global setup sees the report as public. Let a test
-  session's mark stand for its `--hours`, or have replay answer "not readable" for codes marked private.
-- **Not verified yet.** Real WCL sign-in through the dev loop (it needs a browser); `dev:smoke` doesn't run in CI
-  (the stack job runs `stack:smoke`).
-
-### Security review (code level, 2026-11)
-
-Review of `auth/`, `api/`, `jobs/`, `db/`, `storage/`, `wiring.py`, `config.py`, `deploy/`, the workflows and the web
-app's session code. Its high and medium findings and five low ones are fixed on `main` (`docs/decisions.md`, D91 to
-D96), and the locked Python dependencies were upgraded (`pip-audit` finds none). What is still open, most severe
-first:
-
-- **Medium. The per-client rate limit counts the proxy, not the client, until the proxy is trusted.**
-  `api/limits.py` keys on the connection's peer. On a platform every request arrives from its proxy, so the
-  default 300 a minute would be shared by all clients. Set uvicorn's `FORWARDED_ALLOW_IPS` (and confirm the
-  platform's forwarded header) with the staging deploy, before real traffic. The API also starts uvicorn without
+- **Medium. The rate limit counts the proxy.** Set `FORWARDED_ALLOW_IPS` with the staging deploy; uvicorn has no
   `limit_concurrency`, and each API process counts on its own.
-- **Low. "Sign out everywhere" is not on the design canvas.** `components/account/account-menu.tsx` adds it as a
-  link-style button under Sign out, with no confirmation step and no end-to-end test. Add it to the canvas (or
-  move it), and cover it in `e2e/account.spec.ts`.
-- **Low. The web app shows our own rate limit as "WarcraftLogs is busy".** `components/open-pull/error-cards.ts`
-  gives 429 `rate_limited` from `api/limits.py` the same card as WCL's rate limit, and screens outside the
-  open-pull flow show their generic error for the new 429s and for 413. Give the API's own limit its own wording.
-- **Low. Visitor ingests name fights nobody checked, and never expire.** `api/jobs.py` (`start_ingest`): a
-  signed-out caller may ask for any fight number; the job fails when it runs. The cap
-  (`KHADBOT_VISITOR_MAX_JOBS`) bounds how many wait, but twenty waiting junk jobs block other visitors until the
-  budget reaches them. Refuse a fight the cached metadata doesn't list, and expire a visitor job that has waited
-  an hour.
-- **Low. An event stream checks access once.** `api/jobs.py` (`job_events`): the check runs when the stream
-  opens, not again. A stream lasts as long as its job (hours in `waiting_budget`). Recheck on the keepalive tick.
-- **Low. One watch per report, held by whoever asks first, and no limit per user.** `api/watch.py`
-  (`start_watch`) and `jobs/watch.py` (`WatchService.start`). Any signed-in user who can read a public report can
-  hold its only watch, so the raid's own members get 409 `watch_in_progress`, and one user may watch any number
-  of reports. Cap active watches per user, and let a later watcher join the running watch.
-- **Low. Search writes one blob per name asked for, kept for good.** `api/raids/search.py` (`guild_identity`,
-  `character_and_listing`), "not found" answers included. Keep "not found" in memory only, or add `search/` to the
-  lifecycle rules.
-- **Low. Nothing audits dependencies.** `uv.lock` had 44 known advisories in 13 packages on 2026-11-13 before the
-  upgrade. Add a CI job that runs `uv export --frozen --all-extras --no-hashes --no-emit-project` and
-  `pip-audit -r <file> --no-deps --disable-pip`, and `pnpm audit`, on a schedule and when a lock file changes.
-  `pnpm audit` on the same day: production dependencies clean, one moderate advisory in a development-only
-  package (`minimatch`, GHSA-g3hv-75wg-m249).
-- **Low. Workflow actions and base images are pinned by tag.** `.github/workflows/*.yml` (`actions/checkout@v7`,
-  `jdx/mise-action@v5`, ...) and `deploy/Dockerfile` (`python:<version>-slim`). The workflows hold no secrets and
-  have read-only permissions, so the exposure is the build itself. Pin to commit SHAs and an image digest when
-  the deploy pipeline (which will hold secrets) is added.
-- **Low. A test session's lifetime is capped in the library, not in the command's help.** `main.py test-session
-  --hours` accepts any number and fails with the library's message above 168.
-- **Low. The contract's 429 body is used for answers that are not about the WCL budget.** `visitor_queue_full`
-  (`api/jobs.py`) and `rate_limited` (`api/limits.py`) carry `wait_s` in a `BudgetWaitBody`, because the contract
-  test requires that schema for every 429. Rename the schema (it is in the generated client) or give those two
-  their own when the next contract change comes.
-- **Low. The interlocks and limits have not run on a real deployment.** The refusal of replay, the example token
-  key and non-https web origins, the default-on rate limit and the stream cap are all keyed on "not plain-HTTP
-  localhost", which only the unit tests have exercised. Confirm each on the first staging deploy, and that the
-  load test's test sessions stop working once `KHADBOT_TEST_SESSIONS` is removed.
-- **Low, suspected. Record builds hold one lock for the whole API.** `api/routes.py`: the read routes build
-  records under `ctx.lock`. A caller cycling through more loaded pulls of public reports than the `EncounterData`
-  cache holds (32) keeps every other read route waiting behind rebuilds. Not measured in hosted mode; include it
-  in the staging load test.
-- **Low. Local mode trusts every request that reaches 127.0.0.1.** `main.py serve` has no `Host` check, so a web
-  page using DNS rebinding could read an ingested data directory through the visitor's browser. Add
-  `TrustedHostMiddleware` for `localhost` and `127.0.0.1` in local mode.
-- **Low. The pre-commit hooks fail from Git Bash on this Windows machine.** `post-checkout`, `post-merge` and
-  `fixup!` commits print `Executable /bin/sh not found` (the commit itself and its checks run). The post-merge
-  env check therefore doesn't run after a fast-forward.
-- **Deferred to the staging pass.** TLS and HSTS; the web app's Content-Security-Policy; the production values of
-  `KHADBOT_WEB_ORIGINS`, `KHADBOT_POST_LOGIN_URL` and the redirect URI; cookie behaviour across the web and API
-  hosts (SameSite=Lax needs them on one site); platform secrets and their rotation; the container's runtime user
-  and file permissions; proxy buffering, body limits and idle timeouts for the event streams; Postgres roles and
-  grants (the migrations set none, so the app runs as whatever role `DATABASE_URL` names); and a real WCL sign-in
-  end to end, which has not been exercised.
+- **Low.** "Sign out everywhere" is not on the canvas, has no confirmation and no e2e test.
+- **Low.** The API's own 429 shows as "WarcraftLogs is busy"; other screens show a generic error for 429 and 413.
+- **Low.** Visitor ingests may name fights nobody checked and never expire; refuse unlisted fights and expire
+  after an hour.
+- **Low.** An event stream checks access once; recheck on the keepalive.
+- **Low.** One watch per report held by whoever asks first, no per-user cap; let later watchers join.
+- **Low.** Search writes a blob per name asked for, "not found" included, kept for good.
+- **Low.** No dependency audit in CI (`pip-audit` over `uv export`, `pnpm audit`).
+- **Low.** Workflow actions and base images are pinned by tag; pin SHAs and digests with the deploy pipeline.
+- **Low.** `main.py test-session --hours` accepts any number and fails above 168 with the library's message.
+- **Low.** `visitor_queue_full` and `rate_limited` reuse `BudgetWaitBody`; split it at the next contract change.
+- **Low.** The "not plain-HTTP localhost" interlocks have run only in unit tests; confirm on staging.
+- **Low, suspected.** Record builds hold one API-wide lock; include it in the staging load test.
+- **Low.** `main.py serve` has no `Host` check (DNS rebinding); add `TrustedHostMiddleware`.
+- **Deferred to staging:** TLS and HSTS, CSP, production origins and redirect URI, cookies across web and API
+  hosts, platform secrets, the container's user and permissions, proxy settings for event streams, Postgres roles,
+  and a real WCL sign-in end to end.
 
 ## Agent
 
-- **Agent tools over cached data.** The coach's live-API tools were removed (decision D53), so the coach has none.
-  New tools go in `agent/tools/` and read data offline pipelines have fetched and cached (character profiles,
-  report and encounter data, sims, guides), never an external API. Each needs its pipeline and cache first.
-  Bring back the coach's tool routing, argument and tool-error integration tests with them.
-- **Parked agent and CLI tests.** Tests marked `legacy_agent` are known broken and skipped unless run with
-  `-m legacy_agent`: `tests/integration/cli/test_callback_handler_wired.py` (its `FakeListChatModel` can't script
-  tool calls; rewrite on `tests/helpers/fake_llm.py`) and the two LangSmith footer tests in
-  `tests/integration/cli/test_repl_loop.py` (they never set `LANGCHAIN_TRACING_V2=true`). Fix or delete them in the
-  agent refactor, then drop the marker.
+- **Agent tools over cached data.** New tools go in `agent/tools/` and read cached data (D53); each needs its
+  pipeline first. Bring back the tool routing and tool-error integration tests with them.
+- **Parked tests.** `legacy_agent` tests (`tests/integration/cli/test_callback_handler_wired.py`, two LangSmith
+  footer tests in `test_repl_loop.py`) are skipped; fix or delete them in the agent refactor and drop the marker.
 
 ## Encounters
 
 ### Ula'tek (3492), Heroic
 
-File: `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`. Status: first pass, awaiting review (see the
-human task table in `docs/decisions.md`).
+`config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`, first pass awaiting review. Over the 47 recorded
+pulls: coverage `full`, no `phase_trigger_unmatched`, failures Mother's Wrath 13, Unchecked Rage 21, Rattler Slam
+10, Calcified Corpse 19, Circling Prey 12, Desperate Thrash 28, Acidic Expulsion 1.
 
-- **Review the failure rules.** Final counts over the 47 recorded pulls are in the status row.
-- **Spectral Coils as a damage window.** Every player takes it, damage scales with how many soak, and it causes
-  many overkill deaths. Only Rage of the Shackled is a window today.
-- **Rage of the Shackled `expected_defensive_cooldowns: 1`** is a guess; no guide states how many raid
-  cooldowns a channel needs.
-- **Poisonous Bite** is a dispel mechanic with no failure rule: no source says how long the stacking DoT may
-  stay before it counts as a failure (`debuff_duration_gt {ms}` once known).
-- **Soul Constrictor** soakers are an undetected failure. The `hit_while_aura` rule exists, but the logs don't
-  show who soaked while debuffed: Soul Constrictor (1300685) is never reapplied to a player who has it (0 of 2,400
-  applications over 209 Coils), every player hit takes the same amount, and the share debuffed per Coils ranges
-  from 0 to 95% (`docs/encounter/analysis-rules.md`, "Stack and aura failure rules"). It needs another signal, such as positions
-  at the impact, or a soak assignment from a raid plan.
-- **Rage of the Shackled's cast is not in the file.** The channel's cast (1286860) and the Venomous Heart's
-  cast (1299526) aren't listed, so the filtered enemy Casts page misses both; the unfiltered page has all 55 of
-  each. Decide at the file review whether `rage_of_the_shackled` should list the cast. Check first how a damage
-  window treats an enemy cast row. Adding it changes the Casts filter, so enemy Casts are refetched for every
-  Ula'tek pull.
-- **Hits with no enemy cast.** One Circling Prey (`H7z1fqDXjRTFnbtg:15` at 594.6 s) has no cast, the only one
-  of 17, and neither Fury Unleashed ID is ever cast. Write rules that use Ula'tek's casts so a missing cast
-  changes only who is charged, never whether the occurrence counts.
-- **Mephitic Thrash** has no rule: the logs give players inside and outside the sweep the same impact and DoT
-  (unmitigated median 401,660 outside 35 yards, 416,240 inside). Positions are the only signal. Each hit row
-  carries the player's position, and Gore Rattle's cast row carries its own. Of 1,922 impacts, 74 were within
-  3,500 units (35 yards) of Gore Rattle: 59 on the tail's own tank and 15 on other players over 13 casts.
-  Nothing in the logs confirms the radius or whether the sweep is a circle or a cone, so a reviewer must
-  confirm both first. Then the rule is a hit within that distance of the caster, sparing its aggro holder.
-  Positions are stored now, so only the review is missing.
-- **Mother's Wrath (no tank in melee)** has no `reach_yd`. Of its 13 failures over the 47 pulls, 2 targets
-  were dead and 11 alive at 18.0 to 75.1 yards from Ula'tek's latest position sample. One living target was
-  inside her 21-yard swing reach and three more inside her longest swing (30.3 yards), so distance doesn't
-  split them cleanly. A reviewer should judge whether the target's distance from Ula'tek is the right test
-  for this punishment, and if so, which reach to use.
-- **Ingested Venom** (1313529) is tagged as the Serpent's Bite soak debuff on the raid's belief; confirm.
-- **Normal and Mythic** are not covered: every entry lists `heroic` only. Check each entry against logs from
-  those difficulties before adding them.
-- **Unowned raid punishments**: 2 Unchecked Rages at the start of Stage Three and 3 Rattler Slams before anyone
-  picked up the tail have no aggro holder; they need tank assignments from a raid plan.
-
-## Resolved
-
-- 2026-10-16: the log didn't lose the enemy casts before the enrage; the boss stopped casting. On
-  `H7z1fqDXjRTFnbtg:15` Ula'tek channels Rage of the Shackled from 573.7 to 593.7 s and casts nothing during any
-  channel on record; the enrage at 598.8 s is never cast (`docs/encounter/recorded-nights.md`, "Log investigations").
-  What's left is under Ula'tek.
-- 2026-10-11: the legacy comparison is in `docs/legacy-comparison.md`.
-- 2026-10-11: the real fixture pulls have normalized-event and digest goldens.
-- 2026-10-11: `Pull.boss_hp_pct` / `PullDigest.boss_hp_pct` added from WCL `bossPercentage`, and the
-  `start_ms` / `end_ms` comments fixed.
-- 2026-10-11: real fixtures go in Git LFS (`tests/fixtures/encounter/wcl/.gitattributes`) and pre-commit skips them; the
-  `refs/original` backups from the history rewrite were deleted; the leftover pre-commit `commit-msg` hook was
-  uninstalled.
-- 2026-10-11: the recorded fixture pulls were missing the enemy Casts filtered to the Ula'tek file's ability
-  IDs, so an offline ingest with the current config missed that data type. They now carry both the unfiltered
-  and the filtered pages.
-- 2026-10-11: the perf tests ingest only the recorded fixture fights and pass, and the query-tool p95 meets its
-  budget (see the event store spike in `docs/decisions.md`).
-- 2026-10-16: Git LFS budget. The `check` CI job (`.github/workflows/check.yml`) checks out without LFS
-  (`GIT_LFS_SKIP_SMUDGE=1`), so it spends no LFS bandwidth and the tests that need real fixtures skip. The
-  `real-fixtures` job downloads them (about 200 MB per run) and only runs when started by hand.
+- **Review the failure rules** against those counts.
+- **Spectral Coils as a damage window.** Every player takes it and it causes many overkill deaths; only Rage of
+  the Shackled is a window today.
+- **Rage of the Shackled `expected_defensive_cooldowns: 1`** is a guess.
+- **Rage of the Shackled's cast** (1286860) and the Venomous Heart's (1299526) aren't listed, so the filtered enemy
+  Casts page misses them. Decide at review; adding them refetches enemy Casts for every pull.
+- **Poisonous Bite** has no rule until a source says how long the DoT may stay (`debuff_duration_gt`).
+- **Soul Constrictor soakers** are undetected: the debuff is never reapplied and every hit is equal
+  (`docs/encounter/analysis-rules.md`, "Stack and aura failure rules"). Needs positions at impact or a raid plan.
+- **Mephitic Thrash** has no rule; positions could judge it once a reviewer confirms the radius and shape.
+- **Mother's Wrath `reach_yd`.** Target distance doesn't split the 13 failures cleanly; decide whether distance is
+  the right test.
+- **Hits with no enemy cast.** One Circling Prey has no cast; rules using Ula'tek's casts must change only who is
+  charged, never whether it counts.
+- **Ingested Venom** (1313529) as the Serpent's Bite soak debuff is the raid's belief; confirm.
+- **Normal and Mythic** aren't covered; check each entry against those logs first.
+- **Unowned punishments.** 2 Unchecked Rages and 3 Rattler Slams have no aggro holder; they need tank assignments.
