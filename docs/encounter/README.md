@@ -1,5 +1,15 @@
 # Encounter mode
 
+How encounter mode turns a WarcraftLogs report into records, a digest and verified findings. The models are in
+`src/khadbot/encounter/models.py`; why they are shaped this way is in `docs/decisions.md`.
+
+| File | Covers |
+|---|---|
+| [pipeline.md](pipeline.md) | Each stage (fetch, normalize, event store, annotate, analysis, digest, analyst, read models): what it stores and reads, what invalidates it, retention, cost and size |
+| [analysis-rules.md](analysis-rules.md) | Encounter files, hits and windows, phases and anomalies, failure rules and blame, aggro, positions, fixture goldens |
+| [analyst.md](analyst.md) | What refs resolve to, query tool shapes, verify rules, step accounting, the eval harness, findings caching and synthesis |
+| [recorded-nights.md](recorded-nights.md) | What the recorded Ula'tek nights showed: report facts, log investigations, friendly damage |
+
 ## Running the stages
 
 | Stage | REPL command | Entry point |

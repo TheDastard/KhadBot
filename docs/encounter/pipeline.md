@@ -388,22 +388,10 @@ WCL bills by points, with a budget of 3,600 points per hour for the app. With th
 14 points, so a full raid night is a small share of the hourly budget. Raw pages dominate disk use: a night is
 hundreds of MB of JSON and tens of MB of parquet. Measured costs and their method are in `docs/wcl/costs.md`.
 
-Stored records, measured on a copy of a real 21-pull night (a kill and wipes of one raid, real encounter files and
-registries): 1.66 MB of `records/` against 23.2 MB of `annotated/` and 29.4 MB of `events/` for the same night, about
-79 KB per pull (the seven recorded fixture pulls average 78 KB). Time to get one pull's records, on the dev machine
-(Windows, local disk, best of three, a fresh `EncounterData` per pull, annotation cache warm):
-
-| Path | Per pull | Whole 21-pull night |
-|---|---|---|
-| Build (analysis over the annotated frame) | about 0.5 s | 10.5 s |
-| Load from the records store | about 0.19 s | 3.9 s |
-
-With the cooldown files and registry passed in rather than read from `config/`, the fixture pulls take about 240 ms
-to build and 39 ms to load. The rest of a load was YAML parsing of the authored files, which every lookup used to
-repeat (about 115 ms for the four registry files and tens of ms for the encounter file); parsing the blob itself
-takes about 1.3 ms. Lookups now check each file with one `stat` and reparse it only after it changed (D58). With
-the annotation cache cold, a load still re-annotates the frame, so it saves only the analysis step; the annotation
-cache is part of what a second process needs to find.
+Stored records on a real 21-pull night: 1.66 MB of `records/` (about 79 KB a pull) against 23.2 MB of `annotated/`
+and 29.4 MB of `events/`. Getting one pull's records takes about 0.5 s to build from the annotated frame and about
+0.19 s to load from the records store (Windows, local disk, annotation cache warm). With the annotation cache cold, a
+load still re-annotates the frame, so it saves only the analysis step.
 
 `mise run clean` never touches `KHADBOT_DATA_DIR`. Deleting `raw/` means the next ingest refetches from WCL; deleting
 `events/`, `annotated/` or `records/` only costs local recomputation (an offline re-ingest rebuilds `events/` from `raw/`).

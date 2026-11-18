@@ -1,10 +1,12 @@
 # What the recorded nights show
 
-## Findings from the real reports (2026-10-11)
+Evidence from the three recorded Heroic Ula'tek nights (`H7z1fqDXjRTFnbtg`, `QkVa6GHRK8yfrTbw`,
+`trMgApZCVYkv3jdq`; 62 boss pulls, 47 of them Ula'tek) that encounter files and rules rest on. The API behaviour
+behind it is in `docs/wcl/`. Read it before changing a rule these findings justify.
 
-From the fight lists of the three reports and the first live ingest. The API facts behind these are in
-`docs/wcl/report-data.md`; the items below are what they change in the encounter code. Each still needs a code change
-and, where marked, a contract update in plan section 6.
+## Findings from the real reports
+
+From the fight lists of the three reports and the first live ingest.
 
 - **Raid size for the wipe cutoff stays `len(pull.friendly_player_ids)`.** In all 62 recorded pulls the
   friendly players are exactly the players with events, including the Mythic Nymrissa pulls where WCL reports
@@ -35,12 +37,12 @@ and, where marked, a contract update in plan section 6.
   to 365 s into every pull that reached it. Use these IDs in `config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`; a `wcl_phase` trigger
   works for every Ula'tek phase. The enrage is *Fury Unleashed* (confirmed by the raid leader).
 
-## Log investigations (2026-10-16)
+## Log investigations
 
 Three questions answered from the recorded Heroic Ula'tek pulls (47 pulls, three nights), read from the raw
 pages with scratch scripts and no WCL calls. The API behaviour behind them is in `docs/wcl/` (Events, and
 Instances and positions). The proposed contract text is in `docs/plan-changes.md` under
-`encounter/spike-logs`; none of it is implemented.
+`encounter/spike-logs`.
 
 ### Enemy casts near the end of a pull: the boss stops casting, the log doesn't lose them
 
@@ -171,7 +173,7 @@ also need its own query and storage format. The proposal (a `kill_targets` block
 built, someone with WCL credentials has to check DamageDone on the live schema: its fields, page count and size
 on one long pull, recorded in `docs/wcl/report-data.md`.
 
-## Friendly damage on the recorded nights (2026-10-18)
+## Friendly damage on the recorded nights
 
 Measured on all 62 recorded pulls, read from `KHADBOT_DATA_DIR` without writing to it.
 

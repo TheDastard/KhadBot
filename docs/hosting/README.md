@@ -2,6 +2,14 @@
 
 How the hosted service is packaged and configured: the container image, the environment variables each component reads, and the local stack that runs them. Local mode (the CLI on your machine) needs none of this. The reasons behind these choices are in `docs/decisions.md` (container image and local stack).
 
+| File | Covers |
+|---|---|
+| [configuration.md](configuration.md) | Every environment variable by component (API, migrate, worker, watch, lookup, search, replay, seed) |
+| [local.md](local.md) | The local container stack, the native dev loop, the web app against either, test sessions |
+| [operations.md](operations.md) | Signing out everywhere, rotating the token key, retention and backfill, the usage ledger, logs, worker health |
+
+A new environment variable goes in `configuration.md` under its component (`.claude/rules/hosted.md`).
+
 ## The image
 
 One image holds every role. `deploy/Dockerfile` builds it from the repository root:

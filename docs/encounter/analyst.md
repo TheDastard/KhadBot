@@ -1,8 +1,9 @@
 # Analyst and findings
 
-## Analyst loop
+How the analyst reads records, how verify judges its claims, and what the findings cache keeps. Contracts are in
+section 6 of the [design plan](https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE).
 
-Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and decisions D5/D11.
+## Analyst loop
 
 - **Refs resolve against uncapped records**: `digest.build_pull_records` returns every death, mechanic, cooldown and
   window (`PullRecords`) plus the capped digest; `build_digest` wraps it. A ref beyond a digest cap (for example the
@@ -10,8 +11,8 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
 - **`EncounterData`** (`evidence.py`) is the read side for analysis: the store plus the encounter-file root,
   registry, annotation cache and cutoff fraction. It caches `PullRecords` in-process (bounded LRU keyed by
   pull_key, `events_hash` and `encfile_hash`). `resolve(ref, data)` takes `EncounterData` or a bare `EventStore`
-  (which then uses `config/` files), instead of the plan's `resolve(ref, store)`.
-- **What refs resolve to** (contract detail not in plan 6.5): `pull` → a summary (outcome, duration, boss %, phase
+  (which then uses `config/` files).
+- **What refs resolve to**: `pull` → a summary (outcome, duration, boss %, phase
   reached, cutoff, death counts, coverage, anomalies); `mech:<id>` → the `MechanicStat` plus `cluster_rows`
   (`MechanicCluster`: per-cluster first/last hit, hits, players, damage, failures); `event:<seq>` → the annotated
   event with actor and ability names instead of actor IDs, nulls dropped, `hp_pct` rounded to 0.1. Query tools
@@ -20,7 +21,7 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
 - **Claim numbers** also accept `2:14` (m:ss), `12.4 seconds`, `250ms`, `1.2k` and `3.4m`; digits inside words
   (`Healbot2`, `p2`, `3rd`) and inside refs are ignored. A number matches if a record value, scaled to the claim's
   unit and rounded to the claim's precision, equals it.
-- **Query tool shapes** (plan 6.6 names tools and args only): rows are the resolved record for their ref, or a
+- **Query tool shapes**: rows are the resolved record for their ref, or a
   subset of its fields (`list_pulls` and `compare_pulls` rows are slim pull summaries). `query_mechanic` returns
   `{"mechanic": stat, "clusters": [...]}`; cluster rows carry the mechanic's ref. `cooldown_timeline` returns
   cooldown uses and damage-window rows in one list sorted by time; a window's phase is the phase active at its
@@ -35,7 +36,7 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   `events_hash` and `encfile_hash`. It also hashes the role and each tool's `tool_call_schema` (the schema the
   model is sent, without the injected run config) rather than `args_schema`. `VERIFY_RULES_VERSION` lives in
   `versioning.py` next to `GRAPH_VERSION`.
-- **Verify rule additions** (plan 6.7, still `VERIFY_RULES_VERSION = 1` as the first implementation): a ref
+- **Verify rules beyond the plan's**: a ref
   must resolve to a pull inside the request, not just any ingested pull; and the number of refs cited (overall
   and per kind) counts as a supported value, so "3 players died" citing three death refs passes. Numbers come from
   every field of the cited records, including IDs and digits inside strings, so a small count can match by
@@ -47,8 +48,8 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   accepts `EncounterData` or a bare store, calls `llm_factory.get_llm(role="analyst")` once per run, and traces the
   run as `encounter_analyst` with the request ID, versions, model ID, pulls and depth as metadata. `run_id` lets the
   eval harness attach feedback to the trace.
-- **Analyst state** adds `forced` (budget hit), `pulls` (requested pulls that are ingested) and `unknowns` (from
-  code) to the plan's fields. Requested pulls that are not ingested become `pull <key> is not ingested` unknowns;
+- **Analyst state** includes `forced` (budget hit), `pulls` (requested pulls that are ingested) and `unknowns` (from
+  code). Requested pulls that are not ingested become `pull <key> is not ingested` unknowns;
   if none are ingested the model is never called.
 - **Step accounting**: a `submit_report` round costs a step like a query round. The single retry (for rejected
   findings or an invalid `submit_report` call) happens only if steps remain after the submission; otherwise the
@@ -62,20 +63,13 @@ Plan v0.3.2 (2026-10-11) folds the contract changes below into its section 6 and
   at the end and written to `$KHADBOT_DATA_DIR/eval/golden-<timestamp>.json`. `KHADBOT_EVAL_MIN_PASS_RATE` gates
   the run once thresholds are set (unset: report only); `KHADBOT_GOLDEN_QUESTIONS` points at another question
   file. With `LANGSMITH_API_KEY` set, each question's result is attached to its traced run as `golden_pass`
-  feedback (the "upload" the plan mentions). Validation is stricter than the plan's schema: `unanswerable`
+  feedback. Validation: `unanswerable`
   requires `must_be_unknown: true`, and answerable questions need `expected_refs_any`. An optional `depth` field
   selects the step budget.
-- **M3 exit criteria waiting on humans**: golden questions (H5; `tests/golden/questions.yaml` is an empty list with
-  the schema in comments), thresholds and the Groq gate decision (H6), and the query-tool p95 perf test (written,
-  skipped until H2 fixtures exist). Unanswerable handling and every scripted scenario pass on SYNTH01.
 
 ## Findings persistence and fan-out
 
-- **Started ahead of the M3 gate** (2026-10-11): the M3 exit needs the golden questions, thresholds and the Groq
-  gate decision (H5, H6), which are still open. M4 is built and tested on SYNTH01 with fake models. If the gate
-  changes the analyst's tools or prompts, the cache key changes with them (by design), but the synthesis prompt
-  and the cross-pull golden check should be revisited.
-- **What is cached**: only the per-pull review, under `findings.cache_key` (plan 6.8). The synthesis runs on every
+- **What is cached**: only the per-pull review, under `findings.cache_key`. The synthesis runs on every
   review because it answers the user's question; it is cheap next to the per-pull analyses. So "a second identical
   request makes no model calls" holds for per-pull analysis, not for the synthesis call.
 - **Per-pull review question** is the fixed `STANDARD_REVIEW_QUESTION`. It is hashed into the review's

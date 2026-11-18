@@ -26,7 +26,6 @@ tags:
       - src/khadbot/encounter/*.py
       - tests/unit/encounter/*.py
       - docs/encounter/**
-      - docs/legacy-comparison.md
     subtags:
       ingest:
         description: WCL event queries and fetch, raw page cache, normalize, event store, ingest
