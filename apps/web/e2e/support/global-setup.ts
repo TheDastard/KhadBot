@@ -38,7 +38,7 @@ async function health(): Promise<{ features?: Record<string, boolean> }> {
   } catch (cause) {
     throw new Error(
       `The hosted API isn't answering at ${HOSTED_API}. Start the dev loop first: \`mise run dev:all\`, then ` +
-        `\`mise run dev:seed -- --only ${E2E_REPORTS.join(" ")}\` (docs/hosting.md, "The web app").`,
+        `\`mise run dev:seed -- --only ${E2E_REPORTS.join(" ")}\` (docs/hosting/local.md, "The web app").`,
       { cause },
     );
   }

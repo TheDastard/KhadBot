@@ -2,7 +2,7 @@
 
 What guild search, character search and the server list ask WCL, what each request costs and what KhadBot keeps
 between searches. `wcl/search.py` holds the queries; the routes are `api/raids/search.py` and
-`api/raids/servers.py` (`docs/hosting.md`, "Guild, character and server search").
+`api/raids/servers.py` (`docs/hosting/configuration.md`, "Guild, character and server search").
 
 ## Fields
 

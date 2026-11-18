@@ -9,7 +9,7 @@ api/limits.py
   ``rate_limited`` with ``Retry-After``. ``GET /v1/health`` and CORS preflights are not counted. 0 turns it off.
 
 The client address is the connection's peer (``scope["client"]``). Behind a proxy that is the proxy, unless the server
-is told which proxies to trust (uvicorn's ``FORWARDED_ALLOW_IPS``); ``docs/hosting.md`` says how. Counters live in
+is told which proxies to trust (uvicorn's ``FORWARDED_ALLOW_IPS``); ``docs/hosting/configuration.md`` says how. Counters live in
 this process: with several API processes each allows ``per_minute``.
 """
 

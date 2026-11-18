@@ -68,9 +68,9 @@ run = "uv run pytest tests/unit"
 description = "Vitest across the TypeScript workspace"
 run = "pnpm -r run test"
 
-# Needs the dev loop running (mise run dev:all) with SYNTH01 seeded; docs/hosting.md, "The web app".
+# Needs the dev loop running (mise run dev:all) with SYNTH01 seeded; docs/hosting/local.md, "The web app".
 [tasks."test:e2e"]
-description = "Playwright against the dev loop's hosted API (WCL replay, test sessions); see docs/hosting.md"
+description = "Playwright against the dev loop's hosted API (WCL replay, test sessions); see docs/hosting/"
 run = "pnpm --filter @khadbot/web e2e"
 
 # Starts main.py serve on 8001 and a web dev server on 3000 itself; needs .khadbot_fixture_data (gen:fixture-data).
@@ -145,7 +145,7 @@ run = "uv run python main.py serve"
 # Local mode, a quick look at a data directory: read routes only, no sign-in, Postgres, bucket or Docker. Build the data directory once with
 # `mise run gen:fixture-data`. To serve your own data instead, set KHADBOT_DATA_DIR before running the task.
 [tasks."serve:fixtures"]
-description = "Local-mode API on 127.0.0.1:8000 over .khadbot_fixture_data (or KHADBOT_DATA_DIR); see docs/hosting.md"
+description = "Local-mode API on 127.0.0.1:8000 over .khadbot_fixture_data (or KHADBOT_DATA_DIR); see docs/hosting/"
 env = { KHADBOT_DATA_DIR = "{{ get_env(name='KHADBOT_DATA_DIR', default='.khadbot_fixture_data') }}" }
 run = "uv run python main.py serve"
 
@@ -186,7 +186,7 @@ description = "Stop the stack and delete its data volumes (database and bucket)"
 run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes"
 
 
-# -- Native dev loop (needs Docker for Postgres and SeaweedFS; docs/hosting.md, "Local development") --
+# -- Native dev loop (needs Docker for Postgres and SeaweedFS; docs/hosting/local.md, "Local development") --
 # Postgres and SeaweedFS run in Docker; the hosted API and worker run natively and restart when Python files change.
 # Settings come from deploy/dev.env (setup.ps1 creates it from deploy/dev.env.example). Port 8000 is shared with
 # stack:up: run one of them at a time.
@@ -222,7 +222,7 @@ run = "uv run python scripts/dev/dev.py all"
 # Runs `main.py test-session` with the dev loop's environment (deploy/dev.env, which turns KHADBOT_TEST_SESSIONS on);
 # it refuses otherwise. Arguments go after `--`: `mise run dev:session -- --user alice --reports CODE`.
 [tasks."dev:session"]
-description = "Start a session for a named test user and print its cookie (development only; see docs/hosting.md)"
+description = "Start a session for a named test user and print its cookie (development only; see docs/hosting/)"
 run = "uv run python scripts/dev/dev.py session"
 
 

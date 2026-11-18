@@ -9,7 +9,7 @@ is re-processed from, and unreferenced records are removed by the worker's clean
 PutBucketLifecycleConfiguration replaces the bucket's whole configuration, so the script reads the current rules first,
 replaces only the two it owns (rule IDs starting ``khadbot-``) and keeps every other rule as it is. It reads the
 configuration back afterwards and exits non-zero if a rule is missing or differs, so a provider that accepts the
-request but stores something else (or nothing) is noticed. docs/hosting.md says what Cloudflare R2 and SeaweedFS do
+request but stores something else (or nothing) is noticed. docs/hosting/operations.md says what Cloudflare R2 and SeaweedFS do
 with these rules.
 
 Run it with the bucket's settings in the environment (the same ``KHADBOT_S3_*`` and ``AWS_*`` variables the API reads):

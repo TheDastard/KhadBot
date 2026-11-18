@@ -545,7 +545,7 @@ class WclReplayConfig:
 
     ``rateLimitData`` comes from a simulated counter of ``limit_per_hour`` points per window of ``reset_s`` seconds.
     ``live_report`` names a recorded report whose recorded fights appear one at a time: one more per metadata request
-    when ``live_interval_s`` is 0, else one more every ``live_interval_s`` seconds. ``docs/hosting.md``, "WCL replay".
+    when ``live_interval_s`` is 0, else one more every ``live_interval_s`` seconds. ``docs/hosting/configuration.md``, "WCL replay".
     """
 
     directory: str = field(default_factory=lambda: _optional("KHADBOT_WCL_REPLAY").strip())

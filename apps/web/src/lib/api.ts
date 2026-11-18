@@ -18,7 +18,7 @@ let healthClient: ApiClient | null = null;
 export function apiBase(): string {
   const base = process.env.NEXT_PUBLIC_API_BASE;
   if (!base) {
-    throw new Error('NEXT_PUBLIC_API_BASE is not set: point it at the KhadBot API (docs/hosting.md, "The web app").');
+    throw new Error('NEXT_PUBLIC_API_BASE is not set: point it at the KhadBot API (docs/hosting/local.md, "The web app").');
   }
   return base;
 }

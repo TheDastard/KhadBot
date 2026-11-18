@@ -16,7 +16,7 @@ worker run on this machine in hosted mode and restart when a Python or config fi
 ``mise run dev:infra``, ``dev:api``, ``dev:worker``, ``dev:web``, ``dev:seed``, ``dev:smoke``, ``dev:all`` and
 ``dev:session`` run these. Settings
 come from deploy/dev.env (copied from deploy/dev.env.example by scripts/dev/setup.ps1) on top of the main checkout's
-.env, which supplies the WCL credentials. See docs/hosting.md, "Local development".
+.env, which supplies the WCL credentials. See docs/hosting/local.md, "Local development".
 """
 
 from __future__ import annotations

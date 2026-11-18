@@ -1,5 +1,5 @@
 # Local hosted-mode stack: Postgres, SeaweedFS (S3-compatible storage), a migrate step, the API and a worker, all reading
-# deploy/stack.env. Run it with `mise run stack:up`; see deploy/README.md and docs/hosting.md.
+# deploy/stack.env. Run it with `mise run stack:up`; see deploy/README.md and docs/hosting/.
 #
 # The native dev loop (`mise run dev:all`) starts only the postgres and seaweedfs services from this file and runs the
 # API and worker on the host; the bucket and migrations are done by scripts/dev/dev.py, so it builds no image.

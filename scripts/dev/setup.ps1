@@ -22,7 +22,7 @@
 #      running, so the first `mise run dev:all` doesn't stop to download them.
 #
 # Only developer machines run this. A hosted deployment needs none of it: it runs the image built from
-# deploy/Dockerfile with the platform's Postgres, bucket and environment (docs/hosting.md).
+# deploy/Dockerfile with the platform's Postgres, bucket and environment (docs/hosting/).
 #
 # Never touches an existing .env, never changes Python or .venv outside uv, and asks winget before installing
 # anything (winget shows its own agreement prompts).

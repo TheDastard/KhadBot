@@ -3,7 +3,7 @@
 ## WCL replay
 
 `wcl/replay.py` answers WCL requests from recorded reports instead of the network, for development and tests
-(settings and use: `docs/hosting.md`, "WCL replay"). It is an `httpx` transport under `WarcraftLogsClient`, so every
+(settings and use: `docs/hosting/configuration.md`, "WCL replay"). It is an `httpx` transport under `WarcraftLogsClient`, so every
 caller's own code runs unchanged. Everything it answers comes from a recording; what it can't answer it refuses by
 name. How each request maps to the recording (a directory laid out like the raw page cache):
 
@@ -25,7 +25,7 @@ name. How each request maps to the recording (a directory laid out like the raw 
   refused page names it, so a filter no recording holds is visible at once.
 - Pages keep their recorded boundaries whatever `limit` the request sends. The recordings were made with 10,000.
 - Which requests arrive is decided above replay: under replay, ingest asks for the recorded fetch shape (the
-  recordings' filters, per pull; `docs/hosting.md`, "WCL replay"), because the current registries' filters have
+  recordings' filters, per pull; `docs/hosting/configuration.md`, "WCL replay"), because the current registries' filters have
   hashes no recording holds.
 - The recorded fixtures' `report.json` files have no `phases` (they were recorded before `GET_REPORT_META` asked
   for them), so replayed metadata has none for them, just as offline ingest of them has none.

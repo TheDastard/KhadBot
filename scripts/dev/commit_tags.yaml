@@ -287,11 +287,11 @@ tags:
 
   # ── Deployment ───────────────────────────────────────────────────────────
   deploy:
-    description: Container image, compose stack and the dev loop (deploy/), the stack tasks and docs/hosting.md
+    description: Container image, compose stack and the dev loop (deploy/), the stack tasks and docs/hosting/
     paths:
       - deploy/**
       - .dockerignore
-      - docs/hosting.md
+      - docs/hosting/**
       - scripts/data/seed_stack.py
       - scripts/data/apply_bucket_lifecycle.py
     subtags:

@@ -58,7 +58,7 @@ per-fight entries, which stay the only thing normalize reads. `fetch_batches` fe
 (`BATCHED_SPEC_KEYS`) once per spec, filter and chunk of up to `wcl_batch_max_fights` pulls; pulls already partly
 fetched, single pulls, offline and metadata-refresh runs go per pull, and a failed batch falls back to per-pull requests.
 `fetch_report(batch=False)` fetches every spec per pull; the job context passes it under WCL replay, whose recordings
-hold per-pull pages only (`docs/hosting.md`, "WCL replay").
+hold per-pull pages only (`docs/hosting/configuration.md`, "WCL replay").
 
 Specs per pull (`DEFAULT_SPECS` plus `specs_for`):
 
@@ -361,7 +361,7 @@ the next projection of that pull replaces its rows; a change only to the project
 ## Retention and backfill (hosted mode)
 
 Hosted mode keeps `events/` always and expires the stages above it: `raw/` after 14 days and `annotated/` after 90, by
-bucket lifecycle rules (`scripts/data/apply_bucket_lifecycle.py`, `docs/hosting.md`). `records/` has no rule: a blob is
+bucket lifecycle rules (`scripts/data/apply_bucket_lifecycle.py`, `docs/hosting/operations.md`). `records/` has no rule: a blob is
 never updated, so each change leaves the previous blob behind, and the worker's cleanup job removes `records/` objects
 that no `pulls.records_key` references once they are 30 days old. A deleted blob is rebuilt from `events/` on the next
 read.

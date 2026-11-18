@@ -31,7 +31,7 @@ Source: WCL's API client settings page and its "Rate Limits" and "Point Types" d
   on the same account adds no points.
 - **Two schemes.** WCL is moving accounts from its current limits to new ones. An account opts in with "Use New
   Limits" on the client settings page; API keys created on or after 2026-09-29 start on the new scheme.
-  `KHADBOT_WCL_LIMIT_SCHEME` tells the budget which one applies (`docs/hosting.md`).
+  `KHADBOT_WCL_LIMIT_SCHEME` tells the budget which one applies (`docs/hosting/configuration.md`).
 
 | Points | Current limits | New limits |
 |---|---|---|

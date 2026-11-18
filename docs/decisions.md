@@ -1,7 +1,7 @@
 # KhadBot decisions log
 
 Each row is a decision still in force and the reason for it. How the result works lives in the reference docs:
-`docs/encounter/`, `docs/hosting.md`, `docs/wcl/`, `docs/game-art.md`, the API contract (`contracts/openapi.json`)
+`docs/encounter/`, `docs/hosting/`, `docs/wcl/`, `docs/game-art.md`, the API contract (`contracts/openapi.json`)
 and `.claude/rules/`. `.claude/rules/docs.md` says how to add or change a row.
 
 Sources: the [Encounter Review Refactor plan](https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE), the

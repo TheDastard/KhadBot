@@ -65,7 +65,7 @@ scripts/             # dev/ (setup, dev loop runner, clean, contract generator),
                      # recorder, registry builder), wcl/ (budget and merged-filter probes, cost spike)
 apps/                # TypeScript apps (pnpm workspace): web/ (Next.js dashboard; e2e/ holds Playwright); desktop/ and discord/ later
 packages/            # api-client/: types generated from contracts/openapi.json and the typed fetch client
-deploy/              # Dockerfile, compose stack, its env file and the dev loop's env example (dev.env.example); docs/hosting.md describes running and configuring them
+deploy/              # Dockerfile, compose stack, its env file and the dev loop's env example (dev.env.example); docs/hosting/ describes running and configuring them
 tests/               # unit/, integration/, eval/, fixtures/, golden/, helpers/
 docs/decisions.md    # design decisions and their reasons
 docs/encounter/      # encounter mode: running the stages, pipeline, analysis rules, analyst, recorded nights
@@ -81,7 +81,7 @@ Runtime data lives under `KHADBOT_DATA_DIR` (default `.khadbot_data/`, gitignore
 - The design and its data contracts come from the "KhadBot Encounter Review Refactor" plan: https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE (read it with the Artifact tool). Section 6 defines the models, file formats, evidence refs and verify rules.
 - `docs/decisions.md` records each design decision and why it was made. When you change a decision, update that file in the same change.
 - `docs/follow-ups.md` tracks open work that is not a plan task yet. Add a gap you are not fixing; remove it in the commit that fixes it.
-- Reference docs (`docs/wcl/`, `docs/game-art.md`, `docs/encounter/`, `docs/hosting.md`) describe how things are now; `.claude/rules/docs.md` says how to update them.
+- Reference docs (`docs/wcl/`, `docs/game-art.md`, `docs/encounter/`, `docs/hosting/`) describe how things are now; `.claude/rules/docs.md` says how to update them.
 - Path-scoped rules in `.claude/rules/` add detail for the area you are working in.
 
 ## Commands
@@ -107,7 +107,7 @@ A new machine or clone runs `scripts/dev/setup.ps1` once (tools, PATH, LFS, Pyth
 | Web gate: api-client drift check, ESLint, tsc, Vitest | `mise run check:web` | `pnpm run check` |
 | Both gates (a change that touches Python and the web) | `mise run check:all` | `mise run check`, then `mise run check:web` |
 | Regenerate the API client's types (after `gen:contracts`) | `mise run gen:types` | `pnpm --filter @khadbot/api-client gen` |
-| Web end-to-end tests: on the dev loop with SYNTH01 seeded; on `main.py serve` (docs/hosting.md, "The web app") | `mise run test:e2e`, `mise run test:e2e:local` | `pnpm --filter @khadbot/web e2e`, `... e2e:local` |
+| Web end-to-end tests: on the dev loop with SYNTH01 seeded; on `main.py serve` (docs/hosting/local.md, "The web app") | `mise run test:e2e`, `mise run test:e2e:local` | `pnpm --filter @khadbot/web e2e`, `... e2e:local` |
 | Format | `mise run format` | `uv run ruff format src tests scripts && uv run ruff check --fix src tests scripts` |
 | Run the CLI | `mise run cli` | `uv run python main.py cli` |
 | Dev loop: Postgres and the bucket in Docker, the hosted API and worker native with reload, the web dev server (needs Docker; ports 8000 and 3000) | `mise run dev:all` | `uv run python scripts/dev/dev.py all` |

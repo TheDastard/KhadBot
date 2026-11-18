@@ -3,7 +3,7 @@
 // The hosted end-to-end suite (`mise run test:e2e`): the web app against the dev loop's hosted API with WCL replay
 // on and test sessions, never a real Warcraft Logs login or a WCL point. Start the dev loop first
 // (`mise run dev:all`, which also starts the web dev server; `mise run dev:seed -- --only SYNTH01`). When nothing
-// listens on :3000, Playwright starts `next dev` itself. docs/hosting.md, "The web app", has the steps.
+// listens on :3000, Playwright starts `next dev` itself. docs/hosting/local.md, "The web app", has the steps.
 
 import { defineConfig, devices } from "@playwright/test";
 
