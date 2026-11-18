@@ -17,6 +17,10 @@ Steps 1 to 4 run from the task's worktree; steps 5 and 6 run from the main check
 
 - `git status --short` is empty, and every commit is in its final shape: one logical change each, messages per the
   commit rules. Fold stray fixes into the commit they belong to before anything is pushed.
+- Docs keep up with the branch (`.claude/rules/docs.md`): a follow-up this branch fixes or drops is deleted from
+  `docs/follow-ups.md`; a decision it makes or reverses has its `docs/decisions.md` row added, edited or deleted; a
+  gap it leaves is a new follow-up; every doc that names a setting, route, file or field it renamed or removed is
+  updated. Read the diff for each, and fold any doc fix into the commit it belongs to.
 - Note the branch name (`git branch --show-current`) and the worktree path (`git rev-parse --show-toplevel`).
 
 ## 2. Sync with main

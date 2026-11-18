@@ -26,9 +26,7 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 
 ## API
 
-- Every report route checks that the caller may read the report. A report the caller cannot read answers 404, never 403, so the API never confirms that a private report exists.
-- Report routes get the caller from `auth.routes.optional_user` or `current_user` and check with `ReportAccess.require_readable` (`wiring.report_access()`); never write a second access check.
-- State-changing routes depend on `auth.routes.require_csrf` (the `X-KhadBot-CSRF: 1` header plus an `Origin` check). Cookies stay HttpOnly and SameSite=Lax, and Secure everywhere but plain-HTTP localhost.
+Route, access and contract rules are in `api.md`.
 
 ## Dependencies and layers
 
@@ -43,4 +41,4 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 - The stack never mounts `.khadbot_data`; hosted mode keeps its data in Postgres and the bucket. The image runs as a non-root user.
 - `deploy/dev.env.example` is the native dev loop's counterpart of `stack.env` (`127.0.0.1` instead of container host names); the copy `deploy/dev.env` is gitignored and holds throwaway values and nothing else. Real WCL credentials stay in `.env`.
 - The dev loop's `--reload` (`main.py api|worker --reload`) is for development only; never put it in the image or a compose command.
-- A new environment variable goes in `.env.example`, in `docs/hosting.md` under its component, and in `stack.env` when the local stack needs it. `tests/unit/test_config_env.py` fails while `config.py` reads a name `.env.example` doesn't list, or an example lists one nothing reads; after a pull, the post-merge hook and `mise run env:check` name what your own `.env` lacks.
+- A new environment variable goes in `.env.example`, in `docs/hosting/configuration.md` under its component, and in `stack.env` when the local stack needs it. `tests/unit/test_config_env.py` fails while `config.py` reads a name `.env.example` doesn't list, or an example lists one nothing reads; after a pull, the post-merge hook and `mise run env:check` name what your own `.env` lacks.
