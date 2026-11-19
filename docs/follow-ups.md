@@ -183,6 +183,8 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
 - **E2E reports turn public after five minutes** when the cached "not readable" mark expires; let a test session's
   mark last its `--hours`.
 - **Not verified:** a real WCL sign-in through the dev loop; `dev:smoke` in CI.
+- **The fake model provider isn't refused on a real deployment**, as WCL replay is: `LLM_PROVIDER=fake` on a
+  non-localhost hosted API or worker only logs a warning.
 
 ## Security (code review, 2026-11)
 

@@ -241,6 +241,16 @@ def _log_development_switches() -> None:
         logging.getLogger("khadbot.main").warning(
             "Development switch ON: KHADBOT_TEST_SESSIONS (test sessions can be issued). Never set this in production."
         )
+    from khadbot import llm_factory
+    from khadbot.config import get_config
+
+    if roles := llm_factory.fake_provider_roles():
+        logging.getLogger("khadbot.main").warning(
+            "Development switch ON: the fake model provider answers for %s (script %r). No real model is called. "
+            "Never set this in production.",
+            ", ".join(roles),
+            get_config().llm.fake_script,
+        )
 
 
 def _run_worker_check() -> None:

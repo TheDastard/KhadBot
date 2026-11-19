@@ -128,6 +128,21 @@ A development switch for the API, the worker and the CLI (`docs/decisions.md`, D
 
 Try it on the local stack: set `KHADBOT_WCL_REPLAY=tests/fixtures/encounter/wcl` (an absolute path when the process runs elsewhere) for the API and the worker, sign in, and ingest `QkVa6GHRK8yfrTbw` with fight 14 (the report lists every fight, but only the recorded ones have pages, so name them). For live watch, add `KHADBOT_WCL_REPLAY_LIVE=H7z1fqDXjRTFnbtg` and a short `KHADBOT_WATCH_POLL_INTERVAL_S`, then watch that report: its four recorded fights arrive one per poll.
 
+### Fake model provider
+
+A development switch (`docs/decisions.md`, D97): `LLM_PROVIDER=fake`, or `LLM_PROVIDER_ANALYST=fake` for one role, answers every model call from a script in `src/khadbot/llm_fake.py`, with no network and no key. Reviews run end to end on the local stack for nothing. Off unless set; the local stack's and CI's environment files are the only places to set it. `main.py api` and `main.py worker` log a warning at start-up naming the roles it answers for.
+
+| Setting | Meaning |
+|---|---|
+| `FAKE_LLM_SCRIPT` | `default` (the default) or `failing`. `failing` adds one finding whose number no record holds, so verify rejects it and the review shows a rejected finding. A role without a script of that name plays its `default`. |
+| `FAKE_LLM_DELAY_SECONDS` | Seconds each reply waits (default 0), so progress is visible. |
+
+**Analyst.** The script calls `list_pulls`, then `query_deaths` when the pull has deaths (or `compare_pulls` when synthesising), then `submit_report`. Every finding is built from the records those tools returned: refs resolve and numbers match, so verify accepts them.
+
+**Usage.** Every reply reports 1000 input and 200 output tokens (no cache tokens) under the model name `fake`. The price table lists `fake` at zero, so ledger rows carry a cost of 0, and findings are cached under the model key `fake`, never a real model's.
+
+**Other roles.** A role with no script (the coach, until the conversation agent has one) answers with a fixed placeholder line. A script is added with `llm_fake.register_script(role, name, script)`.
+
 ### Seed (`scripts/data/seed_stack.py`)
 
 The API's variables. It refuses to run unless `KHADBOT_MODE=hosted` and `KHADBOT_STORAGE=s3`, so it can never write a local data directory. It needs no WCL credentials.

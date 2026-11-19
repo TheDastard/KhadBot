@@ -52,6 +52,18 @@ def _check_ollama(model: str, base_url: str) -> None:
         )
 
 
+def fake_provider_roles() -> list[str]:
+    """
+    The roles that get the fake provider ("default" stands for every role without an override), for the start-up log.
+    Empty when the fake provider is off.
+    """
+    llm_cfg = get_config().llm
+    roles = [role for role, provider in llm_cfg.role_providers.items() if provider == "fake"]
+    if llm_cfg.provider.value == "fake":
+        roles.append("default")
+    return roles
+
+
 def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChatModel:
     """
     Initialize and return a chat model for the given provider.
@@ -65,6 +77,7 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
       - "openai"     — GPT-4o; production quality eval (BYOK)
       - "groq"       — Llama 3.3 70B via Groq free tier; integration tests
       - "ollama"     — Local open-weight model via Ollama; inner dev loop (free)
+      - "fake"       — Scripted model, no network or key; development and CI (llm_fake.py)
 
     Raises:
         LLMProviderError: If the provider cannot be reached, credentials are
@@ -79,6 +92,12 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
     if model_override and provider in _MODEL_PROVIDERS:
         llm_cfg = replace(llm_cfg, **{f"{provider}_model": model_override})
     logger.debug(f"Initializing LLM for provider: {provider}")
+
+    if provider == "fake":
+        from khadbot.llm_fake import build_fake_model
+
+        logger.info(f"Using the fake model (script {llm_cfg.fake_script!r}) for role {role!r}")
+        return build_fake_model(role, script=llm_cfg.fake_script, delay_seconds=llm_cfg.fake_delay_seconds)
 
     if provider == "anthropic":
         if not llm_cfg.anthropic_api_key:
@@ -153,6 +172,6 @@ def get_llm(provider: str | None = None, *, role: str | None = None) -> BaseChat
     else:
         raise ValueError(
             f"Unknown provider: '{provider}'. "
-            f"Valid options: anthropic, openai, groq, ollama. "
+            f"Valid options: anthropic, openai, groq, ollama, fake. "
             f"Set LLM_PROVIDER in your .env file."
         )

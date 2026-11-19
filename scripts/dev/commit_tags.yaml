@@ -128,11 +128,13 @@ tags:
       rag:
         description: Retrieval and guide data
   llm:
-    description: llm_factory.py, model and provider selection, model prices
+    description: llm_factory.py, model and provider selection, the fake development provider, model prices
     paths:
       - src/khadbot/llm_factory.py
+      - src/khadbot/llm_fake.py
       - config/pricing/**
       - tests/unit/test_llm_factory.py
+      - tests/unit/test_llm_fake.py
       - tests/unit/test_fake_llm.py
 
   # ── Shared clients and data ──────────────────────────────────────────────

@@ -84,7 +84,7 @@ The full experience runs hosted mode on your machine: Postgres and the bucket in
 
 **Reset.** `mise run stack:reset` stops everything in the project and deletes the database and the bucket; `dev:all` recreates them, and `dev:seed` fills them again.
 
-**Switches for development.** WCL replay answers WCL from the recorded fixture reports, so ingest and live watch spend no WCL points: uncomment `KHADBOT_WCL_REPLAY` in `deploy/dev.env` (see "WCL replay" under "Environment variables" above). Test sessions are described under "Test sessions" below.
+**Switches for development.** WCL replay answers WCL from the recorded fixture reports, so ingest and live watch spend no WCL points: uncomment `KHADBOT_WCL_REPLAY` in `deploy/dev.env` (see "WCL replay" under "Environment variables" above). The fake model provider answers reviews with no model key: set `LLM_PROVIDER=fake` (see "Fake model provider" under "Environment variables"). Test sessions are described under "Test sessions" below.
 
 **Time to start.** With the images pulled and the volumes in place, `dev:all` has the infrastructure ready in about 3 seconds and the API healthy about 8 seconds after the command (measured on the maintainer's Windows machine, 2026-10-31). The first run also pulls the Postgres and SeaweedFS images, which takes around a minute depending on the connection.
 

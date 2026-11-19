@@ -19,6 +19,7 @@ class LLMProvider(StrEnum):
     OPENAI = "openai"
     GROQ = "groq"
     OLLAMA = "ollama"
+    FAKE = "fake"  # scripted model for development and CI: no network, no key (llm_fake.py)
 
 
 class EmbeddingBackend(StrEnum):
@@ -80,6 +81,9 @@ class LLMConfig:
     # Per-role overrides for encounter review ("analyst" | "conversation"); absent roles use the global settings.
     role_providers: dict[str, str] = field(default_factory=lambda: _role_env("LLM_PROVIDER"))
     role_models: dict[str, str] = field(default_factory=lambda: _role_env("MODEL", suffix=True))
+    # The fake provider (development only): which script it plays and how long each reply takes.
+    fake_script: str = field(default_factory=lambda: _optional("FAKE_LLM_SCRIPT", "default"))
+    fake_delay_seconds: float = field(default_factory=lambda: float(_optional("FAKE_LLM_DELAY_SECONDS", "0")))
 
 
 @dataclass(frozen=True)

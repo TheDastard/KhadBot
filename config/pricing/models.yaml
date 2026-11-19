@@ -6,6 +6,7 @@
 # Source: https://platform.claude.com/docs/en/about-claude/pricing (docs.claude.com/en/docs/about-claude/pricing
 # redirects there). Model IDs: https://platform.claude.com/docs/en/models/overview ("Claude API ID").
 # A model not listed here gets no cost estimate (the ledger row keeps its tokens and a null cost).
+# `fake` is the development provider (llm_fake.py): it calls no model, so it costs nothing.
 #
 # Columns: input = base input tokens; cache_write = 5-minute cache writes; cache_read = cache hits and refreshes;
 # output = output tokens. `long_context` (optional) replaces the prices for a prompt over `above_input_tokens`.
@@ -38,3 +39,8 @@ models:
       cache_write: 0.625
       cache_read: 0.05
       output: 2.5
+  fake:
+    input: 0
+    cache_write: 0
+    cache_read: 0
+    output: 0
