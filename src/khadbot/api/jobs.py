@@ -13,7 +13,7 @@ Routes (all under ``/v1``; the two that change state need the CSRF header):
   visitor may open one pull of a report they can read, which is a public one: it loads on the app's token and counts
   against the visitors' shared budget allowance (``Ask.visitor``). Anything more (several pulls, a whole report)
   needs sign-in (401 ``not_signed_in``).
-- ``GET /jobs/{id}``: the job's state, per-pull steps (download, prepare, analyse) and typed error.
+- ``GET /jobs/{id}``: the job's state, per-pull steps (download, prepare, analyse) and typed error.  Review jobs (``api/reviews.py``) are followed through the same two read routes.
 - ``GET /jobs/{id}/events``: the same as a server-sent event stream.
 - ``POST /jobs/{id}/cancel``: cancel it (signed in only). Pulls already written stay written; the raw page cache
   resumes.
@@ -21,7 +21,7 @@ Routes (all under ``/v1``; the two that change state need the CSRF header):
 Anyone who can read a job's report may read the job and its stream, signed in or not (the access rule every report
 route uses, so losing access to a report ends it); only the user who started a job may cancel it (403
 ``not_your_job``), and only they see its points spent. A visitor's job has no owner: nobody may cancel it, and it
-runs to the end once queued. A missing job, a process job, and a job on a report the caller cannot read all answer
+runs to the end once queued. A missing job, a process job, a review asked to be cancelled (reviews run to the end), and a job on a report the caller cannot read all answer
 404 ``job_not_found``.
 
 Event stream
@@ -146,6 +146,8 @@ _CODES = {
     ErrorCode.NOT_IN_CACHE.value: JobErrorCode.not_in_cache,
     ErrorCode.PULLS_FAILED.value: JobErrorCode.pulls_failed,
     ErrorCode.INTERRUPTED.value: JobErrorCode.interrupted,
+    ErrorCode.MODEL_MISMATCH.value: JobErrorCode.model_mismatch,
+    ErrorCode.NOT_INGESTED.value: JobErrorCode.pull_not_ingested,
 }
 _DEFAULT_MESSAGES = {
     JobErrorCode.wcl_not_signed_in: "Sign in to Warcraft Logs again, then start the ingest again.",
@@ -210,6 +212,8 @@ def failure_for(rec: JobRecord, config: QueueConfig, now: datetime, *, eta_s: fl
         wait = float(config.retry_backoff_s) ** max(rec.attempts, 1)
         retry_after = max(0.0, wait - (now - rec.updated_at).total_seconds())
     default = _DEFAULT_MESSAGES.get(code, _DEFAULT_MESSAGES[JobErrorCode.internal_error])
+    if rec.kind is JobKind.REVIEW and code is JobErrorCode.internal_error:
+        default = "The review failed unexpectedly."
     # A private report reads like a missing one, and WCL's own error text stays in the logs: both show the default.
     fixed = code in (JobErrorCode.report_not_found, JobErrorCode.wcl_error)
     return JobFailure(
@@ -285,19 +289,28 @@ def job_view(
     The API's view of a job row. ``eta_s`` is the budget wait of a job in ``waiting_budget``. ``own`` says the viewer
     started the job: only they may cancel it and see its points spent.
     """
-    pulls = sorted((_pull_view(k, rec) for k in _pull_keys(rec)), key=lambda p: (p.fight, p.pull_key))
     done = rec.state is StoredState.DONE
+    review = rec.kind is JobKind.REVIEW
+    if review:  # a review reports one pull's progress; it has no download or prepare steps to list
+        entry = rec.progress.pulls.get(rec.pull_key or "")
+        pulls: list[JobPull] = []
+        stage: str | None = "review"
+        fraction = entry.fraction if entry is not None else 0.0
+    else:
+        pulls = sorted((_pull_view(k, rec) for k in _pull_keys(rec)), key=lambda p: (p.fight, p.pull_key))
+        stage, fraction = rec.progress.stage, rec.progress.fraction
     return Job(
         id=rec.id,
+        kind="review" if review else "ingest",
         report_code=rec.report_code,
         state=JobState(rec.state.value),
-        stage=rec.progress.stage,
-        pct=100.0 if done else round(min(max(rec.progress.fraction, 0.0), 1.0) * 100, 1),
+        stage=stage,
+        pct=100.0 if done else round(min(max(fraction, 0.0), 1.0) * 100, 1),
         pulls=pulls,
         error=failure_for(rec, config or QueueConfig(), now or datetime.now(UTC), eta_s=eta_s),
         points_spent=rec.points_spent if own else None,
         cancel_requested=rec.cancel_requested,
-        can_cancel=own and rec.active,
+        can_cancel=own and rec.active and not review,
         created_at=rec.created_at,
         started_at=rec.started_at,
         finished_at=rec.finished_at,
@@ -461,17 +474,23 @@ class EventStreamResponse(StreamingResponse):
     media_type = "text/event-stream"
 
 
-async def _ingest_job(queue: JobQueue, job_id: str) -> JobRecord:
-    """An ingest job by ID. Process and review jobs are internal and answer like a missing one."""
+async def _job_of_kind(queue: JobQueue, job_id: str, kinds: frozenset[JobKind]) -> JobRecord:
+    """A job by ID. Jobs of other kinds (process jobs always) are internal and answer like a missing one."""
     rec = await queue.store.get(job_id)
-    if rec is None or rec.kind is not JobKind.INGEST:
+    if rec is None or rec.kind not in kinds:
         raise ApiError(404, "job_not_found", "No such job.")
     return rec
 
 
-async def _readable_job(request: Request, queue: JobQueue, job_id: str) -> JobRecord:
-    """An ingest job the caller may follow: they can read its report (anyone who can may, not only who started it)."""
-    rec = await _ingest_job(queue, job_id)
+_FOLLOWABLE = frozenset({JobKind.INGEST, JobKind.REVIEW})
+_CANCELLABLE = frozenset({JobKind.INGEST})
+
+
+async def _readable_job(
+    request: Request, queue: JobQueue, job_id: str, kinds: frozenset[JobKind] = _FOLLOWABLE
+) -> JobRecord:
+    """A job the caller may follow: they can read its report (anyone who can may, not only who started it)."""
+    rec = await _job_of_kind(queue, job_id, kinds)
     try:
         await require_readable(request, rec.report_code)
     except ReportNotFoundError:
@@ -594,7 +613,10 @@ def _owns(user: User | None, rec: JobRecord) -> bool:
 
 @router.get("/jobs/{job_id}", response_model=Job, responses=_READ_ERRORS)
 async def get_job(job_id: str, request: Request, user: Caller, queue: Queue) -> Job:
-    """A job on a report you can read, signed in or not: its state, per-pull steps and typed error."""
+    """
+    An ingest or review job on a report you can read, signed in or not: its state, per-pull steps (ingests) and typed
+    error.
+    """
     rec = await _readable_job(request, queue, job_id)
     return job_view(rec, queue.config, eta_s=await request_eta(request)(rec), own=_owns(user, rec))
 
@@ -605,7 +627,7 @@ async def cancel_job(job_id: str, request: Request, user: SignedIn, queue: Queue
     Cancel a job you started (403 `not_your_job` for anyone else who follows it). A queued job is dropped at once; a
     running one stops at its next page and shows `cancel_requested` until it has. A finished job is returned unchanged.
     """
-    rec = await _readable_job(request, queue, job_id)
+    rec = await _readable_job(request, queue, job_id, _CANCELLABLE)
     if rec.requested_by != user.id:
         raise ApiError(403, "not_your_job", "Only the person who started this can stop it.")
     cancelled = await queue.cancel(job_id)

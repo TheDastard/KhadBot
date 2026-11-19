@@ -56,12 +56,15 @@ def test_every_error_response_uses_the_error_body():
     doc = orjson.loads(CONTRACT.read_bytes())
     assert "HTTPValidationError" not in doc["components"]["schemas"]
     for path, ops in doc["paths"].items():
-        for op in ops.values():
+        for method, op in ops.items():
             for status, response in op["responses"].items():
                 if status.startswith(("4", "5")):
                     schema = response["content"]["application/json"]["schema"]
-                    # A 429 also says how long to wait: BudgetWaitBody is an ErrorBody with a wait_s.
+                    # A 429 also says how long to wait: BudgetWaitBody is an ErrorBody with a wait_s, and the review
+                    # route's adds the caller's quota (QuotaExceededBody).
                     allowed = "BudgetWaitBody" if status == "429" else "ErrorBody"
+                    if status == "429" and method == "post" and path.endswith("/review"):
+                        allowed = "QuotaExceededBody"
                     assert schema == {"$ref": f"#/components/schemas/{allowed}"}, (path, status)
 
 

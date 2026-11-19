@@ -83,6 +83,14 @@ from khadbot.api.schemas.raids import (
     ServerRegion,
 )
 from khadbot.api.schemas.reports import GroupInfo, PullSummary, ReportDetail, ReportGroup, ReportInfo, ReportList
+from khadbot.api.schemas.reviews import (
+    QuotaExceededBody,
+    ReviewEstimate,
+    ReviewQuota,
+    ReviewRequest,
+    ReviewResponse,
+    ReviewStatus,
+)
 
 __all__ = [
     "API_VERSION",
@@ -139,12 +147,18 @@ __all__ = [
     "PullStatus",
     "PullSummary",
     "PullTimeline",
+    "QuotaExceededBody",
     "ReportAbilities",
     "ReportDetail",
     "ReportGroup",
     "ReportInfo",
     "ReportList",
     "ReportLookup",
+    "ReviewEstimate",
+    "ReviewQuota",
+    "ReviewRequest",
+    "ReviewResponse",
+    "ReviewStatus",
     "SearchCharacter",
     "SearchGuild",
     "ServerEntry",

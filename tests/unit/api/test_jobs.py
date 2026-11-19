@@ -100,7 +100,8 @@ def record(**kw) -> JobRecord:
         (ErrorCode.PULLS_FAILED, "pulls_failed"),
         (ErrorCode.INTERRUPTED, "interrupted"),
         (ErrorCode.INTERNAL, "internal_error"),
-        (ErrorCode.MODEL_MISMATCH, "internal_error"),
+        (ErrorCode.MODEL_MISMATCH, "model_mismatch"),
+        (ErrorCode.NOT_INGESTED, "pull_not_ingested"),
         ("something_new", "internal_error"),
     ],
 )

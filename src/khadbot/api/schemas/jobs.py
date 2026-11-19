@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -54,6 +55,8 @@ class JobErrorCode(StrEnum):
     not_in_cache = "not_in_cache"  # an offline ingest asked for a page that was never fetched
     pulls_failed = "pulls_failed"  # the ingest finished, but some pulls failed (see the pulls)
     interrupted = "interrupted"  # the worker stopped before the job finished; start it again
+    model_mismatch = "model_mismatch"  # a review: the worker's analyst model is not the one the review was priced for
+    pull_not_ingested = "pull_not_ingested"  # a review: the pull is not loaded
     internal_error = "internal_error"
 
 
@@ -119,9 +122,13 @@ class JobPull(BaseModel):
 
 
 class Job(BaseModel):
-    """An ingest job. Also the payload of the `job.state` and `job.done` stream events."""
+    """A job: an ingest, or a pull review. Also the payload of the `job.state` and `job.done` stream events."""
 
     id: str
+    kind: Literal["ingest", "review"] = Field(
+        default="ingest",
+        description="`review` jobs have no `pulls`; `pct` is the review's progress and they cannot be cancelled",
+    )
     report_code: str
     state: JobState
     stage: str | None

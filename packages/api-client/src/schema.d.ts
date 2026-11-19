@@ -202,7 +202,8 @@ export interface paths {
         };
         /**
          * Get Job
-         * @description A job on a report you can read, signed in or not: its state, per-pull steps and typed error.
+         * @description An ingest or review job on a report you can read, signed in or not: its state, per-pull steps (ingests) and typed
+         *     error.
          */
         get: operations["get_job_v1_jobs__job_id__get"];
         put?: never;
@@ -463,6 +464,36 @@ export interface paths {
         get: operations["get_findings_v1_reports__code__pulls__fight__findings_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{code}/pulls/{fight}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Status
+         * @description What a review of the pull would do now, for anyone who can read the report: whether its findings are cached (a
+         *     review is then free), the token estimate, the review already queued or running, and, signed in, the caller's
+         *     quota. A visitor sees `quota` null: only signed-in users can start a review.
+         */
+        get: operations["get_review_status_v1_reports__code__pulls__fight__review_get"];
+        put?: never;
+        /**
+         * Start Review
+         * @description Review the pull, or return its cached findings. Cached findings (same data, prompts, model and depth) are shared by
+         *     everyone who can read the report: the answer is `cached`, with no job and no quota used. Otherwise the caller's
+         *     quota is checked (429 `quota_exceeded`) and a review job is queued (202); an identical one already queued or
+         *     running is returned instead (200), for anyone who can read the report. Follow the job with `GET /v1/jobs/{id}`
+         *     and read the findings with `GET /v1/reports/{code}/pulls/{fight}/findings`.
+         */
+        post: operations["start_review_v1_reports__code__pulls__fight__review_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1373,7 +1404,7 @@ export interface components {
         };
         /**
          * Job
-         * @description An ingest job. Also the payload of the `job.state` and `job.done` stream events.
+         * @description A job: an ingest, or a pull review. Also the payload of the `job.state` and `job.done` stream events.
          */
         Job: {
             /**
@@ -1395,6 +1426,13 @@ export interface components {
             finished_at: string | null;
             /** Id */
             id: string;
+            /**
+             * Kind
+             * @description `review` jobs have no `pulls`; `pct` is the review's progress and they cannot be cancelled
+             * @default ingest
+             * @enum {string}
+             */
+            kind: "ingest" | "review";
             /** Pct */
             pct: number;
             /**
@@ -1422,7 +1460,7 @@ export interface components {
          * @description Why a job failed or is waiting. The job's state says which: failed, or queued for a retry, or waiting.
          * @enum {string}
          */
-        JobErrorCode: "wcl_not_signed_in" | "report_not_found" | "rate_limited" | "budget_wait" | "wcl_unreachable" | "wcl_error" | "not_in_cache" | "pulls_failed" | "interrupted" | "internal_error";
+        JobErrorCode: "wcl_not_signed_in" | "report_not_found" | "rate_limited" | "budget_wait" | "wcl_unreachable" | "wcl_error" | "not_in_cache" | "pulls_failed" | "interrupted" | "model_mismatch" | "pull_not_ingested" | "internal_error";
         /**
          * JobFailure
          * @description A typed error. Never carries a token, URL or connection string.
@@ -2064,6 +2102,28 @@ export interface components {
             windows: components["schemas"]["WindowMarker"][];
         };
         /**
+         * QuotaExceededBody
+         * @description The answer when the caller has used their reviews: `quota_exceeded`.
+         */
+        QuotaExceededBody: {
+            /**
+             * Code
+             * @example report_not_found
+             * @example pull_not_found
+             * @example unresolvable_ref
+             * @example bad_window
+             */
+            code: string;
+            /** Message */
+            message: string;
+            quota: components["schemas"]["ReviewQuota"];
+            /**
+             * Wait S
+             * @description Seconds until a review frees up, when one will
+             */
+            wait_s?: number | null;
+        };
+        /**
          * ReportAbilities
          * @description The abilities of a report's cached metadata, by game ID.
          */
@@ -2149,6 +2209,110 @@ export interface components {
             /** Title */
             title: string | null;
             zone: components["schemas"]["LookupZone"] | null;
+        };
+        /**
+         * ReviewEstimate
+         * @description What a review of the pull would cost in model tokens if nothing were cached. An allowance, not a cap.
+         */
+        ReviewEstimate: {
+            /**
+             * Digest Tokens
+             * @description The pull's digest, which the analyst reads (about 4 characters a token)
+             */
+            digest_tokens: number;
+            /**
+             * Output Tokens
+             * @description Allowance for the analyst's investigation and findings
+             */
+            output_tokens: number;
+            /**
+             * Total Tokens
+             * @description `digest_tokens` plus `output_tokens`
+             */
+            total_tokens: number;
+        };
+        /**
+         * ReviewQuota
+         * @description The caller's review allowance over a rolling window. A review answered from cached findings never counts.
+         */
+        ReviewQuota: {
+            /**
+             * Limit
+             * @description Reviews allowed in any window
+             */
+            limit: number;
+            /**
+             * Next Slot At
+             * @description When one more review frees up; set only when `remaining` is 0 and a slot will free
+             */
+            next_slot_at?: string | null;
+            /**
+             * Remaining
+             * @description `limit` minus `used`, never below 0
+             */
+            remaining: number;
+            /**
+             * Used
+             * @description Reviews counted in the window: queued, running and done ones; not failed or cancelled
+             */
+            used: number;
+            /**
+             * Window Hours
+             * @description The rolling window's length, in hours
+             */
+            window_hours: number;
+        };
+        /**
+         * ReviewRequest
+         * @description Start a review of one pull.
+         */
+        ReviewRequest: {
+            /**
+             * Depth
+             * @description The analyst's step budget: `quick` (4 rounds), `standard` (8) or `deep` (16)
+             * @default standard
+             * @enum {string}
+             */
+            depth: "quick" | "standard" | "deep";
+        };
+        /**
+         * ReviewResponse
+         * @description What `POST .../review` answers. `cached`: the findings already exist, read them from the findings route (no job,
+         *     nothing counted). Otherwise `job` is the review to follow: a new one (202), or the identical one already queued or
+         *     running (200).
+         */
+        ReviewResponse: {
+            /** Cached */
+            cached: boolean;
+            estimate: components["schemas"]["ReviewEstimate"];
+            job?: components["schemas"]["Job"] | null;
+            quota: components["schemas"]["ReviewQuota"];
+        };
+        /**
+         * ReviewStatus
+         * @description What reviewing this pull would do now, for the review button.
+         */
+        ReviewStatus: {
+            /**
+             * Cached
+             * @description Findings for this pull from this model, depth and data are cached: a review is free and instant
+             */
+            cached: boolean;
+            /**
+             * Depth
+             * @description The depth this answer is for
+             */
+            depth: string;
+            estimate: components["schemas"]["ReviewEstimate"];
+            /** @description A review of this pull that is queued or running, whoever started it; follow it */
+            job?: components["schemas"]["Job"] | null;
+            /**
+             * Model
+             * @description The analyst model the review would run on; findings are cached per model
+             */
+            model: string;
+            /** @description Null for a signed-out visitor, who cannot review */
+            quota?: components["schemas"]["ReviewQuota"] | null;
         };
         /** SearchCharacter */
         SearchCharacter: {
@@ -3687,6 +3851,157 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
+            /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_review_status_v1_reports__code__pulls__fight__review_get: {
+        parameters: {
+            query?: {
+                depth?: "quick" | "standard" | "deep";
+            };
+            header?: never;
+            path: {
+                code: string;
+                fight: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewStatus"];
+                };
+            };
+            /** @description Report or pull not ingested, or a report the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid body or parameter (bad_request) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No WCL points free to check access to the report now (budget_exhausted); see wait_s */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetWaitBody"];
+                };
+            };
+            /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    start_review_v1_reports__code__pulls__fight__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                fight: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The findings are already cached (`cached`, no job), or an identical review is already queued or running (`job`, whoever started it) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResponse"];
+                };
+            };
+            /** @description Signing in is needed to review (not_signed_in) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description CSRF check failed (csrf_failed) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Report or pull not ingested, or a report the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid body or parameter (bad_request) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The caller has used their reviews for the window (quota_exceeded, with `Retry-After` when one will free up), or no WCL points are free to check access (budget_exhausted) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuotaExceededBody"];
                 };
             };
             /** @description Warcraft Logs could not answer the access check (wcl_unavailable) */

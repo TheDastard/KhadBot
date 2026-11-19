@@ -40,6 +40,7 @@ PROBES = {
     "ingest_jobs": ("GET", "/v1/jobs/nope"),
     "live_watch": ("GET", "/v1/reports/ABC123/watch"),
     "budget": ("GET", "/v1/budget"),
+    "reviews": ("GET", "/v1/reports/ABC123/pulls/1/review"),
     "report_lookup": ("GET", "/v1/lookup/report"),
     "raid_search": ("GET", "/v1/search/guild?url=not-a-guild"),  # 400 before any WCL request
 }
@@ -104,6 +105,7 @@ class TestHostedMode:
             "sign_in": True,
             "ingest_jobs": True,
             "live_watch": True,
+            "reviews": True,
             "budget": True,
             "report_lookup": True,
             "raid_search": True,
@@ -179,6 +181,7 @@ class TestModeIsTheCallers:
             "sign_in": True,
             "ingest_jobs": True,
             "live_watch": True,
+            "reviews": True,
             "budget": True,
             "report_lookup": True,
             "raid_search": True,

@@ -42,12 +42,12 @@ There are two ways to run KhadBot on your own machine.
 
 **The full experience** (sign-in, ingest with live progress, live watch, the budget, reviews and chat) runs on the local test environment: hosted mode on your own machine, with Postgres and the bucket in Docker (see "The local stack" above) and the same API and worker code that production runs. Local mode is described first; the dev loop for the test environment follows it.
 
-**What local mode serves.** The read routes (`/v1/reports`, `/v1/reports/{code}`, `/night`, the pull `digest`, `timeline`, `events` and `findings`, and `/v1/evidence/{ref}`) over the data directory, and `GET /v1/health`. Findings are the cached ones; nothing runs the analyst or calls Warcraft Logs. There is no sign-in, so every request may read every ingested report. CORS allows `http://localhost:3000` and `http://127.0.0.1:3000` for `GET`, without credentials. The hosted-only routes (`/v1/auth/*`, `/v1/me`, `/v1/jobs/*`, `/v1/reports/{code}/watch`, `/v1/budget`) are not mounted and answer 404 like any unknown route.
+**What local mode serves.** The read routes (`/v1/reports`, `/v1/reports/{code}`, `/night`, the pull `digest`, `timeline`, `events` and `findings`, and `/v1/evidence/{ref}`) over the data directory, and `GET /v1/health`. Findings are the cached ones; nothing runs the analyst or calls Warcraft Logs. There is no sign-in, so every request may read every ingested report. CORS allows `http://localhost:3000` and `http://127.0.0.1:3000` for `GET`, without credentials. The hosted-only routes (`/v1/auth/*`, `/v1/me`, `/v1/jobs/*`, `/v1/reports/{code}/watch`, `/v1/reports/{code}/pulls/{fight}/review`, `/v1/budget`) are not mounted and answer 404 like any unknown route.
 
 **What `/v1/health` reports.** `mode` is `local` or `hosted`, given by the entry point: `main.py serve` says `local`, `main.py api` in hosted mode says `hosted`. It is a label only. `features` has one boolean per optional area, true only when its routes are mounted, and clients branch on `features` only (`.claude/rules/web.md`): with `sign_in` off the web app shows the reports without a session and labels the header "Local", and a direct link to an area whose flag is off shows "Not available on this server yet".
 
     serve   {"mode": "local",  "features": {"sign_in": false, "ingest_jobs": false, "live_watch": false, "budget": false, "reviews": false, "chat": false}}
-    api     {"mode": "hosted", "features": {"sign_in": true,  "ingest_jobs": true,  "live_watch": true,  "budget": true,  "reviews": false, "chat": false}}
+    api     {"mode": "hosted", "features": {"sign_in": true,  "ingest_jobs": true,  "live_watch": true,  "budget": true,  "reviews": true,  "chat": false}}
 
 **Steps.**
 

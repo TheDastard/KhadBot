@@ -12,7 +12,7 @@ Hosted mode is ``create_app(auth=..., jobs=..., reports=...)``, built by ``main.
 
 - ``auth`` mounts the sign-in routes (``/v1/auth/*``, ``/v1/me``), and every report route then checks that the caller
   may read the report (``deps.readable_report``; an unreadable report answers 404);
-- ``jobs`` (the ``JobQueue``) mounts the ingest and watch routes of ``api/jobs.py`` and is opened for the life of the app;
+- ``jobs`` (the ``JobQueue``) mounts the ingest, watch and review routes of ``api/jobs.py``, ``api/watch.py`` and ``api/reviews.py`` and is opened for the life of the app;
 - ``reports`` (``deps.ReportDirectory``) answers ``GET /v1/reports`` with the signed-in user's reports;
 - CORS allows the web origins (``KHADBOT_WEB_ORIGINS``) with credentials, ``GET``, ``POST`` and ``DELETE``, and the
   ``Content-Type``, ``X-KhadBot-CSRF`` and ``Last-Event-ID`` request headers, never a wildcard.
@@ -183,6 +183,10 @@ def create_app(
 
         app.include_router(watch_router)
         offered["live_watch"] = True
+        from khadbot.api.reviews import router as reviews_router  # pull reviews on the review queue, hosted only
+
+        app.include_router(reviews_router)
+        offered["reviews"] = True
     for extra in routers:
         app.include_router(extra)
     if auth is not None:  # the WCL budget router (api/budget.py): GET /v1/budget, hosted only
