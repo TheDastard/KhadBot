@@ -71,6 +71,18 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
 - **The CLI's `/review` doesn't use `ReviewPull`.** It needs the cross-pull synthesis `ReviewPull` leaves out; give
   the graph a way to synthesize from findings it is handed if `/review` should report per-pull progress.
 
+## Pull reviews
+
+- **Measure the prompt-cache hit rate and the cost per pull.** Review a recorded night on the real analyst model
+  (it spends money: ask first) and record both in `docs/decisions.md` (D98), replacing the architecture page's
+  estimate. The usage ledger already holds cached and cache-write tokens per call.
+- **Choose the analyst model and the quota.** The worker uses whatever `ANALYST_MODEL` or the provider setting names;
+  `KHADBOT_REVIEWS_PER_DAY` defaults to 10 until the real numbers are set.
+- **`jobs.reviews.analyst_model_id` repeats `llm_factory`'s provider and model resolution** so the API can name the
+  model without building a client. Move it into `llm_factory` (one function both use) so they cannot drift.
+- **A running review can't be cancelled.** It stops only at the next model call's progress report; the cancel route
+  answers 404 for review jobs.
+
 ## WCL fetching and points
 
 - **Choose a limit scheme and tier.** KhadBot is on the current 3,600 points an hour; the new scheme gives 1,000

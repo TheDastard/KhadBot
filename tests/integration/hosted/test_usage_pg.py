@@ -94,3 +94,53 @@ async def test_an_ingest_job_leaves_one_wcl_row_matching_its_points(pool, tmp_pa
             "SELECT wcl_points, user_id, report_code FROM usage WHERE job_id = %s", (job.id,)
         ).fetchall()
     assert rows == [(spent, "u1", "SYNTH01")] and spent == 15.0
+
+
+async def test_a_review_job_writes_findings_and_usage_rows_to_postgres(pool, tmp_path, role_fakes, monkeypatch):
+    from helpers.encounter.review_fakes import respond
+    from helpers.encounter.usage_fake import UsageFakeModel
+    from helpers.jobs.ingest import fetch_and_normalize
+
+    from khadbot.config import reset_config
+    from khadbot.db import PostgresFindingsStore
+    from khadbot.jobs import ReviewPull
+
+    monkeypatch.setenv("ANALYST_MODEL", "test-analyst")
+    reset_config()
+    model = UsageFakeModel(respond=respond, model_name="test-analyst")
+    role_fakes["analyst"] = model
+    migrate(pool)
+    env = synth_env(tmp_path)
+    env.context.findings = PostgresFindingsStore(pool)
+    await fetch_and_normalize(IngestReport(code="SYNTH01", offline=True), env.context)
+    with pool.connection() as conn:
+        seed(conn)
+    queue = JobQueue(
+        JobStore(PostgresJobBackend(pool)),
+        InMemoryConnector(),
+        config=QueueConfig(max_retries=1, retry_backoff_s=0, progress_interval_s=0.01),
+        context_factory=lambda: env.context,
+        usage=PostgresUsageLedger(pool),
+    )
+    spec = ReviewPull(pull_key="SYNTH01:1", model="test-analyst")
+    async with queue.open():
+        first = await queue.enqueue_review(spec, requested_by="u1", limit=5)
+        await queue.run_worker(wait=False, listen_notify=False, install_signal_handlers=False)
+        # a second user's request while nothing is in flight: the job runs again but is a cache hit, no model call
+        calls = model.calls
+        second = await queue.enqueue_review(spec, requested_by="u2", limit=5)
+        await queue.run_worker(wait=False, listen_notify=False, install_signal_handlers=False)
+    reset_config()
+
+    with pool.connection() as conn:
+        states = dict(conn.execute("SELECT id, state FROM jobs WHERE kind = 'review'").fetchall())
+        usage = conn.execute(
+            "SELECT user_id, model, input_tokens, cached_input_tokens, output_tokens FROM usage WHERE job_id = %s",
+            (first.job.id,),
+        ).fetchall()
+        none_for_second = conn.execute("SELECT count(*) FROM usage WHERE job_id = %s", (second.job.id,)).fetchone()[0]
+    assert states == {first.job.id: "done", second.job.id: "done"}
+    assert len(usage) == calls > 0 and set(usage) == {("u1", "test-analyst", 1000, 400, 200)}
+    assert model.calls == calls and none_for_second == 0
+    stored = PostgresFindingsStore(pool).for_pull("SYNTH01:1")
+    assert [f.claim for pf in stored for f in pf.findings] == ["The pull was reviewed"]

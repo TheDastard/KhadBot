@@ -16,6 +16,8 @@ Rules the queue keeps:
   already cached), and finishes with them. The process job normalizes the pull and builds its records.
 - Only WCL rate limits, network errors and a sign-in that could not be renewed are retried, with backoff. Anything
   else fails the job once with a typed code.
+- A review (``enqueue_review``) is a ``review`` queue job that checks the user's rolling quota and returns an identical
+  queued or running review instead of a second one; its model calls are written to the usage ledger.
 - A backfill's process jobs are queued at a lower priority than every other job (``enqueue_backfill``), once per pull.
 - A live report watch (``jobs/watch.py``) polls on the ``watch`` queue: one task run is one poll, and it queues the
   next one. The ingests it queues carry ``live``, which lets them use the budget's headroom.
@@ -55,8 +57,9 @@ from khadbot.jobs.budget import Admission, Ask
 from khadbot.jobs.failures import ErrorCode, JobCancelled, classify
 from khadbot.jobs.reporting import CancelFlag, CancellingRawCache, ProgressWriter
 from khadbot.jobs.retention import CleanupResult, CleanupSources, cleanup_records
+from khadbot.jobs.reviews import REVIEW_WINDOW, ReviewQuota, quota_from
 from khadbot.jobs.run import JobContext, TransientJobError, default_token_resolver, run_job
-from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, UserAuth
+from khadbot.jobs.specs import IngestReport, JobSpec, ProcessPull, ReviewPull, UserAuth
 from khadbot.jobs.status import JobKind, JobRecord, JobState, JobStore, NewJob, PostgresJobBackend
 from khadbot.jobs.usage import UsageLedger, record_wcl_points
 from khadbot.jobs.watch import WatchService
@@ -135,6 +138,19 @@ def _locks(spec: JobSpec) -> tuple[str, str | None]:
 # ---------------------------------------------------------------------------
 # Queue
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ReviewEnqueued:
+    """
+    The outcome of ``JobQueue.enqueue_review``: ``job`` is the review to follow (None when the user is over their
+    quota), ``created`` says it was queued now rather than found already queued or running, and ``quota`` is the user's
+    allowance afterwards.
+    """
+
+    job: JobRecord | None
+    created: bool
+    quota: ReviewQuota
 
 
 class JobQueue:
@@ -268,17 +284,46 @@ class JobQueue:
                 return Enqueued(job, False)
         else:
             job = await self.store.create(new)
+        try:
+            await self._defer(job, spec)
+        except procrastinate_exceptions.AlreadyEnqueued:
+            active = await self.store.active_ingests(report)
+            if active:
+                return Enqueued(active[0], False)
+            raise
+        return Enqueued(job, True)
+
+    async def enqueue_review(self, spec: ReviewPull, *, requested_by: str, limit: int) -> ReviewEnqueued:
+        """
+        Queue a review for ``requested_by`` unless they have used ``limit`` reviews in the last ``REVIEW_WINDOW``
+        (``job`` None then). An identical review already queued or running is returned instead (``created`` False) and
+        costs nothing, so a second user asking for the same pull follows the first one's job.
+        """
+        kind, report, pull_key = _describe(spec)
+        new = NewJob(
+            id=uuid.uuid4().hex,
+            kind=kind,
+            report_code=report,
+            pull_key=pull_key,
+            requested_by=requested_by,
+            auth_kind="app",
+            spec=spec.model_dump(mode="json"),
+        )
+        claim = await self.store.claim_review(new, limit=limit, since=datetime.now(UTC) - REVIEW_WINDOW)
+        if claim.job is not None and claim.created:
+            await self._defer(claim.job, spec)
+        return ReviewEnqueued(claim.job, claim.created, quota_from(claim.counted, limit))
+
+    async def _defer(self, job: JobRecord, spec: JobSpec) -> None:
+        """Hand a created job row to procrastinate; a job that cannot be queued is finished as failed (or cancelled)."""
         lock, queueing_lock = _locks(spec)
-        deferrer = self.app.tasks[TASK_NAMES[kind]].configure(lock=lock, queueing_lock=queueing_lock)
+        deferrer = self.app.tasks[TASK_NAMES[job.kind]].configure(lock=lock, queueing_lock=queueing_lock)
         try:
             queue_job_id = await deferrer.defer_async(job_id=job.id)
         except procrastinate_exceptions.AlreadyEnqueued:
             await self.store.finish(
                 job.id, JobState.CANCELLED, error_code="already_queued", error_message="An identical job is queued."
             )
-            active = await self.store.active_ingests(report)
-            if active:
-                return Enqueued(active[0], False)
             raise
         except Exception:
             await self.store.finish(
@@ -286,7 +331,6 @@ class JobQueue:
             )
             raise
         await self.store.set_queue_job_id(job.id, queue_job_id)
-        return Enqueued(job, True)
 
     async def enqueue_backfill(self, pull_key: str) -> Enqueued:
         """
@@ -380,9 +424,15 @@ class JobQueue:
 
     # -- the task body --------------------------------------------------------
 
-    def _context(self, flag: CancelFlag) -> JobContext:
+    def _context(self, flag: CancelFlag, job: JobRecord) -> JobContext:
         ctx = self._context_factory()
-        return replace(ctx, cache=CancellingRawCache(ctx.raw_cache(), flag))
+        return replace(
+            ctx,
+            cache=CancellingRawCache(ctx.raw_cache(), flag),
+            usage=ctx.usage or self.usage,
+            job_id=job.id,
+            user_id=job.requested_by,
+        )
 
     async def _execute(self, context: procrastinate.JobContext, job_id: str) -> None:
         row = await self.store.get(job_id)
@@ -407,7 +457,7 @@ class JobQueue:
         result: object = None
         try:
             async with writer:
-                result = await run_job(spec, self._context(flag), writer)
+                result = await run_job(spec, self._context(flag, job), writer)
                 if isinstance(result, IngestResult):
                     await self._queue_processing(job, result)
             if isinstance(result, IngestResult):  # finish once the last progress is written
@@ -641,4 +691,4 @@ async def serve_worker(queues: list[str] | None = None, concurrency: int | None 
         await queue.run_worker(queues=queues, concurrency=concurrency)
 
 
-__all__ = ["Enqueued", "JobQueue", "build_queue", "serve_worker"]
+__all__ = ["Enqueued", "JobQueue", "ReviewEnqueued", "build_queue", "serve_worker"]

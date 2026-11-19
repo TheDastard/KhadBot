@@ -89,6 +89,8 @@ section 6 of the [design plan](https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE
 - **Concurrency**: `review` passes `max_concurrency=EncounterConfig.analyst_max_concurrency` in the run config;
   the per-pull `Send` tasks respect it. Per-pull runs are traced as `encounter_analyst` children of
   `encounter_review`.
+- **Usage**: `UsageCallback` (`analyst/usage.py`), passed to `review_pull(callbacks=...)`, reports each model call's
+  `usage_metadata` and reported model name to a sink; the review job's sink writes the usage ledger.
 - **Cost estimate** (`estimate_review_cost`): `sum(len(rendered digest) / 4)` over the pulls plus
   `OUTPUT_TOKENS_PER_PULL` (1,500, an allowance rather than a cap) per pull, with no model call. It ignores
   cached pulls, so it is an upper bound. `/review` prints it before running and `--estimate` prints it only.

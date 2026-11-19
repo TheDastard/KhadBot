@@ -20,6 +20,7 @@ import asyncio
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager, contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Literal, LiteralString, Protocol
@@ -29,7 +30,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from khadbot.jobs.failures import ErrorCode
 from khadbot.jobs.listener import SharedListener
 from khadbot.jobs.progress import PullInfo
-from khadbot.jobs.specs import IngestReport
+from khadbot.jobs.specs import IngestReport, ReviewPull
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
@@ -152,6 +153,10 @@ class JobTx(Protocol):
 
     def active_visitor_ingests(self) -> int: ...
 
+    def active_reviews(self, pull_key: str) -> list[JobRecord]: ...
+
+    def reviews_since(self, user_id: str, since: datetime) -> list[datetime]: ...
+
     def children(self, parent_id: str) -> list[JobRecord]: ...
 
 
@@ -202,6 +207,37 @@ def _claim_ingest(tx: JobTx, new: NewJob) -> tuple[JobRecord, bool]:
     rec = _new_record(new)
     tx.insert(rec)
     return rec, True
+
+
+@dataclass(frozen=True)
+class ReviewClaim:
+    """
+    The outcome of claiming a review. ``job`` is the review to follow (new, or the identical one already queued or
+    running) and None when the user is over their quota. ``counted`` are the creation times of the user's reviews in
+    the quota window, the new one included.
+    """
+
+    job: JobRecord | None
+    created: bool
+    counted: list[datetime]
+
+
+def _claim_review(tx: JobTx, new: NewJob, limit: int, since: datetime) -> ReviewClaim:
+    """
+    Create the review unless an identical one (same pull, depth and model) is already queued or running, which is
+    returned instead and costs the caller nothing, or the user has used their ``limit`` reviews since ``since``.
+    """
+    assert new.requested_by is not None and new.pull_key is not None
+    counted = tx.reviews_since(new.requested_by, since)
+    wanted = ReviewPull.model_validate(new.spec)
+    for existing in tx.active_reviews(new.pull_key):
+        if ReviewPull.model_validate(existing.spec) == wanted:
+            return ReviewClaim(existing, False, counted)
+    if len(counted) >= limit:
+        return ReviewClaim(None, False, counted)
+    rec = _new_record(new)
+    tx.insert(rec)
+    return ReviewClaim(rec, True, [*counted, rec.created_at])
 
 
 def _begin(tx: JobTx, job_id: str) -> JobRecord | None:
@@ -432,6 +468,25 @@ class JobStore:
         """How many ingests opened by signed-out visitors are queued, running or waiting for points."""
         return await self._run(lambda tx: tx.active_visitor_ingests())
 
+    async def claim_review(self, new: NewJob, *, limit: int, since: datetime) -> ReviewClaim:
+        """
+        Create a review job for ``new.requested_by`` if they have used fewer than ``limit`` reviews since ``since``;
+        return the identical queued or running review instead if there is one. The check and the insert are one
+        transaction under a per-user lock, so two requests at once cannot both take the last slot.
+        """
+        assert new.requested_by is not None
+        return await self._run(
+            lambda tx: _claim_review(tx, new, limit, since), report=f"review-quota:{new.requested_by}"
+        )
+
+    async def reviews_since(self, user_id: str, since: datetime) -> list[datetime]:
+        """When the user's counted reviews (not failed, not cancelled) were requested since ``since``, oldest first."""
+        return await self._run(lambda tx: tx.reviews_since(user_id, since))
+
+    async def active_reviews(self, pull_key: str) -> list[JobRecord]:
+        """The queued or running reviews of one pull."""
+        return await self._run(lambda tx: tx.active_reviews(pull_key))
+
     async def active_process(self, report: str) -> list[JobRecord]:
         """The queued or running process jobs of one report's pulls."""
         return await self._run(lambda tx: tx.active_process(report), report=report)
@@ -590,6 +645,22 @@ class _MemoryTx:
             if r.kind is JobKind.INGEST and r.active and r.requested_by is None and r.spec.get("visitor") is True
         )
 
+    def active_reviews(self, pull_key: str) -> list[JobRecord]:
+        rows = [
+            r for r in self._backend.rows.values() if r.kind is JobKind.REVIEW and r.pull_key == pull_key and r.active
+        ]
+        return sorted(rows, key=lambda r: r.created_at)
+
+    def reviews_since(self, user_id: str, since: datetime) -> list[datetime]:
+        return sorted(
+            r.created_at
+            for r in self._backend.rows.values()
+            if r.kind is JobKind.REVIEW
+            and r.requested_by == user_id
+            and r.created_at >= since
+            and r.state not in (JobState.FAILED, JobState.CANCELLED)
+        )
+
     def active_process(self, report_code: str) -> list[JobRecord]:
         rows = [
             r
@@ -624,6 +695,14 @@ _SELECT_ACTIVE_INGESTS: LiteralString = (
 _SELECT_ACTIVE_PROCESS: LiteralString = (
     "SELECT " + _COLUMNS + " FROM jobs WHERE kind = 'process' AND report_code = %s "
     "AND state IN ('queued', 'running', 'waiting_budget') ORDER BY created_at"
+)
+_SELECT_ACTIVE_REVIEWS: LiteralString = (
+    "SELECT " + _COLUMNS + " FROM jobs WHERE kind = 'review' AND pull_key = %s "
+    "AND state IN ('queued', 'running', 'waiting_budget') ORDER BY created_at"
+)
+_SELECT_REVIEWS_SINCE: LiteralString = (
+    "SELECT created_at FROM jobs WHERE kind = 'review' AND requested_by = %s AND created_at >= %s "
+    "AND state NOT IN ('failed', 'cancelled') ORDER BY created_at"
 )
 _SELECT_CHILDREN: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE parent_id = %s ORDER BY created_at"
 _INSERT: LiteralString = (
@@ -722,6 +801,12 @@ class _PostgresTx:
         row = self._conn.execute(_COUNT_ACTIVE_VISITOR_INGESTS).fetchone()
         return int(row[0]) if row else 0
 
+    def active_reviews(self, pull_key: str) -> list[JobRecord]:
+        return self._rows(_SELECT_ACTIVE_REVIEWS, (pull_key,))
+
+    def reviews_since(self, user_id: str, since: datetime) -> list[datetime]:
+        return [r[0] for r in self._conn.execute(_SELECT_REVIEWS_SINCE, (user_id, since)).fetchall()]
+
     def active_process(self, report_code: str) -> list[JobRecord]:
         return self._rows(_SELECT_ACTIVE_PROCESS, (report_code,))
 
@@ -765,5 +850,6 @@ __all__ = [
     "NewJob",
     "PostgresJobBackend",
     "PullProgress",
+    "ReviewClaim",
     "covers",
 ]

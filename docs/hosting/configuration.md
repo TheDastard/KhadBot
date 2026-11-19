@@ -66,6 +66,14 @@ The WCL budget (`khadbot.jobs.budget`, state in the `wcl_budget` row). A worker 
 
 Jobs are rows in the `jobs` table (state, per-pull progress, typed error) and each change sends `NOTIFY job_events` with the job's ID. The code that queues and cancels jobs is `khadbot.jobs.queue.JobQueue`; the API calls it for the ingest routes.
 
+### Pull reviews
+
+A signed-in user can review a pull (`POST /v1/reports/{code}/pulls/{fight}/review`; `GET` on the same path says what a review would do). The API answers from the findings cache when the findings for this data, prompts, analyst model and depth exist: they are shared by everyone who can read the report, cost no quota and make no job. Otherwise it queues a `review` job (the worker's `review` queue, which needs the LLM settings above) and the user follows it with `GET /v1/jobs/{id}`; the findings appear on the findings route. A review that someone has already queued or is running is returned to a second asker instead of a second job. The API names the analyst model from the configuration (`ANALYST_MODEL`, else the provider's model setting) without building a client; the job carries it and fails with `model_mismatch` before any model call when the worker is configured with another one, so keep the API and the worker on the same settings. Every model call of a review writes a `usage` row (`operations.md`).
+
+| Variable | Meaning |
+|---|---|
+| `KHADBOT_REVIEWS_PER_DAY` | Reviews one user may start in any rolling 24 hours (default 10); the next answers 429 `quota_exceeded` with the quota and `Retry-After`. Queued, running and done reviews count; failed and cancelled ones do not. 0 allows none; cached findings stay readable. |
+
 ### Live report watch
 
 A signed-in user can watch a report that is still being logged (`POST /v1/reports/{code}/watch`; `GET` shows the watch and `DELETE` stops it; `GET /v1/watches` lists the caller's active watches, newest first). The watch polls the report's metadata on the user's own WCL token and queues an ingest of each new boss fight (`docs/decisions.md`, D64). It runs on the `watch` queue, which workers take jobs from by default; a worker started with `--queues` or `KHADBOT_WORKER_QUEUES` must list `watch` to run polls. Settings, all optional:

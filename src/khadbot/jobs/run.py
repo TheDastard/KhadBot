@@ -21,7 +21,8 @@ ingest are fetched at once, so their "fetched" events interleave:
                    the pull's specs done), then ("ingest", None, 1)
     ProcessPull    ("normalizing", pull, 0), ("normalizing", pull, 1), ("records", pull, 0), ("records", pull, 1),
                    then, with a read-model projector, ("project", pull, 0), ("project", pull, 1)
-    ReviewPull     ("review", pull, 0), ("review", pull, 1)
+    ReviewPull     ("review", pull, 0), then one event per model call, creeping towards 0.95 as the analyst's step
+                   budget is used, then ("review", pull, 1)
 """
 
 from __future__ import annotations
@@ -35,7 +36,8 @@ from pydantic import BaseModel
 
 from khadbot import wiring
 from khadbot.auth.errors import WclSignInRequiredError, WclUnavailableError
-from khadbot.encounter.analyst import ModelMismatchError, review_pull
+from khadbot.encounter.analyst import ModelMismatchError, UsageCallback, review_pull
+from khadbot.encounter.analyst.graph import STEP_BUDGETS
 from khadbot.encounter.config_files import fetch_filter_inputs, load_all_encounters, load_cooldowns
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore
@@ -45,7 +47,9 @@ from khadbot.encounter.models import IngestResult, Pull, PullFindings
 from khadbot.encounter.records_store import ReadModelProjector
 from khadbot.encounter.store import EventStore
 from khadbot.jobs.progress import NullProgress, Progress, PullDescriber, PullInfo
+from khadbot.jobs.reviews import analyst_model_id
 from khadbot.jobs.specs import AppAuth, Auth, IngestReport, JobSpec, ProcessPull, ReviewPull, UserAuth
+from khadbot.jobs.usage import UsageLedger, record_llm_usage
 from khadbot.wcl.client import WarcraftLogsClient
 
 __all__ = [
@@ -236,6 +240,11 @@ class JobContext:
     batch: bool = field(default_factory=lambda: wiring.batch_fetch())  # off under WCL replay: fetch per pull
     resolver: TokenResolver = field(default_factory=lambda: default_token_resolver())
     projector: ReadModelProjector | None = field(default_factory=wiring.read_model_projector)
+    # Where a review writes each model call's tokens, and whom the rows are for (``jobs.usage``). The queue fills
+    # these in from the job row; the CLI leaves them None.
+    usage: UsageLedger | None = None
+    job_id: str | None = None
+    user_id: str | None = None
 
     def encounter_data(self) -> EncounterData:
         if self.data is None:
@@ -374,12 +383,31 @@ async def run_review_pull(
     ctx = ctx or JobContext()
     progress = progress or NullProgress()
     progress.report("review", spec.pull_key, 0.0)
+    calls = 0
+    budget = STEP_BUDGETS[spec.depth] + 1  # the rounds the analyst may use, and the final submission
+
+    async def on_call(model: str, usage: Mapping[str, Any]) -> None:
+        nonlocal calls
+        calls += 1
+        progress.report("review", spec.pull_key, min(0.95, calls / budget))
+        if ctx.usage is not None:
+            await record_llm_usage(
+                ctx.usage,
+                model=model,
+                usage=usage,
+                job_id=ctx.job_id,
+                user_id=ctx.user_id,
+                report_code=spec.pull_key.rpartition(":")[0],
+            )
+
+    callback = UsageCallback(on_call, default_model=spec.model or analyst_model_id())
     out = await review_pull(
         spec.pull_key,
         depth=spec.depth,
         store=ctx.encounter_data(),
         findings=ctx.findings_store(),
         expected_model_id=spec.model,
+        callbacks=[callback],
     )
     progress.report("review", spec.pull_key, 1.0)
     return ReviewPullResult(pull_key=spec.pull_key, findings=out.findings, cached=out.cached, partial=out.partial)

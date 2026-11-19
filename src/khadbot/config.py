@@ -427,6 +427,17 @@ class DevSessionsConfig:
 
 
 @dataclass(frozen=True)
+class ReviewConfig:
+    """
+    Pull reviews on the hosted queue (``jobs/reviews.py``). A review calls a paid model, so each user gets a rolling
+    allowance. Findings already cached cost no quota, and reviews that fail or are cancelled are not counted.
+    """
+
+    # Reviews one user may start in any rolling 24 hours; 0 allows none (cached findings stay readable).
+    per_day: int = field(default_factory=lambda: max(0, int(_optional("KHADBOT_REVIEWS_PER_DAY", "10"))))
+
+
+@dataclass(frozen=True)
 class ApiConfig:
     """Hosted API settings that are not sign-in (``AuthConfig``) or queue (``QueueConfig``) settings."""
 

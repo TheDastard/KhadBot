@@ -126,3 +126,58 @@ class TestSharedListener:
             async with store.listen() as events:
                 await store.create(ingest(job_id, job_id.upper() * 3))
                 assert await asyncio.wait_for(anext(events), 5) == job_id
+
+
+class TestReviewClaims:
+    """``claim_review`` against Postgres: the quota counts SQL rows, and a per-user lock serializes racing requests."""
+
+    @staticmethod
+    def review(job_id: str, user: str, pull: str = "ABC:1"):
+        from khadbot.jobs import ReviewPull
+        from khadbot.jobs.status import JobKind, NewJob
+
+        return NewJob(
+            id=job_id,
+            kind=JobKind.REVIEW,
+            report_code=pull.rpartition(":")[0],
+            pull_key=pull,
+            requested_by=user,
+            spec=ReviewPull(pull_key=pull).model_dump(mode="json"),
+        )
+
+    @staticmethod
+    def users(pool, *ids: str) -> None:
+        with pool.connection() as conn:
+            for n, uid in enumerate(ids, start=1):
+                conn.execute(
+                    "INSERT INTO users (id, wcl_user_id, name, created_at, last_login_at)"
+                    " VALUES (%s, %s, %s, now(), now())",
+                    (uid, n, uid),
+                )
+
+    async def test_the_quota_is_enforced_refunded_and_shared_findings_cost_nothing(self, store, pool):
+        from datetime import UTC, datetime, timedelta
+
+        self.users(pool, "u1", "u2")
+        since = datetime.now(UTC) - timedelta(hours=24)
+        first = await store.claim_review(self.review("r1", "u1", "ABC:1"), limit=1, since=since)
+        assert first.created and len(first.counted) == 1
+        assert (await store.claim_review(self.review("r2", "u1", "ABC:2"), limit=1, since=since)).job is None
+        theirs = await store.claim_review(self.review("r3", "u2", "ABC:1"), limit=1, since=since)
+        assert not theirs.created and theirs.job is not None and theirs.job.id == "r1"  # in flight: followed
+        assert await store.reviews_since("u2", since) == []
+        await store.finish("r1", JobState.FAILED, error_code="internal_error")
+        assert (await store.claim_review(self.review("r4", "u1", "ABC:2"), limit=1, since=since)).created
+
+    async def test_racing_requests_cannot_both_take_the_last_slot(self, store, pool):
+        from datetime import UTC, datetime, timedelta
+
+        self.users(pool, "u1")
+        since = datetime.now(UTC) - timedelta(hours=24)
+
+        def claim(n: int):
+            return asyncio.run(store.claim_review(self.review(f"r{n}", "u1", f"ABC:{n}"), limit=2, since=since))
+
+        with ThreadPoolExecutor(max_workers=8) as workers:
+            results = list(workers.map(claim, range(8)))
+        assert sum(r.created for r in results) == 2

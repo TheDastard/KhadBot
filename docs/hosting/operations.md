@@ -69,7 +69,7 @@ The `usage` table (migration `0008_usage.sql`) records what the service spends, 
 | `wcl_points` | `wcl` rows: the points the ingest job measured. |
 | `model`, `input_tokens`, `cached_input_tokens`, `cache_write_tokens`, `output_tokens`, `cost_usd` | `llm` rows. `input_tokens` includes the cached ones. `cost_usd` is an estimate from the price table, null for a model with no price. |
 
-An ingest job writes its `wcl` row when it settles, from the same measured `points_spent` that the WCL budget settles to and `jobs.points_spent` stores. A job has at most one `wcl` row, and an offline ingest, which spends nothing, has none. Model calls are written by `khadbot.jobs.usage.record_llm_usage`.
+An ingest job writes its `wcl` row when it settles, from the same measured `points_spent` that the WCL budget settles to and `jobs.points_spent` stores. A job has at most one `wcl` row, and an offline ingest, which spends nothing, has none. A review job writes one `llm` row per model call (`khadbot.jobs.usage.record_llm_usage`, through a callback that reads each reply's `usage_metadata` and the model name it reports), with the job, the user who requested it and the report; a review answered from the cache writes none.
 
     python main.py usage --since 2026-10-01 [--by user|guild|kind]     # hosted mode, needs DATABASE_URL
 
