@@ -87,6 +87,8 @@ function Test-PreCommitHook($hooksDir) {
     if (-not (Test-Path $hook)) { return $null }
     foreach ($other in "commit-msg", "post-checkout", "post-merge") {
         if (-not (Test-Path (Join-Path $hooksDir $other))) { return $null }
+        # A chained legacy hook fails on Windows (see the pre-commit install in step 4).
+        if (Test-Path (Join-Path $hooksDir "$other.legacy")) { return $null }
     }
     $line = Select-String -Path $hook -Pattern "^INSTALL_PYTHON='(.*)'$" | Select-Object -First 1
     if (-not $line) { return $null }
@@ -195,8 +197,19 @@ $commonDir = git -C $PSScriptRoot rev-parse --path-format=absolute --git-common-
 $cloneRoot = (Split-Path -Parent $commonDir) -replace "\\", "/"
 $inWorktree = (git -C $PSScriptRoot rev-parse --show-toplevel) -ne $cloneRoot
 
-git lfs install | Out-Null
-Ok "Git LFS hooks installed"
+# The LFS filters go in the user's git config. Of LFS's hooks only pre-push matters here (it uploads LFS objects);
+# post-checkout, post-commit and post-merge only manage lockable files, which this repo has none of. pre-commit owns
+# post-checkout and post-merge (step 4), so `git lfs install` refuses a rerun with "Hook already exists".
+git lfs install --skip-repo | Out-Null
+$lfsPrePush = Join-Path $commonDir "hooks/pre-push"
+if ((Test-Path $lfsPrePush) -and (Select-String -Path $lfsPrePush -SimpleMatch -Quiet "git lfs pre-push")) {
+    Ok "Git LFS is set up"
+} elseif ($inWorktree -or $SkipInstall) {
+    Problem "Git LFS's pre-push hook is missing (run in $cloneRoot`: git lfs update --force, then uv run pre-commit install --overwrite)"
+} else {
+    git -C $cloneRoot lfs update --force | Out-Null
+    if ($LASTEXITCODE -ne 0) { Problem "git lfs update failed" } else { Did "installed Git LFS's hooks" }
+}
 $meta = Join-Path $cloneRoot "tests/fixtures/encounter/wcl/H7z1fqDXjRTFnbtg/report.json"
 if ((Test-Path $meta) -and ((Get-Content $meta -TotalCount 1) -like "version https://git-lfs*")) {
     if ($SkipInstall) { Problem "recorded fixtures are LFS pointer files (run: git lfs pull)" }
@@ -235,9 +248,12 @@ try {
     $hookPython = Test-PreCommitHook (Join-Path $commonDir "hooks")
     if ($inWorktree -or $SkipInstall) {
         if ($hookPython) { Ok "pre-commit hooks installed (run with $hookPython)" }
-        else { Problem "pre-commit hooks are missing or point at a removed .venv (run in $cloneRoot`: uv run pre-commit install)" }
+        else { Problem "pre-commit hooks are missing or point at a removed .venv (run in $cloneRoot`: uv run pre-commit install --overwrite)" }
     } else {
-        uv run pre-commit install | Out-Null
+        # --overwrite replaces LFS's post-checkout and post-merge rather than keeping them as *.legacy hooks for
+        # pre-commit to chain: pre-commit runs a legacy hook through its shebang, and on Windows it can't resolve
+        # `#!/bin/sh`, so every checkout, merge and commit with unstaged changes failed.
+        uv run pre-commit install --overwrite | Out-Null
         if ($LASTEXITCODE -ne 0) { Problem "pre-commit install failed" } else { Ok "pre-commit hooks installed" }
     }
 
