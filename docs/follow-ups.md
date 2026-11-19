@@ -245,7 +245,7 @@ pulls: coverage `full`, no `phase_trigger_unmatched`, failures Mother's Wrath 13
   Casts page misses them. Decide at review; adding them refetches enemy Casts for every pull.
 - **Poisonous Bite** has no rule until a source says how long the DoT may stay (`debuff_duration_gt`).
 - **Soul Constrictor soakers** are undetected: the debuff is never reapplied and every hit is equal
-  (`docs/encounter/analysis-rules.md`, "Stack and aura failure rules"). Needs positions at impact or a raid plan.
+  (`docs/encounter/failure-rules.md`). Needs positions at impact or a raid plan.
 - **Mephitic Thrash** has no rule; positions could judge it once a reviewer confirms the radius and shape.
 - **Mother's Wrath `reach_yd`.** Target distance doesn't split the 13 failures cleanly; decide whether distance is
   the right test.
