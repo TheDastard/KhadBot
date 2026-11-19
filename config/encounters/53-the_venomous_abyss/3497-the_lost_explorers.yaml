@@ -1,0 +1,402 @@
+# The Lost Explorers, The Venomous Abyss: three possessed tortollans, First Mate Nema (NPC 261835),
+# Scrollsage Epu (NPC 261843) and Trader Gebbo (NPC 261848), and the spirit that controls them, Mor'zahi
+# (NPC 261584), who can't be attacked. Guides written before a rename call Nema "Nama" and Epu "Iku".
+# Open gaps for this file are tracked under "The Lost Explorers" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it. Counts in comments are over three Heroic kills (xk73VCBywmavDKz9 fight 11,
+# AQpRY9VNDrCGXtBF fight 20, xJqFwTPH73CXMkBV fight 22) unless they name the fourth pull, a 26 s wipe
+# (AQpRY9VNDrCGXtBF fight 19). That is little data: several rules below fired once or never, and their
+# comments say so.
+#
+# Failures are charged to the player who was hit, except debuff_stacks_gt, not_interrupted and the
+# Relic Rupture per_cluster rule, which charge no one.
+encounter_id: 3497
+name: The Lost Explorers
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 2
+
+# WarcraftLogs reports no phase transitions for this encounter. The fight is a cycle the raid drives:
+# Mor'zahi casts Final Ascension (1297075) and gathers energy for 60 s; a player throws a Disgusting Fish
+# (a player cast, 1296535, whose target is the tortollan fed); 4 to 5 s later Mor'zahi casts Mor'zahi's
+# Command and that tortollan uses its extra ability for 60 s; it then casts Dark Whispers (1301667) and
+# Mor'zahi starts Final Ascension again within 1.2 s. Each tortollan can be fed once.
+#
+# Phases are matched in order, and the order of the feeds is the raid's choice. All three kills fed Nema,
+# then Epu, then Gebbo, so that is the order listed; a raid that feeds in another order gets wrong phases
+# (docs/follow-ups.md). Mor'zahi's Command has one ID per feed: 1296975 followed a fish thrown to Nema
+# (3 of 3), 1297022 one to Epu (3 of 3) and 1297024 one to Gebbo (2 of 2). With one order in the logs,
+# whether the ID follows the tortollan or the feed's position is not known. One kill ended before the
+# third feed and no pull reached a fourth Final Ascension.
+phases:
+  - id: gathering_1
+    name: "Final Ascension gathers (first)"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: nema_commanded
+    name: "Mor'zahi's Command: First Mate Nema (Mighty Thud)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1296975}
+  - id: gathering_2
+    name: "Final Ascension gathers (second)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1297075}
+  - id: epu_commanded
+    name: "Mor'zahi's Command: Scrollsage Epu (Frostfire Volley)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1297022}
+  - id: gathering_3
+    name: "Final Ascension gathers (third)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1297075}
+  - id: gebbo_commanded
+    name: "Mor'zahi's Command: Trader Gebbo (Explosive Surprise)"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1297024}
+
+mechanics:
+  # -- Mor'zahi --------------------------------------------------------------------------------
+  - id: malevolent_presence
+    name: Malevolent Presence
+    description: >-
+      Raid-wide damage every 2 s for the whole fight, the largest source of damage taken. It is not counted as a
+      failure.
+    difficulties: [heroic]
+    ability_ids: [1295450]
+    kind: unavoidable
+    severity: low
+
+  - id: final_ascension
+    name: Final Ascension
+    description: >-
+      The channel that wipes the raid, begun when Mor'zahi's energy fills 60 s after he starts gathering; a
+      Disgusting Fish thrown before it finishes stops it. It is not counted as a failure.
+    # The channel that wipes the raid, begun when Mor'zahi's energy fills, 60 s after he starts gathering.
+    # A fish thrown before it finishes stops it: it began on 2 of the 8 feeds, 0.03 and 0.2 s after the
+    # fish was thrown. It has no damage in these logs, and neither does Fishy Feedback, the raid hit
+    # guides describe on each feed (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1292779]
+    kind: unavoidable
+    severity: high
+
+  - id: evil_eyes
+    name: Evil Eyes
+    description: >-
+      Creepy Statues fire at marked spots around each feed, and players should step out of them. Every hit is a
+      failure, charged to the player hit.
+    # Creepy Statues (NPC 264706) fire at marked spots around each feed; step out of them.
+    difficulties: [heroic]
+    ability_ids: [1292764]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: low
+
+  # -- First Mate Nema -------------------------------------------------------------------------
+  - id: shell_spin
+    name: Shell Spin
+    description: >-
+      Nema throws three shells in a cone at a player, stunning each player a shell touches for 4 s. Every stun is
+      a failure charged to the stunned player, the cast's own target included.
+    # Three shells thrown in a cone at a player (cast 1296062); each player a shell touches is stunned
+    # for 4 s (debuff 1291918). Every stun is a failure, the cast's own target included: of the 32 casts
+    # 2 stunned nobody and 12 stunned one player. The target was stunned on 7 of them (4, 0, 2 and 1 a
+    # pull). hits_on_non_target can't spare it: it judges damage hits and the stun has none.
+    difficulties: [heroic]
+    ability_ids: [1296062, 1291918]
+    kind: avoidable
+    failure: {rule: aura_applied}
+    severity: medium
+
+  - id: steady_strikes
+    name: Steady Strikes
+    description: >-
+      Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. No failure is
+      counted: the logs give no threshold for a late swap.
+    # Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. Stacks at
+    # a swap ran from 26 to 63, so the logs give no threshold for a late swap (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1291929]
+    kind: debuff
+    severity: low
+
+  - id: mighty_thud
+    name: Mighty Thud
+    description: >-
+      Nema's extra ability: he leaps to three marked players in turn, splitting the damage evenly between the
+      players within 6 yd of each. No failure is counted.
+    # Nema's extra ability, twice per Command, 32 s apart. He marks three players and leaps to each in
+    # turn, 2 s apart: a cast naming the marked player (1296133), then damage split evenly between the
+    # players within 6 yd (1300237). A leap that hits nobody is said to hit the whole raid instead; none
+    # of the 18 leaps did (5 to 11 players each), so there is no rule for it (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1296094, 1296133, 1300237]
+    kind: soak
+    cluster_window_ms: 1000
+    severity: high
+
+  - id: aftershock
+    name: Aftershock
+    description: >-
+      Quaking ground left at each Mighty Thud impact, ticking once a second on players inside it. Each player hit
+      in an occurrence counts one failure, charged to that player.
+    # Quaking ground left at each Mighty Thud impact, ticking once a second on players inside it. Soakers
+    # are knocked out of it by the leap; the first tick lands 1.1 s after the impact.
+    difficulties: [heroic]
+    ability_ids: [1310500]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: low
+
+  # -- Scrollsage Epu --------------------------------------------------------------------------
+  - id: blink_nova
+    name: Blink Nova (target)
+    description: >-
+      Debuff marking the player Epu teleports to; the raid damage on arrival is tracked as a damage window. Where
+      the marked player stands needs positions, so no failure is counted.
+    # Cast (1296021) and the debuff marking the player Epu teleports to (1296025). The raid damage is the
+    # blink_nova damage window. Where the marked player takes it matters and needs positions
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1296021, 1296025]
+    kind: debuff
+    severity: medium
+
+  - id: icebound_flames
+    name: Icebound Flames
+    description: >-
+      Cast at a player by Epu that must be interrupted; a completed cast hits its target and leaves a dispellable
+      DoT and slow. Each cast that is not interrupted is a failure, charged to no one.
+    # Cast at a player by Epu; interrupt it. A cast that completes hits its target and leaves a
+    # dispellable DoT and slow on the same ID. 47 casts were begun in the kills and 1 completed; the
+    # 26 s wipe completed 2.
+    difficulties: [heroic]
+    ability_ids: [1286922]
+    kind: interrupt
+    failure: {rule: not_interrupted}
+    severity: medium
+
+  - id: shredding_shards
+    name: Shredding Shards
+    description: >-
+      Channel of seven shards at Epu's target, each adding a stack that raises the next shard's damage; the tanks
+      swap so it falls off. A stack past 7 means a second channel hit a tank still debuffed: one failure per
+      channel, charged to no one.
+    # Channel at Epu's target: seven shards (cast and damage 1310616, started by 1295854), each adding a
+    # stack of a debuff (1295858) that raises the next shard's damage; the tanks swap so it falls off. 11
+    # of 13 debuffs ended at 7 stacks, one channel. A stack past 7 means a second channel landed on a tank
+    # still debuffed: one failure per such channel, charged to no one. It fired twice, both in one kill:
+    # 13 stacks on one tank and 8 on the other.
+    difficulties: [heroic]
+    ability_ids: [1295854, 1310616, 1295858]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 7}
+    cluster_window_ms: 5000
+    severity: medium
+
+  # Frostfire Volley is Epu's extra ability, twice per Command, 27 s apart. Fire missiles land first and
+  # frost missiles 0.5 s later; each hits the players within 10 yd of its target, gives them Burning
+  # Flames or Piercing Frost, and leaves a patch. A missile that hits a player carrying the opposite
+  # element's debuff sets off Elemental Explosion on the raid, so each such hit is a failure charged to
+  # that player. It fired once, with the only Elemental Explosion in the logs: a player took a fire
+  # missile and then a frost missile of the same volley. No player carried a debuff from one volley into
+  # the next (the longest lasted 23.5 s), so that way of failing is untested.
+  - id: frostfire_volley_fire
+    name: Frostfire Volley (fire)
+    description: >-
+      Fire missiles from Epu's Frostfire Volley hit players within 10 yd of each target and give Burning Flames. A
+      fire missile that hits a player carrying Piercing Frost sets off Elemental Explosion: a failure charged to
+      that player.
+    # The cast (1295891) and the fire missiles' damage.
+    difficulties: [heroic]
+    ability_ids: [1295891, 1295893]
+    kind: unavoidable
+    failure: {rule: hit_while_aura, aura_ids: [1295954]}
+    cluster_window_ms: 1000
+    severity: high
+
+  - id: frostfire_volley_frost
+    name: Frostfire Volley (frost)
+    description: >-
+      Frost missiles from Epu's Frostfire Volley land 0.5 s after the fire ones, hit players within 10 yd and give
+      Piercing Frost. One that hits a player carrying Burning Flames sets off Elemental Explosion: a failure
+      charged to that player.
+    difficulties: [heroic]
+    ability_ids: [1295985]
+    kind: unavoidable
+    failure: {rule: hit_while_aura, aura_ids: [1295928]}
+    cluster_window_ms: 1000
+    severity: high
+
+  - id: elemental_explosion
+    name: Elemental Explosion
+    description: >-
+      Raid hit when a Frostfire Volley missile meets the opposite element's debuff. It is not counted here: the
+      player who caused it is charged by the Frostfire Volley rules.
+    difficulties: [heroic]
+    ability_ids: [1295952]
+    kind: avoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: burning_flames
+    name: Burning Flames
+    description: >-
+      Debuff and DoT from a fire missile, lasting 1 min or until the player steps into a Frost Patch. It is not
+      counted as a failure.
+    # Debuff (1295928) and DoT (1310667) from a fire missile, for 1 min or until the player steps into a
+    # Frost Patch. Half were cleared within 3 s.
+    difficulties: [heroic]
+    ability_ids: [1295928, 1310667]
+    kind: debuff
+    severity: medium
+
+  - id: piercing_frost
+    name: Piercing Frost
+    description: >-
+      Debuff, DoT and slow from a frost missile, lasting 1 min or until the player steps into a Fire Patch. It is
+      not counted as a failure.
+    # Debuff (1295954), DoT and slow (1310662) from a frost missile, for 1 min or until the player steps
+    # into a Fire Patch.
+    difficulties: [heroic]
+    ability_ids: [1295954, 1310662]
+    kind: debuff
+    severity: medium
+
+  - id: elemental_patches
+    name: Frost Patch and Fire Patch
+    description: >-
+      Ground left by the Frostfire Volley missiles. Players step into the opposite element's patch to clear their
+      debuff, so a tick can't be told from a mistake and no failure is counted.
+    difficulties: [heroic]
+    ability_ids: [1297648, 1297649]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  # -- Trader Gebbo ----------------------------------------------------------------------------
+  - id: throw_junk
+    name: Throw Junk
+    description: >-
+      Gebbo throws crates at marked spots in bursts. Every hit is a failure, charged to the player standing where
+      a crate landed.
+    # Crates thrown at marked spots, every 4 s in bursts (casts 1291933, and 1306145 with damage 1306127
+    # for the variant thrown two or three times a kill). Standing where one lands is a failure: 69 hits in the
+    # kills, one a killing blow.
+    difficulties: [heroic]
+    ability_ids: [1291933, 1291935, 1306145, 1306127]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  - id: splinters
+    name: Splinters
+    description: >-
+      Stacking bleed on a player who stomps a crate; stomping is the job, since the crates hide the Disgusting
+      Fish and rupture if left. No failure is counted: no source gives a stack limit.
+    # Stacking bleed on a player who stomps a crate (Useless Junk, NPC 270001). Stomping is the job: the
+    # crates hide the Disgusting Fish and rupture if left. The second largest source of damage taken.
+    # Stacks reached 2 on 59 occasions, 3 on 8 and 4 on 2; no source gives a Heroic limit
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1308853]
+    kind: debuff
+    severity: medium
+
+  - id: relic_rupture
+    name: Relic Rupture
+    description: >-
+      A crate left unstomped ruptures 10 s later and hits the whole raid. Each rupture that hits the raid is one
+      failure, charged to no one, since nobody in particular is at fault.
+    # A crate left unstomped starts to rupture (cast 1310028 by the crate) and 10 s later hits the whole
+    # raid (1310027). 21 crates began to rupture and 4 times the raid was hit (20 to 25 players each, 93
+    # hits). One failure per occurrence, charged to no one: nobody in particular is at fault, and crate
+    # assignments from a raid plan could charge it.
+    difficulties: [heroic]
+    ability_ids: [1310028, 1310027]
+    kind: avoidable
+    failure: {rule: per_cluster, blame: {by: nobody}}
+    cluster_window_ms: 3000
+    severity: high
+
+  # Gebbo's extra abilities reached the raid in one pull only: one kill ended before his feed and in
+  # another he died as the bomb's cast began.
+  - id: bouncy_mushroom
+    name: Bouncy Mushroom
+    description: >-
+      Mushrooms Gebbo drops at players; touching one bounces the player, which is how the raid clears Blast Wave,
+      and the mushroom then bursts. It is not counted as a failure.
+    # Mushroom Toss (1292104) drops mushrooms (NPC 268045) at players. Touching one bounces the player
+    # (cast 1299855, debuff 1299854), which is how the raid clears Blast Wave; the mushroom then bursts
+    # (Fungal Burst, 1305618, 2 hits).
+    difficulties: [heroic]
+    ability_ids: [1292104, 1299855, 1299854, 1305618]
+    kind: unavoidable
+    severity: low
+
+  - id: explosive_surprise
+    name: Explosive Surprise
+    description: "Bomb on one player, who takes it to the room's edge. It is not counted as a failure."
+    # Bomb on one player (begun by 1296249; 1297625 is the cast and the 10 s debuff on the carrier), who
+    # takes it to the room's edge.
+    difficulties: [heroic]
+    ability_ids: [1296249, 1297625]
+    kind: debuff
+    severity: medium
+
+  - id: blast_wave
+    name: Blast Wave
+    description: >-
+      Ring that spreads from Gebbo's bomb 10 s after it lands, a large hit plus a DoT; players bounce or teleport
+      over it. Each player it touches is a failure, charged to that player.
+    # Ring that spreads from the bomb 10 s after it lands: a hit of up to 1.2M before mitigation and a
+    # DoT on the same ID. Bounce or teleport over it. Each player it touches is a failure. One wave in
+    # the logs: 11 players hit, 6 killed.
+    difficulties: [heroic]
+    ability_ids: [1305844]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: spreading_flames
+    name: Spreading Flames
+    description: >-
+      Fire spreading from Gebbo's bomb that damages players inside it. It has been seen once, so no failure is
+      counted yet.
+    # Fire spreading from the bomb (NPC 266037): debuff 1297650 while inside, damage 1314061. One
+    # occurrence, during the wave, so no rule yet (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1297650, 1314061]
+    kind: avoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: smashing_shovel
+    name: Smashing Shovel
+    description: >-
+      Extra damage and knockback on each of Gebbo's swings once another tortollan is dead. It is not counted as a
+      failure.
+    # Gebbo's extra damage and knockback on each swing once another tortollan is dead. Seen in one kill,
+    # in its last 18 s. The other two tortollans' abilities for the same case, Relentless Escalation and
+    # Cataclysmic Invocation, are not in the logs.
+    difficulties: [heroic]
+    ability_ids: [1296252, 1296251]
+    kind: unavoidable
+    severity: high
+
+damage_windows:
+  - id: blink_nova
+    name: Blink Nova
+    # Raid-wide hit when Epu teleports to the marked player, 19 times in the kills, smaller the farther
+    # a player stands from the mark. expected_defensive_cooldowns is a guess (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1294334]
+    cluster_window_ms: 2000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # the three tortollans on the tanks
+  - {ability_id: 3, name: Falling, difficulties: [heroic]}               # landing after a mushroom bounce

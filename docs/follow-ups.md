@@ -351,3 +351,17 @@ kills and no wipes. Failures to review: Plague Froth 177, Plague Wave 221, Stygi
   closer than a limit; Caustic Surge has no stack counts, so `debuff_stacks_gt` can't see the overlap.
 - **Unconfirmed**: the unsoaked Catalytic Bile ID (1282616), Virulent Fumes and Congealing Bolt (not in the Dungeon
   Journal), Imbibe's cooldown count; the Blood fountain and leaked adds aren't covered (YAML header).
+
+### The Lost Explorers (3497), Heroic
+
+`config/encounters/53-the_venomous_abyss/3497-the_lost_explorers.yaml`, first pass awaiting review, from only four
+Heroic pulls (three kills); counts and the unseen abilities are in its comments.
+
+- **Phases assume the feed order Nema, Epu, Gebbo.** Another order gets wrong phases, so the format needs phases
+  that match in any order; no pull reached the fourth Final Ascension, so the last phase is missing.
+- **Review**: Shell Spin charges the cast's target (7 of 32 casts); Aftershock `hits_per_cluster_gt 0`, Shredding
+  Shards past 7 stacks, Blink Nova's defensive count. Relic Rupture charges no one until a raid plan assigns crates.
+- **No rule yet** for Mighty Thud (no failed leap seen, and not a damage window), Steady Strikes, Splinters and
+  Spreading Flames; Elemental Explosion's rule is untested on a debuff carried into the next volley.
+- **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback's damage, Haunting Spirits
+  (1310561, unexplained deaths in the wipe).
