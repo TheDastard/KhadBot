@@ -1,0 +1,334 @@
+# Nek'zali the Soulcoiler, first boss of The Venomous Abyss.
+# Open gaps for this file are tracked under "Nek'zali the Soulcoiler" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it.
+#
+# Everything here was checked against seven Heroic pulls from three raid nights (four wipes and three
+# kills). The intermission was reached in six of them and Stage Two in four. Counts in the comments are
+# over those seven pulls.
+#
+# Failures are charged to the player responsible. For most rules that is the player who was hit. Rules on
+# stacking debuffs count one failure per occurrence and charge no one.
+encounter_id: 3470
+name: Nek'zali the Soulcoiler
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 2
+
+# WarcraftLogs reports three phases for this encounter (phase IDs 1-3). Its intermission transition lands
+# 23 s after Nek'zali retreats to the well at 50% health and casts Ritual of Awakening (22.9 to 23.0 s in
+# all five pulls that have both), so the intermission starts on her cast instead. Stage Two starts on the
+# WCL transition, which lands as the second Echo of Jawae dies.
+phases:
+  - id: p1
+    name: "Stage One: Soulcoiler Initiation"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: intermission
+    name: "Intermission: Ritual of Awakening"
+    difficulties: [heroic]
+    start: {trigger: boss_cast, ability_id: 1295124}
+  - id: p2
+    name: "Stage Two: Uncoiling"
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 3}
+
+mechanics:
+  # -- Raid-wide pressure ----------------------------------------------------------------------
+  - id: soulcoil_rite
+    name: Soulcoil Rite
+    description: >-
+      Raid-wide hit plus a stacking DoT from Soulcoil Ignition, each Stage Two Invoke, or anything that enters the
+      Soulcoil Well. No failure is counted, as no event tells the causes apart; Ritual Burn catches the pile-up.
+    # Raid-wide hit plus a stacking DoT; one ID (1288772) for the hit, the DoT and the debuff. Three things
+    # cause one: Soulcoil Ignition (casts 1293664, 1293660 and 1285681; five Rites a second apart, at the
+    # pull and again at 72 to 78 s), each Invoke in Stage Two, and anything that enters the Soulcoil Well:
+    # a Restless Amani that reaches it or a player who dies in it. Only the last is a failure, and no event
+    # tells the three apart, so there is no rule here (docs/follow-ups.md); ritual_burn catches the
+    # pile-up. The largest source of damage in every pull.
+    difficulties: [heroic]
+    ability_ids: [1288772, 1293664, 1293660, 1285681]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: ritual_burn
+    name: Ritual Burn
+    description: >-
+      Debuff from every Soulcoil Rite that makes the next Rites hit harder. Each run of Rites that takes the raid past 5
+      stacks is one failure, charged to no one: Restless Amani reached the well or players died in it.
+    # Debuff from every Soulcoil Rite: the next Rites hit 15% harder per stack for a minute. The boss
+    # "casts" it on each player with every Rite. An Ignition alone leaves 5 stacks, and the Invokes of the
+    # three kills took the raid to 4. Each run of Rites that takes the raid past 5 stacks is one failure,
+    # charged to no one: a group of Restless Amani reached the well, or players died in it. A single Amani
+    # reaching the well stays under the limit, and a long Stage Two would pass it on Invokes alone
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1297624]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 5}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: corpse_blight
+    name: Corpse Blight
+    description: >-
+      Each Restless Amani that dies hits the raid and adds a stack of a 15 s DoT. It is not counted as a failure.
+    # Each Restless Amani that dies hits the raid (1294729, logged with the Amani as its source) and adds a
+    # stack of a 15 s DoT (1307939, damage and debuff, logged with Nek'zali as its source). Stacks reached 4
+    # to 7 as each group of six died together.
+    difficulties: [heroic]
+    ability_ids: [1294729, 1307939]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: uncoiling
+    name: Uncoiling
+    description: "Stage Two raid-wide tick until Nek'zali dies. It is not counted as a failure."
+    # Stage Two raid-wide tick every 0.9 s until Nek'zali dies.
+    difficulties: [heroic]
+    ability_ids: [1292315]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: invoke
+    name: Invoke
+    description: >-
+      Stage Two cast that brings a Soulcoil Rite and moves the Latent Cultists around the well. It is not counted as a
+      failure.
+    # Stage Two cast, 32 to 48 s apart: one Soulcoil Rite, and the Latent Cultists placed in Stage One move
+    # around the well (Entwined Step, which logs nothing of its own).
+    difficulties: [heroic]
+    ability_ids: [1299673]
+    kind: unavoidable
+    severity: medium
+
+  - id: uncoiled_rage
+    name: Uncoiled Rage
+    description: "Nek'zali's enrage at 100 energy, raising her damage and attack speed. It is not counted as a failure."
+    # Enrage at 100 energy: 500% damage, 150% attack speed. Cast once, in the one Stage Two wipe, after
+    # six Restless Amani reached the well.
+    difficulties: [heroic]
+    ability_ids: [1284034]
+    kind: unavoidable
+    severity: high
+
+  # -- Tanking ---------------------------------------------------------------------------------
+  - id: possession_barrage
+    name: Possession Barrage
+    description: >-
+      Cast on Nek'zali's target, then five spirits fly at that player and burst on the first player they reach, hitting
+      the raid harder the shorter they flew. No failure is counted, as a burst's size names no one.
+    # Six-second cast on Nek'zali's current target (1284103, also the debuff that marks them), then five
+    # spirits fly at that player and each bursts on the first player it reaches, hitting the whole raid
+    # (1292034) for less the farther it flew. The tank should be 30 yards or more away with nobody in
+    # between. A spirit that flew its full distance hits for 79,417 before mitigation (83,421 in the
+    # smaller raid); one that burst at once hits for 100,000 to 137,000. No rule: every player takes every
+    # burst, so the size of a burst names no one, and charging the tank needs their distance from Nek'zali
+    # (docs/follow-ups.md). The killing blow on 28 players, all in casts where the spirits burst early.
+    difficulties: [heroic]
+    ability_ids: [1284103, 1292034]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: hollowing_strikes
+    name: Hollowing Strikes
+    description: >-
+      Each melee swing stacks a DoT and reduced healing and absorption on the tank; the tanks swap on each Possession
+      Barrage. Each run past 15 stacks is one failure, charged to no one.
+    # Each melee swing adds a stack on the tank: a DoT and 5% less healing and absorption per stack for
+    # 15 s (one ID for the damage and the debuff). The tanks swap on each Possession Barrage, which leaves
+    # the debuff at 6 to 14 stacks. Each run past 15 stacks is one failure, charged to no one: 8 runs did
+    # (16 to 22 stacks), and 4 of them ended with that tank dead. The limit comes from these pulls; guides
+    # say to swap at 30 to 40% (6 to 8 stacks). The 15 s window is the debuff's duration, so a run that
+    # pauses while the tank runs out for a Barrage stays one failure.
+    difficulties: [heroic]
+    ability_ids: [1284109]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 15}
+    cluster_window_ms: 15000
+    severity: medium
+
+  # -- Avoidable -------------------------------------------------------------------------------
+  - id: latent_cultist
+    name: Latent Cultist
+    description: >-
+      Permanent puddle left where an Essence Rend ended that damages and slows on contact; the puddles move around the
+      well after each Invoke. Each player hit counts one failure per contact, charged to that player.
+    # Permanent puddle left where an Essence Rend ended; contact damages and slows (one ID for the damage
+    # and the debuff). After each Invoke the puddles move around the well. One failure per player per
+    # contact. Part of the count comes from raids running into the well and the puddles to end a lost pull.
+    difficulties: [heroic]
+    ability_ids: [1288554]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: latent_cultist_emergence
+    name: Latent Cultist (emergence)
+    description: >-
+      A larger hit on players near a Latent Cultist as it materializes. No failure is counted, as the logs don't say
+      whether the player hit dropped it or was a bystander.
+    # A larger hit on players within 6 yards of a cultist as it materializes: 17 hits on 10 players, never
+    # fatal. No rule: whether the player hit is the one who dropped it or a bystander is not known
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1292899]
+    kind: avoidable
+    severity: low
+
+  - id: anguished_echoes
+    name: Anguished Echoes
+    description: >-
+      Impact circles that rain out of the well during Soulcoil Ignition. Every hit is a failure, charged to the player
+      hit.
+    difficulties: [heroic]
+    ability_ids: [1294846]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: medium
+
+  - id: soulcoil_well
+    name: Soulcoil Well
+    description: >-
+      Standing in the well in the middle of the room; a player who dies in it causes a Soulcoil Rite. Each player hit
+      counts one failure per visit, charged to that player.
+    # Standing in the well in the middle of the room. A player who dies in it causes a Soulcoil Rite. One
+    # failure per player per visit. Almost all of the hits are in the last seconds of three wipes, where
+    # the raid went into the well to end the pull (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1290390]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: soul_transfer
+    name: Soul Transfer
+    description: >-
+      Intermission: Summoner Jawae and Nek'zali channel into one side of the room while an Echo of Jawae forms, and the
+      blast at the end hits anyone still in the beam. Every hit is a failure, charged to the player hit.
+    # Intermission: Summoner Jawae (1293211) and Nek'zali (1289902) channel into one side of the room and
+    # an Echo of Jawae (1292248) forms over 15 s; the blast at the end hits anyone still in the beam
+    # (1295085).
+    difficulties: [heroic]
+    ability_ids: [1295085, 1293211, 1289902, 1292248]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: high
+
+  # -- Assigned --------------------------------------------------------------------------------
+  - id: essence_rend
+    name: Essence Rend
+    description: >-
+      Pulls players toward the well, then knocks them away with a dispellable DoT; a Latent Cultist appears where it
+      ends, so players should reach the room's edge first. No failure is counted yet.
+    # Pulls several players toward the well for 5 s (debuff 1287427, logged with the environment as its
+    # source; 1287987 marks the cast), then knocks them away with a 15 s DoT (1287434, damage and debuff)
+    # that a magic dispel removes. A Latent Cultist appears where the DoT ends, so the player should be at
+    # the edge of the room first. 72 of 122 were dispelled and 34 ran the full 15 s. No rule: where the
+    # puddle landed needs positions (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1287427, 1287987, 1287434]
+    kind: dispel
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: hungering_pyre
+    name: Hungering Pyre
+    description: >-
+      Echo of Jawae soak whose damage is split between the players inside. A Pyre with fewer than 6 soakers is one
+      failure, charged to no one.
+    # Echo of Jawae soak (cast 1289855, also the damage; 1294742 fires with it): about 4.3M before
+    # mitigation split between the players inside. Every Pyre with 8 or more soakers killed no one; the two
+    # with fewer (5 and 1, both in one wipe) killed 3. The limit of 6 comes from these pulls.
+    difficulties: [heroic]
+    ability_ids: [1289855, 1294742]
+    kind: soak
+    failure: {rule: soak_count_lt, value: 6}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: slithering_flame
+    name: Slithering Flame
+    description: >-
+      Hit and 8 s DoT on every player who did not soak the Pyre; players walk it over Restless Amani corpses because it
+      ends in a Cremation. It is not counted as a failure.
+    # Lands on every player who did not soak the Pyre: a hit and an 8 s DoT (one ID for the damage and
+    # the debuff). Players walk it over Restless Amani corpses, because it ends in a Cremation.
+    difficulties: [heroic]
+    ability_ids: [1294933]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  - id: cremation
+    name: Cremation
+    description: >-
+      The explosion at the end of a Slithering Flame and under each Pyre; it burns corpses within 4 yards and leaves a
+      short DoT on the player. It is not counted as a failure.
+    # Heroic: the explosion at the end of a Slithering Flame, and under each Pyre. Burns the corpses within
+    # 4 yards and leaves a 3 s DoT on the player (one ID for the damage and the debuff).
+    difficulties: [heroic]
+    ability_ids: [1289875]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
+  # -- Adds ------------------------------------------------------------------------------------
+  - id: gravebound_advance
+    name: Gravebound Advance
+    description: >-
+      Shield on Restless Amani as each group leaves the sarcophagi; it absorbs only magic damage, and they can't be
+      killed or stopped while it holds. It is not counted as a failure.
+    # Restless Amani (NPC 261509) shield, cast as each group leaves the sarcophagi: six at a time in most
+    # groups, four in some. It absorbs magic damage only, and the Amani can't be killed or stopped while it
+    # holds. An Amani that reaches the well causes a Soulcoil Rite.
+    difficulties: [heroic]
+    ability_ids: [1287533]
+    kind: unavoidable
+    severity: low
+
+  - id: vessel_of_awakening
+    name: Vessel of Awakening
+    description: >-
+      A Restless Amani corpse not burned by a Pyre or a Cremation is repossessed in the intermission and pulses raid-
+      wide damage. Every occurrence is one failure, charged to no one.
+    # Heroic: a dead Restless Amani leaves a corpse, and a corpse not burned by a Pyre or a Cremation is
+    # repossessed during the intermission; the reawakened Amani pulses raid-wide damage every second for
+    # 5 s. Seen in two of the five intermissions: one Amani in one, and four at once in the other, where it
+    # killed 10 players. Every occurrence is a failure with nobody to charge: one per cluster of its hits.
+    difficulties: [heroic]
+    ability_ids: [1297630]
+    kind: avoidable
+    failure: {rule: per_cluster, blame: {by: nobody}}
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: ritual_of_awakening
+    name: Ritual of Awakening
+    description: "Nek'zali's cast as she retreats to the well at 50% health; it starts the intermission."
+    difficulties: [heroic]
+    ability_ids: [1295124]
+    kind: unavoidable
+    severity: low
+
+damage_windows:
+  - id: possession_barrage
+    name: Possession Barrage
+    # Five raid-wide bursts within about 2.5 s, 28 to 36 s apart. expected_defensive_cooldowns is a guess
+    # (see docs/follow-ups.md). Soulcoil Ignition is the fight's other raid-wide burst but can't be a window:
+    # its Rites share an ID with their own DoT, which ticks all fight.
+    difficulties: [heroic]
+    ability_ids: [1292034]
+    cluster_window_ms: 3000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks, Echoes and Amani
+  - {ability_id: 1306593, name: "[DNT] Increase Drumming", difficulties: [heroic]}  # Ritual Drummer scenery, no damage
