@@ -6,6 +6,7 @@
 
 "use client";
 
+import { ReviewButton } from "@/components/review";
 import { FightPct } from "@/components/shared/fight-pct";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -115,8 +116,8 @@ export function PullHeader({
           prefix="Coverage: "
           focusable
         />
-        {/* Slot: review-button. The pull review button (hosted reviews, `features.reviews`) goes here. */}
-        <span data-slot="review-button" className="ml-auto empty:hidden" />
+        {/* Slot: review-button (components/review/): renders only with `features.reviews`. */}
+        <ReviewButton code={code} fight={fight} />
       </div>
 
       <dl className="m-0 flex flex-wrap gap-x-9 gap-y-3">

@@ -89,8 +89,12 @@ jobs:
       - run: uv sync --locked --extra dev
       - run: pnpm install --frozen-lockfile
       - run: mise run install:playwright -- --with-deps
-      - name: Dev loop settings, with WCL replay on
-        run: sed 's|^# KHADBOT_WCL_REPLAY=|KHADBOT_WCL_REPLAY=|' deploy/dev.env.example > deploy/dev.env
+      - name: Dev loop settings, with WCL replay and the fake model provider on
+        run: |
+          sed 's|^# KHADBOT_WCL_REPLAY=|KHADBOT_WCL_REPLAY=|' deploy/dev.env.example > deploy/dev.env
+          # review.spec.ts runs reviews on the fake model; the delay keeps each one running long enough to watch.
+          echo 'LLM_PROVIDER=fake' >> deploy/dev.env
+          echo 'FAKE_LLM_DELAY_SECONDS=1.5' >> deploy/dev.env
       - name: Start the dev loop (Postgres and the bucket in Docker; the API, worker and web dev server natively)
         run: |
           nohup uv run python scripts/dev/dev.py all > dev-loop.log 2>&1 &

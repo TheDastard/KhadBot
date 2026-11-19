@@ -48,6 +48,7 @@ export const E2E_WORKERS = Number.parseInt(process.env.E2E_WORKERS ?? "", 10) ||
 export const USERS = {
   alice: path.join(AUTH_DIR, "alice.json"),
   bob: path.join(AUTH_DIR, "bob.json"),
+  carol: path.join(AUTH_DIR, "carol.json"),
 } as const;
 
 export type TestUser = keyof typeof USERS;
