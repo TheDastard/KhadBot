@@ -280,3 +280,17 @@ counts over 35 Heroic pulls (one kill).
 - **Soul Sever** has no rule: Malacrass never melees, so his tank must come from taunts, Dread Bolt or a raid plan.
 - **Confirm**: Noxious Ground's free tick, Toxic Deluge as avoidable, Fangs' `expected_defensive_cooldowns: 1`, and
   Unworthy's (1312424) trigger. No source yet for Venomfang, Venom Rupture, Corrupted Toxin, Dreadmarch rules.
+
+### Kith'ix (3513), Heroic
+
+`config/encounters/53-the_venomous_abyss/3513-kithix.yaml`, first pass awaiting review; five Heroic pulls, one kill.
+
+- **The intermission isn't a phase.** Suffocating Darkness repeats and ends on Liadrin's Divine Radiance, not a boss
+  event, so it sits inside `p1`.
+- **Judgment calls to confirm**: Extinguish when a tank survives it by a planned immunity or defensive, Dark
+  Devastation's 8 s window, Digestive Juices' 3-stack limit (a 3-stack set also wiped), Voidscar hits on the tanks
+  placing it, and Overwhelming Fear as a full 6 s rather than an early dispel (needs positions).
+- **Suffocation double counts** an unhealed Abyssal Grasp (9 of 21). Stage Two rests on one pull: Null Gate rules
+  and Nullify's lethal stack (4 to 6 by guide) are unconfirmed; Hatch, Mindsting and Dark Frenzy never appear.
+- **Need a source**: Blood of the Old Ones (1308670, 6 killing blows), Nightfall's stack limit, and Eightfold
+  Eclipse's `expected_defensive_cooldowns: 1`; Eclipse Fragment soaks need a raid plan.

@@ -1,0 +1,397 @@
+# Kith'ix, the single boss of The Unbinding of Kith'ix. WarcraftLogs lists the encounter under zone 53,
+# The Venomous Abyss, so the file lives with that raid's.
+# Open gaps for this file are tracked under "Kith'ix" in docs/follow-ups.md.
+#
+# Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
+# Entries list the difficulties they have been checked on; add a difficulty only after checking the
+# entry against logs from it.
+#
+# Everything here was checked against five Heroic pulls of one raid night (four wipes and the kill), and
+# Stage Two against the kill's 45 seconds only. Counts in the comments are over those five pulls.
+#
+# Failures are charged to the player responsible. For most rules that is the player who was hit or who
+# carried the debuff. Rules on raid-wide debuffs (stacks past a limit, Lost Refulgence) count one failure per
+# occurrence and charge no one.
+encounter_id: 3513
+name: Kith'ix
+zone: {id: 53, name: The Venomous Abyss}
+file_version: 2
+
+# WarcraftLogs reports two phases for this encounter (phase IDs 1-2). Stage One alternates between the add
+# sets and the Suffocating Darkness intermission, which WarcraftLogs does not report as a phase and no
+# trigger can end (docs/follow-ups.md), so both are part of p1 here.
+phases:
+  - id: p1
+    name: "Stage One: Darkness' Domain"
+    difficulties: [heroic]
+    start: {trigger: pull}
+  - id: p2
+    name: "Stage Two: Last Light"
+    # Kith'ix reaches 25% health. The WCL transition lands on the Eightfold Eclipse cast, 8 s after
+    # Stygian Howl stuns the raid.
+    difficulties: [heroic]
+    start: {trigger: wcl_phase, phase: 2}
+
+mechanics:
+  # -- Raid-wide pressure ----------------------------------------------------------------------
+  - id: voidswarm
+    name: Voidswarm
+    description: "Raid-wide ticks while the portals open and each add set arrives. It is not counted as a failure."
+    # Three raid-wide ticks 2 s apart while the portals open and each add set arrives. No enemy cast is
+    # logged for it.
+    difficulties: [heroic]
+    ability_ids: [1301668]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: extinguish
+    name: Extinguish
+    description: >-
+      Raid-wide shockwave; Light's Embrace from Lady Liadrin's motes cuts it by 90% and is used up by the hit. A player
+      hit without Light's Embrace fails, once per shockwave, charged to that player.
+    # Raid-wide shockwave (one ID for the cast and the hit). Lady Liadrin's motes give Light's Embrace
+    # (debuff 1304526), which cuts the hit by 90%; the hit then removes it. 56 of 356 hits landed on a
+    # player without Light's Embrace: 11 of those killed, none of the other 300 did. Each player is judged
+    # per raid-wide hit, charged to the player hit: 56 failures (16, 15, 9, 8, 8 by pull). A hit in the same
+    # millisecond the aura is removed counts as protected; none of the 56 lands within 51 s of an earlier
+    # removal, so the missing tolerance changes nothing here.
+    difficulties: [heroic]
+    ability_ids: [1304424, 1304526]
+    kind: unavoidable
+    failure: {rule: hit_without_aura, aura_ids: [1304526]}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: suffocating_darkness
+    name: Suffocating Darkness
+    description: >-
+      The intermission: a raid-wide tick every second until Liadrin's Divine Radiance clears it. It is not counted as a
+      failure.
+    # The intermission: cast (1302951) at 100 energy, then a raid-wide tick every second (1303165, also the
+    # debuff) until Liadrin's Divine Radiance clears it 44 s later.
+    difficulties: [heroic]
+    ability_ids: [1302951, 1303165]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
+  - id: stygian_howl
+    name: Stygian Howl
+    description: "Raid-wide stun that opens Stage Two. It is not counted as a failure."
+    difficulties: [heroic]
+    ability_ids: [1301110]
+    kind: unavoidable
+    severity: low
+
+  # -- Tanking ---------------------------------------------------------------------------------
+  - id: dark_devastation
+    name: Dark Devastation
+    description: >-
+      Cast on Kith'ix's current target, then Shadow and Physical hits on everyone within 15 yards of them. Anyone hit
+      other than the cast's target stood too close: a failure charged to the player hit.
+    # Cast (1304930) on Kith'ix's current target, then a Shadow (1304946) and a Physical (1304947) hit on
+    # everyone within 15 yards of them. Anyone hit other than the cast's target stood too close: 4 such
+    # players over 28 casts, and all 4 died to it. The target comes from the completed cast row, not the
+    # aggro holder: the other tank often taunts during the 4 s cast, which charged the cast's own target on
+    # 6 of the 28 casts under hits_on_non_tank. The hit lands 0.25 to 0.71 s after the cast row, so the 8 s
+    # window finds it and stays clear of the next cast 20 s later. 4 failures (3 in fight 6, 1 in fight 7).
+    difficulties: [heroic]
+    ability_ids: [1304930, 1304946, 1304947]
+    kind: avoidable
+    failure: {rule: hits_on_non_target, ms: 8000}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: devastated
+    name: Devastated
+    description: >-
+      Debuff from Dark Devastation that raises damage taken for 25 s; the tanks swap on each cast. A second stack means
+      a tank took two in a row: one failure, charged to no one.
+    # Debuff from Dark Devastation: more damage taken for 25 s. Casts come 20 s apart, so the tanks swap on
+    # each one; a second stack means a tank took two in a row. One failure per second stack, charged to no
+    # one.
+    difficulties: [heroic]
+    ability_ids: [1304948]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 1}
+    severity: medium
+
+  - id: voidscar
+    name: Voidscar
+    description: >-
+      Pool left where Dark Devastation landed that damages and knocks back on contact. Each player hit counts one
+      failure per contact, charged to that player; tank hits as the pool forms are still under review.
+    # Pool left where Dark Devastation landed; contact damages and knocks back. The source is the
+    # environment. One failure per player per contact. 30 of the 48 hits are on the two tanks, 16 of them
+    # on the Dark Devastation's target within 3.5 s of its impact, so a reviewer should decide whether a
+    # tank's hit as the pool forms counts (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1304950]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: negation
+    name: Negation
+    description: >-
+      Stage Two debuff on Kith'ix's target that the tank removes by touching a Null Gate; left to run its 8 s, it
+      explodes. A Negation lasting over 7.9 s is a failure charged to the tank who carried it.
+    # Stage Two debuff on Kith'ix's current target (one ID for the cast and the debuff). The tank removes it
+    # by touching a Null Gate; left to run its 8 s, it explodes (1320010). Both Negations that ran out in
+    # the kill lasted 7.9 and 8.0 s and killed their tank. No pull shows one removed early, so the limit
+    # is untested from that side.
+    difficulties: [heroic]
+    ability_ids: [1318467, 1320010]
+    kind: debuff
+    failure: {rule: debuff_duration_gt, ms: 7900}
+    severity: high
+
+  # -- Avoidable -------------------------------------------------------------------------------
+  - id: twisted_appendage
+    name: Twisted Appendage
+    description: >-
+      Tentacles that slap a marked area 3 s after they appear. Each player hit counts one failure per slap, charged to
+      that player.
+    difficulties: [heroic]
+    ability_ids: [1303685]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 1000
+    severity: medium
+
+  - id: suffocation
+    name: Suffocation
+    description: >-
+      Intermission debuff and damage on a player outside Liadrin's Refulgent Bulwark. Each application is a failure
+      charged to that player, including a player dragged out by an unhealed Abyssal Grasp.
+    # Debuff and damage on a player outside Liadrin's Refulgent Bulwark during the intermission. Each
+    # application is a failure. A player dragged out by an Abyssal Grasp nobody healed gets one too, so
+    # that miss is counted here and under abyssal_grasp: 9 of the 21 applications (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1303257]
+    kind: avoidable
+    failure: {rule: aura_applied}
+    cluster_window_ms: 2000
+    severity: high
+
+  - id: blood_of_the_old_ones
+    name: Blood of the Old Ones
+    description: >-
+      Environment damage ticking on single players, probably the ground outside the bulwark; no guide names it. No
+      failure is counted until someone confirms what it is.
+    # Environment damage and debuff, ticking once a second on single players. No guide names it. It follows
+    # a Suffocation on the same player in most cases, so it is probably the ground outside the bulwark. No
+    # rule until someone confirms what it is.
+    difficulties: [heroic]
+    ability_ids: [1308670]
+    kind: avoidable
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: null_gate
+    name: Null Gate
+    description: >-
+      Stage Two: three players are marked for 5 s, then a gate opens on each and hits them. It is not counted as a
+      failure.
+    # Stage Two: three players are marked for 5 s (debuff 1308873), then a gate opens on each and hits them
+    # (1308874). The gate should also hit and Nullify other players within 5 yards; in the kill all 11 hits
+    # were on the marked players themselves, so that case is unseen and has no rule.
+    difficulties: [heroic]
+    ability_ids: [1308873, 1308874]
+    kind: debuff
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: nullshards
+    name: Nullshards
+    description: >-
+      Shards scattered by Null Gates; each contact adds a Nullify stack. Contacts are not counted, since nearly everyone
+      is hit; the lethal stack is the failure instead.
+    # Shards scattered by Null Gates; each contact adds a Nullify stack. No rule: the kill is the only
+    # sample and 21 of 23 players were hit (78 hits), so it would charge nearly everyone. The lethal stack
+    # is the failure instead (nullify_death).
+    difficulties: [heroic]
+    ability_ids: [1308881]
+    kind: avoidable
+    severity: medium
+
+  - id: nullify
+    name: Nullify
+    description: >-
+      Stacking debuff and DoT from Null Gates and Nullshards. Its lethal stack is counted under Nullify (lethal stack).
+    # Stacking debuff (1308875) and its DoT (1308876) from Null Gates and Nullshards.
+    difficulties: [heroic]
+    ability_ids: [1308875, 1308876]
+    kind: debuff
+    severity: medium
+
+  - id: nullify_death
+    name: Nullify (lethal stack)
+    description: >-
+      The hit that kills a player whose Nullify reached its limit. Every hit is a failure, charged to the player hit.
+    # The hit that kills a player whose Nullify reached its limit. The debuff rows show 4 stacks on most
+    # of the players it killed and 5 on two; guides give 4, 5 or 6 for Heroic.
+    difficulties: [heroic]
+    ability_ids: [1308877]
+    kind: avoidable
+    failure: {rule: any_hit}
+    severity: high
+
+  # -- Assigned --------------------------------------------------------------------------------
+  - id: unspeakable_horrors
+    name: Unspeakable Horrors
+    description: >-
+      Marks three players for 6 s, after which each gets Overwhelming Fear; they should leave the group first. It is not
+      counted as a failure.
+    difficulties: [heroic]
+    ability_ids: [1304045]
+    kind: debuff
+    severity: low
+
+  - id: overwhelming_fear
+    name: Overwhelming Fear
+    description: >-
+      Fear that screams when it ends or is dispelled, hitting the raid for less the farther away the player is; dispel
+      it once the player is out of the group. A fear that runs its full 6 s is a failure charged to the feared player.
+    # Fear (debuff 1304046) that screams when it ends or is dispelled, hitting the raid for less the
+    # farther away the player is (1304047). Dispel it once the player is out of the group. A fear that ran
+    # its full 6 s was never dispelled: 7 of 47 did, the other 40 ended within 3.5 s. Whether the player
+    # was out of the group needs positions (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1304046, 1304047]
+    kind: dispel
+    failure: {rule: debuff_duration_gt, ms: 5900}
+    cluster_window_ms: 1000
+    severity: medium
+
+  - id: abyssal_grasp
+    name: Abyssal Grasp
+    description: >-
+      Intermission heal absorb on seven players at a time; left for its full 8 s, it drags the player into the darkness.
+      Each one that runs its course is a failure charged to the player grabbed, though the miss is the healers'.
+    # Intermission heal absorb on seven players at a time. Healed off, it ends early; left for its full
+    # 8 s, it drags the player into the darkness. 15 of 112 ran the full 7.95 to 8.01 s (none in the kill);
+    # the longest that was healed off lasted 7.6 s. Charged to the player grabbed, though the miss is the
+    # healers'.
+    difficulties: [heroic]
+    ability_ids: [1303406]
+    kind: debuff
+    failure: {rule: debuff_duration_gt, ms: 7900}
+    severity: high
+
+  - id: eclipse_fragment
+    name: Eclipse Fragment
+    description: >-
+      Intermission orbs that drift toward Liadrin; a player who intercepts one takes a stacking DoT. No failure is
+      counted, as who should soak comes from a raid plan.
+    # Intermission orbs that drift from the Voidscars toward Liadrin. A player who intercepts one takes a
+    # stacking DoT (one ID for the damage and the debuff). Mostly the tanks and a few assigned players soak
+    # them. No rule: who should soak comes from a raid plan.
+    difficulties: [heroic]
+    ability_ids: [1308674]
+    kind: soak
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: lost_refulgence
+    name: Lost Refulgence
+    description: >-
+      Raid-wide DoT each time an Eclipse Fragment reaches Liadrin, which also shrinks her bulwark. Every occurrence is
+      one failure, charged to no one.
+    # Raid-wide DoT each time an Eclipse Fragment reaches Liadrin, which also shrinks her bulwark: three
+    # times in two of the wipes, never in the kill. Every occurrence is one failure, charged to no one: 3 failures (fight 5 once,
+    # fight 8 twice).
+    difficulties: [heroic]
+    ability_ids: [1308675]
+    kind: debuff
+    failure: {rule: per_cluster, blame: {by: nobody}}
+    cluster_window_ms: 3000
+    severity: high
+
+  # -- Adds ------------------------------------------------------------------------------------
+  - id: venom_roar
+    name: Venom Roar
+    description: >-
+      Venomous Hulk frontal cone with a knockback. Anyone hit other than the Hulk's aggro holder fails, once per cone,
+      charged to the player hit.
+    # Venomous Hulk (NPC 268190) frontal cone with a knockback: cast (1302884), then two hits (1302914,
+    # 1302917). Anyone hit other than the Hulk's aggro holder fails, once per cone.
+    difficulties: [heroic]
+    ability_ids: [1302884, 1302914, 1302917]
+    kind: avoidable
+    failure: {rule: hits_on_non_tank, ms: 8000}
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: voidweave
+    name: Voidweave
+    description: >-
+      Voidweaver channel that puts a debuff on seven random players, damaging them every second for 8 s. It is not
+      counted as a failure.
+    # Voidweaver (NPC 268192) channel: cast (1302333), debuff on seven random players (1302334) and its
+    # damage each second for 8 s (1302336).
+    difficulties: [heroic]
+    ability_ids: [1302333, 1302334, 1302336]
+    kind: debuff
+    cluster_window_ms: 2000
+    severity: medium
+
+  - id: nightfall
+    name: Nightfall
+    description: >-
+      Voidweaver cast that hits the raid and stacks a debuff raising that hit while a Voidweaver lives. No failure is
+      counted, as no source gives a stack limit.
+    # Voidweaver cast (1302705); the raid-wide hit (1302727) and the stacking debuff that raises it
+    # (1302728) are logged with Kith'ix as their source. Stacks grow while a Voidweaver lives: 2 to 5 in
+    # most sets, 10 in the one that wiped the raid. No rule: no source gives a stack limit
+    # (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1302705, 1302727, 1302728]
+    kind: debuff
+    cluster_window_ms: 3000
+    severity: high
+
+  - id: digestive_juices
+    name: Digestive Juices
+    description: >-
+      Raid-wide stacking DoT each time a Bomber Beetle explodes; beetles should explode one at a time. Each add set that
+      takes the raid past 3 stacks is one failure, charged to no one.
+    # Raid-wide stacking DoT each time a Bomber Beetle (NPC 268194) explodes; one ID for the damage and
+    # the debuff. The largest source of damage in every pull. Beetles should explode one at a time. Each
+    # add set that takes the raid past 3 stacks is one failure, charged to no one. The limit of 3 comes
+    # from these pulls, not from a guide: the kill reached 3 in each of its three sets, and the three sets
+    # that reached 4 or 5 killed 3 to 5 players each (docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1302319]
+    kind: debuff
+    failure: {rule: debuff_stacks_gt, value: 3}
+    cluster_window_ms: 10000
+    severity: high
+
+  - id: hatch
+    name: Hatch
+    description: >-
+      Mindstinger Egg cast; eggs drop when a Hulk or Voidweaver dies and must die before it finishes. No failure is
+      counted, as no egg has been seen hatching.
+    # Mindstinger Egg (NPC 268201) cast; eggs drop when a Hulk or Voidweaver dies and must die before it
+    # finishes. All 64 casts began and none completed, so what a hatched egg logs is unknown and there is
+    # no rule.
+    difficulties: [heroic]
+    ability_ids: [1304026]
+    kind: interrupt
+    severity: medium
+
+damage_windows:
+  - id: eightfold_eclipse
+    name: Eightfold Eclipse
+    # Stage Two raid-wide hit as each eclipse forms, about 8.6 s apart; the eighth wipes the raid. The kill
+    # saw six. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    difficulties: [heroic]
+    ability_ids: [1305876]
+    cluster_window_ms: 2000
+    expected_defensive_cooldowns: 1
+
+ignored_abilities:
+  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks, and adds
