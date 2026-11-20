@@ -10,6 +10,7 @@
 import type { ReactNode } from "react";
 
 import { ContextPanel } from "@/components/panel/context-panel";
+import { ArtFooter } from "@/components/shared/boss-art";
 import { FocusSync, useFocusFull } from "@/lib/focus";
 import type { PullDigestData } from "@/lib/queries";
 
@@ -62,6 +63,7 @@ export function PullPage({
           </div>
           <ContextPanel code={code} fight={fight} />
         </div>
+        <ArtFooter />
       </main>
     </div>
   );

@@ -6,6 +6,7 @@
 
 "use client";
 
+import { BossPortrait, useBossArt } from "@/components/shared/boss-art";
 import { ReviewButton } from "@/components/review";
 import { FightPct } from "@/components/shared/fight-pct";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -98,6 +99,7 @@ export function PullHeader({
   ]
     .filter(Boolean)
     .join(" · ");
+  const { portraitSrc } = useBossArt(group?.encounter_id);
   const total = summary?.deaths ?? null;
   const before = summary?.deaths_before_cutoff ?? null;
   const phase = names.phaseShort(digest.phase_reached);
@@ -105,6 +107,7 @@ export function PullHeader({
   return (
     <div className="flex flex-col gap-3" data-testid="pull-header">
       <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+        <BossPortrait src={portraitSrc} width={96} />
         <h1 className="m-0 text-[28px] leading-tight">{title}</h1>
         <span className="font-mono text-[13px] leading-none font-medium text-mut">fight {fight}</span>
         <StatusBadge status={kill ? "kill" : "wipe"} />

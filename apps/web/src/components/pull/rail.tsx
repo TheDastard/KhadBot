@@ -2,12 +2,14 @@
 //
 // The pull rail (240 px): the report's pulls grouped under their encounter and difficulty, kills first, a divider,
 // then wipes in pull order. Each row is a link that opens the pull with its pull ref selected (review answer 7); the
-// open pull has aria-current. There are no boss icons yet (nothing supplies them), so the group header is the name.
+// open pull has aria-current. A group header is the boss's 28 px thumbnail (a neutral square without one), framed by a
+// 1 px line as the canvas draws it, and name.
 
 "use client";
 
 import Link from "next/link";
 
+import { BossThumbnail, useBossArt } from "@/components/shared/boss-art";
 import { FightPct, FightPctBar } from "@/components/shared/fight-pct";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { focusHref, useFocusFull } from "@/lib/focus";
@@ -56,6 +58,17 @@ function Row({ code, pull, current, full }: { code: string; pull: PullSummary; c
   );
 }
 
+function GroupHeader({ group }: { group: Group }) {
+  const { thumbnailSrc } = useBossArt(group.encounter_id);
+  return (
+    <div className="flex items-center gap-2 border-b border-line px-2 pb-1.5">
+      <BossThumbnail src={thumbnailSrc} size={28} className="border border-line" />
+      <span className="min-w-0 flex-1 text-[13px] leading-tight font-semibold">{group.encounter_name}</span>
+      <span className="text-xs text-mut">{difficultyLabel(group)}</span>
+    </div>
+  );
+}
+
 export function PullRail({ code, fight }: { code: string; fight: number }) {
   const detail = useReportDetail(code);
   const full = useFocusFull();
@@ -74,10 +87,7 @@ export function PullRail({ code, fight }: { code: string; fight: number }) {
           const { kills, wipes } = splitKillsAndWipes(group.pulls);
           return (
             <div key={`${group.encounter_id}-${group.difficulty}`} className="flex flex-col gap-1" data-group={group.encounter_id}>
-              <div className="flex items-center gap-2 border-b border-line px-2 pb-1.5">
-                <span className="min-w-0 flex-1 text-[13px] leading-tight font-semibold">{group.encounter_name}</span>
-                <span className="text-xs text-mut">{difficultyLabel(group)}</span>
-              </div>
+              <GroupHeader group={group} />
               {kills.map((p) => (
                 <Row key={p.fight} code={code} pull={p} current={p.fight === fight} full={full} />
               ))}

@@ -3,8 +3,16 @@
 // One night: the title, the report code in mono, "date · N boss pulls", then one encounter row per encounter and
 // difficulty. Guild and character results reuse it.
 
+"use client";
+
+import { useBossArt } from "@/components/shared/boss-art";
+
 import { EncounterRow } from "./encounter-row";
-import { nightMeta, type Night } from "./night";
+import { nightMeta, type Night, type NightGroup } from "./night";
+
+function GroupRow({ code, group }: { code: string; group: NightGroup }) {
+  return <EncounterRow code={code} group={group} portraitSrc={useBossArt(group.encounterId).portraitSrc} />;
+}
 
 /** `meta` replaces the "date · N boss pulls" line (the character search words it "… pulls with <name>"). */
 export function NightCard({ night, meta }: { night: Night; meta?: string }) {
@@ -21,7 +29,7 @@ export function NightCard({ night, meta }: { night: Night; meta?: string }) {
         {/* Slot: night-overview. The night overview's button returns here with that screen; nothing is drawn now. */}
       </header>
       {night.groups.map((group) => (
-        <EncounterRow key={`${group.encounterId}:${group.difficulty}`} code={night.code} group={group} />
+        <GroupRow key={`${group.encounterId}:${group.difficulty}`} code={night.code} group={group} />
       ))}
     </article>
   );

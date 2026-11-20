@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { signInHrefHere } from "@/components/account";
+import { useArtAttribution, useBossArt } from "@/components/shared/boss-art";
 import { useFeature } from "@/lib/capabilities";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/queries";
@@ -53,6 +54,8 @@ export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
 
   const pull = pullOfJob(open.stream.job, fight);
   const tile = tileOf(lookup.data, fight, pull);
+  const { thumbnailSrc } = useBossArt(tile?.encounterId);
+  const attribution = useArtAttribution();
   const phase = phaseWithOpenError(open.stream, open.openError, open.connectionLost, fight);
 
   const waitS =
@@ -70,6 +73,8 @@ export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
       onStartAgain={open.restart}
       signInHref={signInHrefHere()}
       signedOut={signedOut}
+      thumbnailSrc={thumbnailSrc}
+      attribution={attribution}
     />
   );
 }
@@ -113,6 +118,7 @@ function tileOf(lookup: Lookup | undefined, fight: number, pull: JobPull | null)
     const found = group.pulls.find((p) => p.fight === fight);
     if (found) {
       return {
+        encounterId: group.encounter_id,
         encounter: group.encounter_name,
         difficulty: difficultyWord(group.difficulty_name),
         label: found.label,
@@ -124,6 +130,7 @@ function tileOf(lookup: Lookup | undefined, fight: number, pull: JobPull | null)
   }
   if (pull?.encounter_name) {
     return {
+      encounterId: pull.encounter_id ?? null,
       encounter: pull.encounter_name,
       difficulty: difficultyWord(pull.difficulty_name),
       label: null,

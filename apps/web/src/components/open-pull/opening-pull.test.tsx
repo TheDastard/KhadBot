@@ -20,6 +20,7 @@ vi.mock("next/navigation", () => ({
 afterEach(cleanup);
 
 const TILE: PullTileInfo = {
+  encounterId: 3000,
   encounter: "Ula'tek",
   difficulty: "Heroic",
   label: "P3",
@@ -130,5 +131,24 @@ describe("a log the visitor can't read", () => {
     show(notFound, { signedOut: false });
     expect(screen.getByText("Report not found or not shared with your Warcraft Logs account")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "This log is private" })).toBeNull();
+  });
+});
+
+describe("boss art on the tile", () => {
+  const SRC = "https://render.worldofwarcraft.com/us/icons/56/1.jpg";
+
+  it("fills the tile with the thumbnail and shows the attribution line", () => {
+    show({ kind: "loading" }, { thumbnailSrc: SRC, attribution: "Boss art is the property of Blizzard Entertainment, Inc." });
+    const tile = screen.getByTestId("pull-tile");
+    expect(within(tile).getByTestId("boss-thumbnail").getAttribute("data-art")).toBe("image");
+    expect(screen.getByTestId("art-attribution").textContent).toContain("Blizzard");
+  });
+
+  it("keeps the plain tile, the label and no attribution without art", () => {
+    show({ kind: "loading" });
+    const tile = screen.getByTestId("pull-tile");
+    expect(within(tile).getByTestId("boss-thumbnail").getAttribute("data-art")).toBe("fallback");
+    expect(within(tile).getByText("P3")).toBeTruthy();
+    expect(screen.queryByTestId("art-attribution")).toBeNull();
   });
 });

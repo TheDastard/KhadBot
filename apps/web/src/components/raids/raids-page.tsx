@@ -10,6 +10,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
+import { ArtFooter } from "@/components/shared/boss-art";
 import { Button } from "@/components/ui/button";
 import { SkeletonBlock, SkeletonCard } from "@/components/shared/skeletons";
 import { useFeatures } from "@/lib/capabilities";
@@ -43,6 +44,7 @@ export function RaidsPage() {
       ) : (
         <ServerReports />
       )}
+      <ArtFooter className="mt-2" />
     </>
   );
 }

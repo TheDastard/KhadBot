@@ -10,6 +10,7 @@ import { CheckIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 
 import { PrivateLogCard } from "@/components/account";
+import { ArtAttributionLine, BossThumbnail } from "@/components/shared/boss-art";
 import { ErrorState } from "@/components/shared/error-state";
 import { FightPct, FightPctBar } from "@/components/shared/fight-pct";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ import { STEP_COPY, statusLine, type JobStep, type Phase, type StepState } from 
 
 /** What the tile and heading show about the pull, from the report lookup (or the job, when the lookup has nothing). */
 export interface PullTileInfo {
+  /** WCL's encounter ID, for the boss art; null when unknown. */
+  encounterId: number | null;
   encounter: string | null;
   difficulty: string | null;
   /** "P3" */
@@ -48,6 +51,10 @@ export interface OpeningPullProps {
    * 404 for private and missing alike), as the Raids page does, instead of "Report not found".
    */
   signedOut?: boolean;
+  /** The boss's Blizzard thumbnail URL (fills the tile); the neutral tile without one. */
+  thumbnailSrc?: string | undefined;
+  /** The art attribution line, shown at the foot of the screen when any art is drawn. */
+  attribution?: string | null;
 }
 
 const DIFFICULTY_WORD: Record<string, string> = { lfr: "LFR", normal: "Normal", heroic: "Heroic", mythic: "Mythic" };
@@ -73,7 +80,7 @@ export function tileMonoLine(code: string, fight: number, tile: PullTileInfo | n
 }
 
 export function OpeningPull(props: OpeningPullProps) {
-  const { code, fight, tile, steps, phase, countdownS, onStartAgain, signInHref, signedOut = false } = props;
+  const { code, fight, tile, steps, phase, countdownS, onStartAgain, signInHref, signedOut = false, thumbnailSrc, attribution } = props;
   const countdown = countdownS === null ? null : formatCountdown(countdownS);
   const card = cardFor(phase, steps);
   return (
@@ -85,7 +92,7 @@ export function OpeningPull(props: OpeningPullProps) {
       <div className="flex flex-col gap-3">
         <span className="font-mono text-xs leading-none font-medium text-mut">Opening a pull</span>
         <div className="flex min-w-0 items-center gap-3.5">
-          <Tile tile={tile} />
+          <Tile tile={tile} thumbnailSrc={thumbnailSrc} />
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="m-0 font-display text-[28px] leading-[1.2] font-semibold [overflow-wrap:anywhere]">
               {tileHeading(fight, tile)}
@@ -135,6 +142,7 @@ export function OpeningPull(props: OpeningPullProps) {
           <span className="text-[13px] text-mut">You can leave; it keeps loading, and opens straight away next time.</span>
         )}
       </div>
+      <ArtAttributionLine text={attribution} />
     </main>
   );
 }
@@ -143,15 +151,16 @@ export function OpeningPull(props: OpeningPullProps) {
 // The tile
 // ----------------------------------------------------------------------------------------------------------------
 
-/** The 72 px tile: ordinal, fight % and the bar over a plain surface (the boss icon waits for game art). */
-function Tile({ tile }: { tile: PullTileInfo | null }) {
+/** The 72 px tile: the boss thumbnail filling it (a plain surface without one), with the ordinal, fight % and bar over it. */
+function Tile({ tile, thumbnailSrc }: { tile: PullTileInfo | null; thumbnailSrc?: string | undefined }) {
   return (
     <span
       data-testid="pull-tile"
       className="relative block size-[72px] flex-none overflow-hidden rounded-sm border border-line bg-s2"
     >
+      <BossThumbnail src={thumbnailSrc} size="fill" className="absolute inset-0 rounded-none" />
       {tile?.label ? (
-        <span className="absolute top-1 left-[5px] font-mono text-[11px] leading-none font-semibold text-ink">
+        <span className="absolute top-1 left-[5px] rounded-[1px] bg-s1/80 px-0.5 font-mono text-[11px] leading-none font-semibold text-ink">
           {tile.label}
         </span>
       ) : null}
@@ -160,7 +169,7 @@ function Tile({ tile }: { tile: PullTileInfo | null }) {
           <FightPct
             pct={tile.pct ?? 0}
             kill={tile.kill}
-            className="absolute right-[5px] bottom-[9px] text-[13px] leading-none"
+            className="absolute right-[5px] bottom-[9px] rounded-[1px] bg-s1/80 px-0.5 text-[13px] leading-none"
           />
           <FightPctBar
             pct={tile.pct ?? 0}
