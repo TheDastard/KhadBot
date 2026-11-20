@@ -8,9 +8,9 @@ and doesn't do with them. The decision behind it is in `docs/decisions.md` (game
 |---|---|---|
 | Spell tooltip and icon | Wowhead's tooltip script, in the browser | Every ability link |
 | Ability icon name | WCL's `ReportAbility.icon` (`GET /v1/reports/{code}/abilities`) | Anywhere that wants an icon without the script |
-| Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (`GET /v1/art/portraits/{name}.png`); a fallback until uploaded | Pull heading, search results |
-| Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API, as a URL in `GET /v1/art/encounters`; a neutral square without one | Rail, night overview, loading tiles |
-| Raid image, class icon | Blizzard's Game Data API (planned); nothing, and class colours, until then | Raid headings; player names |
+| Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (`GET /v1/art/portraits/{name}.png`); nothing is drawn until uploaded | Pull heading (96 by 48), search results' encounter rows (48 by 24) |
+| Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API, as a URL in `GET /v1/art/encounters`; a neutral square without one | Rail group headers (28 px), the opening-a-pull tile (72 px); the night overview when built |
+| Raid image, class icon | Not drawn; class colours on player names. Blizzard's Game Data API has both (below) | Nowhere |
 | Faction mark | Drawn by KhadBot | Guild results |
 | Logo | KhadBot's own asset | Header |
 
@@ -61,6 +61,9 @@ The hosts the script talks to, read from `tooltips.js`:
 - `script-src https://wow.zamimg.com`: the script itself.
 - `connect-src https://nether.wowhead.com`: tooltip data, `GET /tooltip/spell/<id>?dataEnv=1&locale=0` (CORS `*`).
 - `img-src https://wow.zamimg.com`: icons, `/images/wow/icons/<size>/<name>.jpg` (`tiny` is a gif).
+- `img-src https://render.worldofwarcraft.com`: the boss thumbnails (Blizzard's Game Data API media URLs, see "Boss
+  thumbnails" below). The web app declares no Content-Security-Policy yet, so this host waits with the others for the
+  deploy pipeline (`docs/follow-ups.md`, "Not deployed").
 - `style-src https://wow.zamimg.com`: it adds `/css/universal.css`. The script also sets inline styles (icons are
   background images) and inserts style rules, so `style-src` needs `'unsafe-inline'` or a nonce.
 
@@ -139,6 +142,12 @@ The `v` value is the first 16 hex digits of the PNG's SHA-256, so a re-export ch
 hash at most every five minutes, so an upload shows in the listing within that time. The browser loads portraits from
 the API's origin, so the web rules and the Content-Security-Policy gain no host for them.
 
+The web app draws both (`components/shared/boss-art.tsx`): it reads the listing once per session, matches a boss by `encounter_id`,
+prefixes the API base to `portrait_url` and uses `thumbnail_url` as is. Either image falls back on a null URL or a load error
+(a neutral square for a thumbnail, nothing for a portrait), and both have `alt=""` because the boss's name is always beside
+them. The `attribution` line is shown at the foot of each screen that draws art (the Raids page, the pull page and the
+opening-a-pull screen), once the listing holds any art.
+
 Thumbnail URLs are resolved lazily on the first listing request, through `BlizzardClient`, four lookups at a time, and
 kept in the API process's memory for a day (no table, no refresh job; the 30-day limit holds because a process's
 cache never lives that long, and it is the same in local mode). A failed or empty lookup leaves that thumbnail out and
@@ -165,9 +174,8 @@ Logs, Wowhead, Raider.IO and warcraft.wiki.gg show the same images. KhadBot show
 
 ## Boss thumbnails, raid and class images: Blizzard's Game Data API
 
-`khadbot.blizzard.BlizzardClient` makes the one call KhadBot uses so far (an achievement's `icon` asset), for the art listing; nothing
-else calls the API yet (`docs/follow-ups.md`). The facts marked "probed" come from live calls
-against namespace `static-12.1.5_70077-us`.
+`khadbot.blizzard.BlizzardClient` makes the one call KhadBot uses (an achievement's `icon` asset), for the art
+listing. The facts marked "probed" come from live calls against namespace `static-12.1.5_70077-us`.
 
 Sources: the endpoint list at https://develop.battle.net/documentation/world-of-warcraft/game-data-apis, the guides
 at https://community.developer.battle.net/documentation/guides/getting-started and
@@ -187,7 +195,9 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
   empty there is no client and no Blizzard art, never an error at start. A token lasts 24 hours
   (probed).
 - Limits: 36,000 requests an hour per client and 100 a second. Over the hourly quota service slows; over the
-  per-second limit the API answers 429 until the next second. KhadBot's lookups are a few hundred, once.
+  per-second limit the API answers 429 until the next second. An API process makes one token request and one
+  lookup per registry boss a day when each answers (ten for The Venomous Abyss, read from the API's request log
+  on the local stack).
 
 ### Terms
 
@@ -223,8 +233,8 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
   category lists a `Mythic: <journal encounter name>` achievement for each boss (probed), so a script proposes each ID
   by name and a person confirms it into the boss art registry.
 - **Media URLs.** The media endpoints return URLs on `render.worldofwarcraft.com`, which need no credential, so the
-  browser loads them with `<img src>` once the server has resolved them (probed). The web rules add the host when this
-  is built.
+  browser loads them with `<img src>` once the server has resolved them (probed). The web rules name the host as their
+  second exception.
 
 ### How it works
 
@@ -239,7 +249,7 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
 
 - Boss portraits and raid images: nothing in their place.
 - Class icons: class colours on player names (`GET /v1/reports/{code}/players`).
-- Boss thumbnails on the rail and loading tiles: a neutral square.
+- Boss thumbnails on the rail and the opening-a-pull tile: a neutral square.
 
 ## Faction mark
 

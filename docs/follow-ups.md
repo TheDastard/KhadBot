@@ -156,18 +156,19 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   select offers only encounters seen this visit. Add a route from the encounter files.
 - **Damage-window panel's other occurrences** need each occurrence's active cooldowns: resolve sibling refs, or add
   `defensive_cooldowns_active` to `WindowMarker`.
-- **Blizzard art on the web.** The routes exist (`GET /v1/art/encounters`, `GET /v1/art/portraits/{name}.png`); still
-  to build are the web components that draw them and the attribution line. Raid values are under "Encounters".
 - **Wowhead script on a client-rendered page.** Confirm `WH.Tooltips.refreshLinks(element)` and the CSP hosts in a
   browser.
 
 ## Web dashboard
 
+- **Opening-a-pull tile over art.** The canvas darkens the thumbnail with a gradient and sets the label and fight %
+  in white; the build puts them on translucent surface chips in the quality colour. Matching it needs scrim and
+  on-art text tokens in both themes.
 - **Phone layouts.** The 390-wide artboards: rail selector, panel as bottom sheet, account sheet, phone sizes,
   phone-width Playwright and axe runs.
 - **Not deployed.** Add the web app as its own service with the deploy pipeline (`NEXT_PUBLIC_API_BASE` per
   environment, its origin in `KHADBOT_WEB_ORIGINS`), and a Content-Security-Policy with the hosts in
-  `docs/game-art.md`.
+  `docs/game-art.md` (the Wowhead hosts and `render.worldofwarcraft.com` for `img-src`).
 - **"So busy nights mean less waiting"** is left out of the sign-in copy until WCL's user points are on; restore it
   then.
 - **Fonts cover Latin only.** Add `latin-ext` and `cyrillic` subsets if players notice.
