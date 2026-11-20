@@ -217,6 +217,6 @@ layers = [
     "auth",
     "db",
     "encounter",
-    "wcl | simc",
+    "wcl | simc | blizzard",
     "config : errors : storage : llm_factory : llm_fake : logging_setup",
 ]

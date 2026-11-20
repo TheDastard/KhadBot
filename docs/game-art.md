@@ -148,7 +148,8 @@ Logs, Wowhead, Raider.IO and warcraft.wiki.gg show the same images. KhadBot show
 
 ## Boss thumbnails, raid and class images: Blizzard's Game Data API
 
-Nothing calls the API from KhadBot yet (`docs/follow-ups.md`). The facts marked "probed" come from live calls
+`khadbot.blizzard.BlizzardClient` makes the one call KhadBot uses so far (an achievement's `icon` asset); nothing
+else calls the API yet (`docs/follow-ups.md`). The facts marked "probed" come from live calls
 against namespace `static-12.1.5_70077-us`.
 
 Sources: the endpoint list at https://develop.battle.net/documentation/world-of-warcraft/game-data-apis, the guides
@@ -164,8 +165,9 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
 - Auth is the OAuth client credentials flow (`POST https://oauth.battle.net/token`,
   `grant_type=client_credentials`), which gives a bearer token for these public endpoints.
 - **The client is the maintainer's:** a Battle.net account with an authenticator, the API terms accepted, and a
-  client registered in the developer portal. Its ID and secret will be the settings `BLIZZARD_CLIENT_ID` and
-  `BLIZZARD_CLIENT_SECRET` (planned, `docs/follow-ups.md`); hosted mode takes them as secrets. A token lasts 24 hours
+  client registered in the developer portal. Its ID and secret are the settings `BLIZZARD_CLIENT_ID` and
+  `BLIZZARD_CLIENT_SECRET` (and `BLIZZARD_REGION`, default `us`); hosted mode takes them as secrets. With either
+  empty there is no client and no Blizzard art, never an error at start. A token lasts 24 hours
   (probed).
 - Limits: 36,000 requests an hour per client and 100 a second. Over the hourly quota service slows; over the
   per-second limit the API answers 429 until the next second. KhadBot's lookups are a few hundred, once.

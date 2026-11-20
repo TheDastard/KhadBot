@@ -93,6 +93,31 @@ class RaiderIOConfig:
     api_key: str = field(default_factory=lambda: _optional("RAIDERIO_API_KEY"))
 
 
+# The regions Blizzard's API serves from ``{region}.api.blizzard.com``; China has its own host and is not supported.
+BLIZZARD_REGIONS = ("us", "eu", "kr", "tw")
+
+
+@dataclass(frozen=True)
+class BlizzardConfig:
+    """
+    Blizzard Game Data API credentials, used for boss thumbnails (``docs/game-art.md``). Both are optional: with
+    either empty KhadBot serves no Blizzard art and the web app shows its fallbacks. That is never an error at start.
+    """
+
+    client_id: str = field(default_factory=lambda: _optional("BLIZZARD_CLIENT_ID"))
+    client_secret: str = field(default_factory=lambda: _optional("BLIZZARD_CLIENT_SECRET"), repr=False)
+    region: str = field(default_factory=lambda: _optional("BLIZZARD_REGION", "us").strip().lower())
+
+    def __post_init__(self) -> None:
+        if self.region not in BLIZZARD_REGIONS:
+            raise ValueError(f"BLIZZARD_REGION must be one of {', '.join(BLIZZARD_REGIONS)}, not {self.region!r}.")
+
+    @property
+    def enabled(self) -> bool:
+        """True when both the client ID and the secret are set."""
+        return bool(self.client_id and self.client_secret)
+
+
 @dataclass(frozen=True)
 class WarcraftLogsConfig:
     client_id: str = field(default_factory=lambda: _require("WARCRAFTLOGS_CLIENT_ID"))
@@ -516,6 +541,7 @@ class AppConfig:
     llm: LLMConfig = field(default_factory=LLMConfig)
     raiderio: RaiderIOConfig = field(default_factory=RaiderIOConfig)
     warcraftlogs: WarcraftLogsConfig = field(default_factory=WarcraftLogsConfig)
+    blizzard: BlizzardConfig = field(default_factory=BlizzardConfig)
     simc: SimCConfig = field(default_factory=SimCConfig)
     encounter: EncounterConfig = field(default_factory=EncounterConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)

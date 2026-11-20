@@ -112,6 +112,16 @@ Polls and the ingests a watch queues are live requests to the WCL budget, which 
 | `KHADBOT_SEARCH_DATABASE_POINTS` | Database points a report listing reserves (default 1, measured at 1). |
 | `KHADBOT_ACCESS_PUBLIC_RECHECK_S` | How long a cached "public" report-access answer stands (default 21600), longer than `KHADBOT_ACCESS_RECHECK_S` (a user-token answer, 3600) and `KHADBOT_ACCESS_DENIED_RECHECK_S` (300). A log its owner makes private stays readable here for up to this long. |
 
+### Blizzard art
+
+Boss thumbnails are resolved through Blizzard's Game Data API (`khadbot.blizzard`, `docs/game-art.md`). Optional: with the ID or the secret empty there is no Blizzard client and no thumbnails, and the API still starts. Hosted mode takes the secret from the platform's environment like any other.
+
+| Variable | Meaning |
+|---|---|
+| `BLIZZARD_CLIENT_ID` | The Blizzard API client's ID (https://develop.battle.net/access/clients). |
+| `BLIZZARD_CLIENT_SECRET` | The client's secret. Never logged. |
+| `BLIZZARD_REGION` | `us` (default), `eu`, `kr` or `tw`: the API host and the `static-<region>` namespace. Anything else fails at load. |
+
 ### WCL replay
 
 A development switch for the API, the worker and the CLI (`docs/decisions.md`, D71): with `KHADBOT_WCL_REPLAY` set to a directory of recorded reports, every WCL data request is answered from that directory or refused, and none reaches the network. Ingest, the queue, the budget, progress, live watch and access checks run their production code; only the answers are recorded ones. Sign-in still goes to real WCL: the code exchange, the refresh and the current-user query pass through, so real sign-in keeps working, and a signed-in user's ingests and watches are then replayed too. Off unless set; the local stack's and CI's environment files are the only places to set it, never staging or production: a hosted API or worker whose `KHADBOT_WCL_REDIRECT_URI` is not plain-HTTP localhost refuses to start with replay set, because replay answers report access checks from the recordings.

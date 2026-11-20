@@ -155,6 +155,11 @@ tags:
     paths:
       - src/khadbot/simc/**
       - tests/unit/simc/**
+  blizzard:
+    description: Blizzard's Game Data API client, for boss thumbnails (blizzard/)
+    paths:
+      - src/khadbot/blizzard/**
+      - tests/unit/blizzard/**
   storage:
     description: Blob stores the pipeline's caches and event store write through, and their factory (storage/)
     paths:

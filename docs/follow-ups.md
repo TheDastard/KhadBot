@@ -156,9 +156,8 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   select offers only encounters seen this visit. Add a route from the encounter files.
 - **Damage-window panel's other occurrences** need each occurrence's active cooldowns: resolve sibling refs, or add
   `defensive_cooldowns_active` to `WindowMarker`.
-- **Blizzard art.** Not built (`docs/game-art.md`): encounter-file fields for the journal ID, portrait file and kill
-  achievement; an upload of the converted portraits to the blob store and the route that serves them; config for `BLIZZARD_CLIENT_ID`/`_SECRET`; the refresh job for achievement icons, raid tiles
-  and class icons; a route; the attribution line. Raid values are under "Encounters".
+- **Blizzard art.** Not built (`docs/game-art.md`): the routes that serve the stored portraits and each boss's art
+  URLs, the web components that draw them, and the attribution line. Raid values are under "Encounters".
 - **Wowhead script on a client-rendered page.** Confirm `WH.Tooltips.refreshLinks(element)` and the CSP hosts in a
   browser.
 

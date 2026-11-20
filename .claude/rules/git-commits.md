@@ -44,7 +44,7 @@ it owns. `mise run lint:tags` lists them. The broad shape:
 | `raid` | Authored per-boss encounter files (`config/encounters/`); the summary names the boss | one per raid zone: `venomous-abyss` |
 | `agent` | The coach agent | `coach`, `tools`, `rag` |
 | `llm`, `config` | `llm_factory.py` and model prices; `config.py` and `.env.example` | |
-| `wcl`, `simc`, `storage` | The shared WCL client, SimC data, blob stores | `wcl`: `probes` (`scripts/wcl/`) |
+| `wcl`, `simc`, `blizzard`, `storage` | The shared WCL client, SimC data, the Blizzard API client, blob stores | `wcl`: `probes` (`scripts/wcl/`) |
 | `db`, `jobs`, `auth` | Hosted mode | `db`: `migrations`, `read-models`; `jobs`: `queue`, `budget`, `watch` |
 | `cli`, `api`, `web` | The apps | `api`: `art`, `raids`, `contracts`, `client`; `web`: `pull`, `timeline`, `raids`, `account`, `ui`, `e2e` |
 | `deploy` | Image, compose stack, dev loop | `image`, `compose`, `dev-loop`, `tests` |
