@@ -46,7 +46,7 @@ it owns. `mise run lint:tags` lists them. The broad shape:
 | `llm`, `config` | `llm_factory.py` and model prices; `config.py` and `.env.example` | |
 | `wcl`, `simc`, `storage` | The shared WCL client, SimC data, blob stores | `wcl`: `probes` (`scripts/wcl/`) |
 | `db`, `jobs`, `auth` | Hosted mode | `db`: `migrations`, `read-models`; `jobs`: `queue`, `budget`, `watch` |
-| `cli`, `api`, `web` | The apps | `api`: `raids`, `contracts`, `client`; `web`: `pull`, `timeline`, `raids`, `account`, `ui`, `e2e` |
+| `cli`, `api`, `web` | The apps | `api`: `art`, `raids`, `contracts`, `client`; `web`: `pull`, `timeline`, `raids`, `account`, `ui`, `e2e` |
 | `deploy` | Image, compose stack, dev loop | `image`, `compose`, `dev-loop`, `tests` |
 | `repo` | Repo-wide | `layout`, `deps`, `tooling`, `ci`, `rules`, `commits` |
 | `tests`, `fixtures`, `eval` | Test, fixture and eval infrastructure shared across systems | |

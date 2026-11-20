@@ -232,6 +232,17 @@ tags:
       - src/khadbot/api/**
       - tests/unit/api/**
     subtags:
+      art:
+        description: Boss art, its registry, the routes that serve it and the portrait upload
+        paths:
+          - src/khadbot/api/art.py
+          - src/khadbot/api/boss_art.py
+          - src/khadbot/api/schemas/art.py
+          - tests/unit/api/test_art.py
+          - tests/unit/api/test_boss_art.py
+          - config/registries/boss_art.yaml
+          - scripts/data/upload_boss_portraits.py
+          - tests/unit/scripts/data/test_upload_boss_portraits.py
       raids:
         description: Report lookup, the server list, and guild and character search (api/raids/)
         paths:

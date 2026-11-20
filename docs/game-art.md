@@ -106,13 +106,26 @@ The design canvas's portraits are these files, equal to within 7/255 per channel
 ### Names
 
 The file name is an internal name (a creature type, a nickname), often not the boss's, so a person matches each file
-to its boss in the Adventure Guide and the encounter file records it. A boss may have no portrait of its own in the
+to its boss in the Adventure Guide and the registry records it. A boss may have no portrait of its own in the
 export; it then uses the fallback.
+
+### The registry and the upload
+
+`config/registries/boss_art.yaml` holds every raid boss's art references by WCL encounter ID: the journal encounter
+ID, the portrait name, the Mythic kill achievement ID and `verified`, true once a person confirmed the entry (the
+file's header says what each field covers). `khadbot.api.boss_art.load_boss_art` loads it and fails at load on a
+malformed file.
+
+`scripts/data/upload_boss_portraits.py <export folder>` converts each portrait the registry names to PNG (Pillow, in
+the `dev` group) and writes it to the blob store as `art/portraits/<portrait>.png`: the local data directory, or the
+bucket with `KHADBOT_STORAGE=s3`. It skips files whose converted bytes match the stored object and lists any portrait
+the export lacks. Records cleanup (`jobs/retention.py`) lists only `records/`, and the bucket lifecycle rules cover only
+`raw/` and `annotated/`, so nothing removes `art/`.
 
 ### Serving them (planned)
 
-The converted PNGs go into the hosted bucket, which is private (it also holds raw WCL pages), and an API route
-returns each one with long-lived cache headers. The browser loads them from the API's own origin, so the web rules
+The converted PNGs in `art/portraits/` are served from the hosted bucket, which is private (it also holds raw WCL
+pages), and an API route returns each one with long-lived cache headers. The browser loads them from the API's own origin, so the web rules
 and the Content-Security-Policy gain no host. Local mode reads them from `KHADBOT_DATA_DIR` through the same blob
 store.
 
@@ -182,14 +195,14 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
 | Spell icon | `GET /data/wow/media/spell/{spellId}` | Not used: Wowhead's script draws spell icons |
 
 - **Encounter mapping.** A journal encounter ID is not WCL's encounter ID. WCL's `Encounter` type has `journalID`
-  (`docs/wcl/search.md`, "Fields"), which gives the mapping; it goes into the encounter files, `null` with
+  (`docs/wcl/search.md`, "Fields"), which gives the mapping; it goes into the boss art registry, `null` with
   `verified: false` when unknown. `GET /data/wow/journal-instance/index` lists the raids, and
   `GET /data/wow/journal-instance/{id}` lists each raid's encounters (probed). A raid may be split across several
   journal instances.
 - **Achievement mapping.** Nothing links an encounter to its achievement: the achievement's `criteria` carry only a
   description. `GET /data/wow/achievement-category/index` names one "<expansion> Raid" category per expansion, and that
   category lists a `Mythic: <journal encounter name>` achievement for each boss (probed), so a script proposes each ID
-  by name and a person confirms it into the encounter file.
+  by name and a person confirms it into the boss art registry.
 - **Media URLs.** The media endpoints return URLs on `render.worldofwarcraft.com`, which need no credential, so the
   browser loads them with `<img src>` once the server has resolved them (probed). The web rules add the host when this
   is built.

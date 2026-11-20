@@ -1,0 +1,29 @@
+# Art references for raid bosses, one entry per boss, by WCL encounter ID (docs/game-art.md).
+#
+# Raids only. Loaded by khadbot.api.boss_art.load_boss_art; a malformed file stops the caller at load.
+# Not in the encounter files: search results show bosses that have no encounter file, and encounter files feed the
+# analysis cache keys.
+#
+# Fields:
+#   encounter_id          WCL's encounter ID.
+#   name                  The boss's name as WCL spells it; documentation only.
+#   journal_encounter_id  Blizzard's Dungeon Journal encounter ID; null when no journal instance lists the boss.
+#   portrait              The file name after `UI-EJ-BOSS-` in the client export of ENCOUNTERJOURNAL, with no
+#                         extension; null when the export has none. Stored as art/portraits/<portrait>.png.
+#   kill_achievement_id   The boss's `Mythic: <boss>` achievement, whose icon is the boss thumbnail; null if unknown.
+#   verified              true only when a person has confirmed every non-null value on the entry against the game
+#                         (the Adventure Guide for the journal ID and portrait, the achievement list for the
+#                         achievement). false means at least one value is a name match from Blizzard's API that
+#                         nobody has checked. A null is "unknown or none", never a guess.
+bosses:
+  # --- The Venomous Abyss (WCL zone 53) ---
+  - {encounter_id: 3470, name: "Nek'zali the Soulcoiler", journal_encounter_id: 2888, portrait: "Priestess", kill_achievement_id: 63523, verified: true}
+  - {encounter_id: 3445, name: "Entombed Sentinels", journal_encounter_id: 2874, portrait: "Golems", kill_achievement_id: 63524, verified: true}
+  - {encounter_id: 3497, name: "The Lost Explorers", journal_encounter_id: 2894, portrait: "Tortollans", kill_achievement_id: 63525, verified: true}
+  - {encounter_id: 3455, name: "Vashnik the Malignant", journal_encounter_id: 2882, portrait: "Alchemist", kill_achievement_id: 63526, verified: true}
+  - {encounter_id: 3420, name: "Sszorak", journal_encounter_id: 2871, portrait: "Brute", kill_achievement_id: 63527, verified: true}
+  - {encounter_id: 3421, name: "The Twin Fangs", journal_encounter_id: 2887, portrait: "Twins", kill_achievement_id: 63528, verified: true}
+  - {encounter_id: 3429, name: "The Coiled Altar", journal_encounter_id: 2883, portrait: "ZuljanMalacrass", kill_achievement_id: 63529, verified: true}
+  - {encounter_id: 3492, name: "Ula'tek", journal_encounter_id: 2895, portrait: "Ulatek", kill_achievement_id: 63476, verified: true}
+  - {encounter_id: 3513, name: "Kith'ix", journal_encounter_id: 2896, portrait: "Kithix", kill_achievement_id: 63694, verified: true}
+  - {encounter_id: 3379, name: "Nymrissa Wavecaller", journal_encounter_id: 2849, portrait: "NagaSorcerer", kill_achievement_id: 63682, verified: true}

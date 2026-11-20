@@ -234,13 +234,12 @@ The review's high and medium findings are fixed (D91 to D96). Open, most severe 
 
 ### The Venomous Abyss, game art
 
-Values for the encounter files' art fields, confirmed by the maintainer (`docs/game-art.md`):
-
-- Journal instances 1320 (8 bosses), 1322 Altar of Fangs and 1324 The Unbinding of Kith'ix; Mythic kill achievements
-  in category 15566 (e.g. Ula'tek 63476). Nymrissa Wavecaller has achievements but is in none of these instances.
-- Portraits (`UI-EJ-BOSS-…`): Nek'zali `Priestess`, Entombed Sentinels `Golems`, The Lost Explorers `Tortollans`,
-  Vashnik `Alchemist`, Sszorak `Brute`, The Twin Fangs `Twins`, The Coiled Altar `ZuljanMalacrass`, Ula'tek `Ulatek`,
-  Rav'i `Hydra`, The Writhing Coil `Writhe`, Zul'jan `Zuljan`, Nymrissa `NagaSorcerer`. Kith'ix: none found.
+- **The client export stops short.** Three runs of `exportInterfaceFiles art` on client 12.1.5.70783 wrote every
+  journal file up to file ID 7966637 and none of the ten after it, Kith'ix's `ui-ej-boss-kithix.blp` (8214195) among
+  them, likely a timeout. New bosses' portraits will be missing until the export completes; find a way to make it
+  finish (or export the newest files) before the next raid tier.
+- **Hosted buckets.** The portraits are uploaded to the local stack only; staging and production need the upload
+  script run against their buckets, and the Blizzard client ID and secret in their secrets.
 
 ### Ula'tek (3492), Heroic
 
