@@ -20,6 +20,7 @@ export const queryKeys = {
   pull: (code: string, fight: number) => ["report", code, "pull", fight] as const,
   digest: (code: string, fight: number) => ["report", code, "pull", fight, "digest"] as const,
   players: (code: string) => ["report", code, "players"] as const,
+  encounterArt: ["art", "encounters"] as const,
 };
 
 /** `GET /v1/health`: what this server offers. Read once per visit; the capability gate waits for it. */
@@ -81,6 +82,21 @@ export function usePlayers(code: string | undefined) {
     enabled: !!code,
     staleTime: 5 * 60_000,
     retry: (count, error) => count < 2 && !isClientError(error),
+  });
+}
+
+/**
+ * `GET /v1/art/encounters`: every raid boss's portrait and thumbnail URLs, fetched once and kept for the session
+ * (the route is public and cacheable for an hour). Components read it through `useBossArt` (components/shared/
+ * boss-art.tsx); a failed read leaves every image to its fallback, so it is not retried and never shown as an error.
+ */
+export function useEncounterArt() {
+  return useQuery({
+    queryKey: queryKeys.encounterArt,
+    queryFn: () => unwrap(api().GET("/v1/art/encounters")),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
   });
 }
 
