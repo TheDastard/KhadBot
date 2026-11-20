@@ -156,8 +156,9 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   select offers only encounters seen this visit. Add a route from the encounter files.
 - **Damage-window panel's other occurrences** need each occurrence's active cooldowns: resolve sibling refs, or add
   `defensive_cooldowns_active` to `WindowMarker`.
-- **Blizzard art.** Boss, raid and class images need a Battle.net client the user creates, a refresh job through
-  WCL's `journalID`, and a route (`docs/game-art.md`).
+- **Blizzard art.** Not built (`docs/game-art.md`): encounter-file fields for the journal ID, portrait file and kill
+  achievement; an upload of the converted portraits to the blob store and the route that serves them; config for `BLIZZARD_CLIENT_ID`/`_SECRET`; the refresh job for achievement icons, raid tiles
+  and class icons; a route; the attribution line. Raid values are under "Encounters".
 - **Wowhead script on a client-rendered page.** Confirm `WH.Tooltips.refreshLinks(element)` and the CSP hosts in a
   browser.
 
@@ -230,6 +231,16 @@ The review's high and medium findings are fixed (D91 to D96). Open, most severe 
   footer tests in `test_repl_loop.py`) are skipped; fix or delete them in the agent refactor and drop the marker.
 
 ## Encounters
+
+### The Venomous Abyss, game art
+
+Values for the encounter files' art fields, confirmed by the maintainer (`docs/game-art.md`):
+
+- Journal instances 1320 (8 bosses), 1322 Altar of Fangs and 1324 The Unbinding of Kith'ix; Mythic kill achievements
+  in category 15566 (e.g. Ula'tek 63476). Nymrissa Wavecaller has achievements but is in none of these instances.
+- Portraits (`UI-EJ-BOSS-…`): Nek'zali `Priestess`, Entombed Sentinels `Golems`, The Lost Explorers `Tortollans`,
+  Vashnik `Alchemist`, Sszorak `Brute`, The Twin Fangs `Twins`, The Coiled Altar `ZuljanMalacrass`, Ula'tek `Ulatek`,
+  Rav'i `Hydra`, The Writhing Coil `Writhe`, Zul'jan `Zuljan`, Nymrissa `NagaSorcerer`. Kith'ix: none found.
 
 ### Ula'tek (3492), Heroic
 

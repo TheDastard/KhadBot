@@ -8,8 +8,9 @@ and doesn't do with them. The decision behind it is in `docs/decisions.md` (game
 |---|---|---|
 | Spell tooltip and icon | Wowhead's tooltip script, in the browser | Every ability link |
 | Ability icon name | WCL's `ReportAbility.icon` (`GET /v1/reports/{code}/abilities`) | Anywhere that wants an icon without the script |
-| Boss portrait, raid image | Blizzard's Game Data API (planned); a fallback until then | Pull heading, search results, loading tiles |
-| Class icon | Blizzard's Game Data API (planned); class colours until then | Player names |
+| Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (planned); a fallback until then | Pull heading, search results |
+| Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API (planned); a neutral square until then | Rail, night overview, loading tiles |
+| Raid image, class icon | Blizzard's Game Data API (planned); nothing, and class colours, until then | Raid headings; player names |
 | Faction mark | Drawn by KhadBot | Guild results |
 | Logo | KhadBot's own asset | Header |
 
@@ -83,16 +84,64 @@ and `GET /v1/reports/{code}/abilities` serves it, lowercased and without a file 
 ID and name. The recorded fixtures' metadata predates the field, so it is null for them. While Wowhead's script draws
 the icons nothing in the dashboard needs it; it is there for a place that wants an icon name without the script.
 
-## Boss, raid and class images: Blizzard's Game Data API
+## Boss portraits: the game client's journal art
 
-The planned source for non-ability images. Nothing calls it yet: it needs an OAuth client that only the user can
-create (`docs/follow-ups.md`).
+The Dungeon Journal's boss button images, the portraits the design canvas draws. No API serves them: the Game Data
+API has no journal-encounter media, and a forum reply in 2021 said an image missing from the media endpoints "is not
+provided by the API" (https://us.forums.blizzard.com/en/blizzard/t/journal-encounter-media/16364).
+
+### Getting them
+
+1. Launch the game with `-console` (Battle.net app → Game Settings → Additional command line arguments).
+2. At character select, open the console (`` ` ``) and run `exportInterfaceFiles art`, the client's own export for
+   addon authors. It writes the interface art under `_retail_\BlizzardInterfaceArt\Interface\`.
+3. The portraits are `ENCOUNTERJOURNAL\UI-EJ-BOSS-<name>.blp`: 128×64, RGBA with a transparent background, the only
+   size. Pillow reads BLP and writes PNG.
+4. Re-export after a patch that adds bosses; the new files are the last ones the export writes.
+
+Never extract with third-party tools (CASC readers, wago.tools): the EULA bars unauthorised tools and data mining.
+
+The design canvas's portraits are these files, equal to within 7/255 per channel (BLP decoding).
+
+### Names
+
+The file name is an internal name (a creature type, a nickname), often not the boss's, so a person matches each file
+to its boss in the Adventure Guide and the encounter file records it. A boss may have no portrait of its own in the
+export; it then uses the fallback.
+
+### Serving them (planned)
+
+The converted PNGs go into the hosted bucket, which is private (it also holds raw WCL pages), and an API route
+returns each one with long-lived cache headers. The browser loads them from the API's own origin, so the web rules
+and the Content-Security-Policy gain no host. Local mode reads them from `KHADBOT_DATA_DIR` through the same blob
+store.
+
+Size: about 10 KB a portrait and about 12 MB for a whole export, inside R2's free storage, and browsers cache each
+image, so the cost is nil at this scale (https://developers.cloudflare.com/r2/pricing/, as of 2026-11). A public
+bucket would need a custom domain on Cloudflare (`r2.dev` is rate-limited and not for production,
+https://developers.cloudflare.com/r2/buckets/public-buckets/); the route can return such a URL later instead.
+
+### Terms
+
+No Blizzard policy grants showing client art on a website: the EULA keeps the artwork Blizzard's, and the trademark
+guidelines (https://www.blizzard.com/legal/38fd0408-8431-469a-99bc-2cd9eb9462c8) cover marks, not art. Warcraft
+Logs, Wowhead, Raider.IO and warcraft.wiki.gg show the same images. KhadBot shows them on these terms of its own:
+
+- Free and non-commercial; never part of a paid feature.
+- Served by KhadBot, never hotlinked from Wowhead's or Warcraft Logs' copies (Wowhead's terms bar
+  mirroring, and the 2021 forum reply calls using Wowhead's CDN unauthorised).
+- Kept out of git.
+- Pages that show them name Blizzard as the source, and they come down if Blizzard asks.
+
+## Boss thumbnails, raid and class images: Blizzard's Game Data API
+
+Nothing calls the API from KhadBot yet (`docs/follow-ups.md`). The facts marked "probed" come from live calls
+against namespace `static-12.1.5_70077-us`.
 
 Sources: the endpoint list at https://develop.battle.net/documentation/world-of-warcraft/game-data-apis, the guides
 at https://community.developer.battle.net/documentation/guides/getting-started and
 https://community.developer.battle.net/documentation/world-of-warcraft/guides/namespaces, and the API terms at
-https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizzard-developer-api-terms-of-use. The
-documentation shows request parameters, not response bodies; shapes marked "unconfirmed" below need a real call.
+https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizzard-developer-api-terms-of-use.
 
 ### Access
 
@@ -101,9 +150,10 @@ documentation shows request parameters, not response bodies; shapes marked "unco
   (journal, media, spells, achievements, classes) is `static-{region}`.
 - Auth is the OAuth client credentials flow (`POST https://oauth.battle.net/token`,
   `grant_type=client_credentials`), which gives a bearer token for these public endpoints.
-- **The client is the user's to create:** a Battle.net account with an authenticator, the API terms accepted, and a
-  client registered in the developer portal ("API Access", with a service URL and an intended use). Its ID and secret
-  go in the hosted secrets.
+- **The client is the maintainer's:** a Battle.net account with an authenticator, the API terms accepted, and a
+  client registered in the developer portal. Its ID and secret will be the settings `BLIZZARD_CLIENT_ID` and
+  `BLIZZARD_CLIENT_SECRET` (planned, `docs/follow-ups.md`); hosted mode takes them as secrets. A token lasts 24 hours
+  (probed).
 - Limits: 36,000 requests an hour per client and 100 a second. Over the hourly quota service slows; over the
   per-second limit the API answers 429 until the next second. KhadBot's lookups are a few hundred, once.
 
@@ -125,25 +175,31 @@ documentation shows request parameters, not response bodies; shapes marked "unco
 
 | Image | Endpoint (namespace `static-{region}`) | Notes |
 |---|---|---|
-| Boss render | `GET /data/wow/journal-encounter/{id}` lists the encounter's creatures (each with a creature display ID, unconfirmed); `GET /data/wow/media/creature-display/{creatureDisplayId}` gives a render of that creature | The closest thing to the journal portrait; not the journal's own button image |
-| Raid image | `GET /data/wow/media/journal-instance/{journalInstanceId}` | |
+| Boss thumbnail | `GET /data/wow/media/achievement/{achievementId}` of the boss's `Mythic: <boss>` achievement | `icon` asset, 56×56 JPG, `/us/icons/56/<fileId>.jpg`, the only size (probed) |
+| Raid image | `GET /data/wow/media/journal-instance/{journalInstanceId}` | `tile` asset, `/us/zones/<raid-slug>-small.jpg` (probed) |
 | Class icon | `GET /data/wow/media/playable-class/{playableClassId}`; specs: `GET /data/wow/media/playable-specialization/{specId}` | Class IDs from `GET /data/wow/playable-class/index`; about 13 calls |
-| Boss achievement icon | `GET /data/wow/media/achievement/{achievementId}` | No link from an encounter to its achievement and no search endpoint, so each would be matched by name by a person; the creature render fits better |
+| Boss render | `GET /data/wow/journal-encounter/{id}` lists `creatures`, each with `creature_display.id`; `GET /data/wow/media/creature-display/{id}` gives a `zoom` render | 600×600 JPG of the whole model, small, on flat dark grey (probed). Not the journal portrait; unused |
 | Spell icon | `GET /data/wow/media/spell/{spellId}` | Not used: Wowhead's script draws spell icons |
 
-- **Encounter mapping.** A journal encounter ID is not WCL's encounter ID (3492 for Ula'tek). WCL's `Encounter` type
-  has `journalID` (`docs/wcl/search.md`, "Fields"), which gives the mapping; it goes into the encounter files, `null`
-  with `verified: false` when unknown.
-- **Media URLs.** The media endpoints return URLs, not image bytes, and the URLs need no credential, so the browser
-  loads them with `<img src>` once the server has resolved them. The host is expected to be
-  `render.worldofwarcraft.com` (unconfirmed until the first real response); the web rules add it as a second image
-  host when this is built.
+- **Encounter mapping.** A journal encounter ID is not WCL's encounter ID. WCL's `Encounter` type has `journalID`
+  (`docs/wcl/search.md`, "Fields"), which gives the mapping; it goes into the encounter files, `null` with
+  `verified: false` when unknown. `GET /data/wow/journal-instance/index` lists the raids, and
+  `GET /data/wow/journal-instance/{id}` lists each raid's encounters (probed). A raid may be split across several
+  journal instances.
+- **Achievement mapping.** Nothing links an encounter to its achievement: the achievement's `criteria` carry only a
+  description. `GET /data/wow/achievement-category/index` names one "<expansion> Raid" category per expansion, and that
+  category lists a `Mythic: <journal encounter name>` achievement for each boss (probed), so a script proposes each ID
+  by name and a person confirms it into the encounter file.
+- **Media URLs.** The media endpoints return URLs on `render.worldofwarcraft.com`, which need no credential, so the
+  browser loads them with `<img src>` once the server has resolved them (probed). The web rules add the host when this
+  is built.
 
 ### How it will work
 
-1. A refresh job, on the user's client credential, resolves each encounter's creature-display image URL (and the
-   class icons) into a table with the time each was fetched, refreshes each before 30 days and drops it after.
-2. The API serves the URL as JSON; it stores and proxies no image.
+1. A refresh job, on the maintainer's client credential, resolves each encounter's achievement icon URL, each raid's
+   tile and the class icons into a table with the time each was fetched, refreshes each before 30 days and drops it
+   after.
+2. The API serves the URL as JSON; it stores and proxies no API image.
 3. The browser hotlinks the URL and falls back when there is none.
 4. Pages that show Blizzard Data name Blizzard as its source.
 
@@ -151,7 +207,7 @@ documentation shows request parameters, not response bodies; shapes marked "unco
 
 - Boss portraits and raid images: nothing in their place.
 - Class icons: class colours on player names (`GET /v1/reports/{code}/players`).
-- Boss achievement icons on the rail and loading tiles: a neutral square.
+- Boss thumbnails on the rail and loading tiles: a neutral square.
 
 ## Faction mark
 
@@ -164,4 +220,3 @@ dashboard draws its own neutral mark for Alliance and Horde (a coloured shield, 
 - `WH.Tooltips.refreshLinks` and the Content-Security-Policy hosts and inline-style allowance are read from the
   script's code; confirm them in a browser when the web app builds ability links (`docs/follow-ups.md`).
 - WCL's `ReportAbility.icon` value is not in any recording; look at it on the first live report.
-- The Blizzard response shapes marked unconfirmed, and the media host.
