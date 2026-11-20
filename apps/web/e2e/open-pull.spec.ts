@@ -17,6 +17,11 @@ import { expect, test } from "./support/fixtures";
 
 const REAL = "H7z1fqDXjRTFnbtg";
 const MOCKED = "/r/SYNTH01/p/999"; // never loaded, never opened: the job routes are mocked
+// A 2 by 2 opaque PNG, standing in for a boss thumbnail.
+const TEST_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGOMspvHwMDAxAAGAA5uAToaGCg+AAAAAElFTkSuQmCC",
+  "base64",
+);
 
 test.use({ user: "alice" });
 
@@ -208,6 +213,50 @@ test.describe("states", () => {
     await expect(page.getByRole("link", { name: "Back to the search" })).toHaveAttribute("href", "/");
     await expect(page.getByText("it keeps loading")).toBeVisible();
     await expectAccessible(page);
+  });
+
+  test("the tile fills with the boss thumbnail, and falls back to the plain square when it can't load", async ({ page }) => {
+    // The listing names a thumbnail on this machine (the fixture blocks Blizzard's host): `ok.png` serves a generated
+    // PNG, `missing.png` a 404.
+    let thumbnail_url = `${WEB_URL}/e2e-art/ok.png`;
+    await page.route(/\/v1\/art\/encounters$/, (route) =>
+      route.fulfill({
+        status: 200,
+        headers: CORS,
+        contentType: "application/json",
+        body: JSON.stringify({
+          encounters: [{ encounter_id: 3492, name: "Ula'tek", portrait_url: null, thumbnail_url }],
+          attribution: "Boss art is the property of Blizzard Entertainment, Inc.",
+        }),
+      }),
+    );
+    await page.route(/\/e2e-art\/ok\.png$/, (route) => route.fulfill({ status: 200, contentType: "image/png", body: TEST_PNG }));
+    await page.route(/\/e2e-art\/missing\.png$/, (route) => route.fulfill({ status: 404, body: "" }));
+    await mockJob(
+      page,
+      jobBody("running", [["running", 20], ["waiting", 0], ["waiting", 0]], {}, {
+        encounter_id: 3492,
+        encounter_name: "Ula'tek",
+        difficulty: 4,
+        difficulty_name: "heroic",
+      }),
+    );
+    await page.goto(MOCKED);
+    const tile = page.getByTestId("pull-tile");
+    const thumbnail = tile.getByTestId("boss-thumbnail");
+    await expect(thumbnail).toHaveAttribute("data-art", "image");
+    await expect
+      .poll(() => thumbnail.locator("img").evaluate((el) => (el as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+    expect(await tile.boundingBox()).toMatchObject({ width: 72, height: 72 });
+    await expect(page.getByTestId("art-attribution")).toContainText("Blizzard");
+    await expectAccessible(page, { ready: () => expect(thumbnail).toHaveAttribute("data-art", "image") });
+
+    thumbnail_url = `${WEB_URL}/e2e-art/missing.png`;
+    await page.reload();
+    await expect(page.getByTestId("art-attribution")).toBeVisible();
+    await expect(thumbnail).toHaveAttribute("data-art", "fallback");
+    await expect(thumbnail.locator("img")).toHaveCount(0);
   });
 
   test("waiting for points counts down with the steps waiting", async ({ page }) => {

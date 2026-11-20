@@ -16,6 +16,7 @@ const port = new URL(LOCAL_API).port || "8001";
 
 export default defineConfig({
   testDir: "./e2e/local",
+  globalSetup: "./e2e/local/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
