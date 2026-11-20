@@ -22,6 +22,8 @@ Hosted mode is ``create_app(auth=..., jobs=..., reports=...)``, built by ``main.
 is mounted, and clients never branch on it. ``features`` is what is mounted: each area sets its flag where it mounts
 its routes.
 
+The boss art routes (``api/art.py``) are public and mounted in every mode.
+
 More routers plug in through ``create_app``'s ``routers`` argument, so serving and the generated contract stay in one
 place. ``openapi_document`` renders the contract committed as ``contracts/openapi.json``: the hosted API, with every
 route, so the web client is generated from one document. The document needs no database, queue or WCL credentials.
@@ -30,7 +32,7 @@ route, so the web client is generated from one document. The document needs no d
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
@@ -43,13 +45,17 @@ from fastapi.responses import JSONResponse
 
 from khadbot import wiring
 from khadbot.api.abilities import router as abilities_router
+from khadbot.api.art import ArtService, IconSource, ThumbnailCache
+from khadbot.api.art import router as art_router
+from khadbot.api.boss_art import BossArt, load_boss_art
 from khadbot.api.deps import ReportDirectory
 from khadbot.api.names import router as names_router
 from khadbot.api.night import ReadSource
 from khadbot.api.routes import router
 from khadbot.api.schemas import API_VERSION, Features
 from khadbot.api.views import ApiContext, ApiError
-from khadbot.config import ApiConfig, AuthConfig, EncounterConfig
+from khadbot.blizzard import BlizzardClient
+from khadbot.config import ApiConfig, AuthConfig, BlizzardConfig, EncounterConfig
 from khadbot.encounter.evidence import EncounterData
 from khadbot.encounter.findings import FindingsStore, SqliteFindingsStore
 from khadbot.storage import BlobStore, LocalBlobStore
@@ -76,6 +82,8 @@ def create_app(
     jobs: JobQueue | None = None,
     reports: ReportDirectory | None = None,
     budget: BudgetManager | None = None,
+    boss_art: Mapping[int, BossArt] | None = None,
+    icon_source: IconSource | None = None,
 ) -> FastAPI:
     """
     The dashboard API over ``data`` and ``findings``.
@@ -99,6 +107,11 @@ def create_app(
     API's tests), ``hosted`` for ``main.py api`` in hosted mode and the documentation app. It is a label for people
     and logs; the web app reads ``features``, never ``mode``.
 
+    The boss art routes (``api/art.py``) are mounted in every mode. ``boss_art`` is the registry (default
+    ``config/registries/boss_art.yaml``, loaded here so a malformed file stops the app) and ``icon_source`` what
+    resolves a boss's thumbnail URL (default a ``BlizzardClient`` from the ``BLIZZARD_*`` settings, none without
+    credentials, and then the listing has no thumbnails).
+
     Raises:
         ValueError: ``jobs`` or ``reports`` without ``auth``: only the hosted API has users to own them; or ``mode``
             that disagrees with ``auth`` (a hosted API has sign-in, a local one has none).
@@ -115,13 +128,22 @@ def create_app(
     if findings is None:
         findings = SqliteFindingsStore(root / "khadbot.sqlite")
 
+    owned_blizzard = BlizzardClient.from_config(BlizzardConfig()) if icon_source is None else None
+    art = ArtService(
+        boss_art if boss_art is not None else load_boss_art(), blobs, ThumbnailCache(icon_source or owned_blizzard)
+    )
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        if jobs is None:
-            yield
-            return
-        async with jobs.open():  # the queue's own connection pool lives as long as the app
-            yield
+        try:
+            if jobs is None:
+                yield
+                return
+            async with jobs.open():  # the queue's own connection pool lives as long as the app
+                yield
+        finally:
+            if owned_blizzard is not None:
+                await owned_blizzard.aclose()
 
     app = FastAPI(
         title="KhadBot Dashboard API",
@@ -138,6 +160,7 @@ def create_app(
         data=data, findings=findings, data_dir=shown_dir, raw=wiring.raw_cache(blobs), read_source=read_source
     )
     app.state.directory = reports
+    app.state.art = art
     if budget is not None:
         app.state.budget = budget
     if auth is None:
@@ -167,6 +190,7 @@ def create_app(
     offered: dict[str, bool] = {}
     app.include_router(router)
     app.include_router(abilities_router)  # report abilities with WCL's icon names (api/abilities.py), every mode
+    app.include_router(art_router)  # boss portraits and thumbnail URLs (api/art.py): public, every mode
     app.include_router(names_router)  # display names, cooldowns and players (api/names.py): read routes, every mode
     if auth is not None:
         from khadbot.auth.routes import mount  # hosted only: loads the crypto library

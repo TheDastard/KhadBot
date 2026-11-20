@@ -15,6 +15,7 @@ Every model is re-exported here, so callers import from ``khadbot.api.schemas`` 
 from __future__ import annotations
 
 from khadbot.api.schemas.abilities import AbilityIcon, ReportAbilities
+from khadbot.api.schemas.art import EncounterArt, EncounterArtList
 from khadbot.api.schemas.common import API_VERSION, Coverage, DifficultyName, ErrorBody, Outcome
 from khadbot.api.schemas.health import Features, Health
 from khadbot.api.schemas.jobs import (
@@ -108,6 +109,8 @@ __all__ = [
     "DeathEvidence",
     "DeathMarker",
     "DifficultyName",
+    "EncounterArt",
+    "EncounterArtList",
     "EncounterNames",
     "ErrorBody",
     "EventEvidence",

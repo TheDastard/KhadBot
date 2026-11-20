@@ -8,8 +8,8 @@ and doesn't do with them. The decision behind it is in `docs/decisions.md` (game
 |---|---|---|
 | Spell tooltip and icon | Wowhead's tooltip script, in the browser | Every ability link |
 | Ability icon name | WCL's `ReportAbility.icon` (`GET /v1/reports/{code}/abilities`) | Anywhere that wants an icon without the script |
-| Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (planned); a fallback until then | Pull heading, search results |
-| Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API (planned); a neutral square until then | Rail, night overview, loading tiles |
+| Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (`GET /v1/art/portraits/{name}.png`); a fallback until uploaded | Pull heading, search results |
+| Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API, as a URL in `GET /v1/art/encounters`; a neutral square without one | Rail, night overview, loading tiles |
 | Raid image, class icon | Blizzard's Game Data API (planned); nothing, and class colours, until then | Raid headings; player names |
 | Faction mark | Drawn by KhadBot | Guild results |
 | Logo | KhadBot's own asset | Header |
@@ -122,12 +122,29 @@ bucket with `KHADBOT_STORAGE=s3`. It skips files whose converted bytes match the
 the export lacks. Records cleanup (`jobs/retention.py`) lists only `records/`, and the bucket lifecycle rules cover only
 `raw/` and `annotated/`, so nothing removes `art/`.
 
-### Serving them (planned)
+### Serving them
 
 The converted PNGs in `art/portraits/` are served from the hosted bucket, which is private (it also holds raw WCL
-pages), and an API route returns each one with long-lived cache headers. The browser loads them from the API's own origin, so the web rules
-and the Content-Security-Policy gain no host. Local mode reads them from `KHADBOT_DATA_DIR` through the same blob
-store.
+pages), by two public routes in `api/art.py`, mounted in every mode (hosted, and `main.py serve` over
+`KHADBOT_DATA_DIR`'s blob store) with no capability flag:
+
+- `GET /v1/art/encounters`: one entry per registry boss, in registry order: `encounter_id`, `name`, `portrait_url`
+  (a path on the API's own origin, `/v1/art/portraits/<name>.png?v=<hash>`, null until the PNG is uploaded) and
+  `thumbnail_url` (a Blizzard image URL, null without credentials or when Blizzard could not answer), and one
+  `attribution` line. Cacheable for an hour. Every registry entry is listed, `verified` or not.
+- `GET /v1/art/portraits/<name>.png`: the stored PNG with `Cache-Control: public, max-age=31536000, immutable`. A
+  name not in the registry, or not uploaded, is 404 `art_not_found`.
+
+The `v` value is the first 16 hex digits of the PNG's SHA-256, so a re-export changes the URL; the route re-reads each
+hash at most every five minutes, so an upload shows in the listing within that time. The browser loads portraits from
+the API's origin, so the web rules and the Content-Security-Policy gain no host for them.
+
+Thumbnail URLs are resolved lazily on the first listing request, through `BlizzardClient`, four lookups at a time, and
+kept in the API process's memory for a day (no table, no refresh job; the 30-day limit holds because a process's
+cache never lives that long, and it is the same in local mode). A failed or empty lookup leaves that thumbnail out and
+is remembered for five minutes (a 429's `Retry-After` extends that, up to an hour) so Blizzard is not asked on every
+request; it never fails the route. A URL that is not `https` is dropped. The attribution reads: "Boss art is the
+property of Blizzard Entertainment, Inc. KhadBot is not affiliated with or endorsed by Blizzard Entertainment."
 
 Size: about 10 KB a portrait and about 12 MB for a whole export, inside R2's free storage, and browsers cache each
 image, so the cost is nil at this scale (https://developers.cloudflare.com/r2/pricing/, as of 2026-11). A public
@@ -148,7 +165,7 @@ Logs, Wowhead, Raider.IO and warcraft.wiki.gg show the same images. KhadBot show
 
 ## Boss thumbnails, raid and class images: Blizzard's Game Data API
 
-`khadbot.blizzard.BlizzardClient` makes the one call KhadBot uses so far (an achievement's `icon` asset); nothing
+`khadbot.blizzard.BlizzardClient` makes the one call KhadBot uses so far (an achievement's `icon` asset), for the art listing; nothing
 else calls the API yet (`docs/follow-ups.md`). The facts marked "probed" come from live calls
 against namespace `static-12.1.5_70077-us`.
 
@@ -209,16 +226,16 @@ https://www.blizzard.com/en-us/legal/a2989b50-5f16-43b1-abec-2ae17cc09dd6/blizza
   browser loads them with `<img src>` once the server has resolved them (probed). The web rules add the host when this
   is built.
 
-### How it will work
+### How it works
 
-1. A refresh job, on the maintainer's client credential, resolves each encounter's achievement icon URL, each raid's
-   tile and the class icons into a table with the time each was fetched, refreshes each before 30 days and drops it
-   after.
-2. The API serves the URL as JSON; it stores and proxies no API image.
+1. `GET /v1/art/encounters` resolves each registry boss's achievement icon URL through `BlizzardClient` on the
+   maintainer's client credential and keeps it in memory (see "Serving them"). Raid tiles and class icons are not
+   built.
+2. The API serves the URL as JSON; it stores and proxies no Blizzard image.
 3. The browser hotlinks the URL and falls back when there is none.
-4. Pages that show Blizzard Data name Blizzard as its source.
+4. Pages that show Blizzard Data show the response's `attribution` line.
 
-### Until then
+### Without them
 
 - Boss portraits and raid images: nothing in their place.
 - Class icons: class colours on player names (`GET /v1/reports/{code}/players`).

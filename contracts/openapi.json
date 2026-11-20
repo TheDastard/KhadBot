@@ -861,6 +861,74 @@
         "title": "DeathRecord",
         "type": "object"
       },
+      "EncounterArt": {
+        "description": "One raid boss's art. Either image is null when it is not available; the web app then draws its fallback.",
+        "properties": {
+          "encounter_id": {
+            "description": "WCL's encounter ID",
+            "title": "Encounter Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The boss's name as WCL spells it",
+            "title": "Name",
+            "type": "string"
+          },
+          "portrait_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Path on this API's own origin of the journal portrait (a 128 by 64 PNG), ending in `?v=` and a hash of the image, so a re-export changes the URL. Null when no portrait is registered or uploaded.",
+            "title": "Portrait Url"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the boss's Mythic kill achievement icon (a 56 by 56 JPG) on Blizzard's image host; the browser loads it directly. Null when the API has no Blizzard credentials, Blizzard could not answer, or the boss has no registered achievement.",
+            "title": "Thumbnail Url"
+          }
+        },
+        "required": [
+          "encounter_id",
+          "name"
+        ],
+        "title": "EncounterArt",
+        "type": "object"
+      },
+      "EncounterArtList": {
+        "description": "The art of every boss in the registry, in registry order.",
+        "properties": {
+          "attribution": {
+            "description": "The line to show wherever this art is drawn, naming Blizzard as its source",
+            "title": "Attribution",
+            "type": "string"
+          },
+          "encounters": {
+            "items": {
+              "$ref": "#/components/schemas/EncounterArt"
+            },
+            "title": "Encounters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attribution",
+          "encounters"
+        ],
+        "title": "EncounterArtList",
+        "type": "object"
+      },
       "EncounterNames": {
         "description": "Display names for the IDs records carry: phases, mechanics and damage windows from the encounter file's view for\none difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).\nCooldown names are ``GET /v1/cooldowns``.",
         "properties": {
@@ -4773,6 +4841,87 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/art/encounters": {
+      "get": {
+        "description": "The art of every raid boss in the registry, in registry order, with the attribution line to show beside it. Public:\nthe art is the same for everyone, and signed-out visitors see it too. Each boss's `portrait_url` is a path on this\nAPI's origin (null until its portrait is uploaded) and `thumbnail_url` a Blizzard image URL (null without Blizzard\ncredentials or when Blizzard could not answer); the web app draws its fallback for a null. Cacheable for an hour.",
+        "operationId": "list_encounter_art_v1_art_encounters_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EncounterArtList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path parameter (bad_request)"
+          }
+        },
+        "summary": "List Encounter Art",
+        "tags": [
+          "art"
+        ]
+      }
+    },
+    "/v1/art/portraits/{filename}": {
+      "get": {
+        "description": "One boss portrait by file name (`<portrait>.png`, as in a `portrait_url`), the PNG stored in the blob store. Public.\nServed with a year-long immutable cache: the `v` hash in the listing's URL changes when the image does.",
+        "operationId": "get_portrait_v1_art_portraits__filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {}
+            },
+            "description": "The portrait, a PNG"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such portrait in the registry, or not uploaded (art_not_found)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid path parameter (bad_request)"
+          }
+        },
+        "summary": "Get Portrait",
+        "tags": [
+          "art"
+        ]
+      }
+    },
     "/v1/auth/callback": {
       "get": {
         "description": "WCL's redirect after sign-in. Starts a session and redirects to the web app, or answers 400.",

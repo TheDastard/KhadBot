@@ -4,6 +4,50 @@
  */
 
 export interface paths {
+    "/v1/art/encounters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Encounter Art
+         * @description The art of every raid boss in the registry, in registry order, with the attribution line to show beside it. Public:
+         *     the art is the same for everyone, and signed-out visitors see it too. Each boss's `portrait_url` is a path on this
+         *     API's origin (null until its portrait is uploaded) and `thumbnail_url` a Blizzard image URL (null without Blizzard
+         *     credentials or when Blizzard could not answer); the web app draws its fallback for a null. Cacheable for an hour.
+         */
+        get: operations["list_encounter_art_v1_art_encounters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/art/portraits/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Portrait
+         * @description One boss portrait by file name (`<portrait>.png`, as in a `portrait_url`), the PNG stored in the blob store. Public.
+         *     Served with a year-long immutable cache: the `v` hash in the listing's URL changes when the image does.
+         */
+        get: operations["get_portrait_v1_art_portraits__filename__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/callback": {
         parameters: {
             query?: never;
@@ -1018,6 +1062,45 @@ export interface components {
              * @default 0
              */
             window_self_damage: number;
+        };
+        /**
+         * EncounterArt
+         * @description One raid boss's art. Either image is null when it is not available; the web app then draws its fallback.
+         */
+        EncounterArt: {
+            /**
+             * Encounter Id
+             * @description WCL's encounter ID
+             */
+            encounter_id: number;
+            /**
+             * Name
+             * @description The boss's name as WCL spells it
+             */
+            name: string;
+            /**
+             * Portrait Url
+             * @description Path on this API's own origin of the journal portrait (a 128 by 64 PNG), ending in `?v=` and a hash of the image, so a re-export changes the URL. Null when no portrait is registered or uploaded.
+             */
+            portrait_url?: string | null;
+            /**
+             * Thumbnail Url
+             * @description Absolute URL of the boss's Mythic kill achievement icon (a 56 by 56 JPG) on Blizzard's image host; the browser loads it directly. Null when the API has no Blizzard credentials, Blizzard could not answer, or the boss has no registered achievement.
+             */
+            thumbnail_url?: string | null;
+        };
+        /**
+         * EncounterArtList
+         * @description The art of every boss in the registry, in registry order.
+         */
+        EncounterArtList: {
+            /**
+             * Attribution
+             * @description The line to show wherever this art is drawn, naming Blizzard as its source
+             */
+            attribution: string;
+            /** Encounters */
+            encounters: components["schemas"]["EncounterArt"][];
         };
         /**
          * EncounterNames
@@ -2603,6 +2686,75 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_encounter_art_v1_art_encounters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterArtList"];
+                };
+            };
+            /** @description Invalid path parameter (bad_request) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_portrait_v1_art_portraits__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The portrait, a PNG */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                };
+            };
+            /** @description No such portrait in the registry, or not uploaded (art_not_found) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Invalid path parameter (bad_request) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     callback_v1_auth_callback_get: {
         parameters: {
             query?: {
