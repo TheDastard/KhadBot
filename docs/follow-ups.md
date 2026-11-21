@@ -239,7 +239,9 @@ The review's high and medium findings are fixed (D91 to D96). Open, most severe 
   them, likely a timeout. New bosses' portraits will be missing until the export completes; find a way to make it
   finish (or export the newest files) before the next raid tier.
 - **Hosted buckets.** The portraits are uploaded to the local stack only; staging and production need the upload
-  script run against their buckets, and the Blizzard client ID and secret in their secrets.
+  script run against their buckets (`docs/game-art.md`, "Uploading to a hosted bucket"), and the Blizzard client ID
+  and secret in their secrets. The upload folder must also hold Kith'ix's `UI-EJ-BOSS-Kithix.blp`, which the export
+  lacks.
 
 ### Ula'tek (3492), Heroic
 

@@ -125,6 +125,19 @@ bucket with `KHADBOT_STORAGE=s3`. It skips files whose converted bytes match the
 the export lacks. Records cleanup (`jobs/retention.py`) lists only `records/`, and the bucket lifecycle rules cover only
 `raw/` and `annotated/`, so nothing removes `art/`.
 
+### Uploading to a hosted bucket
+
+Run the script from a checkout with that environment's storage settings (`docs/hosting/configuration.md`):
+`KHADBOT_STORAGE=s3`, `KHADBOT_S3_BUCKET`, `KHADBOT_S3_ENDPOINT` (R2's `https://<account-id>.r2.cloudflarestorage.com`),
+`KHADBOT_S3_REGION=auto`, and the same `KHADBOT_S3_PREFIX` as the API, since the store puts every key under it. The
+credentials are an R2 API token with write access to the bucket, as `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+
+1. Put every portrait the registry names in one folder: the script reads a single folder.
+2. `--dry-run` lists what would be written without touching the bucket; then run it for real.
+3. The API rechecks a portrait's hash every five minutes, so uploads appear without a restart. The Blizzard settings
+   are read when the API starts: restart it after adding them to the environment's secrets.
+4. `GET /v1/art/encounters` on that environment shows a `portrait_url` and a `thumbnail_url` for every boss.
+
 ### Serving them
 
 The converted PNGs in `art/portraits/` are served from the hosted bucket, which is private (it also holds raw WCL
