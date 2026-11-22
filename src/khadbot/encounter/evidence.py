@@ -19,7 +19,7 @@ in-process, keyed by pull and content hashes) and resolves refs against them. A 
 same JSON-safe dict a query tool returned for it, so a claim is checked against what the model saw.
 
 Each kind's resolved shape has a model, so the dashboard API can publish it: ``DeathRecord``,
-``MechanicRecord`` (the stat plus its cluster rows), ``CooldownUse``, ``WindowCoverage``, ``EventRecord``
+``MechanicRecord`` (the stat, the mechanic's description and its cluster rows), ``CooldownUse``, ``WindowCoverage``, ``EventRecord``
 and ``PullRecord``. The resolver still builds plain dicts; ``RECORD_MODELS`` names each kind's model, and
 a resolved dict dumps back unchanged through it (``extra="forbid"`` catches a field the model lacks).
 """
@@ -219,10 +219,17 @@ def pull_summary(r: PullRecords) -> dict[str, Any]:
 
 
 def mechanic_detail(r: PullRecords, stat: MechanicStat) -> dict[str, Any]:
-    """What a ``mech`` ref resolves to: the stat plus one row per cluster (with blame context where it has one)."""
+    """
+    What a ``mech`` ref resolves to: the stat, the encounter file's description of the mechanic when it has one, and
+    one row per cluster (with blame context where it has one).
+    """
     reach = blame_reach_yd(r.enc, stat.mechanic_id)
     clusters = mechanic_clusters(r.annotated, stat.mechanic_id, r.actors, reach_yd=reach)
-    return {**stat.model_dump(mode="json"), "cluster_rows": [c.model_dump(mode="json") for c in clusters]}
+    out = stat.model_dump(mode="json")
+    mech = next((m for m in r.enc.mechanics if m.id == stat.mechanic_id), None) if r.enc is not None else None
+    if mech is not None and mech.description is not None:
+        out["description"] = mech.description
+    return {**out, "cluster_rows": [c.model_dump(mode="json") for c in clusters]}
 
 
 # ---------------------------------------------------------------------------
@@ -240,10 +247,16 @@ def _absent() -> Any:
 
 
 class MechanicRecord(MechanicStat):
-    """What a ``mech`` ref resolves to (``mechanic_detail``): the stat plus one row per cluster."""
+    """
+    What a ``mech`` ref resolves to (``mechanic_detail``): the stat, the mechanic's description and one row per
+    cluster.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
+    # The encounter file's plain-text description: what the mechanic does and what a failure means. Absent when the
+    # file gives none (mechanics without a failure rule may leave it out).
+    description: str | None = _absent()
     cluster_rows: list[MechanicCluster]
 
 

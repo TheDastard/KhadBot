@@ -17,6 +17,13 @@ anomaly, who a failure is charged to, and how aggro and positions feed that. The
   `load_encounter_view(encounter_id, pull.difficulty)`: that difficulty's entries only, or None (coverage `none`)
   when no phase covers it. `encfile_hash` is taken over the view, so editing one difficulty leaves the others
   cached. The ingest filter uses every difficulty's ability IDs.
+- **Mechanic descriptions.** `description` is one line of plain text, at most 300 characters
+  (`MECHANIC_DESCRIPTION_MAX_CHARS`): what the mechanic does and, with a failure rule, what a failure means (who
+  failed and how). Required on every mechanic with a `failure` rule, optional on the rest; damage windows have none.
+  It is in `encfile_hash` when set (an unset one is left out of the dump), and the `mech:` ref, `query_mechanic` and
+  `GET /v1/encounters/{id}/names` (`mechanic_descriptions`) carry it. The digest leaves it out: Ula'tek's 30
+  descriptions come to about 1.1k tokens (`len(text) // 4`), which would take its largest digest (2,225 tokens,
+  `recorded-nights.md`) past the 3k ceiling.
 - **Unknown keys are errors** (`extra="forbid"`), so typos fail at load.
 - **Triggers that match nothing yet.** `boss_hp_below` needs damage on the boss (no DamageDone spec) and
   `boss_aura_applied` needs auras on the boss (Buffs are fetched for friendlies only). Use `boss_cast`, `wcl_phase`

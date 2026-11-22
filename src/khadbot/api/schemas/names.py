@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from khadbot.api.schemas.common import DifficultyName
 
@@ -55,8 +55,8 @@ class PhaseName(BaseModel):
 
 class EncounterNames(BaseModel):
     """
-    Display names for the IDs records carry: phases, mechanics and damage windows from the encounter file's view for
-    one difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).
+    Display names for the IDs records carry: phases, mechanics (with their descriptions) and damage windows from the
+    encounter file's view for one difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).
     Cooldown names are ``GET /v1/cooldowns``.
     """
 
@@ -66,6 +66,12 @@ class EncounterNames(BaseModel):
     encounter_name: str | None  # the encounter file's name
     phases: dict[str, PhaseName]  # phase ID -> names, in the file's order
     mechanics: dict[str, str]  # mechanic ID -> name
+    mechanic_descriptions: dict[str, str] = Field(
+        description=(
+            "Mechanic ID -> the encounter file's one- or two-sentence plain-text description: what the mechanic does "
+            "and what a failure means. Only mechanics that have one; every mechanic with a failure rule does."
+        )
+    )
     damage_windows: dict[str, str]  # damage window ID -> name
 
 

@@ -183,7 +183,7 @@ export interface paths {
         /**
          * Get Names
          * @description Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a
-         *     short name for tight spaces. An encounter or difficulty without an encounter file answers an empty lookup, not an
+         *     short name for tight spaces, and each mechanic that has one its plain-text description. An encounter or difficulty without an encounter file answers an empty lookup, not an
          *     error. Cooldown names are ``GET /v1/cooldowns``.
          */
         get: operations["get_names_v1_encounters__encounter_id__names_get"];
@@ -1104,8 +1104,8 @@ export interface components {
         };
         /**
          * EncounterNames
-         * @description Display names for the IDs records carry: phases, mechanics and damage windows from the encounter file's view for
-         *     one difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).
+         * @description Display names for the IDs records carry: phases, mechanics (with their descriptions) and damage windows from the
+         *     encounter file's view for one difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).
          *     Cooldown names are ``GET /v1/cooldowns``.
          */
         EncounterNames: {
@@ -1121,6 +1121,13 @@ export interface components {
             encounter_id: number;
             /** Encounter Name */
             encounter_name: string | null;
+            /**
+             * Mechanic Descriptions
+             * @description Mechanic ID -> the encounter file's one- or two-sentence plain-text description: what the mechanic does and what a failure means. Only mechanics that have one; every mechanic with a failure rule does.
+             */
+            mechanic_descriptions: {
+                [key: string]: string;
+            };
             /** Mechanics */
             mechanics: {
                 [key: string]: string;
@@ -1781,7 +1788,8 @@ export interface components {
         };
         /**
          * MechanicRecord
-         * @description What a ``mech`` ref resolves to (``mechanic_detail``): the stat plus one row per cluster.
+         * @description What a ``mech`` ref resolves to (``mechanic_detail``): the stat, the mechanic's description and one row per
+         *     cluster.
          */
         MechanicRecord: {
             /** Blame Dist Yd */
@@ -1803,6 +1811,8 @@ export interface components {
             damage_taken: number;
             /** Deaths In Window */
             deaths_in_window: number;
+            /** Description */
+            description?: string | null;
             /** Failures */
             failures: number;
             /** Failures By Player */

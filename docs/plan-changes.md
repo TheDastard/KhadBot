@@ -160,3 +160,35 @@ occurs among the pull's transitions after 0 ms (the opening transition belongs t
 listed phase with that ID is reached when the ID occurs at least n times, and a repeating one is flagged once when
 the ID occurs more often than spans were detected for it. Listed phases with other triggers are flagged by count,
 as before; repeating phases with other triggers are not judged."
+
+## encounter/mechanic-descriptions
+
+### Refactor plan 6.2: encounter file, mechanic `description`
+
+In the encounter-file example, give each mechanic with a `failure` rule a `description` after its `name`, for
+example under `swirl`:
+
+```yaml
+    description: Swirling flames on the ground. Every hit is a failure, charged to the player hit.
+```
+
+Add after the "Validation" paragraph: "`description` is one line of plain text, at most 300 characters: what the
+mechanic does and, when it has a failure rule, what a failure means (who failed and how). It is required on every
+mechanic with a `failure` rule and optional on the rest; damage windows have none. A description with a line break
+or surrounding spaces is rejected. When set it is part of the canonical dump and so of `encfile_hash`; an unset
+one is left out of the dump, so files without descriptions keep their hash. The digest does not show it."
+
+### Refactor plan 6.5: the `mech` ref record
+
+Replace the `mech:<id>` row's text with: "The `MechanicStat` (with `blame_states` and `blame_dist_yd` for
+`per_cluster` mechanics), the encounter file's `description` of the mechanic when it has one, plus
+`cluster_rows: list[MechanicCluster]`, whose rows on `per_cluster` mechanics carry `blamed`, `blame_state`,
+`blame_dist_yd` and `blame_reach_yd`, so every number the MECHANICS line prints resolves". In "Resolved record
+models", `mech` → `MechanicRecord` (`MechanicStat` plus `description?` (absent when the file gives none) and
+`cluster_rows: list[MechanicCluster]`).
+
+### Web portal plan: encounter names
+
+The refactor plan does not cover the names route. Wherever the web portal plan lists
+`GET /v1/encounters/{id}/names`, add: "`mechanic_descriptions: dict[str, str]`, mechanic ID to its description,
+for the mechanics that have one (every mechanic with a failure rule), beside `mechanics`."

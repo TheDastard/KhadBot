@@ -54,6 +54,9 @@ def test_names_for_each_stored_encounter_and_difficulty(dataset, client):
         assert body["encounter_name"] == (enc.name if enc else None)
         assert body["phases"] == _phases(enc)
         assert body["mechanics"] == ({x.id: x.name for x in enc.mechanics} if enc else {})
+        assert body["mechanic_descriptions"] == (
+            {x.id: x.description for x in enc.mechanics if x.description} if enc else {}
+        )
         assert body["damage_windows"] == ({x.id: x.name for x in enc.damage_windows} if enc else {})
         assert "cooldowns" not in body
 
@@ -85,6 +88,9 @@ def test_names_for_ulatek_heroic(real_dataset):
     assert body["mechanics"] == {x.id: x.name for x in enc.mechanics}
     assert body["damage_windows"] == {x.id: x.name for x in enc.damage_windows}
     assert body["mechanics"] and body["damage_windows"]
+    # Every mechanic with a failure rule has a description; others may leave it out.
+    assert {x.id for x in enc.mechanics if x.failure} <= set(body["mechanic_descriptions"]) <= set(body["mechanics"])
+    assert body["mechanic_descriptions"] == {x.id: x.description for x in enc.mechanics if x.description}
 
 
 def test_a_difficulty_without_an_encounter_file_is_an_empty_lookup(real_dataset):
@@ -98,6 +104,7 @@ def test_a_difficulty_without_an_encounter_file_is_an_empty_lookup(real_dataset)
         "encounter_name": None,
         "phases": {},
         "mechanics": {},
+        "mechanic_descriptions": {},
         "damage_windows": {},
     }
 

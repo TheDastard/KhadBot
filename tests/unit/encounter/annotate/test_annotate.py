@@ -36,6 +36,7 @@ def mech(failure=None, *, ability=100, mid="m", window_ms=1000, kind="avoidable"
     out = {"id": mid, "name": mid, "ability_ids": [ability], "kind": kind, "cluster_window_ms": window_ms}
     if failure:
         out["failure"] = failure
+        out["description"] = f"Test mechanic {mid}."
     return out
 
 

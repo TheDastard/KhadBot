@@ -644,6 +644,41 @@ class TestEncounterFile:
         assert repeating.phases[1].repeat
         assert encfile_hash(repeating) != encfile_hash(before)
 
+    @pytest.mark.parametrize(
+        ("mutate", "match"),
+        [
+            (lambda d: d["mechanics"][0].pop("description"), "mechanic 'swirl' has a failure rule and needs"),
+            (lambda d: d["mechanics"][0].update(description=None), "mechanic 'swirl' has a failure rule and needs"),
+            (lambda d: d["mechanics"][0].update(description=""), "description"),
+            (lambda d: d["mechanics"][0].update(description="x" * 301), "300 characters"),
+            (lambda d: d["mechanics"][0].update(description="Two\nlines."), "one line of plain text"),
+            (lambda d: d["mechanics"][0].update(description=" Padded."), "one line of plain text"),
+            (lambda d: d["damage_windows"][0].update(description="A window."), "description"),
+        ],
+    )
+    def test_description_validation(self, enc_data, mutate, match):
+        mutate(enc_data)
+        with pytest.raises(ConfigurationError, match=match):
+            parse_encounter(enc_data)
+
+    def test_description_is_optional_without_a_failure_rule(self, enc_data):
+        enc_data["mechanics"][0].pop("failure")
+        enc_data["mechanics"][0].pop("description")
+        assert parse_encounter(enc_data).mechanics[0].description is None
+        enc_data["mechanics"][0]["description"] = "x" * 300
+        assert parse_encounter(enc_data).mechanics[0].description == "x" * 300
+
+    def test_description_is_hashed_and_an_unset_one_stays_out_of_the_dump(self, enc_data):
+        enc_data["mechanics"][0].pop("failure")
+        enc_data["mechanics"][0].pop("description")
+        bare = parse_encounter(enc_data)
+        assert "description" not in bare.mechanics[0].model_dump()
+        enc_data["mechanics"][0]["description"] = "A swirl."
+        described = parse_encounter(enc_data)
+        assert encfile_hash(described) != encfile_hash(bare)
+        enc_data["mechanics"][0]["description"] = "A different swirl."
+        assert encfile_hash(parse_encounter(enc_data)) != encfile_hash(described)
+
     def test_repeat_is_checked_per_difficulty(self, enc_data):
         # On heroic the repeating phase ends the list; the mythic-only phase after it doesn't break that.
         enc_data["phases"] = [{**p, "difficulties": ["heroic", "mythic"]} for p in enc_data["phases"]]

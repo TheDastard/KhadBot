@@ -12,12 +12,12 @@ section 6 of the [design plan](https://claude.ai/artifact/Q45H17JuH5EXK8oz17CzQE
   registry, annotation cache and cutoff fraction. It caches `PullRecords` in-process (bounded LRU keyed by
   pull_key, `events_hash` and `encfile_hash`). `resolve(ref, data)` takes `EncounterData` or a bare `EventStore`
   (which then uses `config/` files).
-- **What refs resolve to**: `pull` → a summary (outcome, duration, boss %, phase
-  reached, cutoff, death counts, coverage, anomalies); `mech:<id>` → the `MechanicStat` plus `cluster_rows`
-  (`MechanicCluster`: per-cluster first/last hit, hits, players, damage, failures); `event:<seq>` → the annotated
-  event with actor and ability names instead of actor IDs, nulls dropped, `hp_pct` rounded to 0.1. Query tools
-  return exactly these dicts, so verify checks claims against what the model saw. `plan:` refs parse but do not
-  resolve until raid plans exist.
+- **What refs resolve to**: `pull` → a summary (outcome, duration, boss %, phase reached, cutoff, death counts,
+  coverage, anomalies); `mech:<id>` → the `MechanicStat`, the encounter file's `description` when it has one, and
+  `cluster_rows` (`MechanicCluster`: per-cluster first/last hit, hits, players, damage, failures); `event:<seq>` →
+  the annotated event with actor and ability names instead of actor IDs, nulls dropped, `hp_pct` rounded to 0.1.
+  Query tools return exactly these dicts, so verify checks claims against what the model saw. `plan:` refs parse
+  but do not resolve until raid plans exist.
 - **Claim numbers** also accept `2:14` (m:ss), `12.4 seconds`, `250ms`, `1.2k` and `3.4m`; digits inside words
   (`Healbot2`, `p2`, `3rd`) and inside refs are ignored. A number matches if a record value, scaled to the claim's
   unit and rounded to the claim's precision, equals it.

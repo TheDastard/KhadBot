@@ -620,6 +620,7 @@ def test_mechanic_failures_count_the_blamed_player():
                     "ability_ids": [100],
                     "kind": "avoidable",
                     "failure": rule,
+                    "description": "Test mechanic.",
                 }
             ],
         }

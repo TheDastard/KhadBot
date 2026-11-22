@@ -17,6 +17,7 @@ phases:
 mechanics:
   - id: swirl
     name: Synth Swirl
+    description: Synthetic swirl on the ground. Every hit is a failure, charged to the player hit.
     difficulties: [mythic]
     ability_ids: [900101]
     kind: avoidable
@@ -25,12 +26,14 @@ mechanics:
     severity: medium
   - id: shadow_bolt
     name: Synth Shadow Bolt
+    description: Synthetic boss cast that must be interrupted. Each cast that is not interrupted is a failure, charged to no one.
     difficulties: [mythic]
     ability_ids: [900401]
     kind: interrupt
     failure: {rule: not_interrupted}
   - id: curse
     name: Synth Curse
+    description: Synthetic debuff that must be dispelled. A curse kept longer than its limit is a failure, charged to the cursed player.
     difficulties: [mythic]
     ability_ids: [900601]
     kind: debuff

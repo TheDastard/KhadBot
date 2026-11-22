@@ -7,6 +7,7 @@ the in-process records cache, and number extraction and matching for the verify 
 
 from __future__ import annotations
 
+import dataclasses
 import re
 
 import polars as pl
@@ -24,9 +25,11 @@ from khadbot.encounter.digest import render_digest
 from khadbot.encounter.evidence import (
     RECORD_MODELS,
     EncounterData,
+    MechanicRecord,
     UnresolvableRef,
     claim_numbers,
     extract_numbers,
+    mechanic_detail,
     number_supported,
     numeric_values,
     parse_ref,
@@ -167,6 +170,22 @@ def test_record_models_reject_a_field_they_do_not_know(synth_data):
 def test_mechanic_with_no_hits_resolves(synth_data):
     curse = synth_data.resolve("ev:SYNTH01:1:mech:curse")
     assert (curse["hits"], curse["failures"], curse["cluster_rows"]) == (0, 1, [])
+
+
+def test_mechanic_ref_carries_the_encounter_files_description(synth_data):
+    mech = synth_data.resolve("ev:SYNTH01:1:mech:swirl")
+    enc = synth_data.records("SYNTH01:1").enc
+    assert mech["description"] == next(m.description for m in enc.mechanics if m.id == "swirl")
+    assert MechanicRecord.model_validate(mech).model_dump(mode="json") == mech
+
+
+def test_mechanic_ref_without_a_description_leaves_it_out(synth_data):
+    r = synth_data.records("SYNTH01:1")
+    bare = r.enc.model_copy(update={"mechanics": [m.model_copy(update={"description": None}) for m in r.enc.mechanics]})
+    stat = next(m for m in r.mechanics if m.mechanic_id == "swirl")
+    detail = mechanic_detail(dataclasses.replace(r, enc=bare), stat)
+    assert "description" not in detail
+    assert MechanicRecord.model_validate(detail).model_dump(mode="json") == detail
 
 
 def test_cluster_rows_count_only_hit_failures(synth_data):

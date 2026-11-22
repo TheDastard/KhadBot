@@ -930,7 +930,7 @@
         "type": "object"
       },
       "EncounterNames": {
-        "description": "Display names for the IDs records carry: phases, mechanics and damage windows from the encounter file's view for\none difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).\nCooldown names are ``GET /v1/cooldowns``.",
+        "description": "Display names for the IDs records carry: phases, mechanics (with their descriptions) and damage windows from the\nencounter file's view for one difficulty. Without an encounter file for that difficulty the lookup is empty (``encounter_name`` null).\nCooldown names are ``GET /v1/cooldowns``.",
         "properties": {
           "damage_windows": {
             "additionalProperties": {
@@ -975,6 +975,14 @@
             ],
             "title": "Encounter Name"
           },
+          "mechanic_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Mechanic ID -> the encounter file's one- or two-sentence plain-text description: what the mechanic does and what a failure means. Only mechanics that have one; every mechanic with a failure rule does.",
+            "title": "Mechanic Descriptions",
+            "type": "object"
+          },
           "mechanics": {
             "additionalProperties": {
               "type": "string"
@@ -997,6 +1005,7 @@
           "encounter_name",
           "phases",
           "mechanics",
+          "mechanic_descriptions",
           "damage_windows"
         ],
         "title": "EncounterNames",
@@ -2552,7 +2561,7 @@
       },
       "MechanicRecord": {
         "additionalProperties": false,
-        "description": "What a ``mech`` ref resolves to (``mechanic_detail``): the stat plus one row per cluster.",
+        "description": "What a ``mech`` ref resolves to (``mechanic_detail``): the stat, the mechanic's description and one row per\ncluster.",
         "properties": {
           "blame_dist_yd": {
             "additionalProperties": {
@@ -2616,6 +2625,17 @@
           "deaths_in_window": {
             "title": "Deaths In Window",
             "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "failures": {
             "title": "Failures",
@@ -5249,7 +5269,7 @@
     },
     "/v1/encounters/{encounter_id}/names": {
       "get": {
-        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces. An encounter or difficulty without an encounter file answers an empty lookup, not an\nerror. Cooldown names are ``GET /v1/cooldowns``.",
+        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces, and each mechanic that has one its plain-text description. An encounter or difficulty without an encounter file answers an empty lookup, not an\nerror. Cooldown names are ``GET /v1/cooldowns``.",
         "operationId": "get_names_v1_encounters__encounter_id__names_get",
         "parameters": [
           {

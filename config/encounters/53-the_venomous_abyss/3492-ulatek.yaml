@@ -38,7 +38,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: necrotic_vapors
     name: Necrotic Vapors
-    # Stacking raid-wide damage for the whole fight.
+    description: "Stacking raid-wide damage for the whole fight. It is not counted as a failure."
     difficulties: [heroic]
     ability_ids: [1286835]
     kind: unavoidable
@@ -46,6 +46,10 @@ mechanics:
 
   - id: spectral_coils
     name: Spectral Coils
+    description: >-
+      Damage every player takes, reduced by the number of players at the impact; the Soul Constrictor debuff
+      stops a player reducing the next Coils. A debuffed player who soaks again can't be told apart in the logs,
+      so no failure is counted.
     # Damage (1287265), the Spectral Coil and Gore Rattle casts, and the Soul Constrictor debuff (1300685;
     # stops a player reducing the next Coils). Every player takes the damage, reduced by the number of
     # players at the impact, so soak_count_lt never fires. A debuffed player who soaks again can't be told
@@ -58,6 +62,9 @@ mechanics:
 
   - id: mephitic_thrash
     name: Mephitic Thrash
+    description: >-
+      Tail sweep that players inside it should get out of. The logs give them the same impact and DoT as
+      everyone outside, so standing in it is not counted as a failure.
     # Tail sweep. One ID covers the cast, impact, debuff and DoT. Players inside the sweep should get
     # out, but the logs give them the same impact and DoT as everyone outside, so standing in it can't
     # be detected.
@@ -69,6 +76,9 @@ mechanics:
 
   - id: blight_vein
     name: Blight Vein
+    description: >-
+      Raid-wide DoT each time a Grasping Fangs tether is broken; tethers must be broken a few at a time. It is
+      not counted as a failure.
     # Raid-wide DoT each time a Grasping Fangs tether is broken; tethers must be broken a few at a time.
     difficulties: [heroic]
     ability_ids: [1317955, 1311609]
@@ -78,6 +88,10 @@ mechanics:
 
   - id: malignant_shell
     name: Malignant Shell
+    description: >-
+      Eggs stick to the players who carry them and tick while attached. A shell broken by Caustic Waves or
+      Deadly Venom that hatches a Blightscale Viper is a failure charged to the carrier; one lost at the
+      carrier's death that hatches a Viper is a failure charged to no one.
     # Eggs stick to the players who pick them up and tick while attached: the cost of carrying eggs.
     # A shell (1295360) broken by a Caustic Waves hit (1292403) or a step into the venom pools (Deadly
     # Venom, 1297338) hatches a Blightscale Viper, whose Putrid Membrane (1301268) then lands on the raid.
@@ -96,7 +110,7 @@ mechanics:
 
   - id: enrage
     name: Fury Unleashed
-    # Enrage: a large raid hit followed by heavy damage every second.
+    description: "Ula'tek's enrage: a large raid hit followed by heavy damage every second."
     difficulties: [heroic]
     ability_ids: [1295004, 1286905]
     kind: unavoidable
@@ -105,6 +119,9 @@ mechanics:
   # -- Tanking ---------------------------------------------------------------------------------
   - id: mothers_wrath_tank
     name: Mother's Wrath (tank)
+    description: >-
+      Mother's Wrath on the tank: the hit, the Stone Venom DoT and Hobbled. Taking it as the tank is not a
+      failure.
     # Cast, the hit on the tank, the Stone Venom DoT and debuff, and Hobbled.
     difficulties: [heroic]
     ability_ids: [1298367, 1298369, 1298418, 1298417, 1300938]
@@ -113,6 +130,9 @@ mechanics:
 
   - id: mothers_wrath_raid
     name: Mother's Wrath (no tank in melee)
+    description: >-
+      Mother's Wrath hits the whole raid instead of the tank when Ula'tek's target is out of her reach. Each
+      such hit is a failure charged to the target of the Mother's Wrath cast just before it.
     # Hits the whole raid when Ula'tek's target is out of her reach. Charged to the target of the
     # Mother's Wrath cast just before it. No reach_yd: the targets' distances from Ula'tek don't split
     # cleanly at her swing reach (docs/follow-ups.md).
@@ -127,6 +147,9 @@ mechanics:
 
   - id: unchecked_rage
     name: Unchecked Rage
+    description: >-
+      Raid-wide physical damage when Ula'tek has no target in melee and is not casting. Each cast is a failure
+      charged to the player holding Ula'tek's aggro, usually a tank who taunted her but never reached melee.
     # Raid-wide physical damage when Ula'tek has no melee target and is not casting. Charged to Ula'tek's
     # (NPC 257758) aggro holder: a tank who taunted it but never reached melee is the one at fault.
     # reach_yd: Ula'tek's swing reach, the p95 of her melee swings' distance to the target rounded up
@@ -144,6 +167,9 @@ mechanics:
 
   - id: rattler_slam
     name: Rattler Slam
+    description: >-
+      Gore Rattle slams the raid with its tail when nobody is in its melee range. Each slam is a failure
+      charged to the tail tank holding Gore Rattle's aggro, or to no one before anyone picked up the tail.
     # Raid-wide tail slam when nobody is in melee range of Gore Rattle. Charged to Gore Rattle's (NPC
     # 259555) aggro holder, the tail tank; a slam before anyone picked up the tail is charged to no one.
     # reach_yd: Gore Rattle's swing reach, the p95 of its melee swings' distance to the target rounded up
@@ -162,6 +188,9 @@ mechanics:
   # one failure per player per occurrence instead of one per tick.
   - id: caustic_waves
     name: Caustic Waves
+    description: >-
+      Venom waves from the boss and the tail that tick on players standing in them and hatch any egg they
+      touch. Each player hit by a wave counts one failure, charged to that player.
     # Venom waves from the boss and the tail; also hatch any egg they touch.
     difficulties: [heroic]
     ability_ids: [1292403, 1298570, 1319282, 1311807, 1292211]
@@ -172,6 +201,9 @@ mechanics:
 
   - id: virulent_spit
     name: Virulent Spit
+    description: >-
+      Avoidable damage that ticks on players who stand in it. Each player hit in an occurrence counts one
+      failure, charged to that player.
     difficulties: [heroic]
     ability_ids: [1302982]
     kind: avoidable
@@ -181,6 +213,9 @@ mechanics:
 
   - id: deadly_venom
     name: Deadly Venom
+    description: >-
+      Venom pools around the encounter area that tick on players standing in them; Volatile Purge raises their
+      damage. Each player hit in an occurrence counts one failure, charged to that player.
     # Standing in the venom pools around the encounter area. Volatile Purge increases its damage.
     difficulties: [heroic]
     ability_ids: [1297338]
@@ -191,7 +226,9 @@ mechanics:
 
   - id: toxin_cloud
     name: Toxin Cloud
-    # Hits players who step onto the stage-two side platforms before they have fully dropped.
+    description: >-
+      Hits players who step onto the stage-two side platforms before they have fully dropped. Each player hit
+      counts one failure per occurrence, charged to that player.
     difficulties: [heroic]
     ability_ids: [1295995]
     kind: avoidable
@@ -201,7 +238,8 @@ mechanics:
 
   - id: falling_debris
     name: Falling Debris
-    # Impacts at random spots during Rage of the Shackled.
+    description: >-
+      Impacts at random spots during Rage of the Shackled. Every hit is a failure, charged to the player hit.
     difficulties: [heroic]
     ability_ids: [1286885]
     kind: avoidable
@@ -210,7 +248,9 @@ mechanics:
 
   - id: wardens_protection
     name: Warden's Protection
-    # Aura around the eggs while the Doomscale Warden lives.
+    description: >-
+      Aura around the eggs while the Doomscale Warden lives. Each player hit by it in an occurrence counts one
+      failure, charged to that player.
     difficulties: [heroic]
     ability_ids: [1306858]
     kind: avoidable
@@ -220,6 +260,9 @@ mechanics:
 
   - id: circling_prey
     name: Circling Prey
+    description: >-
+      Destroys a platform, with a large hit and knockback close in and a smaller hit to everyone else. A hit
+      over 1M before mitigation means the player was still on the platform: a failure charged to that player.
     # Destroys a platform: a large hit and knockback close in, a smaller hit to everyone else. Close-in
     # hits are over 1.3M before mitigation and the rest under 0.5M, so a hit over 1M means the player
     # was still on the platform.
@@ -233,6 +276,9 @@ mechanics:
   # -- Adds ------------------------------------------------------------------------------------
   - id: blightscale_viper
     name: Blightscale Viper
+    description: >-
+      Empowered add that hatches from an egg that touched venom or finished its cast. Its abilities are Putrid
+      Membrane, Acidic Burst and Petrifying Sting.
     # Empowered add from an egg that hatched (touched venom or finished its cast). Putrid Membrane
     # damage and debuff, Acidic Burst, and Petrifying Sting damage and debuff.
     difficulties: [heroic]
@@ -243,6 +289,8 @@ mechanics:
 
   - id: poisonous_bite
     name: Poisonous Bite
+    description: >-
+      Stacking DoT a Blightscale Rawling puts on its target; it can be dispelled. No failure is counted yet.
     # Blightscale Rawling stacking DoT on its target (debuff 1287036); dispellable.
     difficulties: [heroic]
     ability_ids: [1287032, 1287036]
@@ -251,7 +299,7 @@ mechanics:
 
   - id: blightscale_clutch
     name: Blightscale Clutch
-    # Clutch of spawn that grows stronger until it is broken.
+    description: "Clutch of spawn that grows stronger until it is broken."
     difficulties: [heroic]
     ability_ids: [1290409]
     kind: unavoidable
@@ -259,6 +307,9 @@ mechanics:
 
   - id: malice
     name: Malice
+    description: >-
+      Raid-wide channel from the Doomscale Warden that must be interrupted. Each cast that is not interrupted
+      is a failure, charged to no one.
     # Doomscale Warden raid-wide channel; must be interrupted.
     difficulties: [heroic]
     ability_ids: [1290779, 1290991]
@@ -268,6 +319,9 @@ mechanics:
 
   - id: anguished_cry
     name: Anguished Cry
+    description: >-
+      Raid hit and stun from a Weakened Doomscale that must be interrupted. Each cast that is not interrupted
+      is a failure, charged to no one.
     # Weakened Doomscale raid hit and stun; interrupt it.
     difficulties: [heroic]
     ability_ids: [1305650]
@@ -277,6 +331,9 @@ mechanics:
 
   - id: desperate_thrash
     name: Desperate Thrash
+    description: >-
+      Frontal cone a Weakened Doomscale aims at its tank, an impact plus a DoT. Anyone it hits other than the
+      player holding that add's aggro fails, once per cone, charged to the player hit.
     # Weakened Doomscale frontal cone aimed at its tank (impact plus a DoT). Anyone hit other than the
     # aggro holder of the add that cast it fails, once per cone; the two adds share an actor ID and are
     # told apart by instance.
@@ -289,7 +346,7 @@ mechanics:
 
   - id: grasping_fangs
     name: Grasping Fangs
-    # Tether DoT and slow on several players; breaking a tether causes Blight Vein.
+    description: "Tether DoT and slow on several players; breaking a tether causes Blight Vein on the raid."
     difficulties: [heroic]
     ability_ids: [1311612, 1311611, 1301117]
     kind: debuff
@@ -297,7 +354,7 @@ mechanics:
 
   - id: doomscale_shell
     name: Doomscale Shell
-    # DoT on the player carrying the Doomscale Egg.
+    description: "DoT on the player carrying the Doomscale Egg."
     difficulties: [heroic]
     ability_ids: [1300314, 1300312]
     kind: unavoidable
@@ -305,6 +362,9 @@ mechanics:
 
   - id: acidic_expulsion
     name: Acidic Expulsion
+    description: >-
+      Raid-wide stacking DoT from Blightscale Shriekers, which should die before they stack it past two. Each
+      spread of stacks past two is one failure, charged to no one.
     # Blightscale Shrieker raid-wide stacking DoT; kill Shriekers before they stack it past 2. Each spread
     # of stacks past 2 is one failure, charged to no one.
     difficulties: [heroic]
@@ -315,6 +375,9 @@ mechanics:
 
   - id: vicious_echoes
     name: Vicious Echoes
+    description: >-
+      Raid hit plus a raid stun from a Blightscale Shrieker; a missed interrupt usually wipes. Each cast that
+      is not interrupted is a failure, charged to no one.
     # Blightscale Shrieker raid hit plus a raid stun; a missed interrupt usually wipes.
     difficulties: [heroic]
     ability_ids: [1310764]
@@ -325,6 +388,9 @@ mechanics:
   # -- Stage Three bites -----------------------------------------------------------------------
   - id: serpents_bite
     name: Serpent's Bite
+    description: >-
+      Stage Three bite on players that must be soaked, followed by a venom DoT. A bite left unsoaked becomes
+      Calcified Corpse.
     # Initial hit on the bitten players (1295838), the venom DoT (1293146), cast and debuff (1288879),
     # and Ingested Venom (1313529), a damage-free debuff believed to mark players who soaked a bite.
     difficulties: [heroic]
@@ -335,6 +401,9 @@ mechanics:
 
   - id: calcified_corpse
     name: Calcified Corpse
+    description: >-
+      A Serpent's Bite left unsoaked turns its player to stone, a stun plus heavy damage. Each Calcified
+      Corpse is a failure charged to the bitten player, standing in for their soak group.
     # A bite left unsoaked turns its player to stone: a stun plus heavy damage. Each Calcified Corpse
     # debuff (1306119) is a failure charged to the bitten player, standing in for their soak group.
     difficulties: [heroic]
@@ -346,6 +415,9 @@ mechanics:
 
   - id: volatile_purge
     name: Volatile Purge
+    description: >-
+      Eruption on players who soaked a bite, who must spread out. A player hit more than once in one eruption
+      stood in someone else's and fails, charged to that player.
     # Eruption on players who soaked a bite; spread out. A player hit more than once in one eruption
     # stood in someone else's.
     difficulties: [heroic]

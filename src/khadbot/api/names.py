@@ -3,8 +3,8 @@ api/names.py
 
 Lookups the pull page uses to show what records carry only as IDs:
 
-- ``GET /v1/encounters/{encounter_id}/names?difficulty=``: phase (with a short name), mechanic and damage-window names
-  from the encounter file's view for that difficulty. The digest stays as it is; the client joins on IDs. Encounter
+- ``GET /v1/encounters/{encounter_id}/names?difficulty=``: phase (with a short name), mechanic (with descriptions) and
+  damage-window names from the encounter file's view for that difficulty. The digest stays as it is; the client joins on IDs. Encounter
   files are authored config, not report data, so the route needs no report access.
 - ``GET /v1/cooldowns``: every cooldown file entry by spell ID (name, the file's category, verified). It depends on no
   report or encounter, so it is served with a day's ``Cache-Control`` and an ETag of the three files' content (304 on
@@ -70,7 +70,7 @@ def get_names(
 ) -> EncounterNames:
     """
     Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a
-    short name for tight spaces. An encounter or difficulty without an encounter file answers an empty lookup, not an
+    short name for tight spaces, and each mechanic that has one its plain-text description. An encounter or difficulty without an encounter file answers an empty lookup, not an
     error. Cooldown names are ``GET /v1/cooldowns``.
     """
     enc = load_encounter_view(encounter_id, difficulty, ctx.data.enc_root)
@@ -81,6 +81,7 @@ def get_names(
         encounter_name=enc.name if enc else None,
         phases={p.id: PhaseName(name=p.name, short_name=short_phase_name(p.name)) for p in enc.phases} if enc else {},
         mechanics={m.id: m.name for m in enc.mechanics} if enc else {},
+        mechanic_descriptions={m.id: m.description for m in enc.mechanics if m.description} if enc else {},
         damage_windows={w.id: w.name for w in enc.damage_windows} if enc else {},
     )
 

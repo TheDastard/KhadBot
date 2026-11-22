@@ -401,7 +401,8 @@ def query_mechanic(pull: str, mechanic_id: str, *, config: RunnableConfig) -> st
     """Get one mechanic's statistics for a pull plus one row per cluster of hits.
 
     The statistics are failures, hits, clusters, damage taken, the players who failed most and the
-    deaths it contributed to. Each cluster row has its first and last hit time, players hit, damage
+    deaths it contributed to, with the encounter file's description of what the mechanic does and
+    what a failure means. Each cluster row has its first and last hit time, players hit, damage
     and failures. Mechanic IDs are listed in the digest.
 
     Args:

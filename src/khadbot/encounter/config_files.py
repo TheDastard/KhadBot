@@ -390,14 +390,44 @@ class FailureRule(_Strict):
         return self
 
 
+MECHANIC_DESCRIPTION_MAX_CHARS = 300
+
+
 class Mechanic(_Entry):
+    """
+    One mechanic. ``description`` says in plain text what the mechanic does and, when it has a ``failure`` rule, what
+    a failure means (who failed and how). It is shown to people and to the analyst, so a mechanic with a failure rule
+    requires one.
+    """
+
     id: str
     name: str
+    description: str | None = Field(None, min_length=1, max_length=MECHANIC_DESCRIPTION_MAX_CHARS)
     ability_ids: list[int] = Field(min_length=1)
     kind: MechanicKind
     failure: FailureRule | None = None
     cluster_window_ms: int = 1000
     severity: Literal["low", "medium", "high"] = "medium"
+
+    @model_validator(mode="after")
+    def _description(self) -> Mechanic:
+        if self.failure is not None and self.description is None:
+            raise ValueError(f"mechanic '{self.id}' has a failure rule and needs a 'description'")
+        if self.description is not None:
+            text = self.description
+            if text != text.strip() or "\n" in text or "\r" in text:
+                raise ValueError(
+                    f"mechanic '{self.id}': 'description' must be one line of plain text with no surrounding spaces"
+                )
+        return self
+
+    @model_serializer(mode="wrap")
+    def _drop_unset_description(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Leaving an unset description out keeps the content hash of mechanics that have none what it was before.
+        data: dict[str, Any] = handler(self)
+        if data.get("description") is None:
+            data.pop("description", None)
+        return data
 
 
 class DamageWindow(_Entry):
