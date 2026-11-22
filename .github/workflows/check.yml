@@ -171,4 +171,4 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked --extra dev
-      - run: uv run pytest tests/unit -m "not perf"
+      - run: uv run pytest tests/unit -n auto -m "not perf"

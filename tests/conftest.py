@@ -237,6 +237,20 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_cmdline_main(config):
+    """Run serially when rewriting goldens, so `-n auto` from the mise tasks can't interleave the rewrites.
+
+    Runs before pytest-xdist's own hook (a conftest's tryfirst hook is called before a plugin's), which then sees
+    zero workers and turns distribution off.
+    """
+    import os
+
+    if config.getoption("--update-goldens") or os.environ.get("UPDATE_GOLDEN"):
+        if hasattr(config.option, "numprocesses"):
+            config.option.numprocesses = 0
+
+
 @pytest.fixture
 def update_goldens(request) -> bool:
     """True when goldens should be rewritten (--update-goldens, or UPDATE_GOLDEN=1 for older tests)."""

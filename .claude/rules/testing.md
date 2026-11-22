@@ -16,3 +16,4 @@ paths:
 - Perf tests are marked `@pytest.mark.perf` and are skipped by default.
 - Don't weaken or delete an assertion to make a test pass. If the expected behaviour changed, say so and update the test deliberately.
 - New code ships with tests for the success path, each documented failure path, and the edge cases its design calls out.
+- The gate runs unit tests in parallel (`-n auto`, pytest-xdist), so every test must be safe beside any other: write files under `tmp_path`, never a fixed path in the repo or data dir; bind no fixed port; keep timing assertions generous. Session-scoped fixtures run once per worker. `--update-goldens` forces a serial run.

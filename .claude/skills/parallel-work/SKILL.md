@@ -48,7 +48,7 @@ in order, the rest in parallel. Work that didn't come from a plan stays with who
   leaves test runs or servers going slows everyone. Stop a finished agent that keeps reporting with `TaskStop`;
   start full checks one at a time where you can.
 - Before landing, prove every commit:
-  `git rebase --exec "uv sync --extra dev -q && uv run --extra dev ruff check src tests scripts && uv run --extra dev mypy src && uv run --extra dev lint-imports && uv run --extra dev pytest tests/unit -q --no-cov" refs/remotes/origin/main`.
+  `git rebase --exec "uv sync --extra dev -q && uv run --extra dev ruff check src tests scripts && uv run --extra dev mypy src && uv run --extra dev lint-imports && uv run --extra dev pytest tests/unit -n auto -q --no-cov" refs/remotes/origin/main`.
   A flaky failure stops the rebase; rerun that commit's tests, and `git rebase --continue` only once they pass.
 
 ## Cleaning up
