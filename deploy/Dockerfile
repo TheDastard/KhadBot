@@ -4,7 +4,7 @@
 #   migrate  applies the database migrations and exits
 #   worker   runs the job queue worker (ingest, process and review jobs from Postgres)
 #
-# Build from the repository root:  docker build -f deploy/Dockerfile -t khadbot .
+# Build from the repository root:  docker build -f deploy/Dockerfile --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t khadbot .
 #
 # The image carries the locked `api` and `hosted` dependency groups only (no CLI, no LLM providers, no dev tools),
 # the source, and config/ (every cache key hashes the authored files, so the image and the data must agree on them).
@@ -40,6 +40,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- Runtime stage -----------------------------------------------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
+# The commit the image is built from, written as `version` on every log line. Declared here, after the slow layers,
+# so a new SHA rebuilds nothing above.
+ARG GIT_SHA=""
+
 RUN groupadd --system --gid 10001 khadbot \
     && useradd --system --uid 10001 --gid khadbot --home-dir /home/khadbot --create-home khadbot \
     && mkdir -p /var/lib/khadbot \
@@ -59,7 +63,8 @@ COPY --chown=khadbot:khadbot scripts/data/apply_bucket_lifecycle.py ./scripts/da
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    KHADBOT_DATA_DIR=/var/lib/khadbot
+    KHADBOT_DATA_DIR=/var/lib/khadbot \
+    KHADBOT_VERSION=$GIT_SHA
 
 USER khadbot
 EXPOSE 8000

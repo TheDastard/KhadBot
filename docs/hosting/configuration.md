@@ -18,6 +18,8 @@ Secrets are supplied by the platform's environment, never by the image, a compos
 | `KHADBOT_S3_REGION` | Region (`auto` for R2, any value for SeaweedFS). |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Bucket credentials, read by boto3 itself. |
 | `KHADBOT_DATA_DIR` | Scratch directory (the image sets `/var/lib/khadbot`). Not used for data in hosted mode. |
+| `KHADBOT_VERSION` | The build, written as `version` on every log line of every hosted command. The image sets it to the git SHA it was built from (build argument `GIT_SHA`); empty leaves the field out. |
+| `KHADBOT_ENV` | The deployment, written as `env` on every log line of every hosted command: `dev` (dev loop), `stack` (local compose stack), `staging`, `prod`. Empty leaves the field out. |
 
 In hosted mode the API also reads the sign-in settings (`WARCRAFTLOGS_CLIENT_ID`, `WARCRAFTLOGS_CLIENT_SECRET`, `KHADBOT_TOKEN_KEYS`, `KHADBOT_WCL_REDIRECT_URI`, `KHADBOT_POST_LOGIN_URL`, `KHADBOT_WEB_ORIGINS` and the session and access settings in `.env.example`) and refuses to start without the client credentials and a token key, or with the example token key from `deploy/stack.env` (it is public) when the redirect URI is not plain-HTTP localhost. It calls WCL only to check whether a user may read a report (cached in `report_access`) and to sign users in; it never fetches events. An access check that isn't cached costs a WCL request, so it first reserves 1 point from the WCL budget as the caller (a signed-out caller against the visitors' shared allowance); with none free the route answers 429 `budget_exhausted` with `wait_s` and `Retry-After`, without asking WCL. It queues ingests on the job queue and never runs them.
 

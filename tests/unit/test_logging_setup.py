@@ -1,8 +1,8 @@
 """
 tests/unit/test_logging_setup.py
 
-The hosted log format: one JSON object per line with the job, user and report IDs as context, and a log-capture test
-that no secret-shaped value reaches the output however it is logged (message, argument, URL, exception, header).
+The hosted log format: one JSON object per line with the process fields, the context IDs and the allowlisted event
+fields, and a log-capture test that no secret-shaped value reaches the output however it is logged (message, argument, URL, exception, header).
 All the secrets here are obviously fake.
 """
 
@@ -16,7 +16,7 @@ import logging
 import pytest
 
 from khadbot.config import LoggingConfig
-from khadbot.logging_setup import configure_logging, log_context, redact
+from khadbot.logging_setup import configure_logging, current_log_context, log_context, redact
 
 FERNET_KEY = base64.urlsafe_b64encode(
     b"fake-key-0123456789abcdef-012345"
@@ -116,3 +116,82 @@ def test_configuring_twice_leaves_one_handler():
         assert first not in logging.getLogger().handlers and second in logging.getLogger().handlers
     finally:
         logging.getLogger().removeHandler(second)
+
+
+# ---------------------------------------------------------------------------
+# Event and process fields
+# ---------------------------------------------------------------------------
+
+
+def test_allowlisted_event_fields_keep_their_json_types(stream):
+    logging.getLogger("khadbot.test").info(
+        "done", extra={"event": "job.finish", "duration_ms": 12, "points": 7.5, "attempt": 2, "outcome": "done"}
+    )
+    (line,) = lines(stream)
+    assert line["event"] == "job.finish" and line["outcome"] == "done"
+    assert line["duration_ms"] == 12 and isinstance(line["duration_ms"], int)
+    assert line["points"] == 7.5 and line["attempt"] == 2
+
+
+def test_a_field_outside_the_allowlist_is_dropped(stream):
+    logging.getLogger("khadbot.test").info("x", extra={"event": "x", "payload": {"token": "abc"}, "headers": "h"})
+    (line,) = lines(stream)
+    assert line["event"] == "x" and "payload" not in line and "headers" not in line
+
+
+def test_a_secret_shaped_event_field_is_redacted(stream):
+    secret = SECRETS["api key"]
+    logging.getLogger("khadbot.test").warning(
+        "failed", extra={"error_code": f"bad key {secret}", "route": ["access_token=" + SECRETS["access token"]]}
+    )
+    output = stream.getvalue()
+    assert secret not in output and SECRETS["access token"] not in output
+    (line,) = lines(stream)
+    assert "<redacted>" in line["error_code"] and isinstance(line["route"], str)
+
+
+def test_process_fields_appear_only_when_set():
+    buffer = io.StringIO()
+    config = LoggingConfig(log_format="json", log_level="INFO", version="c2bcd7e", env="stack")
+    handler = configure_logging(config, service="api", stream=buffer)
+    try:
+        with log_context(request_id="7f3a9c0e5b2d4e61", job_id="j1"):
+            logging.getLogger("khadbot.test").info("hit", extra={"event": "http.request", "status": 202})
+    finally:
+        logging.getLogger().removeHandler(handler)
+    (line,) = lines(buffer)
+    assert (line["service"], line["version"], line["env"]) == ("api", "c2bcd7e", "stack")
+    assert line["request_id"] == "7f3a9c0e5b2d4e61"
+    assert list(line) == [
+        "time", "level", "logger", "message", "service", "version", "env", "request_id", "job_id", "event", "status"
+    ]  # fmt: skip
+
+    empty = io.StringIO()
+    handler = configure_logging(LoggingConfig(log_format="json", version="", env=""), stream=empty)
+    try:
+        logging.getLogger("khadbot.test").info("plain")
+    finally:
+        logging.getLogger().removeHandler(handler)
+    (line,) = lines(empty)
+    assert not {"service", "version", "env"} & set(line)
+
+
+def test_current_log_context_is_a_copy():
+    assert current_log_context() == {}
+    with log_context(request_id="r1", user_id="u1"):
+        ids = current_log_context()
+        ids["user_id"] = "changed"
+        assert ids == {"request_id": "r1", "user_id": "changed"}
+        assert current_log_context() == {"request_id": "r1", "user_id": "u1"}
+    assert current_log_context() == {}
+
+
+def test_text_format_shows_event_fields():
+    buffer = io.StringIO()
+    handler = configure_logging(LoggingConfig(log_format="text", log_level="INFO"), stream=buffer)
+    try:
+        with log_context(job_id="job1"):
+            logging.getLogger("khadbot.test").info("finished", extra={"event": "job.finish", "duration_ms": 40})
+    finally:
+        logging.getLogger().removeHandler(handler)
+    assert buffer.getvalue().rstrip().endswith("finished [job_id=job1] event=job.finish duration_ms=40")

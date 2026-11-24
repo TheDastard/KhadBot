@@ -122,9 +122,8 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   falling back to the app token. A watch linked late ingests every past fight from the headroom.
 - **WCL budget gaps.** Concurrent jobs are charged each other's points (no per-request cost from WCL). A job that
   fails before any request is charged its estimate. A cancelled waiting job keeps its place in line until reached.
-- **Usage ledger gaps.** A failed ingest writes no WCL row. No job calls `record_llm_usage` yet. The default
-  `ANTHROPIC_MODEL` (`claude-sonnet-4-20250514`) has no price in `config/pricing/models.yaml`. Nothing warns when
-  prices go stale.
+- **Usage ledger gaps.** A failed ingest writes no WCL row. The default `ANTHROPIC_MODEL`
+  (`claude-sonnet-4-20250514`) has no price in `config/pricing/models.yaml`. Nothing warns when prices go stale.
 - **No error tracker**; errors reach the JSON logs only.
 - **Worker health is per machine.** `main.py worker --check` reads a local file; a heartbeat row would show other
   machines.

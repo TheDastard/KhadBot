@@ -611,12 +611,16 @@ class WclReplayConfig:
 class LoggingConfig:
     """
     Logging and worker liveness for hosted deployments. Logs are one JSON object per line on stdout; ``text`` gives
-    plain lines for a terminal. A worker touches ``worker_health_file`` every ``worker_heartbeat_s`` seconds, and
-    ``main.py worker --check`` (the container health check) fails when the file is older than ``worker_stale_s``.
+    plain lines for a terminal. Each JSON line names the build (``version``, the git SHA the image sets) and the
+    deployment (``env``: ``dev``, ``stack``, ``staging``, ``prod``) when they are set. A worker touches
+    ``worker_health_file`` every ``worker_heartbeat_s`` seconds, and ``main.py worker --check`` (the container health
+    check) fails when the file is older than ``worker_stale_s``.
     """
 
     log_format: str = field(default_factory=lambda: _optional("KHADBOT_LOG_FORMAT", "json").strip().lower())
     log_level: str = field(default_factory=lambda: _optional("KHADBOT_LOG_LEVEL", "INFO").strip().upper())
+    version: str = field(default_factory=lambda: _optional("KHADBOT_VERSION").strip())
+    env: str = field(default_factory=lambda: _optional("KHADBOT_ENV").strip())
     worker_health_file: str = field(
         default_factory=lambda: (
             _optional("KHADBOT_WORKER_HEALTH_FILE") or os.path.join(tempfile.gettempdir(), "khadbot-worker.alive")

@@ -505,7 +505,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     ):
         from khadbot.logging_setup import configure_logging
 
-        configure_logging()
+        configure_logging(service=command)
         if command in {"api", "worker"}:
             _log_development_switches()
             _announce_wcl_replay()

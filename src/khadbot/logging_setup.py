@@ -1,13 +1,17 @@
 """
 logging_setup.py
 
-Logging for the hosted service: one JSON object per line on stdout, carrying the job, user and report IDs of the work
-that wrote it, and scrubbed of anything shaped like a secret.
+Logging for the hosted service: one JSON object per line on stdout, carrying the process that wrote it, the request,
+job, user and report IDs of the work it belongs to and any allowlisted event fields, scrubbed of anything shaped like a
+secret.
 
-- ``configure_logging()`` replaces the root handler. ``KHADBOT_LOG_FORMAT`` is ``json`` (default) or ``text``;
-  ``KHADBOT_LOG_LEVEL`` is the level.
-- ``log_context(job_id=..., user_id=..., report_code=...)`` attaches IDs to every record logged inside the block,
-  including from tasks it starts. Only IDs are accepted: a value is a name or an identifier, never a credential.
+- ``configure_logging(service=...)`` replaces the root handler. ``KHADBOT_LOG_FORMAT`` is ``json`` (default) or
+  ``text``; ``KHADBOT_LOG_LEVEL`` is the level. Every JSON line carries ``service``, ``version`` (``KHADBOT_VERSION``)
+  and ``env`` (``KHADBOT_ENV``) when each has a value.
+- ``log_context(request_id=..., job_id=..., ...)`` attaches IDs to every record logged inside the block, including
+  from tasks it starts. Only IDs are accepted: a value is a name or an identifier, never a credential.
+- Event fields come from ``log.info(..., extra={"event": "job.finish", "duration_ms": 12})``. Only the names in
+  ``EVENT_FIELDS`` are written; numbers and booleans stay JSON numbers and booleans, anything else is redacted text.
 - ``redact()`` is the last line of defence. Code must not log tokens, cookies, client secrets, encryption keys or
   connection strings in the first place (``.claude/rules/hosted.md``); this removes the ones that slip into a message,
   an exception text or a URL. It masks credentials in URLs (``postgres://user:***@host``), ``key=value`` and
@@ -31,7 +35,25 @@ from typing import IO
 from khadbot.config import LoggingConfig
 
 REDACTED = "<redacted>"
-CONTEXT_FIELDS = ("job_id", "user_id", "report_code", "pull_key")
+CONTEXT_FIELDS = ("request_id", "job_id", "user_id", "report_code", "pull_key")
+EVENT_FIELDS = (
+    "event",
+    "duration_ms",
+    "outcome",
+    "status",
+    "method",
+    "route",
+    "error_code",
+    "attempt",
+    "queue",
+    "job_kind",
+    "points",
+    "model",
+    "input_tokens",
+    "output_tokens",
+    "op",
+    "bytes",
+)
 
 # ---------------------------------------------------------------------------
 # Redaction
@@ -76,7 +98,7 @@ _context: ContextVar[dict[str, str] | None] = ContextVar("khadbot_log_context", 
 
 @contextlib.contextmanager
 def log_context(**ids: str | None) -> Iterator[None]:
-    """Add IDs (``job_id``, ``user_id``, ``report_code``, ``pull_key``) to the records logged inside the block."""
+    """Add IDs (``request_id``, ``job_id``, ``user_id``, ``report_code``, ``pull_key``) to the records logged inside."""
     unknown = set(ids) - set(CONTEXT_FIELDS)
     if unknown:
         raise ValueError(f"Log context takes only {', '.join(CONTEXT_FIELDS)}; got {', '.join(sorted(unknown))}")
@@ -87,30 +109,64 @@ def log_context(**ids: str | None) -> Iterator[None]:
         _context.reset(token)
 
 
+def current_log_context() -> dict[str, str]:
+    """A copy of the IDs set by the enclosing ``log_context()`` blocks (empty outside any)."""
+    return dict(_context.get() or {})
+
+
+# ---------------------------------------------------------------------------
+# Event fields
+# ---------------------------------------------------------------------------
+
+_JsonValue = str | int | float | bool
+
+
+def _event_value(value: object) -> _JsonValue:
+    """``value`` as JSON: numbers and booleans unchanged, anything else as redacted text."""
+    if isinstance(value, bool | int | float):
+        return value
+    return redact(value if isinstance(value, str) else str(value))
+
+
+def _event_fields(record: logging.LogRecord) -> dict[str, _JsonValue]:
+    """The allowlisted ``extra=`` fields the record carries, in ``EVENT_FIELDS`` order."""
+    attrs = record.__dict__
+    return {name: _event_value(attrs[name]) for name in EVENT_FIELDS if attrs.get(name) is not None}
+
+
 # ---------------------------------------------------------------------------
 # Formatters
 # ---------------------------------------------------------------------------
 
 
 class JsonFormatter(logging.Formatter):
-    """One JSON object per record: ``time``, ``level``, ``logger``, ``message``, the context IDs and ``exc``."""
+    """
+    One JSON object per record: ``time``, ``level``, ``logger``, ``message``, then the process fields (``service``,
+    ``version``, ``env``, each only when set), the context IDs, the event fields and ``exc``.
+    """
+
+    def __init__(self, process: dict[str, str] | None = None) -> None:
+        super().__init__()
+        self._process = {key: value for key, value in (process or {}).items() if value}
 
     def format(self, record: logging.LogRecord) -> str:
-        entry: dict[str, str] = {
+        entry: dict[str, _JsonValue] = {
             "time": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
             "level": record.levelname,
             "logger": record.name,
             "message": redact(record.getMessage()),
         }
+        entry.update(self._process)
         for key, value in (_context.get() or {}).items():
             entry[key] = redact(value)
+        entry.update(_event_fields(record))
         if record.exc_info:
             entry["exc"] = redact(self.formatException(record.exc_info))
         return json.dumps(entry, ensure_ascii=False)
 
 
 class TextFormatter(logging.Formatter):
-    """Plain lines for a terminal, with the same redaction and the context IDs after the message."""
+    """Plain lines for a terminal, with the same redaction, then the context IDs and the event fields."""
 
     def __init__(self) -> None:
         super().__init__("%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -118,7 +174,9 @@ class TextFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         line = redact(super().format(record))
         ids = " ".join(f"{k}={redact(v)}" for k, v in (_context.get() or {}).items())
-        return f"{line} [{ids}]" if ids else line
+        fields = " ".join(f"{k}={v}" for k, v in _event_fields(record).items())
+        line = f"{line} [{ids}]" if ids else line
+        return f"{line} {fields}" if fields else line
 
 
 # ---------------------------------------------------------------------------
@@ -128,14 +186,18 @@ class TextFormatter(logging.Formatter):
 _HANDLER_MARK = "_khadbot_handler"
 
 
-def configure_logging(config: LoggingConfig | None = None, *, stream: IO[str] | None = None) -> logging.Handler:
+def configure_logging(
+    config: LoggingConfig | None = None, *, service: str | None = None, stream: IO[str] | None = None
+) -> logging.Handler:
     """
     Send the root logger to ``stream`` (stdout by default) in the configured format and level, replacing any handler
-    an earlier call installed. Returns the handler.
+    an earlier call installed. JSON lines carry ``service`` (the command, e.g. ``api``), ``version`` and ``env`` when
+    each has a value. Returns the handler.
     """
     cfg = config or LoggingConfig()
     handler = logging.StreamHandler(stream or sys.stdout)
-    handler.setFormatter(TextFormatter() if cfg.log_format == "text" else JsonFormatter())
+    process = {"service": service or "", "version": cfg.version, "env": cfg.env}
+    handler.setFormatter(TextFormatter() if cfg.log_format == "text" else JsonFormatter(process))
     setattr(handler, _HANDLER_MARK, True)
     root = logging.getLogger()
     for old in [h for h in root.handlers if getattr(h, _HANDLER_MARK, False)]:
@@ -145,4 +207,13 @@ def configure_logging(config: LoggingConfig | None = None, *, stream: IO[str] | 
     return handler
 
 
-__all__ = ["CONTEXT_FIELDS", "JsonFormatter", "TextFormatter", "configure_logging", "log_context", "redact"]
+__all__ = [
+    "CONTEXT_FIELDS",
+    "EVENT_FIELDS",
+    "JsonFormatter",
+    "TextFormatter",
+    "configure_logging",
+    "current_log_context",
+    "log_context",
+    "redact",
+]

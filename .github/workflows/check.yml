@@ -145,6 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GIT_LFS_SKIP_SMUDGE: "1"
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
         with:

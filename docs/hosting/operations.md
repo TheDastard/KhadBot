@@ -79,11 +79,21 @@ Model prices are in `config/pricing/models.yaml`, with the page they came from a
 
 ### Logs
 
-Hosted commands (`api`, `worker`, `migrate`, `backfill`, `usage`) log one JSON object per line to stdout: `time`, `level`, `logger`, `message`, and `job_id`, `user_id`, `report_code` when the line is written while a job runs, plus `exc` for an exception. Every message and exception text passes through a redaction step that masks passwords in URLs, values of secret-named pairs (`token`, `secret`, `password`, `key`, `cookie`, `session`, `authorization`), `Cookie`, `Set-Cookie` and `Authorization` header values, `Bearer` values, JWTs, Fernet-shaped keys and API key prefixes. That is a backstop: code still must not log them. The API runs uvicorn without its own log config, so its access lines go through the same handler.
+Hosted commands (`api`, `worker`, `migrate`, `backfill`, `usage`, `rotate-token-keys`) log one JSON object per line to stdout (`src/khadbot/logging_setup.py`). A field with no value is left out. The fields, in this order:
+
+| Group | Fields | Source |
+|---|---|---|
+| Base | `time`, `level`, `logger`, `message` | Every record. |
+| Process | `service` (the command: `api`, `worker`, ...), `version`, `env` | Set once at start; `version` and `env` from `KHADBOT_VERSION` and `KHADBOT_ENV` ([configuration](configuration.md)). |
+| Context | `request_id`, `job_id`, `user_id`, `report_code`, `pull_key` | `log_context()` around the work. |
+| Event | `event`, `duration_ms`, `outcome`, `status`, `method`, `route`, `error_code`, `attempt`, `queue`, `job_kind`, `points`, `model`, `input_tokens`, `output_tokens`, `op`, `bytes` | `extra=` on the call. |
+| Exception | `exc` | An exception's traceback. |
+
+Code logs an event with `log.info("Job finished", extra={"event": "job.finish", "duration_ms": 412, "outcome": "done"})`. Only the names in `EVENT_FIELDS` are written, so a secret or an unbounded value passed in `extra=` never reaches the line; a new field is added to that allowlist and this table together. Numbers and booleans stay JSON numbers and booleans; any other value is written as text. Every message, exception text, context ID and text event field passes through a redaction step that masks passwords in URLs, values of secret-named pairs (`token`, `secret`, `password`, `key`, `cookie`, `session`, `authorization`), `Cookie`, `Set-Cookie` and `Authorization` header values, `Bearer` values, JWTs, Fernet-shaped keys and API key prefixes. That is a backstop: code still must not log them. The API runs uvicorn without its own log config, so its access lines go through the same handler.
 
 | Variable | Meaning |
 |---|---|
-| `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs after the message). |
+| `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs and then the event fields after the message). |
 | `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). |
 
 There is no error tracker; `sentry-sdk` was not added.
