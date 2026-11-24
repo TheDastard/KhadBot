@@ -1,0 +1,154 @@
+# KhadBot's Grafana alert rules, loaded at Grafana's start (docs/hosting/observability.md, "Alerts").
+#
+# No contact point is provisioned yet: a firing rule shows in Grafana's alert list only. The thresholds are starting
+# values written here: Grafana does not expand environment variables in alert rule files, so the daily LLM cost limit
+# (5 USD, the khadbot-llm-cost-day rule) is changed in this file.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: khadbot
+    folder: KhadBot
+    interval: 1m
+    rules:
+      # The worker finished nothing for 10 minutes while a queue has had work ready for 10 minutes.
+      - uid: khadbot-worker-stalled
+        title: Worker stalled with work queued
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service="worker"} | event="job.finish" [10m])) or vector(0)'
+          - refId: B
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: khadbot-pg
+            model:
+              refId: B
+              format: table
+              rawQuery: true
+              editorMode: code
+              rawSql: >-
+                SELECT count(*) AS ready_jobs FROM procrastinate_jobs AS j
+                WHERE j.status = 'todo'
+                AND coalesce(j.scheduled_at, (SELECT min(e.at) FROM procrastinate_events AS e
+                WHERE e.job_id = j.id AND e.type = 'deferred')) <= now() - interval '10 minutes'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: '$A == 0 && $B > 0'
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        annotations:
+          summary: No job.finish line in 10 minutes while a queue has had ready work for 10 minutes.
+          description: Check the worker is running (Jobs dashboard, queue depth) and its WARNING and ERROR lines.
+        labels:
+          area: jobs
+
+      # More than 2% of API requests answered 5xx over 5 minutes.
+      - uid: khadbot-api-5xx
+        title: API 5xx above 2%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: >-
+                sum(count_over_time({service="api"} | event="http.request" | json status="status"
+                | __error__="" | status >= 500 [5m])) or vector(0)
+          - refId: B
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: loki
+            model:
+              refId: B
+              queryType: instant
+              expr: 'sum(count_over_time({service="api"} | event="http.request" [5m]))'
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: '$A / $B > 0.02'
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        annotations:
+          summary: More than 2% of API requests returned 5xx over the last 5 minutes.
+          description: Service dashboard, error_code counts and the WARNING feed.
+        labels:
+          area: api
+
+      # A job has waited for WCL points for more than 30 minutes (since it entered waiting_budget).
+      - uid: khadbot-budget-wait
+        title: Job waiting for WCL points over 30 minutes
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: khadbot-pg
+            model:
+              refId: A
+              format: table
+              rawQuery: true
+              editorMode: code
+              rawSql: >-
+                SELECT count(*) AS waiting_jobs FROM jobs
+                WHERE state = 'waiting_budget' AND updated_at < now() - interval '30 minutes'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [0]}
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        annotations:
+          summary: A job has waited for WCL points for more than 30 minutes.
+          description: Jobs dashboard, WCL budget wait; Spend dashboard for the points spent this hour.
+        labels:
+          area: budget
+
+      # Estimated LLM cost since 00:00 UTC is over the daily limit (5 USD).
+      - uid: khadbot-llm-cost-day
+        title: LLM cost today over the daily limit
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: {from: 600, to: 0}
+            datasourceUid: khadbot-pg
+            model:
+              refId: A
+              format: table
+              rawQuery: true
+              editorMode: code
+              rawSql: >-
+                SELECT coalesce(sum(cost_usd), 0) AS llm_usd_today FROM usage
+                WHERE kind = 'llm' AND at >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [5]}  # the daily limit in USD
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        annotations:
+          summary: Estimated LLM cost today (UTC) is over the 5 USD daily limit.
+          description: Spend dashboard, LLM cost per day by model and top users.
+        labels:
+          area: spend

@@ -1,0 +1,509 @@
+{
+  "uid": "khadbot-jobs",
+  "title": "KhadBot jobs",
+  "description": "The job queue: states, failures, queue depth, durations and the WCL budget wait.",
+  "tags": [
+    "khadbot"
+  ],
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "timezone": "utc",
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "env",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "query": {
+          "label": "env",
+          "stream": "",
+          "type": 1,
+          "refId": "LokiVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(env)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Jobs table",
+      "id": 1,
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Jobs now",
+      "description": "Active jobs by state, now.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT s.state AS metric, count(j.id) AS value\nFROM (VALUES ('queued'), ('running'), ('waiting_budget')) AS s(state)\nLEFT JOIN jobs j ON j.state = s.state\nGROUP BY s.state\nORDER BY s.state",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 8,
+        "h": 6
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Jobs created, by current state",
+      "description": "Jobs by the time they were created, stacked by the state each is in now.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, $__interval), state AS metric, count(*) AS value\nFROM jobs\nWHERE $__timeFilter(created_at)\nGROUP BY 1, 2\nORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 16,
+        "h": 6
+      }
+    },
+    {
+      "type": "table",
+      "title": "Failures by error_code",
+      "description": "Failed jobs that finished in the time range.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT coalesce(error_code, '(none)') AS error_code, kind, count(*) AS failures, max(finished_at) AS last\nFROM jobs\nWHERE state = 'failed' AND coalesce(finished_at, updated_at) BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1, 2\nORDER BY failures DESC",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Queue depth per queue",
+      "description": "procrastinate's rows per queue: todo now, todo scheduled for later (budget rechecks, retries), and doing. A queue shows once it has had a job.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT queue_name AS queue,\n       count(*) FILTER (WHERE status = 'todo' AND (scheduled_at IS NULL OR scheduled_at <= now())) AS todo_ready,\n       count(*) FILTER (WHERE status = 'todo' AND scheduled_at > now()) AS todo_scheduled,\n       count(*) FILTER (WHERE status = 'doing') AS doing\nFROM procrastinate_jobs\nGROUP BY queue_name\nORDER BY queue_name",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "row",
+      "title": "Worker (events job.start and job.finish)",
+      "id": 6,
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Job duration by kind (p50, p95)",
+      "description": "duration_ms of job.finish lines, per job kind.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "refId": "A",
+          "expr": "quantile_over_time(0.5, {env=~\"$env\"} | event=\"job.finish\" | json job_kind=\"job_kind\", duration_ms=\"duration_ms\" | __error__=\"\" | unwrap duration_ms [$__auto]) by (job_kind)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{job_kind}} p50"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "refId": "B",
+          "expr": "quantile_over_time(0.95, {env=~\"$env\"} | event=\"job.finish\" | json job_kind=\"job_kind\", duration_ms=\"duration_ms\" | __error__=\"\" | unwrap duration_ms [$__auto]) by (job_kind)",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{job_kind}} p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Job outcomes",
+      "description": "job.finish and job.settled lines by outcome: done, failed, retrying, cancelled, interrupted, waiting_budget, gone, awaiting_children. An ingest that waited for its process jobs logs awaiting_children, then its final state as job.settled.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "refId": "A",
+          "expr": "sum by (outcome) (count_over_time({env=~\"$env\"} | event=~\"job.finish|job.settled\" | json outcome=\"outcome\" [$__auto]))",
+          "editorMode": "code",
+          "queryType": "range",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 8,
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "row",
+      "title": "WCL budget wait",
+      "id": 9,
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Jobs waiting for WCL points",
+      "description": "Jobs in waiting_budget and how long the oldest has waited (since its last state change). The alert fires past 30 minutes.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT count(*) AS waiting,\n       coalesce(round(extract(epoch FROM now() - min(updated_at)) / 60), 0) AS longest_minutes\nFROM jobs\nWHERE state = 'waiting_budget'",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "id": 10,
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Waiting jobs",
+      "description": "Every job in waiting_budget, oldest first.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT id, kind, report_code, requested_by, updated_at AS waiting_since,\n       round(extract(epoch FROM now() - updated_at) / 60) AS minutes\nFROM jobs\nWHERE state = 'waiting_budget'\nORDER BY updated_at",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 11,
+      "gridPos": {
+        "x": 8,
+        "y": 25,
+        "w": 16,
+        "h": 8
+      }
+    }
+  ]
+}

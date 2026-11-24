@@ -52,7 +52,48 @@ Everything Grafana loads comes from `deploy/observability/grafana/`, mounted rea
 
 - `provisioning/datasources/datasources.yaml`: Loki (UID `loki`, the default) and Postgres as `khadbot_readonly` (UID `khadbot-pg`). Dashboards refer to these UIDs. The read-only role cannot read `wcl_tokens`, `sessions` or `oauth_states`; a table a dashboard needs is added to `readonly.sql`, since there are no default privileges for future tables.
 - `provisioning/dashboards/dashboards.yaml`: loads every JSON file in `dashboards/` into the KhadBot folder. Edit a dashboard in Grafana, export its JSON and save it there.
+- `provisioning/alerting/rules.yaml`: the alert rules ([Alerts](#alerts)).
+
+`tests/unit/deploy/test_observability.py` checks these files: they parse, dashboard and rule uids are unique, every query names a provisioned data source UID, and every SQL query reads only tables `readonly.sql` grants.
+
+## Dashboards
+
+Four dashboards in the KhadBot folder. Loki panels filter on the `env` variable (label values, default all); Postgres panels read the one database the data source points at.
+
+| Dashboard (uid) | Panels | Source |
+|---|---|---|
+| KhadBot service (`khadbot-service`) | Requests per minute by route; 5xx share; p50 and p95 `duration_ms` by route; `error_code` counts by service; a feed of WARNING and above from every KhadBot service; WCL requests and failures by `op`; LLM calls and p50/p95 duration by `model` | Loki |
+| KhadBot jobs (`khadbot-jobs`) | Active jobs by state now; jobs created over time, stacked by current state; failed jobs by `error_code`; procrastinate rows per queue (todo now, todo scheduled later, doing); p50/p95 duration by `job_kind` and outcomes from `job.finish` and `job.settled`; jobs in `waiting_budget` and how long the oldest has waited | Postgres (`jobs`, `procrastinate_jobs`) and Loki |
+| KhadBot spend (`khadbot-spend`) | LLM cost today (UTC); the app bucket's spent points and hourly limit now; LLM calls with no price; WCL points per hour from `usage` against the hourly limit in `wcl_budget`; LLM cost per day by model; top users and top guilds by LLM cost, then WCL points | Postgres (`usage`, `wcl_budget`) |
+| KhadBot follow an ID (`khadbot-follow-id`) | Text variables `request_id`, `job_id`, `report_code`, `user_id`; every line whose IDs start with the set values, oldest first; the matching `jobs` rows (a `job_id` also finds its process jobs) | Loki and Postgres (`jobs`) |
+
+Which log events feed which panels ([operations.md](operations.md#logs) has the fields):
+
+- `http.request`: the service dashboard's request, 5xx and duration panels, and the API side of `error_code` counts.
+- `job.finish`: job duration and outcomes, the worker side of `error_code` counts.
+- `job.settled`: the final outcome of each ingest that waited for its process jobs, in the outcomes panel.
+- `wcl.request`: WCL requests by `op`. Successful requests log at DEBUG, so they count only with `KHADBOT_LOG_LEVEL=DEBUG`; failures log at WARNING and always count.
+- `llm.call`: LLM calls and duration by model.
+
+In Follow an ID an empty variable matches every line, so set at least one and widen the time range to the request's or job's time. The jobs table matches `request_id` through `to_jsonb(j) ->> 'request_id'`, which finds nothing (rather than failing) while `jobs` has no `request_id` column. Every set variable must match (AND).
+
+## Alerts
+
+`provisioning/alerting/rules.yaml` holds four rules in the `khadbot` group (KhadBot folder), evaluated every minute. The thresholds are starting values.
+
+| Rule (uid) | Fires when | Reads |
+|---|---|---|
+| Worker stalled with work queued (`khadbot-worker-stalled`) | No `job.finish` line from the worker in 10 minutes while a procrastinate `todo` job has been ready (deferred or scheduled) for 10 minutes | Loki, `procrastinate_jobs`, `procrastinate_events` |
+| API 5xx above 2% (`khadbot-api-5xx`) | `http.request` lines with status 500 or above are more than 2% of the API's requests over 5 minutes; no requests is OK | Loki |
+| Job waiting for WCL points over 30 minutes (`khadbot-budget-wait`) | A job has been in `waiting_budget` for more than 30 minutes, measured from its `updated_at` (set when it entered the state) | `jobs` |
+| LLM cost today over the daily limit (`khadbot-llm-cost-day`) | Estimated LLM cost in `usage` since 00:00 UTC is over 5 USD | `usage` |
+
+Grafana does not expand environment variables in alert rule files, so the daily LLM limit is the threshold's `params` value in `rules.yaml`, not a setting. No contact point is provisioned: a firing rule shows in Grafana's Alerting list only.
 
 ## Docker socket on Windows
 
 Docker Desktop (engine 29.9.3, Linux containers) on Windows 11 exposes the engine to a container that mounts `/var/run/docker.sock:/var/run/docker.sock`: a throwaway `docker:27-cli` container listed the running containers through it, and Alloy discovers the stack's containers the same way. From Git Bash, run such a `docker run -v` with `MSYS_NO_PATHCONV=1`, or Git Bash rewrites `/var/run` to a Windows path; `docker compose` reads the mount from `compose.yaml` and is unaffected. The dev loop's file tailing needs no socket.
+
+## Open questions
+
+- Where alerts are sent (the contact point and channel). Until that is chosen, the rules notify no one.

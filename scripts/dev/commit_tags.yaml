@@ -340,6 +340,7 @@ tags:
         paths:
           - deploy/observability/**
           - docs/hosting/observability.md
+          - tests/unit/deploy/test_observability.py
 
   # ── Repo-wide ────────────────────────────────────────────────────────────
   repo:

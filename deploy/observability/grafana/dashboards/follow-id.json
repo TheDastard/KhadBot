@@ -1,0 +1,179 @@
+{
+  "uid": "khadbot-follow-id",
+  "title": "KhadBot follow an ID",
+  "description": "Every log line and jobs row for a request, job, report or user.",
+  "tags": [
+    "khadbot"
+  ],
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "",
+  "timezone": "utc",
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "env",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "query": {
+          "label": "env",
+          "stream": "",
+          "type": 1,
+          "refId": "LokiVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(env)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "sort": 1
+      },
+      {
+        "name": "request_id",
+        "label": "request_id",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "name": "job_id",
+        "label": "job_id",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "name": "report_code",
+        "label": "report_code",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "hide": 0
+      },
+      {
+        "name": "user_id",
+        "label": "user_id",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "hide": 0
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Matching lines, oldest first",
+      "description": "Every line whose IDs start with the values set above; empty variables match everything. Set at least one, and widen the time range to the job's or request's time.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "refId": "A",
+          "expr": "{env=~\"$env\"} | request_id=~\"${request_id:regex}.*\" | job_id=~\"${job_id:regex}.*\" | report_code=~\"${report_code:regex}.*\" | user_id=~\"${user_id:regex}.*\"",
+          "editorMode": "code",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Ascending",
+        "prettifyLogMessage": false
+      },
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 14
+      }
+    },
+    {
+      "type": "table",
+      "title": "Matching jobs",
+      "description": "jobs rows matching every variable set (a job_id also finds its process jobs). request_id matches once jobs has a request_id column; before that it matches nothing. With no variable set, the 200 newest jobs.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT id, kind, state, report_code, pull_key, parent_id, requested_by, error_code, attempts, points_spent,\n       created_at, started_at, finished_at\nFROM jobs AS j\nWHERE (${job_id:sqlstring} = '' OR j.id = ${job_id:sqlstring} OR j.parent_id = ${job_id:sqlstring})\n  AND (${report_code:sqlstring} = '' OR j.report_code = ${report_code:sqlstring})\n  AND (${user_id:sqlstring} = '' OR j.requested_by = ${user_id:sqlstring})\n  AND (${request_id:sqlstring} = '' OR to_jsonb(j) ->> 'request_id' = ${request_id:sqlstring})\nORDER BY created_at DESC\nLIMIT 200",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 24,
+        "h": 10
+      }
+    }
+  ]
+}

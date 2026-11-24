@@ -1,0 +1,394 @@
+{
+  "uid": "khadbot-spend",
+  "title": "KhadBot spend",
+  "description": "WCL points and LLM cost from the usage ledger.",
+  "tags": [
+    "khadbot"
+  ],
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "1m",
+  "timezone": "utc",
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "LLM cost today (UTC)",
+      "description": "Estimated from config/pricing/models.yaml; calls of a model with no price count as 0.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT coalesce(sum(cost_usd), 0) AS \"LLM cost today\"\nFROM usage\nWHERE kind = 'llm' AND at >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "id": 1,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "WCL window now",
+      "description": "The app bucket's points spent this window and its hourly limit, from the wcl_budget row. Empty until the budget's first change.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT (state -> 'bucket' ->> 'spent')::double precision AS spent,\n       (state -> 'bucket' ->> 'limit_per_hour')::double precision AS \"limit per hour\"\nFROM wcl_budget\nWHERE bucket = 'app'",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "id": 2,
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 10,
+        "h": 5
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Unpriced LLM calls",
+      "description": "usage rows of a model missing from config/pricing/models.yaml: their cost is unknown.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT count(*) AS \"calls without a price\"\nFROM usage\nWHERE kind = 'llm' AND cost_usd IS NULL AND $__timeFilter(at)",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "id": 3,
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 5
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "WCL points per hour against the budget",
+      "description": "Measured WCL points from the usage ledger (one row per finished ingest), per hour, with the app bucket's hourly limit from wcl_budget.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT $__timeGroupAlias(at, 1h), sum(wcl_points) AS \"points spent\"\nFROM usage\nWHERE kind = 'wcl' AND $__timeFilter(at)\nGROUP BY 1\nORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "B",
+          "rawSql": "SELECT t.time, (state -> 'bucket' ->> 'limit_per_hour')::double precision AS \"hourly limit\"\nFROM wcl_budget, (VALUES ($__timeFrom()::timestamptz), ($__timeTo()::timestamptz)) AS t(time)\nWHERE bucket = 'app'\nORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM cost per day by model",
+      "description": "Estimated LLM cost per UTC day from the usage ledger.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT $__timeGroupAlias(at, 1d), model AS metric, sum(cost_usd) AS value\nFROM usage\nWHERE kind = 'llm' AND $__timeFilter(at)\nGROUP BY 1, 2\nORDER BY 1",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top users by spend",
+      "description": "Users by estimated LLM cost, then WCL points, over the time range.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT coalesce(user_id, '(none)') AS user_id,\n       sum(cost_usd) FILTER (WHERE kind = 'llm') AS llm_usd,\n       sum(wcl_points) FILTER (WHERE kind = 'wcl') AS wcl_points,\n       count(*) AS usage_rows\nFROM usage\nWHERE $__timeFilter(at)\nGROUP BY 1\nORDER BY llm_usd DESC NULLS LAST, wcl_points DESC NULLS LAST\nLIMIT 20",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 6,
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top guilds by spend",
+      "description": "WCL guilds by estimated LLM cost, then WCL points. guild_id is null until report metadata fills it.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "khadbot-pg"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "khadbot-pg"
+          },
+          "refId": "A",
+          "rawSql": "SELECT coalesce(guild_id::text, '(unknown)') AS guild_id,\n       sum(cost_usd) FILTER (WHERE kind = 'llm') AS llm_usd,\n       sum(wcl_points) FILTER (WHERE kind = 'wcl') AS wcl_points,\n       count(*) AS usage_rows\nFROM usage\nWHERE $__timeFilter(at)\nGROUP BY 1\nORDER BY llm_usd DESC NULLS LAST, wcl_points DESC NULLS LAST\nLIMIT 20",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "id": 7,
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      }
+    }
+  ]
+}
