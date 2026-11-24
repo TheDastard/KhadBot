@@ -192,3 +192,17 @@ models", `mech` → `MechanicRecord` (`MechanicStat` plus `description?` (absent
 The refactor plan does not cover the names route. Wherever the web portal plan lists
 `GET /v1/encounters/{id}/names`, add: "`mechanic_descriptions: dict[str, str]`, mechanic ID to its description,
 for the mechanics that have one (every mechanic with a failure rule), beside `mechanics`."
+
+## web/mechanic-tooltips
+
+### Refactor plan 6.2: encounter file, mechanic `icon_ability_id`
+
+Add to the mechanic fields after `ability_ids`: "`icon_ability_id` (optional): which of the mechanic's
+`ability_ids` stands for it as an icon; one outside them is a load error. Unset, the first ability ID is used. It is
+part of the canonical dump only when set, so files without it keep their hash."
+
+### Web portal plan: encounter names
+
+Wherever the web portal plan lists `GET /v1/encounters/{id}/names`, add: "`mechanic_info: dict[str, MechanicInfo]`
+for every mechanic: `ability_ids`, `icon_ability_id` (resolved), `kind`, `severity` and `failure_summary` (the
+failure rule in plain words, null without a rule)."

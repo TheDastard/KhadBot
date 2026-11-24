@@ -689,6 +689,26 @@ class TestEncounterFile:
         assert encfile_hash(reviewed) == encfile_hash(unset)
         assert encfile_hash(reviewed.for_difficulty("heroic")) == encfile_hash(unset.for_difficulty("heroic"))
 
+    def test_icon_ability_defaults_to_the_first_ability(self, enc_data):
+        mech = parse_encounter(enc_data).mechanics[0]
+        assert mech.icon_ability_id is None
+        assert mech.icon_id == mech.ability_ids[0]
+
+    def test_icon_ability_must_be_one_of_the_mechanics_abilities(self, enc_data):
+        enc_data["mechanics"][0]["ability_ids"] = [900101, 900199]
+        enc_data["mechanics"][0]["icon_ability_id"] = 900199
+        assert parse_encounter(enc_data).mechanics[0].icon_id == 900199
+        enc_data["mechanics"][0]["icon_ability_id"] = 900198
+        with pytest.raises(ConfigurationError, match="'icon_ability_id' must be one of its 'ability_ids'"):
+            parse_encounter(enc_data)
+
+    def test_icon_ability_is_hashed_and_an_unset_one_stays_out_of_the_dump(self, enc_data):
+        enc_data["mechanics"][0]["ability_ids"] = [900101, 900199]
+        bare = parse_encounter(enc_data)
+        assert "icon_ability_id" not in bare.mechanics[0].model_dump()
+        enc_data["mechanics"][0]["icon_ability_id"] = 900199
+        assert encfile_hash(parse_encounter(enc_data)) != encfile_hash(bare)
+
     def test_repeat_is_checked_per_difficulty(self, enc_data):
         # On heroic the repeating phase ends the list; the mythic-only phase after it doesn't break that.
         enc_data["phases"] = [{**p, "difficulties": ["heroic", "mythic"]} for p in enc_data["phases"]]

@@ -16,9 +16,14 @@ from fastapi.testclient import TestClient
 from helpers.encounter.real_fixtures import WCL_FIXTURES
 
 from khadbot.api import create_app
-from khadbot.api.names import cooldowns_response, short_phase_name
+from khadbot.api.names import cooldowns_response, failure_summary, short_phase_name
 from khadbot.api.schemas import PlayerClass
-from khadbot.encounter.config_files import load_all_encounters, load_cooldowns, load_encounter_view
+from khadbot.encounter.config_files import (
+    FailureRule,
+    load_all_encounters,
+    load_cooldowns,
+    load_encounter_view,
+)
 
 ULATEK, HEROIC = 3492, 4
 NYMRISSA, MYTHIC = 3379, 5
@@ -40,6 +45,21 @@ def _registries(ds):
 # ---------------------------------------------------------------------------
 
 
+def _info(enc) -> dict:
+    if enc is None:
+        return {}
+    return {
+        x.id: {
+            "ability_ids": x.ability_ids,
+            "icon_ability_id": x.icon_id,
+            "kind": x.kind,
+            "severity": x.severity,
+            "failure_summary": failure_summary(x.failure),
+        }
+        for x in enc.mechanics
+    }
+
+
 def _phases(enc) -> dict:
     return {x.id: {"name": x.name, "short_name": short_phase_name(x.name)} for x in enc.phases} if enc else {}
 
@@ -58,6 +78,7 @@ def test_names_for_each_stored_encounter_and_difficulty(dataset, client):
             {x.id: x.description for x in enc.mechanics if x.description} if enc else {}
         )
         assert body["mechanic_verified"] == ({x.id: x.verified for x in enc.mechanics} if enc else {})
+        assert body["mechanic_info"] == _info(enc)
         assert body["damage_windows"] == ({x.id: x.name for x in enc.damage_windows} if enc else {})
         assert "cooldowns" not in body
 
@@ -94,6 +115,12 @@ def test_names_for_ulatek_heroic(real_dataset):
     assert body["mechanic_descriptions"] == {x.id: x.description for x in enc.mechanics if x.description}
     # Every mechanic is listed; none of the authored ones has been verified by a person yet.
     assert body["mechanic_verified"] == {x.id: x.verified for x in enc.mechanics}
+    # Every mechanic has its abilities and an icon ability among them; a summary exactly when it has a failure rule.
+    assert body["mechanic_info"] == _info(enc)
+    for x in enc.mechanics:
+        info = body["mechanic_info"][x.id]
+        assert info["icon_ability_id"] in info["ability_ids"]
+        assert (info["failure_summary"] is None) == (x.failure is None)
 
 
 def test_a_difficulty_without_an_encounter_file_is_an_empty_lookup(real_dataset):
@@ -109,8 +136,43 @@ def test_a_difficulty_without_an_encounter_file_is_an_empty_lookup(real_dataset)
         "mechanics": {},
         "mechanic_descriptions": {},
         "mechanic_verified": {},
+        "mechanic_info": {},
         "damage_windows": {},
     }
+
+
+@pytest.mark.parametrize(
+    ("rule", "text"),
+    [
+        ({"rule": "any_hit"}, "Every hit is a failure, charged to the player hit."),
+        ({"rule": "hits_per_cluster_gt", "value": 0}, "A player hit by an occurrence fails once per occurrence"),
+        ({"rule": "hits_per_cluster_gt", "value": 1}, "more than once by one occurrence"),
+        ({"rule": "hits_per_cluster_gt", "value": 3}, "more than 3 times by one occurrence"),
+        ({"rule": "hit_amount_gt", "value": 250000}, "above 250,000 damage"),
+        ({"rule": "hits_on_non_tank", "ms": 3000}, "in the 3 s before"),
+        ({"rule": "soak_count_lt", "value": 4}, "fewer than 4 players is a failure, charged to no one."),
+        ({"rule": "debuff_duration_gt", "ms": 1500}, "longer than 1.5 s"),
+        ({"rule": "per_cluster", "blame": {"by": "nobody"}}, "the whole raid's failure"),
+        (
+            {"rule": "per_cluster", "blame": {"by": "aggro_holder", "npc_game_id": 1, "ms": 30000, "reach_yd": 21}},
+            "last held the NPC's aggro (its latest swing or taunt in the 30 s before); its reach is 21 yd",
+        ),
+        ({"rule": "per_cluster", "blame": {"by": "cast_target", "ability_id": 2}}, "target of the enemy cast"),
+        ({"rule": "aura_removed_by", "ability_ids": [3], "on_death": True}, "at the player's death also counts"),
+        ({"rule": "not_interrupted"}, "not interrupted is a failure, charged to no one."),
+    ],
+)
+def test_failure_summary_fills_in_the_rule(rule, text):
+    assert text in (failure_summary(FailureRule.model_validate(rule)) or "")
+
+
+def test_every_failure_rule_has_a_summary():
+    for enc in load_all_encounters().values():
+        for m in enc.mechanics:
+            if m.failure is not None:
+                summary = failure_summary(m.failure)
+                assert summary and summary.endswith(".") and "None" not in summary, (m.id, summary)
+    assert failure_summary(None) is None
 
 
 def test_unknown_encounter_and_difficulty_are_empty_lookups(client):

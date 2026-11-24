@@ -397,20 +397,27 @@ class Mechanic(_Entry):
     """
     One mechanic. ``description`` says in plain text what the mechanic does and, when it has a ``failure`` rule, what
     a failure means (who failed and how). It is shown to people and to the analyst, so a mechanic with a failure rule
-    requires one. ``verified`` is true only once a person has inspected the entry (IDs, rule, threshold, blame and
-    description) against the logs; the dashboard tags unverified mechanics. It is left out of ``encfile_hash``, since
-    analysis never reads it.
+    requires one. ``icon_ability_id`` picks which of its ``ability_ids`` stands for it as an icon (``icon_id``: the
+    first ability ID when unset). ``verified`` is true only once a person has inspected the entry (IDs, rule,
+    threshold, blame and description) against the logs; the dashboard tags unverified mechanics. It is left out of
+    ``encfile_hash``, since analysis never reads it.
     """
 
     id: str
     name: str
     description: str | None = Field(None, min_length=1, max_length=MECHANIC_DESCRIPTION_MAX_CHARS)
     ability_ids: list[int] = Field(min_length=1)
+    icon_ability_id: int | None = None
     kind: MechanicKind
     failure: FailureRule | None = None
     cluster_window_ms: int = 1000
     severity: Literal["low", "medium", "high"] = "medium"
     verified: bool = False
+
+    @property
+    def icon_id(self) -> int:
+        """The ability that stands for the mechanic as an icon: ``icon_ability_id``, else the first ability ID."""
+        return self.icon_ability_id if self.icon_ability_id is not None else self.ability_ids[0]
 
     @model_validator(mode="after")
     def _description(self) -> Mechanic:
@@ -422,14 +429,17 @@ class Mechanic(_Entry):
                 raise ValueError(
                     f"mechanic '{self.id}': 'description' must be one line of plain text with no surrounding spaces"
                 )
+        if self.icon_ability_id is not None and self.icon_ability_id not in self.ability_ids:
+            raise ValueError(f"mechanic '{self.id}': 'icon_ability_id' must be one of its 'ability_ids'")
         return self
 
     @model_serializer(mode="wrap")
-    def _drop_unset_description(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
-        # Leaving an unset description out keeps the content hash of mechanics that have none what it was before.
+    def _drop_unset_optionals(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        # Leaving an unset description or icon out keeps the content hash of mechanics that have neither what it was.
         data: dict[str, Any] = handler(self)
-        if data.get("description") is None:
-            data.pop("description", None)
+        for key in ("description", "icon_ability_id"):
+            if data.get(key) is None:
+                data.pop(key, None)
         return data
 
 

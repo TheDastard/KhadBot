@@ -53,6 +53,26 @@ class PhaseName(BaseModel):
     short_name: str  # "Stage Three: Ula'tek's Ascension" -> "Stage Three"
 
 
+class MechanicInfo(BaseModel):
+    """What the pull page shows about a mechanic beside its name: its abilities, icon, kind, severity and rule."""
+
+    ability_ids: list[int] = Field(description="The game's spell IDs of the mechanic's abilities, in the file's order")
+    icon_ability_id: int = Field(
+        description=(
+            "The one of `ability_ids` that stands for the mechanic as an icon: the encounter file's `icon_ability_id`, "
+            "else the first ability ID"
+        )
+    )
+    kind: Literal["avoidable", "soak", "interrupt", "dispel", "debuff", "unavoidable"]
+    severity: Literal["low", "medium", "high"]
+    failure_summary: str | None = Field(
+        description=(
+            "How the mechanic's failure rule counts failures and who they are charged to, in plain words built from "
+            "the rule and its parameters; null for a mechanic without a failure rule"
+        )
+    )
+
+
 class EncounterNames(BaseModel):
     """
     Display names for the IDs records carry: phases, mechanics (with their descriptions) and damage windows from the
@@ -77,6 +97,9 @@ class EncounterNames(BaseModel):
             "Mechanic ID -> whether a person has inspected the encounter file's entry against the logs; every "
             "mechanic in ``mechanics`` is listed. False entries are shown as unverified."
         )
+    )
+    mechanic_info: dict[str, MechanicInfo] = Field(
+        description="Mechanic ID -> its abilities, icon ability, kind, severity and failure summary; every mechanic"
     )
     damage_windows: dict[str, str]  # damage window ID -> name
 

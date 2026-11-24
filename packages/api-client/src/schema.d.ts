@@ -183,9 +183,10 @@ export interface paths {
         /**
          * Get Names
          * @description Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a
-         *     short name for tight spaces, and each mechanic that has one its plain-text description. Each mechanic also says
-         *     whether a person has verified it. An encounter or difficulty without an encounter file answers an empty lookup,
-         *     not an error. Cooldown names are ``GET /v1/cooldowns``.
+         *     short name for tight spaces, each mechanic that has one its plain-text description, every mechanic whether a
+         *     person has verified it, and its abilities, icon ability, kind, severity and failure rule in plain words
+         *     (`mechanic_info`). An encounter or difficulty without an encounter file answers an empty lookup, not an
+         *     error. Cooldown names are ``GET /v1/cooldowns``.
          */
         get: operations["get_names_v1_encounters__encounter_id__names_get"];
         put?: never;
@@ -1130,6 +1131,13 @@ export interface components {
                 [key: string]: string;
             };
             /**
+             * Mechanic Info
+             * @description Mechanic ID -> its abilities, icon ability, kind, severity and failure summary; every mechanic
+             */
+            mechanic_info: {
+                [key: string]: components["schemas"]["MechanicInfo"];
+            };
+            /**
              * Mechanic Verified
              * @description Mechanic ID -> whether a person has inspected the encounter file's entry against the logs; every mechanic in ``mechanics`` is listed. False entries are shown as unverified.
              */
@@ -1771,6 +1779,37 @@ export interface components {
             record: components["schemas"]["MechanicRecord"];
             /** Ref */
             ref: string;
+        };
+        /**
+         * MechanicInfo
+         * @description What the pull page shows about a mechanic beside its name: its abilities, icon, kind, severity and rule.
+         */
+        MechanicInfo: {
+            /**
+             * Ability Ids
+             * @description The game's spell IDs of the mechanic's abilities, in the file's order
+             */
+            ability_ids: number[];
+            /**
+             * Failure Summary
+             * @description How the mechanic's failure rule counts failures and who they are charged to, in plain words built from the rule and its parameters; null for a mechanic without a failure rule
+             */
+            failure_summary: string | null;
+            /**
+             * Icon Ability Id
+             * @description The one of `ability_ids` that stands for the mechanic as an icon: the encounter file's `icon_ability_id`, else the first ability ID
+             */
+            icon_ability_id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "avoidable" | "soak" | "interrupt" | "dispel" | "debuff" | "unavoidable";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high";
         };
         /**
          * MechanicMarker

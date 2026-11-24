@@ -983,6 +983,14 @@
             "title": "Mechanic Descriptions",
             "type": "object"
           },
+          "mechanic_info": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MechanicInfo"
+            },
+            "description": "Mechanic ID -> its abilities, icon ability, kind, severity and failure summary; every mechanic",
+            "title": "Mechanic Info",
+            "type": "object"
+          },
           "mechanic_verified": {
             "additionalProperties": {
               "type": "boolean"
@@ -1015,6 +1023,7 @@
           "mechanics",
           "mechanic_descriptions",
           "mechanic_verified",
+          "mechanic_info",
           "damage_windows"
         ],
         "title": "EncounterNames",
@@ -2510,6 +2519,66 @@
           "record"
         ],
         "title": "MechanicEvidence",
+        "type": "object"
+      },
+      "MechanicInfo": {
+        "description": "What the pull page shows about a mechanic beside its name: its abilities, icon, kind, severity and rule.",
+        "properties": {
+          "ability_ids": {
+            "description": "The game's spell IDs of the mechanic's abilities, in the file's order",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Ability Ids",
+            "type": "array"
+          },
+          "failure_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the mechanic's failure rule counts failures and who they are charged to, in plain words built from the rule and its parameters; null for a mechanic without a failure rule",
+            "title": "Failure Summary"
+          },
+          "icon_ability_id": {
+            "description": "The one of `ability_ids` that stands for the mechanic as an icon: the encounter file's `icon_ability_id`, else the first ability ID",
+            "title": "Icon Ability Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "avoidable",
+              "soak",
+              "interrupt",
+              "dispel",
+              "debuff",
+              "unavoidable"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ability_ids",
+          "icon_ability_id",
+          "kind",
+          "severity",
+          "failure_summary"
+        ],
+        "title": "MechanicInfo",
         "type": "object"
       },
       "MechanicMarker": {
@@ -5278,7 +5347,7 @@
     },
     "/v1/encounters/{encounter_id}/names": {
       "get": {
-        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces, and each mechanic that has one its plain-text description. Each mechanic also says\nwhether a person has verified it. An encounter or difficulty without an encounter file answers an empty lookup,\nnot an error. Cooldown names are ``GET /v1/cooldowns``.",
+        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces, each mechanic that has one its plain-text description, every mechanic whether a\nperson has verified it, and its abilities, icon ability, kind, severity and failure rule in plain words\n(`mechanic_info`). An encounter or difficulty without an encounter file answers an empty lookup, not an\nerror. Cooldown names are ``GET /v1/cooldowns``.",
         "operationId": "get_names_v1_encounters__encounter_id__names_get",
         "parameters": [
           {

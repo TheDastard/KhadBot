@@ -102,6 +102,7 @@ describe("names", () => {
       mechanics: { swirl: "Swirl", bite: "Bite" },
       mechanic_descriptions: {},
       mechanic_verified: { swirl: false, bite: true },
+      mechanic_info: {},
       damage_windows: {},
     } as Parameters<typeof buildNames>[0];
     const names = buildNames(encounter, undefined);

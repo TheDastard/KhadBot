@@ -29,6 +29,11 @@ anomaly, who a failure is charged to, and how aggro and positions feed that. The
   files write it explicitly. It is left out of `encfile_hash`, so flipping it rebuilds no annotation, digest or
   finding; analysis and the analyst never read it. `GET /v1/encounters/{id}/names` serves it (`mechanic_verified`)
   and the dashboard tags unverified mechanics in the Mechanics section, the mechanic panel and the death panel.
+- **Mechanic icons.** `icon_ability_id` (optional) names which of the mechanic's `ability_ids` stands for it as an
+  icon; one outside them fails at load. Unset, it is the first ability ID (`Mechanic.icon_id`). It is in
+  `encfile_hash` only when set. `GET /v1/encounters/{id}/names` serves the resolved ID in `mechanic_info`, beside
+  the abilities, kind, severity and `failure_summary`, the failure rule in plain words (one template per rule in
+  `api/names.py`, after `failure-rules.md`).
 - **Unknown keys are errors** (`extra="forbid"`), so typos fail at load.
 - **Triggers that match nothing yet.** `boss_hp_below` needs damage on the boss (no DamageDone spec) and
   `boss_aura_applied` needs auras on the boss (Buffs are fetched for friendlies only). Use `boss_cast`, `wcl_phase`
