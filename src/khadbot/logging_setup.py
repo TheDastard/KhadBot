@@ -10,6 +10,10 @@ secret.
   and ``env`` (``KHADBOT_ENV``) when each has a value.
 - ``log_context(request_id=..., job_id=..., ...)`` attaches IDs to every record logged inside the block, including
   from tasks it starts. Only IDs are accepted: a value is a name or an identifier, never a credential.
+- ``log_context_holder()`` opens a block whose IDs are learnt part-way through it: ``add_log_ids(user_id=...)``,
+  called anywhere inside (a FastAPI dependency in the thread pool or another task included), adds them to every record
+  logged in the block from then on. A context variable set in such a place would not reach the rest of the block; the
+  holder is one mutable dict that every copy of the context shares. ``log_context()`` IDs win over added ones.
 - Event fields come from ``log.info(..., extra={"event": "job.finish", "duration_ms": 12})``. Only the names in
   ``EVENT_FIELDS`` are written; numbers and booleans stay JSON numbers and booleans, anything else is redacted text.
 - ``redact()`` is the last line of defence. Code must not log tokens, cookies, client secrets, encryption keys or
@@ -94,24 +98,60 @@ def redact(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 _context: ContextVar[dict[str, str] | None] = ContextVar("khadbot_log_context", default=None)
+# The innermost log_context_holder()'s dict. The variable is set once per block; add_log_ids() mutates the dict, which
+# every copy of the context (thread pool calls, tasks) shares, so the change reaches the whole block.
+_holder: ContextVar[dict[str, str] | None] = ContextVar("khadbot_log_context_holder", default=None)
+
+
+def _checked(ids: dict[str, str | None]) -> dict[str, str]:
+    """``ids`` without the None values; raises ``ValueError`` for a name outside ``CONTEXT_FIELDS``."""
+    unknown = set(ids) - set(CONTEXT_FIELDS)
+    if unknown:
+        raise ValueError(f"Log context takes only {', '.join(CONTEXT_FIELDS)}; got {', '.join(sorted(unknown))}")
+    return {k: v for k, v in ids.items() if v is not None}
 
 
 @contextlib.contextmanager
 def log_context(**ids: str | None) -> Iterator[None]:
     """Add IDs (``request_id``, ``job_id``, ``user_id``, ``report_code``, ``pull_key``) to the records logged inside."""
-    unknown = set(ids) - set(CONTEXT_FIELDS)
-    if unknown:
-        raise ValueError(f"Log context takes only {', '.join(CONTEXT_FIELDS)}; got {', '.join(sorted(unknown))}")
-    token = _context.set({**(_context.get() or {}), **{k: v for k, v in ids.items() if v is not None}})
+    token = _context.set({**(_context.get() or {}), **_checked(ids)})
     try:
         yield
     finally:
         _context.reset(token)
 
 
+@contextlib.contextmanager
+def log_context_holder() -> Iterator[None]:
+    """
+    Open an empty holder for IDs learnt inside the block: ``add_log_ids()`` fills it, and every record logged in the
+    block after that carries them. An inner holder hides the outer one until it closes.
+    """
+    token = _holder.set({})
+    try:
+        yield
+    finally:
+        _holder.reset(token)
+
+
+def add_log_ids(**ids: str | None) -> None:
+    """
+    Add IDs to the innermost ``log_context_holder()``, so the rest of its block carries them, from whichever thread or
+    task calls this. Outside any holder it does nothing. Takes the same names as ``log_context()``.
+    """
+    checked = _checked(ids)
+    holder = _holder.get()
+    if holder is not None:
+        holder.update(checked)
+
+
 def current_log_context() -> dict[str, str]:
-    """A copy of the IDs set by the enclosing ``log_context()`` blocks (empty outside any)."""
-    return dict(_context.get() or {})
+    """
+    A copy of the IDs of the enclosing ``log_context()`` blocks and the innermost holder, in ``CONTEXT_FIELDS`` order
+    (empty outside any).
+    """
+    ids = {**(_holder.get() or {}), **(_context.get() or {})}
+    return {name: ids[name] for name in CONTEXT_FIELDS if name in ids}
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +197,7 @@ class JsonFormatter(logging.Formatter):
             "message": redact(record.getMessage()),
         }
         entry.update(self._process)
-        for key, value in (_context.get() or {}).items():
+        for key, value in current_log_context().items():
             entry[key] = redact(value)
         entry.update(_event_fields(record))
         if record.exc_info:
@@ -173,7 +213,7 @@ class TextFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         line = redact(super().format(record))
-        ids = " ".join(f"{k}={redact(v)}" for k, v in (_context.get() or {}).items())
+        ids = " ".join(f"{k}={redact(v)}" for k, v in current_log_context().items())
         fields = " ".join(f"{k}={v}" for k, v in _event_fields(record).items())
         line = f"{line} [{ids}]" if ids else line
         return f"{line} {fields}" if fields else line
@@ -212,8 +252,10 @@ __all__ = [
     "EVENT_FIELDS",
     "JsonFormatter",
     "TextFormatter",
+    "add_log_ids",
     "configure_logging",
     "current_log_context",
     "log_context",
+    "log_context_holder",
     "redact",
 ]

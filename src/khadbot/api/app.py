@@ -17,6 +17,9 @@ Hosted mode is ``create_app(auth=..., jobs=..., reports=...)``, built by ``main.
 - CORS allows the web origins (``KHADBOT_WEB_ORIGINS``) with credentials, ``GET``, ``POST`` and ``DELETE``, and the
   ``Content-Type``, ``X-KhadBot-CSRF`` and ``Last-Event-ID`` request headers, never a wildcard.
 
+In every mode ``RequestLog`` (``api/request_log.py``) gives each request an ID, returns it in ``X-Request-ID`` (exposed
+through CORS) and logs one ``http.request`` line; only CORS wraps it, so even its error answers carry CORS headers.
+
 ``GET /v1/health`` reports ``mode`` and ``features`` (``schemas.Features``). ``mode`` is the label the caller gives
 (``main.py serve`` says ``local``; ``main.py api`` and the documentation app say ``hosted``); nothing infers it from what
 is mounted, and clients never branch on it. ``features`` is what is mounted: each area sets its flag where it mounts
@@ -51,6 +54,7 @@ from khadbot.api.boss_art import BossArt, load_boss_art
 from khadbot.api.deps import ReportDirectory
 from khadbot.api.names import router as names_router
 from khadbot.api.night import ReadSource
+from khadbot.api.request_log import REQUEST_ID_HEADER, RequestLog
 from khadbot.api.routes import router
 from khadbot.api.schemas import API_VERSION, Features
 from khadbot.api.views import ApiContext, ApiError
@@ -164,7 +168,14 @@ def create_app(
     if budget is not None:
         app.state.budget = budget
     if auth is None:
-        app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
+        app.add_middleware(RequestLog)
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=CORS_ORIGINS,
+            allow_methods=["GET"],
+            allow_headers=["*"],
+            expose_headers=[REQUEST_ID_HEADER],
+        )
     else:
         from khadbot.api.limits import RequestLimits  # the body cap and the per-client request rate (api/limits.py)
 
@@ -173,14 +184,17 @@ def create_app(
         app.add_middleware(
             RequestLimits, max_body_bytes=settings.max_body_bytes, per_minute=settings.rate_limit(local=local)
         )
+        app.add_middleware(RequestLog)  # outside the limits, so their answers are logged and carry the request ID
         _add_hosted_cors(app, auth.config)  # added last, so it wraps the limits and their answers carry CORS headers
 
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
+        request.state.log_error_code = exc.code  # the request's http.request line carries it (api/request_log.py)
         return JSONResponse(status_code=exc.status, content={"code": exc.code, "message": exc.message})
 
     @app.exception_handler(RequestValidationError)
     async def _bad_request(request: Request, exc: RequestValidationError) -> JSONResponse:
+        request.state.log_error_code = "bad_request"
         problems = "; ".join(f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors())
         return JSONResponse(status_code=422, content={"code": "bad_request", "message": problems})
 
@@ -257,6 +271,7 @@ def _add_hosted_cors(app: FastAPI, config: AuthConfig) -> None:
         allow_credentials=True,
         allow_methods=HOSTED_CORS_METHODS,
         allow_headers=["Content-Type", CSRF_HEADER, "Last-Event-ID"],
+        expose_headers=[REQUEST_ID_HEADER],
     )
 
 

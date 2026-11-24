@@ -65,6 +65,7 @@ class RequestLimits:
             return
         wait = self._over_rate(scope)
         if wait is not None:
+            scope.setdefault("state", {})["log_error_code"] = "rate_limited"  # for the request's log line
             await _answer(
                 send,
                 429,
@@ -79,7 +80,7 @@ class RequestLimits:
             return
         declared = _content_length(scope)
         if declared is not None and declared > self.max_body_bytes:
-            await _too_large(send, self.max_body_bytes)
+            await _too_large(scope, send, self.max_body_bytes)
             return
         await self._with_counted_body(scope, receive, send)
 
@@ -133,7 +134,7 @@ class RequestLimits:
             if not overflowed or started:
                 raise
         if overflowed and not started:
-            await _too_large(send, self.max_body_bytes)
+            await _too_large(scope, send, self.max_body_bytes)
 
 
 def _content_length(scope: Scope) -> int | None:
@@ -146,7 +147,8 @@ def _content_length(scope: Scope) -> int | None:
     return None
 
 
-async def _too_large(send: Send, limit: int) -> None:
+async def _too_large(scope: Scope, send: Send, limit: int) -> None:
+    scope.setdefault("state", {})["log_error_code"] = "body_too_large"  # for the request's log line
     await _answer(send, 413, "body_too_large", f"The request body is larger than {limit} bytes.", {})
 
 

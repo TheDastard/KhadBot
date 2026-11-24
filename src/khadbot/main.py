@@ -146,10 +146,11 @@ def _run_api(host: str, port: int) -> None:
     if hosted and sys.platform == "win32":
         # psycopg's async connections (the job event stream, the queue) need the selector event loop, which Windows
         # does not use by default.
-        server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_config=None))
+        server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_config=None, access_log=False))
         asyncio.run(server.serve(), loop_factory=asyncio.SelectorEventLoop)
     else:
-        uvicorn.run(app, host=host, port=port, log_config=None)  # uvicorn logs through the root handler: JSON, redacted
+        # uvicorn logs through the root handler (JSON, redacted); api/request_log.py writes the access line
+        uvicorn.run(app, host=host, port=port, log_config=None, access_log=False)
 
 
 def _run_migrate() -> None:

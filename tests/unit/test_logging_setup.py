@@ -16,7 +16,14 @@ import logging
 import pytest
 
 from khadbot.config import LoggingConfig
-from khadbot.logging_setup import configure_logging, current_log_context, log_context, redact
+from khadbot.logging_setup import (
+    add_log_ids,
+    configure_logging,
+    current_log_context,
+    log_context,
+    log_context_holder,
+    redact,
+)
 
 FERNET_KEY = base64.urlsafe_b64encode(
     b"fake-key-0123456789abcdef-012345"
@@ -183,6 +190,59 @@ def test_current_log_context_is_a_copy():
         ids["user_id"] = "changed"
         assert ids == {"request_id": "r1", "user_id": "changed"}
         assert current_log_context() == {"request_id": "r1", "user_id": "u1"}
+    assert current_log_context() == {}
+
+
+# ---------------------------------------------------------------------------
+# IDs learnt inside a block
+# ---------------------------------------------------------------------------
+
+
+def test_ids_added_to_a_holder_reach_later_records_only(stream):
+    log = logging.getLogger("khadbot.test")
+    with log_context(request_id="r1"), log_context_holder():
+        log.info("before")
+        add_log_ids(user_id="u1")
+        log.info("after")
+    log.info("outside")
+    before, after, outside = lines(stream)
+    assert before["request_id"] == "r1" and "user_id" not in before
+    assert (after["request_id"], after["user_id"]) == ("r1", "u1")
+    assert "user_id" not in outside and "request_id" not in outside
+
+
+async def test_an_id_added_in_another_task_or_thread_reaches_the_block():
+    import asyncio
+
+    with log_context_holder():
+        await asyncio.to_thread(add_log_ids, user_id="from-thread")
+        assert current_log_context() == {"user_id": "from-thread"}
+        await asyncio.create_task(asyncio.to_thread(add_log_ids, report_code="ABC"))
+        assert current_log_context() == {"user_id": "from-thread", "report_code": "ABC"}
+
+
+def test_each_holder_starts_empty_and_an_inner_one_hides_the_outer():
+    with log_context_holder():
+        add_log_ids(user_id="first")
+        with log_context_holder():
+            assert current_log_context() == {}
+            add_log_ids(user_id="inner")
+            assert current_log_context() == {"user_id": "inner"}
+        assert current_log_context() == {"user_id": "first"}
+    with log_context_holder():
+        assert current_log_context() == {}
+
+
+def test_log_context_ids_win_and_the_order_is_fixed():
+    with log_context_holder(), log_context(user_id="explicit"):
+        add_log_ids(user_id="added", job_id="j1")
+        assert list(current_log_context().items()) == [("job_id", "j1"), ("user_id", "explicit")]
+
+
+def test_add_log_ids_takes_ids_only_and_does_nothing_outside_a_holder():
+    with pytest.raises(ValueError, match="takes only"):
+        add_log_ids(access_token="x")  # type: ignore[arg-type]
+    add_log_ids(user_id="nobody")
     assert current_log_context() == {}
 
 

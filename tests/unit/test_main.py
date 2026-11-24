@@ -117,7 +117,8 @@ class TestApiSubcommand:
             "host": "0.0.0.0",
             "port": 8123,
             "log_config": None,
-        }  # uvicorn logs via the root handler
+            "access_log": False,
+        }  # uvicorn logs via the root handler; api/request_log.py writes the access line
         assert run.call_args.args[0].state.ctx.read_source is None
         assert run.call_args.args[0].state.mode == "local"  # no hosted settings: the read routes only
 

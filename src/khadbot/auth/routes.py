@@ -39,6 +39,7 @@ from khadbot.auth.errors import AccessBudgetError, AuthError, CsrfError, LoginEr
 from khadbot.auth.service import AuthService
 from khadbot.auth.store import User
 from khadbot.errors import ErrorBody
+from khadbot.logging_setup import add_log_ids
 
 SESSION_COOKIE = "khadbot_session"
 LOGIN_COOKIE = "khadbot_login"
@@ -72,7 +73,10 @@ Auth = Annotated[AuthService, Depends(get_auth)]
 
 async def optional_user(request: Request, auth: Auth) -> User | None:
     """The signed-in user, or None for a visitor."""
-    return await auth.current_user(request.cookies.get(SESSION_COOKIE))
+    user = await auth.current_user(request.cookies.get(SESSION_COOKIE))
+    if user is not None:
+        add_log_ids(user_id=str(user.id))  # the request's later log lines carry it (api/request_log.py)
+    return user
 
 
 async def current_user(user: Annotated[User | None, Depends(optional_user)]) -> User:
@@ -188,6 +192,7 @@ def mount(app: FastAPI, service: AuthService) -> None:
 
     @app.exception_handler(AuthError)
     async def _auth_error(request: Request, exc: AuthError) -> JSONResponse:
+        request.state.log_error_code = exc.code  # the request's log line carries it (api/request_log.py)
         content: dict[str, object] = {"code": exc.code, "message": exc.message}
         headers = dict(_NO_STORE)
         if isinstance(exc, AccessBudgetError):  # the same body as the lookup's own 429 (schemas.BudgetWaitBody)
