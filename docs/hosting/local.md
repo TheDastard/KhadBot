@@ -10,9 +10,11 @@ Needs Docker with Compose. From the repository root:
     mise run stack:queue-smoke  # queue a job and check the worker finishes it
     mise run stack:logs
     mise run stack:down     # stop, keep the data volumes
-    mise run stack:reset    # stop and delete the database and bucket
+    mise run stack:reset    # stop and delete the database, bucket and collected logs
 
 Everything listens on 127.0.0.1: the API on 8000, Postgres on 5432 and the SeaweedFS S3 endpoint on 8333. The data lives in named Docker volumes; the local `.khadbot_data` directory is never mounted.
+
+To search the stack's logs in Grafana, add `mise run obs:up`; see [observability.md](observability.md).
 
 ### Seeding
 

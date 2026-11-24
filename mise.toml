@@ -188,11 +188,25 @@ run = "docker compose -f deploy/compose.yaml logs --follow --tail 100"
 
 [tasks."stack:down"]
 description = "Stop the stack and keep its data volumes"
-run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke --profile obs down"
 
 [tasks."stack:reset"]
-description = "Stop the stack and delete its data volumes (database and bucket)"
-run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes"
+description = "Stop the stack and delete its data volumes (database, bucket and the obs profile's logs)"
+run = "docker compose -f deploy/compose.yaml --profile seed --profile smoke --profile obs down --volumes"
+
+# ── Logs: Loki, Alloy and Grafana (opt-in obs profile; docs/hosting/observability.md) ──
+# Start after stack:up or dev:infra: --no-deps leaves the running Postgres, API and worker alone.
+[tasks."obs:up"]
+description = "Start Loki, Alloy and Grafana (127.0.0.1:3001) beside the running stack or dev loop"
+run = "docker compose -f deploy/compose.yaml --profile obs up --detach --no-deps loki alloy grafana obs-readonly"
+
+[tasks."obs:down"]
+description = "Stop Loki, Alloy and Grafana and keep their volumes"
+run = "docker compose -f deploy/compose.yaml --profile obs rm --stop --force loki alloy grafana obs-readonly"
+
+[tasks."obs:open"]
+description = "Open Grafana's Explore view"
+run = "uv run python -c \"import webbrowser; u='http://127.0.0.1:3001/explore'; print(u); webbrowser.open(u)\""
 
 
 # -- Native dev loop (needs Docker for Postgres and SeaweedFS; docs/hosting/local.md, "Local development") --

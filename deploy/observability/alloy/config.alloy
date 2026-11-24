@@ -1,0 +1,130 @@
+// Grafana Alloy for the local stack's obs profile (deploy/compose.yaml). It reads two sources and sends both to Loki:
+//
+// - the containers of the `khadbot` compose project, through the Docker socket mounted at /var/run/docker.sock;
+// - the native dev loop's files, .khadbot_dev_logs/<service>.jsonl, mounted read-only at /devlogs.
+//
+// KhadBot lines are JSON (docs/hosting/operations.md, "Logs"). Only service, level and env become labels; the IDs and
+// a few event fields become structured metadata; the line itself is stored unchanged. Postgres, SeaweedFS and the
+// observability services pass through as text with their service label. See docs/hosting/observability.md.
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Containers of the khadbot compose project
+// ---------------------------------------------------------------------------------------------------------------------
+
+discovery.docker "khadbot" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=khadbot"]
+  }
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.khadbot.targets
+
+  // The compose service name is the fallback service label; a JSON line's own `service` field overrides it.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.containers.output
+  relabel_rules = discovery.relabel.containers.rules
+  labels        = {env = "stack"}
+  forward_to    = [loki.process.khadbot.receiver]
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The native dev loop's files
+// ---------------------------------------------------------------------------------------------------------------------
+
+local.file_match "devlogs" {
+  path_targets = [{"__path__" = "/devlogs/*.jsonl"}]
+}
+
+discovery.relabel "devlogs" {
+  targets = local.file_match.devlogs.targets
+
+  // The file name is the fallback service label: /devlogs/worker.jsonl -> worker.
+  rule {
+    source_labels = ["__path__"]
+    regex         = ".*/([^/]+)\\.jsonl"
+    target_label  = "service"
+  }
+
+  rule {
+    target_label = "env"
+    replacement  = "dev"
+  }
+}
+
+loki.source.file "devlogs" {
+  targets    = discovery.relabel.devlogs.output
+  forward_to = [loki.process.khadbot.receiver]
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Parsing: three labels, IDs as structured metadata, the line kept as is
+// ---------------------------------------------------------------------------------------------------------------------
+
+loki.process "khadbot" {
+  // loki.source.file adds a filename label; the service label already says which file a line came from.
+  stage.label_drop {
+    values = ["filename"]
+  }
+
+  // Third-party and observability services write their own formats: keep their lines as text.
+  stage.match {
+    selector = "{service!~\"postgres|seaweedfs|loki|alloy|grafana\"}"
+
+    stage.json {
+      expressions = {
+        level       = "",
+        service     = "",
+        env         = "",
+        request_id  = "",
+        job_id      = "",
+        user_id     = "",
+        report_code = "",
+        pull_key    = "",
+        event       = "",
+        route       = "",
+        error_code  = "",
+      }
+    }
+
+    // A field the line does not carry leaves the label as it was (the compose service or file name, the source's env).
+    stage.labels {
+      values = {
+        level   = "",
+        service = "",
+        env     = "",
+      }
+    }
+
+    stage.structured_metadata {
+      values = {
+        request_id  = "",
+        job_id      = "",
+        user_id     = "",
+        report_code = "",
+        pull_key    = "",
+        event       = "",
+        route       = "",
+        error_code  = "",
+      }
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

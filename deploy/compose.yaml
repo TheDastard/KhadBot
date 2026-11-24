@@ -6,6 +6,8 @@
 #
 # Everything listens on 127.0.0.1 only. The stack stores its data in named volumes, never in a host directory: the
 # local .khadbot_data directory is not mounted and plays no part here.
+#
+# The opt-in "obs" profile adds Loki, Alloy and Grafana for searching logs (docs/hosting/observability.md).
 
 name: khadbot
 
@@ -145,6 +147,81 @@ services:
       createbucket:
         condition: service_completed_successfully
 
+  # ---- Observability (profile "obs"; `mise run obs:up`, docs/hosting/observability.md) --------------------------------
+  # Opt-in: plain `stack:up` and the CI stack job start none of these. obs:up starts them with --no-deps beside a
+  # running stack (stack:up) or the dev loop's Postgres (dev:infra).
+
+  loki:
+    image: grafana/loki:3.7.9
+    profiles: ["obs"]
+    command: ["-config.file=/etc/loki/config.yaml"]
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./observability/loki/config.yaml:/etc/loki/config.yaml:ro
+      - lokidata:/loki
+
+  # Reads the khadbot project's container logs through the Docker socket and the dev loop's .khadbot_dev_logs files.
+  alloy:
+    image: grafana/alloy:v1.21.3
+    profiles: ["obs"]
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    ports:
+      - "127.0.0.1:12345:12345"
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../.khadbot_dev_logs:/devlogs:ro
+      - alloydata:/var/lib/alloy/data
+    depends_on:
+      - loki
+
+  # Anonymous users are Admin: acceptable only because the port is bound to 127.0.0.1. The admin password in
+  # stack.env is for the HTTP API.
+  grafana:
+    image: grafana/grafana:13.3.0
+    profiles: ["obs"]
+    env_file: stack.env
+    environment:
+      GF_SERVER_HTTP_PORT: "3001"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - loki
+
+  # Creates or updates the khadbot_readonly role Grafana's Postgres data source uses, then exits. Needs the migrated
+  # tables: in the full stack it waits for migrate; obs:up runs it after stack:up or dev:infra.
+  obs-readonly:
+    image: postgres:17
+    profiles: ["obs"]
+    env_file: stack.env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        PGPASSWORD="$${POSTGRES_PASSWORD}" exec psql -h postgres -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}" \
+          -v ON_ERROR_STOP=1 -v ro_password="$${KHADBOT_READONLY_PASSWORD}" -v db="$${POSTGRES_DB}" \
+          -f /readonly.sql
+    volumes:
+      - ./observability/postgres/readonly.sql:/readonly.sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:
   seaweedfsdata:
+  lokidata:
+  alloydata:
+  grafanadata:

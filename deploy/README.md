@@ -8,6 +8,7 @@ Container and platform files for hosted mode.
 | `compose.yaml` | The local stack: Postgres, SeaweedFS (the local S3 store), a bucket-creation step, migrate, API and the job queue worker, with the seed and the queue smoke test behind profiles. |
 | `stack.env` | Throwaway environment for the local stack. Not secrets; never put real values here. |
 | `dev.env.example` | The same values with `127.0.0.1` host names, for the API and worker running natively (`mise run dev:all`). `setup.ps1` copies it to the gitignored `dev.env`. |
+| `observability/` | Config for the opt-in `obs` profile: Alloy, Loki, Grafana's provisioning and dashboards, and the read-only Postgres role. See [docs/hosting/observability.md](../docs/hosting/observability.md). |
 
 The dev loop starts only Postgres and SeaweedFS from `compose.yaml` and runs the API and worker natively with reload (`mise run dev:all`); see "The dev loop" in [docs/hosting/](../docs/hosting/). `stack:up` and `dev:all` both use port 8000.
 

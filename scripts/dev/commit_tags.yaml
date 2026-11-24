@@ -335,6 +335,11 @@ tags:
         paths:
           - scripts/dev/stack_smoke.py
           - scripts/dev/queue_smoke.py
+      observability:
+        description: Loki, Alloy and Grafana in the stack's obs profile, their config and docs
+        paths:
+          - deploy/observability/**
+          - docs/hosting/observability.md
 
   # ── Repo-wide ────────────────────────────────────────────────────────────
   repo:

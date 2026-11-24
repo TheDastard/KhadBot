@@ -1,0 +1,14 @@
+# Loads every dashboard JSON file in deploy/observability/grafana/dashboards/ (mounted at /var/lib/grafana/dashboards).
+# Edit a dashboard in Grafana, export its JSON and save it there; the repository copy is the source.
+apiVersion: 1
+
+providers:
+  - name: khadbot
+    folder: KhadBot
+    type: file
+    disableDeletion: true
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -1,0 +1,27 @@
+# Grafana data sources for the local stack's obs profile. The UIDs are fixed so dashboards in
+# deploy/observability/grafana/dashboards/ can name them. The Postgres one signs in as the read-only role that
+# deploy/observability/postgres/readonly.sql creates; its password comes from deploy/stack.env.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    editable: false
+
+  - name: KhadBot Postgres
+    uid: khadbot-pg
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: postgres:5432
+    user: khadbot_readonly
+    editable: false
+    jsonData:
+      database: $POSTGRES_DB
+      sslmode: disable
+      postgresVersion: 1700
+    secureJsonData:
+      password: $KHADBOT_READONLY_PASSWORD

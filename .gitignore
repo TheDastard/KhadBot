@@ -71,6 +71,8 @@ env/
 # -----------------------------------------------------------------------------
 .khadbot_data/
 .khadbot_fixture_data/
+# The dev loop's JSON log files, tailed by the obs profile's Alloy
+.khadbot_dev_logs/
 
 # Claude Code task worktrees
 # -----------------------------------------------------------------------------
