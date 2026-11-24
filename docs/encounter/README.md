@@ -27,6 +27,9 @@ How encounter mode turns a WarcraftLogs report into records, a digest and verifi
 - `--unregistered` prints the top unregistered and unclassified friendly-damage abilities (up to 20 each) instead of
   the digest. It is an authoring aid for the encounter file and the friendly-damage registry.
 - `--estimate` prints the review's token estimate without calling a model.
+- `main.py` (the REPL, `ingest`, `digest`) logs to stderr as redacted text at WARNING, so stdout carries only the
+  command's output (`digest --json` stays parseable). `KHADBOT_LOG_LEVEL` and `KHADBOT_LOG_FORMAT` override that
+  ([operations](../hosting/operations.md)).
 
 Annotation runs inside `/digest` and `/review`; it has no command of its own.
 

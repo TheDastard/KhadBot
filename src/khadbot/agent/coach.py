@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import logging
 
-from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage
 
@@ -26,7 +25,6 @@ from khadbot.agent.personas import get_persona
 from khadbot.agent.prompt_assembler import PromptAssembler, get_assembler
 from khadbot.agent.tools import TOOLS
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 

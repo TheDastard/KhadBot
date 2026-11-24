@@ -17,10 +17,15 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
 from khadbot.agent.agent_config import AgentConfig, load_agent_config
 from khadbot.agent.prompt_assembler import PromptAssembler
+
+# The test run's one load of .env, as main() does for the app: settings tests rely on (and, from a worktree, the main
+# checkout's .env, found by walking up) reach every test. Variables already in the environment, CI's included, win.
+load_dotenv(find_dotenv())
 
 # ---------------------------------------------------------------------------
 # Agent config fixtures

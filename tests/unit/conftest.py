@@ -2,11 +2,13 @@
 tests/unit/conftest.py
 
 Shared fixtures for the encounter and CLI command unit tests: the synthetic SYNTH01 raw cache copied into tmp_path,
-plus the filter inputs its pages were recorded with.
+plus the filter inputs its pages were recorded with. Every unit test gets the root logger back as it found it, since
+``main()`` installs a handler on it, and no test loads the developer's ``.env`` through ``main()``.
 """
 
 from __future__ import annotations
 
+import logging
 import shutil
 
 import pytest
@@ -19,6 +21,22 @@ from helpers.encounter.synth import (
 
 from khadbot.encounter.ingest.fetch import RawPageCache
 from khadbot.encounter.store import ParquetEventStore
+
+
+@pytest.fixture(autouse=True)
+def restore_root_logger():
+    """Put the root logger's handlers and level back after the test (``main()`` and ``configure_logging`` set them)."""
+    root = logging.getLogger()
+    handlers, level = list(root.handlers), root.level
+    yield
+    root.handlers[:] = handlers
+    root.setLevel(level)
+
+
+@pytest.fixture(autouse=True)
+def no_dotenv(monkeypatch):
+    """``main()`` finds no ``.env``, so the developer's settings never reach a test (the ``.env`` tests point it at one)."""
+    monkeypatch.setattr("dotenv.find_dotenv", lambda *args, **kwargs: "")
 
 
 @pytest.fixture

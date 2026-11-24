@@ -107,8 +107,8 @@ A job keeps the `request_id` of the API request that queued it in `jobs.request_
 
 | Variable | Meaning |
 |---|---|
-| `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs and then the event fields after the message). |
-| `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). |
+| `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs and then the event fields after the message). The terminal commands (`cli`, `ingest`, `digest`, `serve`, `test-session`) default to `text`. |
+| `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). `cli`, `ingest`, `digest` and `test-session` default to `WARNING` and write to stderr. |
 
 There is no error tracker; `sentry-sdk` was not added.
 

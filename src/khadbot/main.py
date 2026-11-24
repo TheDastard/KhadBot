@@ -24,6 +24,8 @@ API_HOST = "0.0.0.0"  # the container binds every interface; the published port 
 PACKAGE_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = PACKAGE_DIR.parents[1] / "config"  # the authored encounter files and registries, next to src/
 RELOAD_DEBOUNCE_MS = 500
+LOCAL_COMMANDS = {"cli", "ingest", "digest", "serve", "test-session"}  # every command the hosted logging skips
+LOCAL_LOG_LEVEL = "WARNING"
 
 # ---------------------------------------------------------------------------
 # Subcommands
@@ -103,7 +105,8 @@ def _run_serve(port: int) -> None:
         sys.exit(missing_group_message("api", "serve") + f"\n({exc})")
 
     # Local only: WCL credentials stay in the server's environment, and nothing is exposed beyond this machine.
-    uvicorn.run(create_app(mode="local"), host=SERVE_HOST, port=port)
+    # uvicorn logs through the root handler, so its lines are redacted too.
+    uvicorn.run(create_app(mode="local"), host=SERVE_HOST, port=port, log_config=None, access_log=False)
 
 
 def _run_api(host: str, port: int) -> None:
@@ -230,6 +233,42 @@ def _run_test_session(
             f"session until {issued.expires_at:%Y-%m-%d %H:%M} UTC; {where}",
             file=sys.stderr,
         )
+
+
+def _load_env_file() -> None:
+    """Load ``.env`` into the environment: the one place the app does it, for every command, before anything reads a
+    setting. Library modules never load it themselves; they read the environment through ``config``.
+
+    ``find_dotenv`` walks up from this file, which from a worktree reaches the main checkout's ``.env``. Variables
+    already set in the real environment win. A container has no ``.env`` (``.dockerignore``), so there it does nothing.
+    """
+    from dotenv import find_dotenv, load_dotenv
+
+    load_dotenv(find_dotenv())
+
+
+def _configure_local_logging(command: str) -> None:
+    """Logging for the commands run from a terminal: plain text, redacted like the hosted lines.
+
+    ``serve`` logs at the configured level, uvicorn's lines included. The others write to stderr at WARNING, so a
+    library's warnings are redacted and stdout keeps only the command's own output (Rich, ``digest --json``, a
+    session cookie). ``KHADBOT_LOG_FORMAT`` and ``KHADBOT_LOG_LEVEL`` override these defaults when set.
+    """
+    import dataclasses
+    import os
+
+    from khadbot.config import LoggingConfig
+    from khadbot.logging_setup import configure_logging
+
+    config = LoggingConfig()
+    if not os.getenv("KHADBOT_LOG_FORMAT", "").strip():
+        config = dataclasses.replace(config, log_format="text")
+    if command == "serve":
+        configure_logging(config, service=command)
+        return
+    if not os.getenv("KHADBOT_LOG_LEVEL", "").strip():
+        config = dataclasses.replace(config, log_level=LOCAL_LOG_LEVEL)
+    configure_logging(config, service=command, stream=sys.stderr)
 
 
 def _log_development_switches() -> None:
@@ -502,6 +541,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         argv_list = list(sys.argv[1:] if argv is None else argv)
         _run_reloading([a for a in argv_list if a != "--reload"])
         return
+    _load_env_file()  # before anything reads settings: logging, config, the coach
     if command in {"api", "migrate", "worker", "backfill", "usage", "rotate-token-keys"} and not getattr(
         args, "check", False
     ):
@@ -511,6 +551,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         if command in {"api", "worker"}:
             _log_development_switches()
             _announce_wcl_replay()
+    if command in LOCAL_COMMANDS:
+        _configure_local_logging(command)
     if command == "ingest" and args.refresh_meta and args.offline:
         from khadbot.cli.commands.encounter import REFRESH_OFFLINE_ERROR
 

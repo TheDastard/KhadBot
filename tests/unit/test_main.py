@@ -4,11 +4,31 @@ tests/unit/test_main.py
 Argparse dispatch for khadbot.main. _run_cli is patched; no agent is built.
 """
 
+import json
+import logging
+import os
+import sys
 from unittest.mock import patch
 
 import pytest
 
+from khadbot.logging_setup import JsonFormatter, TextFormatter
 from khadbot.main import main
+
+
+@pytest.fixture(autouse=True)
+def default_log_settings(monkeypatch):
+    """The logging defaults under test, whatever the shell sets (``conftest`` restores the root logger)."""
+    monkeypatch.delenv("KHADBOT_LOG_FORMAT", raising=False)
+    monkeypatch.delenv("KHADBOT_LOG_LEVEL", raising=False)
+
+
+def khadbot_handler() -> logging.StreamHandler:
+    """The one handler ``configure_logging`` installed on the root logger."""
+    found = [h for h in logging.getLogger().handlers if getattr(h, "_khadbot_handler", False)]
+    assert len(found) == 1
+    assert isinstance(found[0], logging.StreamHandler)
+    return found[0]
 
 
 class TestDispatch:
@@ -90,9 +110,114 @@ class TestServeSubcommand:
         with patch("uvicorn.run") as run:
             _run_serve(8123)
         app = run.call_args.args[0]
-        assert run.call_args.kwargs == {"host": "127.0.0.1", "port": 8123}
+        assert run.call_args.kwargs == {
+            "host": "127.0.0.1",
+            "port": 8123,
+            "log_config": None,
+            "access_log": False,
+        }  # via the root handler
         assert app.state.ctx.data_dir == tmp_path
         assert app.state.mode == "local"
+
+
+class TestLocalLogging:
+    """The commands run from a terminal log redacted text: ``serve`` at INFO, the rest to stderr at WARNING."""
+
+    def test_serve_logs_text_at_info_through_the_root_handler(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("KHADBOT_DATA_DIR", str(tmp_path))
+        with patch("uvicorn.run") as run:
+            main(["serve", "--port", "8123"])
+        handler = khadbot_handler()
+        assert isinstance(handler.formatter, TextFormatter)
+        assert handler.stream is sys.stdout
+        assert logging.getLogger().level == logging.INFO
+        assert run.call_args.kwargs["log_config"] is None
+
+    def test_serve_keeps_an_explicit_json_format(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("KHADBOT_DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("KHADBOT_LOG_FORMAT", "json")
+        with patch("uvicorn.run"):
+            main(["serve"])
+        assert isinstance(khadbot_handler().formatter, JsonFormatter)
+
+    def test_offline_ingest_logs_warnings_as_text_on_stderr(self):
+        with patch("khadbot.main._run_ingest") as run:
+            main(["ingest", "ABC123", "--offline"])
+        run.assert_called_once()
+        handler = khadbot_handler()
+        assert isinstance(handler.formatter, TextFormatter)
+        assert handler.stream is sys.stderr
+        assert logging.getLogger().level == logging.WARNING
+
+    @pytest.mark.parametrize("argv", [["cli"], [], ["digest", "ABC123", "4"], ["test-session"]])
+    def test_other_terminal_commands_log_to_stderr_at_warning(self, argv):
+        with (
+            patch("khadbot.main._run_cli"),
+            patch("khadbot.main._run_digest"),
+            patch("khadbot.main._run_test_session"),
+        ):
+            main(argv)
+        assert khadbot_handler().stream is sys.stderr
+        assert logging.getLogger().level == logging.WARNING
+
+    def test_an_explicit_level_wins(self, monkeypatch):
+        monkeypatch.setenv("KHADBOT_LOG_LEVEL", "debug")
+        with patch("khadbot.main._run_ingest"):
+            main(["ingest", "ABC123", "--offline"])
+        assert logging.getLogger().level == logging.DEBUG
+
+    def test_settings_in_dotenv_reach_the_logging(self, tmp_path, monkeypatch):
+        env_file = tmp_path / ".env"
+        env_file.write_text("KHADBOT_LOG_LEVEL=DEBUG\nKHADBOT_LOG_FORMAT=json\n", encoding="utf-8")
+        monkeypatch.setattr("dotenv.find_dotenv", lambda *args, **kwargs: str(env_file))
+        with patch("khadbot.main._run_ingest"):
+            main(["ingest", "ABC123", "--offline"])
+        assert logging.getLogger().level == logging.DEBUG
+        assert isinstance(khadbot_handler().formatter, JsonFormatter)
+
+    def test_hosted_commands_load_dotenv_too(self, tmp_path, monkeypatch):
+        env_file = tmp_path / ".env"
+        env_file.write_text("KHADBOT_TEST_DOTENV_MARKER=from-dotenv\n", encoding="utf-8")
+        monkeypatch.setattr("dotenv.find_dotenv", lambda *args, **kwargs: str(env_file))
+        monkeypatch.delenv("KHADBOT_TEST_DOTENV_MARKER", raising=False)
+        try:
+            with patch("khadbot.main._run_rotate_token_keys"):
+                main(["rotate-token-keys"])
+            assert os.environ.get("KHADBOT_TEST_DOTENV_MARKER") == "from-dotenv"
+        finally:
+            os.environ.pop("KHADBOT_TEST_DOTENV_MARKER", None)
+
+    def test_importing_the_coach_leaves_the_environment_alone(self, monkeypatch):
+        import importlib
+
+        import dotenv
+
+        monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **k: pytest.fail("the coach loaded .env"))
+        import khadbot.agent.coach as coach
+
+        importlib.reload(coach)
+
+    def test_the_real_environment_wins_over_dotenv(self, tmp_path, monkeypatch):
+        env_file = tmp_path / ".env"
+        env_file.write_text("KHADBOT_LOG_LEVEL=DEBUG\n", encoding="utf-8")
+        monkeypatch.setattr("dotenv.find_dotenv", lambda *args, **kwargs: str(env_file))
+        monkeypatch.setenv("KHADBOT_LOG_LEVEL", "ERROR")
+        with patch("khadbot.main._run_digest"):
+            main(["digest", "ABC123", "4"])
+        assert logging.getLogger().level == logging.ERROR
+
+    def test_digest_json_keeps_stdout_clean_and_redacts_the_warning(self, capsys):
+        def digest(*args):
+            logging.getLogger("somelib").warning("retrying https://user:hunter2@example.com")
+            logging.getLogger("somelib").info("not shown at WARNING")
+            print(json.dumps({"pull": 4}))
+
+        with patch("khadbot.main._run_digest", side_effect=digest):
+            main(["digest", "ABC123", "4", "--json"])
+        out, err = capsys.readouterr()
+        assert json.loads(out) == {"pull": 4}
+        assert "WARNING somelib: retrying https://user:<redacted>@example.com" in err
+        assert "hunter2" not in err and "not shown" not in err
 
 
 class TestApiSubcommand:
