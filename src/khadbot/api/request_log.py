@@ -19,8 +19,8 @@ variable set here covers the whole request, which ``BaseHTTPMiddleware`` would n
 - **An unhandled exception** is logged with its traceback as status 500. When no response has started, the middleware
   answers it itself: 500 with the API's usual ``{code, message}`` body (``internal_error``) and the ``X-Request-ID``
   header, so CORS, outside it, adds its headers too and the web app can show the reference. Nothing is re-raised then,
-  so Starlette's own error middleware never sees it. When the response had already started, the exception is
-  re-raised as before.
+  so Starlette's own error middleware never sees it, and the error tracker gets it from ``report_exception`` (tagged
+  with the request's IDs). When the response had already started, the exception is re-raised as before.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ import time
 from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
+from khadbot.error_reporting import report_exception
 from khadbot.logging_setup import log_context, log_context_holder, new_request_id
 
 Scope = MutableMapping[str, Any]
@@ -92,12 +93,13 @@ class RequestLog:
         with log_context(request_id=request_id), log_context_holder():
             try:
                 await self.app(scope, receive, tagged)
-            except Exception:
+            except Exception as exc:
                 if response_started:
                     self._write(scope, state, 500, started, exc_info=True)
                     raise
                 state[STATE_ERROR_CODE] = INTERNAL_ERROR
                 self._write(scope, state, 500, started, exc_info=True)
+                report_exception(exc)  # the SDK's ASGI hook sees only what propagates
                 await _internal_error(tagged)
                 return
             self._write(scope, state, status, started)

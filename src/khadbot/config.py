@@ -630,6 +630,27 @@ class LoggingConfig:
     worker_stale_s: float = field(default_factory=lambda: float(_optional("KHADBOT_WORKER_STALE_S", "60")))
 
 
+@dataclass(frozen=True)
+class ErrorReportingConfig:
+    """
+    Error reporting for the API and the worker through the Sentry SDK, which Sentry and GlitchTip both accept. Off
+    unless ``SENTRY_DSN`` is set. ``SENTRY_TRACES_SAMPLE_RATE`` (0 to 1, default 0) is the share of requests and jobs
+    sent as performance traces; 0 sends errors only.
+    """
+
+    dsn: str = field(default_factory=lambda: _optional("SENTRY_DSN").strip(), repr=False)
+    traces_sample_rate: float = field(default_factory=lambda: float(_optional("SENTRY_TRACES_SAMPLE_RATE") or "0"))
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.traces_sample_rate <= 1:
+            raise ValueError(f"SENTRY_TRACES_SAMPLE_RATE must be between 0 and 1, not {self.traces_sample_rate}.")
+
+    @property
+    def enabled(self) -> bool:
+        """True when a DSN is set."""
+        return bool(self.dsn)
+
+
 _config: AppConfig | None = None
 
 

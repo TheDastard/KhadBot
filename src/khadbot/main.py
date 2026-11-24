@@ -461,6 +461,16 @@ def _announce_wcl_replay() -> None:
         sys.exit(str(exc))
 
 
+def _start_error_reporting(service: str) -> None:
+    """Report the API's or worker's errors to the error tracker when ``SENTRY_DSN`` is set; nothing otherwise."""
+    from khadbot.error_reporting import init_error_reporting
+
+    try:
+        init_error_reporting(service)
+    except (ImportError, ValueError) as exc:
+        sys.exit(str(exc))
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="khadbot", description="KhadBot — Agentic WoW Assistant")
     sub = parser.add_subparsers(dest="command")
@@ -549,6 +559,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 
         configure_logging(service=command)
         if command in {"api", "worker"}:
+            _start_error_reporting(command)
             _log_development_switches()
             _announce_wcl_replay()
     if command in LOCAL_COMMANDS:

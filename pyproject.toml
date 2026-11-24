@@ -50,6 +50,7 @@ hosted = [
     "zstandard>=0.25.0",          # zstd for the raw WCL pages in hosted object storage
     "cryptography>=50.0.2",       # Fernet / MultiFernet encryption of stored WCL tokens (sign-in)
     "procrastinate>=3.10.0",      # Postgres-backed job queue: ingest, process and review workers (no Redis)
+    "sentry-sdk>=3.0.0",          # error reports from the API and worker (Sentry or GlitchTip); off without SENTRY_DSN
 ]
 
 providers = [
@@ -219,5 +220,5 @@ layers = [
     "db",
     "encounter",
     "wcl | simc | blizzard",
-    "config : errors : storage : llm_factory : llm_fake : logging_setup",
+    "config : errors : storage : llm_factory : llm_fake : logging_setup : error_reporting",
 ]

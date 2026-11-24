@@ -110,7 +110,13 @@ A job keeps the `request_id` of the API request that queued it in `jobs.request_
 | `KHADBOT_LOG_FORMAT` | `json` (default) or `text` (plain lines, with the IDs and then the event fields after the message). The terminal commands (`cli`, `ingest`, `digest`, `serve`, `test-session`) default to `text`. |
 | `KHADBOT_LOG_LEVEL` | Root log level (default `INFO`). `cli`, `ingest`, `digest` and `test-session` default to `WARNING` and write to stderr. |
 
-There is no error tracker; `sentry-sdk` was not added.
+### Error tracking
+
+With `SENTRY_DSN` set ([configuration](configuration.md)), the API and the worker send their errors to a tracker through the Sentry SDK (`sentry-sdk`, in the `hosted` group); Sentry and GlitchTip both accept it. Without a DSN the SDK is never imported. `src/khadbot/error_reporting.py` starts it right after logging:
+
+- An unhandled exception in a route, and any record logged at `ERROR` or above (a failed job), becomes an event. The API's request log middleware answers an unhandled exception itself, so it sends that event (`report_exception`), inside the request's context. `INFO` records become breadcrumbs on the next event; log lines are not sent as tracker logs.
+- No user details, cookies, request headers, request bodies, query data or stack-frame variables are collected. Every string in an event or breadcrumb goes through the same redaction as the log lines, and a logged message's arguments are dropped in favour of the redacted formatted text.
+- Each event is tagged with `service` and the `request_id`, `job_id`, `user_id`, `report_code` and `pull_key` of the work it happened in, so the tag finds the matching log lines. `release` is `KHADBOT_VERSION`; `environment` is `KHADBOT_ENV` (`unset` when empty).
 
 ### Worker health
 

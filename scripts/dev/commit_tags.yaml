@@ -353,6 +353,7 @@ tags:
           - tests/unit/test_main*.py
           - tests/unit/test_optional_groups.py
           - tests/unit/test_logging_setup.py
+          - tests/unit/test_error_reporting.py
           - tests/unit/conftest.py
       deps:
         description: Python and pnpm dependencies and their lock files
