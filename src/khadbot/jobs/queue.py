@@ -27,7 +27,14 @@ Rules the queue keeps:
   up and settles to its measured spend when it ends. One that can't reserve goes to ``waiting_budget`` and is queued
   again when points free up, or at its next recheck time.
 - An ingest's measured WCL points are written to the usage ledger (``jobs/usage.py``) when it settles, the same figure
-  the budget settles to. Every job logs with its job, user and report IDs as context.
+  the budget settles to. Every job logs with its job, user, report and request IDs as context: the request ID is the
+  one of the API request that queued it (or its parent ingest).
+- Each run of a job logs one ``job.start`` when a worker picks it up and exactly one ``job.finish`` however it ends
+  (``outcome``: done, failed, retrying, cancelled, interrupted, waiting_budget, gone, awaiting_children), before any
+  exception leaves the task. A run that ends normally takes its outcome and error code from the row it left, so an
+  ingest whose pulls all failed logs ``failed`` (``pulls_failed``). An ingest still waiting for its process jobs logs
+  ``awaiting_children``; the store logs its final state as ``job.settled`` when they finish (``jobs/status.py``).
+  procrastinate's own line for a failed run keeps its text but loses the traceback, which ``job.finish`` carries.
 
 This module needs the ``hosted`` dependency group; nothing in local mode imports it.
 """
@@ -37,9 +44,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -102,6 +110,97 @@ class RetryAfterStrategy(RetryStrategy):
         if decision.retry_at is None or decision.retry_at < floor:
             decision.retry_at = floor
         return decision
+
+
+# ---------------------------------------------------------------------------
+# Job lifecycle log lines
+# ---------------------------------------------------------------------------
+
+_PROCRASTINATE_FAILURES = frozenset({"job_error", "job_error_retry", "job_aborted", "job_aborted_retry"})
+
+
+class _DropFailureTraceback(logging.Filter):
+    """
+    Keep procrastinate's "Job ... ended with status: Error" lines but drop their traceback: the worker's own
+    ``job.finish`` line logs the failure once, with the job's context and its typed error code.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if getattr(record, "action", None) in _PROCRASTINATE_FAILURES:
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
+def _quiet_procrastinate_failures() -> None:
+    """Install ``_DropFailureTraceback`` on procrastinate's worker logger, once per process."""
+    worker_logger = logging.getLogger("procrastinate.worker")
+    if not any(isinstance(f, _DropFailureTraceback) for f in worker_logger.filters):
+        worker_logger.addFilter(_DropFailureTraceback())
+
+
+_FINISH_LEVELS = {"failed": logging.ERROR, "retrying": logging.WARNING, "interrupted": logging.WARNING}
+
+
+@dataclass
+class _Run:
+    """One run of a job, as its ``job.start`` and ``job.finish`` lines describe it. The task body sets the outcome."""
+
+    job_id: str
+    job_kind: str | None
+    queue: str | None
+    attempt: int
+    started: float = field(default_factory=time.monotonic)
+    outcome: str | None = None
+    error_code: str | None = None
+    points: float | None = None
+
+    def end(self, outcome: str, error_code: str | None = None) -> None:
+        self.outcome, self.error_code = outcome, error_code
+
+    def end_as(self, row: JobRecord | None) -> None:
+        """
+        End a run that returned normally with what its row says: its final state and error code, or
+        ``awaiting_children`` while an ingest waits for its process jobs. No row (deleted meanwhile) leaves ``done``.
+        """
+        if row is None:
+            return
+        if row.active:
+            self.end("awaiting_children")
+        else:
+            self.end(row.state.value, row.error_code if row.state is not JobState.DONE else None)
+
+    def _fields(self, event: str) -> dict[str, object]:
+        return {"event": event, "job_kind": self.job_kind, "queue": self.queue, "attempt": self.attempt}
+
+    def log_start(self) -> None:
+        logger.info("Job %s started (attempt %d)", self.job_id, self.attempt, extra=self._fields("job.start"))
+
+    def log_finish(self, exc: BaseException | None = None) -> None:
+        """Write the run's one ``job.finish``. An exception the task body did not classify counts as a failure."""
+        if self.outcome is None:
+            if exc is None:
+                self.end("done")
+            elif isinstance(exc, asyncio.CancelledError):
+                self.end("interrupted", ErrorCode.INTERRUPTED)
+            else:
+                self.end("failed", classify(exc).code if isinstance(exc, Exception) else ErrorCode.INTERNAL)
+        outcome = self.outcome or "failed"
+        logger.log(
+            _FINISH_LEVELS.get(outcome, logging.INFO),
+            "Job %s finished: %s%s",
+            self.job_id,
+            outcome,
+            f" ({self.error_code})" if self.error_code else "",
+            exc_info=exc if outcome == "failed" else None,
+            extra={
+                **self._fields("job.finish"),
+                "outcome": outcome,
+                "error_code": self.error_code,
+                "duration_ms": round((time.monotonic() - self.started) * 1000),
+                "points": self.points,
+            },
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +288,7 @@ class JobQueue:
         self.config = config or QueueConfig()
         self._context_factory = context_factory or JobContext
         self.app = procrastinate.App(connector=connector)
+        _quiet_procrastinate_failures()
         retry = RetryAfterStrategy(
             max_attempts=self.config.max_retries,
             exponential_wait=self.config.retry_backoff_s,
@@ -437,17 +537,35 @@ class JobQueue:
     async def _execute(self, context: procrastinate.JobContext, job_id: str) -> None:
         row = await self.store.get(job_id)
         with log_context(
-            job_id=job_id, user_id=row.requested_by if row else None, report_code=row.report_code if row else None
+            request_id=row.request_id if row else None,
+            job_id=job_id,
+            user_id=row.requested_by if row else None,
+            report_code=row.report_code if row else None,
         ):
-            await self._execute_job(context, job_id)
+            queue_job = context.job
+            run = _Run(
+                job_id=job_id,
+                job_kind=row.kind.value if row else None,
+                queue=queue_job.queue if queue_job else None,
+                attempt=(queue_job.attempts if queue_job else 0) + 1,  # procrastinate counts earlier runs
+            )
+            run.log_start()
+            try:
+                await self._execute_job(context, job_id, run)
+            except BaseException as exc:
+                run.log_finish(exc)  # in the job's context, before procrastinate sees the exception
+                raise
+            run.log_finish()
 
-    async def _execute_job(self, context: procrastinate.JobContext, job_id: str) -> None:
+    async def _execute_job(self, context: procrastinate.JobContext, job_id: str, run: _Run) -> None:
         reserved = await self._reserve_budget(job_id)
         if reserved is None:
+            run.end("waiting_budget")
             return  # waiting for WCL points: queued again when they free up
         job = await self.store.begin(job_id)
         if job is None:
             logger.info("Job %s is gone, finished or cancelled; not running it", job_id)
+            run.end("gone")
             if reserved:
                 await self._release_budget(job_id)
             return
@@ -461,7 +579,7 @@ class JobQueue:
                 if isinstance(result, IngestResult):
                     await self._queue_processing(job, result)
             if isinstance(result, IngestResult):  # finish once the last progress is written
-                await self.store.finish(
+                row = await self.store.finish(
                     job_id,
                     JobState.DONE,
                     points_spent=result.points_spent,
@@ -469,12 +587,15 @@ class JobQueue:
                     awaiting_children=True,
                 )
             else:
-                await self.store.finish(job_id, JobState.DONE)
+                row = await self.store.finish(job_id, JobState.DONE)
+            run.end_as(row)
         except JobCancelled:
+            run.end("cancelled")
             await self.store.finish(job_id, JobState.CANCELLED)
             raise procrastinate_exceptions.JobAborted from None
         except asyncio.CancelledError:
             # The worker is stopping and ran out of patience. The job's written data stays; ask for it again.
+            run.end("interrupted", ErrorCode.INTERRUPTED)
             await asyncio.shield(
                 self.store.finish(
                     job_id,
@@ -496,14 +617,17 @@ class JobQueue:
                 retry_exc = context.task.get_retry_exception(transient, context.job)
                 if retry_exc is not None:
                     when = retry_exc.retry_decision.retry_at  # the later of the backoff and WCL's hint
+                    run.end("retrying", failure.code)
                     await self.store.requeue(job_id, failure.code, failure.message, when or hint)
                     raise transient from exc
+            run.end("failed", failure.code)
             await self.store.finish(
                 job_id, JobState.FAILED, error_code=failure.code, error_message=failure.message, retry_at=hint
             )
             raise
         finally:
             spent = result.points_spent if isinstance(result, IngestResult) else None
+            run.points = spent
             if isinstance(result, IngestResult):
                 await asyncio.shield(self._record_usage(job, spent))
             if reserved:

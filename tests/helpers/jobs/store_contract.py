@@ -11,6 +11,7 @@ import asyncio
 
 from khadbot.jobs import IngestReport, ProcessPull
 from khadbot.jobs.status import JobKind, JobState, NewJob
+from khadbot.logging_setup import log_context
 
 
 def ingest(job_id: str, code: str = "ABC", **spec) -> NewJob:
@@ -286,3 +287,34 @@ class TestVisitorIngests:
         await store.create(ingest("u1"))
         await store.create(process("p1", None))
         assert await store.active_visitor_ingests() == 0
+
+
+class TestRequestId:
+    async def test_a_job_keeps_the_request_id_of_the_log_context_it_was_created_in(self, store):
+        with log_context(request_id="abcd1234efgh"):
+            created = await store.create(ingest("i1"))
+        assert created.request_id == "abcd1234efgh"
+        assert (await store.get("i1")).request_id == "abcd1234efgh"
+
+    async def test_a_claimed_ingest_keeps_it_too(self, store):
+        with log_context(request_id="abcd1234efgh"):
+            job, created = await store.claim_ingest(ingest("i1"))
+        assert created and (await store.get(job.id)).request_id == "abcd1234efgh"
+
+    async def test_a_child_inherits_its_parents_when_the_context_has_none(self, store):
+        with log_context(request_id="abcd1234efgh"):
+            await store.create(ingest("i1"))
+        await store.create(process("p1", "i1"))
+        assert (await store.get("p1")).request_id == "abcd1234efgh"
+
+    async def test_the_context_wins_over_the_parent(self, store):
+        with log_context(request_id="abcd1234efgh"):
+            await store.create(ingest("i1"))
+        with log_context(request_id="zzzz9999yyyy"):
+            await store.create(process("p1", "i1"))
+        assert (await store.get("p1")).request_id == "zzzz9999yyyy"
+
+    async def test_a_job_queued_outside_a_request_has_none(self, store):
+        await store.create(ingest("i1"))
+        await store.create(process("p1", None))
+        assert (await store.get("i1")).request_id is None and (await store.get("p1")).request_id is None

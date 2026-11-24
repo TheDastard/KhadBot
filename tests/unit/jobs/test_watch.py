@@ -4,11 +4,15 @@ tests/unit/jobs/test_watch.py
 The live report watch against a WCL stub whose report gains fights over time, on procrastinate's in-memory connector:
 new boss fights are ingested once with the user's auth and the live flag, trash and unfinished fights are ignored,
 the watch stops after a quiet period, at its maximum length, when the user stops it, when the sign-in or the report
-is gone and after repeated failures; one watch exists per report; polls draw live points from the WCL budget.
+is gone and after repeated failures; one watch exists per report; polls draw live points from the WCL budget; each
+poll runs under a request ID of its own, which the ingest it queues and that ingest's process jobs keep.
 """
 
 from __future__ import annotations
 
+import logging
+import re
+from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
@@ -23,6 +27,7 @@ from khadbot.jobs.budget_store import BudgetManager, MemoryBudgetBackend
 from khadbot.jobs.status import JobKind, JobState
 from khadbot.jobs.watch import finished_boss_fights
 from khadbot.jobs.watch_store import StopReason, WatchState
+from khadbot.logging_setup import current_log_context
 
 CODE = "SYNTH01"
 
@@ -369,6 +374,76 @@ async def test_a_worker_polls_and_ingests_the_new_pulls(env):
     assert stored.active and stored.polls == 1
     waiting = w.connector.jobs[stored.queue_job_id]
     assert waiting["status"] == "todo" and waiting["scheduled_at"] > w.clock()  # the next poll is not due
+
+
+# ---------------------------------------------------------------------------
+# Request ID
+# ---------------------------------------------------------------------------
+
+
+class _Lines(logging.Handler):
+    """Keeps each watch line's message with the log context it was written in."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.DEBUG)
+        self.lines: list[tuple[str, dict[str, str]]] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.lines.append((record.getMessage(), current_log_context()))
+
+
+@pytest.fixture
+def watch_lines() -> Iterator[_Lines]:
+    handler = _Lines()
+    log = logging.getLogger("khadbot.jobs.watch")
+    saved = log.level
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
+    yield handler
+    log.removeHandler(handler)
+    log.setLevel(saved)
+
+
+async def test_a_poll_gives_the_ingest_it_queues_its_own_request_id(env, watch_lines):
+    w = make_watch_env(env, fights=[fight(1)])
+    async with w.queue.open():
+        rec, _ = await w.service.start(CODE, "u1")
+        await w.service.poll(rec.id)
+        w.wcl.fights.append(fight(2, start=100000))
+        await w.service.poll(rec.id)
+    first, second = w.ingests()
+    assert re.fullmatch(r"[0-9a-f]{16}", first.request_id or "")
+    assert first.request_id != second.request_id  # one ID per poll
+    handed = [ctx.get("request_id") for msg, ctx in watch_lines.lines if "handed to ingest" in msg]
+    assert handed == [first.request_id, second.request_id]  # the poll's lines carry its ID
+
+
+async def test_a_polls_request_id_ends_with_the_poll(env, watch_lines):
+    w = make_watch_env(env, fights=[fight(1)])
+    async with w.queue.open():
+        rec, _ = await w.service.start(CODE, "u1")
+        await w.service.poll(rec.id)
+        assert "request_id" not in current_log_context()
+        later = await w.queue.enqueue(IngestReport(code="OTHER01", offline=True))
+        await w.service.stop(CODE, "u1")
+    (polled,) = [j for j in w.ingests() if j.report_code == CODE]
+    assert polled.request_id is not None and later.job.request_id is None
+    stopped = [ctx for msg, ctx in watch_lines.lines if "stopped" in msg]
+    assert stopped and all(ctx.get("request_id") != polled.request_id for ctx in stopped)
+
+
+async def test_a_watch_ingests_process_jobs_keep_the_polls_request_id(env):
+    w = make_watch_env(env, fights=[fight(1, start=100000, end=160000), fight(2, start=300000, end=380000)])
+    async with w.queue.open():
+        await w.service.start(CODE, "u1")
+        for _ in range(6):
+            await w.queue.run_worker(
+                queues=["watch", "ingest", "process"], wait=False, listen_notify=False, install_signal_handlers=False
+            )
+    (ingest,) = w.ingests()
+    process = [r for r in w.jobs.rows.values() if r.kind is JobKind.PROCESS]
+    assert ingest.request_id is not None and process
+    assert {r.request_id for r in process} == {ingest.request_id}
 
 
 # ---------------------------------------------------------------------------

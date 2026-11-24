@@ -10,6 +10,8 @@ secret.
   and ``env`` (``KHADBOT_ENV``) when each has a value.
 - ``log_context(request_id=..., job_id=..., ...)`` attaches IDs to every record logged inside the block, including
   from tasks it starts. Only IDs are accepted: a value is a name or an identifier, never a credential.
+  ``new_request_id()`` makes the request ID of work no caller named: an API request without a usable
+  ``X-Request-ID``, a live watch poll, a backfill run.
 - ``log_context_holder()`` opens a block whose IDs are learnt part-way through it: ``add_log_ids(user_id=...)``,
   called anywhere inside (a FastAPI dependency in the thread pool or another task included), adds them to every record
   logged in the block from then on. A context variable set in such a place would not reach the rest of the block; the
@@ -31,6 +33,7 @@ import json
 import logging
 import re
 import sys
+import uuid
 from collections.abc import Iterator
 from contextvars import ContextVar
 from datetime import UTC, datetime
@@ -145,6 +148,11 @@ def add_log_ids(**ids: str | None) -> None:
         holder.update(checked)
 
 
+def new_request_id() -> str:
+    """A fresh request ID: 16 random hex characters."""
+    return uuid.uuid4().hex[:16]
+
+
 def current_log_context() -> dict[str, str]:
     """
     A copy of the IDs of the enclosing ``log_context()`` blocks and the innermost holder, in ``CONTEXT_FIELDS`` order
@@ -257,5 +265,6 @@ __all__ = [
     "current_log_context",
     "log_context",
     "log_context_holder",
+    "new_request_id",
     "redact",
 ]

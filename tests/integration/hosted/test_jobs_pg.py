@@ -21,6 +21,7 @@ from helpers.jobs.store_contract import (  # noqa: F401 - collected here
     TestChildren,
     TestClaimIngest,
     TestLifecycle,
+    TestRequestId,
     TestVisitorIngests,
     ingest,
 )

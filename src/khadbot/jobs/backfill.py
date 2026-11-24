@@ -14,21 +14,29 @@ in a way only a fresh ingest repairs, and that ingest spends points. Backfill do
 
 A pull that already has a queued or running process job is skipped, so a backfill run twice queues each pull once.
 Processing an up-to-date pull writes nothing, so queueing pulls that need no rebuild costs only the worker's time.
+
+A backfill run queues outside any API request, so it generates one request ID for the whole run: every job it queues
+stores it, and the worker's lines for those jobs carry it, so one backfill can be followed in the logs. The command
+prints it.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Protocol
 
 from khadbot.encounter.records_store import ReadModelIndex
+from khadbot.logging_setup import log_context, new_request_id
 
 if TYPE_CHECKING:
     from khadbot.jobs.queue import Enqueued
 
 __all__ = ["BACKFILL_PRIORITY", "BackfillQueue", "BackfillResult", "parse_since", "run_backfill"]
+
+logger = logging.getLogger(__name__)
 
 # procrastinate runs higher priorities first and the default is 0, so a backfill waits behind interactive work.
 BACKFILL_PRIORITY = -10
@@ -44,11 +52,15 @@ class BackfillQueue(Protocol):
 
 @dataclass(frozen=True)
 class BackfillResult:
-    """``matched`` pulls were selected; ``enqueued`` got a new job, ``already_queued`` already had one."""
+    """
+    ``matched`` pulls were selected; ``enqueued`` got a new job, ``already_queued`` already had one. ``request_id`` is
+    the ID the new jobs carry (None for a dry run).
+    """
 
     matched: list[str]
     enqueued: list[str] = field(default_factory=list)
     already_queued: list[str] = field(default_factory=list)
+    request_id: str | None = None
 
 
 def parse_since(text: str) -> int:
@@ -70,14 +82,24 @@ async def run_backfill(
 ) -> BackfillResult:
     """
     Queue a low-priority process job for each stored pull of ``encounter_id`` (one ``difficulty``, or all), of reports
-    that started at or after ``since_ms``. A dry run selects and queues nothing.
+    that started at or after ``since_ms``. A dry run selects and queues nothing. The jobs share one generated request
+    ID, returned in the result; a pull that already had a job keeps that job's.
     """
     matched = await asyncio.to_thread(index.pull_keys, encounter_id, difficulty, since_ms)
     if dry_run:
         return BackfillResult(matched)
     enqueued: list[str] = []
     already: list[str] = []
-    for key in matched:
-        result = await queue.enqueue_backfill(key)
-        (enqueued if result.created else already).append(key)
-    return BackfillResult(matched, enqueued, already)
+    request_id = new_request_id()
+    with log_context(request_id=request_id):
+        for key in matched:
+            result = await queue.enqueue_backfill(key)
+            (enqueued if result.created else already).append(key)
+        logger.info(
+            "Backfill of encounter %d: %d pulls matched, %d queued, %d already queued",
+            encounter_id,
+            len(matched),
+            len(enqueued),
+            len(already),
+        )
+    return BackfillResult(matched, enqueued, already, request_id)

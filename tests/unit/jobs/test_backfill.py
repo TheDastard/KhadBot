@@ -2,7 +2,7 @@
 tests/unit/jobs/test_backfill.py
 
 Backfill on procrastinate's in-memory connector: which pulls it selects, that each is queued once at a low priority
-with app auth, and that a pull whose raw pages are gone is rebuilt from stored events without any WCL call.
+with app auth under one request ID per run, and that a pull whose raw pages are gone is rebuilt from stored events without any WCL call.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from khadbot.encounter import digest
 from khadbot.jobs import IngestReport
 from khadbot.jobs.backfill import BACKFILL_PRIORITY, parse_since, run_backfill
 from khadbot.jobs.status import JobKind, JobState
+from khadbot.logging_setup import current_log_context
 
 
 class FakeIndex:
@@ -106,7 +107,7 @@ class TestSelection:
         queue, backend, connector = make_queue(lambda: env.context)
         async with queue.open():
             result = await run_backfill(queue, FakeIndex(self.ROWS), encounter_id=3000, dry_run=True)
-        assert result.enqueued == [] and len(result.matched) == 4
+        assert result.enqueued == [] and len(result.matched) == 4 and result.request_id is None
         assert not backend.rows and not connector.jobs
 
     async def test_an_encounter_with_no_pulls_queues_nothing(self, env):
@@ -114,6 +115,20 @@ class TestSelection:
         async with queue.open():
             result = await run_backfill(queue, FakeIndex(self.ROWS), encounter_id=1)
         assert result.matched == [] and not backend.rows
+
+
+class TestRequestId:
+    ROWS = [("SYNTH01:1", 3000, 5, 1_000), ("SYNTH01:2", 3000, 5, 1_000), ("OTHER:1", 3000, 5, 2_000)]
+
+    async def test_a_runs_jobs_share_one_request_id_and_the_next_run_gets_another(self, env):
+        queue, backend, _ = make_queue(lambda: env.context)
+        async with queue.open():
+            first = await run_backfill(queue, FakeIndex(self.ROWS[:2]), encounter_id=3000)
+            second = await run_backfill(queue, FakeIndex(self.ROWS), encounter_id=3000)
+        assert first.request_id is not None and second.request_id not in (None, first.request_id)
+        ids = {r.pull_key: r.request_id for r in backend.rows.values()}
+        assert ids == {"SYNTH01:1": first.request_id, "SYNTH01:2": first.request_id, "OTHER:1": second.request_id}
+        assert "request_id" not in current_log_context()
 
 
 class TestEnqueue:

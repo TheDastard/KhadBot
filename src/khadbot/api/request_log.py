@@ -29,11 +29,10 @@ import json
 import logging
 import re
 import time
-import uuid
 from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
-from khadbot.logging_setup import log_context, log_context_holder
+from khadbot.logging_setup import log_context, log_context_holder, new_request_id
 
 Scope = MutableMapping[str, Any]
 Message = MutableMapping[str, Any]
@@ -75,7 +74,7 @@ class RequestLog:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        request_id = incoming_request_id(scope) or uuid.uuid4().hex[:16]
+        request_id = incoming_request_id(scope) or new_request_id()
         state = scope.setdefault("state", {})  # shared with request.state, so handlers' notes come back here
         started = self._clock()
         status = 500

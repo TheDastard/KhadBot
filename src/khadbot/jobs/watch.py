@@ -25,6 +25,8 @@ How a watch behaves:
 - **Budget.** Each poll asks the WCL budget for ``poll_points`` as a live request (it may use the headroom) and
   settles at that estimate. A poll the budget cannot grant is skipped and counted, never queued behind other jobs:
   the next one comes a full interval later. The ingests a watch queues carry ``live`` too (see ``jobs/queue.py``).
+- **Request ID.** A poll runs outside any API request, so each poll generates its own request ID: the poll's lines
+  carry it and the ingest it queues stores it, like an ingest queued by a request.
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ from khadbot.jobs.run import JobContext, TransientJobError, UserAuthUnavailableE
 from khadbot.jobs.specs import IngestReport, UserAuth
 from khadbot.jobs.status import JobRecord, JobState
 from khadbot.jobs.watch_store import StopReason, WatchRecord, WatchState, WatchStore
+from khadbot.logging_setup import log_context, new_request_id
 from khadbot.wcl.client import WarcraftLogsAPIError, WarcraftLogsClient, WarcraftLogsPrivateReportError
 
 if TYPE_CHECKING:
@@ -231,7 +234,14 @@ class WatchService:
         """
         Run one poll of a watch and queue the next. Does nothing for a watch that is gone or stopped. Never raises
         for a failed poll: that is counted on the watch, which stops after ``max_failures`` in a row.
+
+        Each poll runs under a request ID of its own, which its lines carry and the ingest it queues stores (and passes
+        to that ingest's process jobs), so one ID follows a poll and the work it caused. The ID ends with the poll.
         """
+        with log_context(request_id=new_request_id()):
+            await self._poll(watch_id)
+
+    async def _poll(self, watch_id: str) -> None:
         rec = await self.store.get(watch_id)
         if rec is None or not rec.active:
             return
@@ -347,6 +357,13 @@ class WatchService:
         ):
             # A whole-report ingest already running may have read the metadata before these fights existed.
             return _Outcome()
+        logger.info(
+            "Watch %s: fights %s handed to ingest %s%s",
+            rec.id,
+            spec.fights,
+            job.id,
+            "" if queued.created else " (already queued)",
+        )
         return _Outcome(handed={p.fight_id: p.end_ms for p in fresh}, queued_job=job.id, new_ingest=queued.created)
 
     async def _read_pulls(self, rec: WatchRecord) -> list[Pull]:

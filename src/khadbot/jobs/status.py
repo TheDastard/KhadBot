@@ -11,12 +11,15 @@ mode, ``MemoryJobBackend`` for unit tests and tools. ``JobStore`` is the async f
 
 An ingest finishes with its process jobs: when its own work is done it waits (``awaiting_children``) until every
 ``ProcessPull`` it enqueued has finished, then becomes ``done``, or ``failed`` if any pull failed, or ``cancelled``.
+When that happens after the ingest's own run ended (its last process job finished, or a cancel dropped them), the
+store logs one ``job.settled`` line with the ingest's final state, after the transaction commits.
 Every transaction first takes one advisory lock per report, so a report's rows change one writer at a time.
 """
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Iterator
 from contextlib import AbstractAsyncContextManager, AbstractContextManager, asynccontextmanager, contextmanager
@@ -31,9 +34,12 @@ from khadbot.jobs.failures import ErrorCode
 from khadbot.jobs.listener import SharedListener
 from khadbot.jobs.progress import PullInfo
 from khadbot.jobs.specs import IngestReport, ReviewPull
+from khadbot.logging_setup import current_log_context, log_context
 
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
+
+logger = logging.getLogger(__name__)
 
 NOTIFY_CHANNEL = "job_events"
 
@@ -96,6 +102,7 @@ class JobRecord(BaseModel):
     report_code: str
     pull_key: str | None = None
     parent_id: str | None = None
+    request_id: str | None = None  # the API request that queued it, or its parent's: links the job to its logs
     state: JobState = JobState.QUEUED
     progress: JobProgress = Field(default_factory=JobProgress)
     requested_by: str | None = None
@@ -130,6 +137,7 @@ class NewJob(BaseModel):
     parent_id: str | None = None
     requested_by: str | None = None
     auth_kind: Literal["app", "user"] = "app"
+    request_id: str | None = None  # None: the store takes the log context's, else the parent's
     spec: dict[str, Any]
 
 
@@ -190,9 +198,17 @@ def covers(existing: IngestReport, new: IngestReport) -> bool:
     return new.fights is not None and set(new.fights) <= set(existing.fights)
 
 
-def _new_record(new: NewJob) -> JobRecord:
+def _new_record(tx: JobTx, new: NewJob) -> JobRecord:
+    """
+    The row for a new job. Its ``request_id`` is the caller's, else the log context's (the API request queueing it),
+    else its parent's, so a process job carries the ID of the request that queued its ingest.
+    """
     now = _now()
-    return JobRecord(**new.model_dump(), created_at=now, updated_at=now)
+    request_id = new.request_id or current_log_context().get("request_id")
+    if request_id is None and new.parent_id is not None:
+        parent = tx.load(new.parent_id)
+        request_id = parent.request_id if parent else None
+    return JobRecord(**{**new.model_dump(), "request_id": request_id}, created_at=now, updated_at=now)
 
 
 def _with_pull(progress: JobProgress, pull: str, entry: PullProgress) -> JobProgress:
@@ -204,7 +220,7 @@ def _claim_ingest(tx: JobTx, new: NewJob) -> tuple[JobRecord, bool]:
     for existing in tx.active_ingests(new.report_code):
         if covers(IngestReport.model_validate(existing.spec), wanted):
             return existing, False
-    rec = _new_record(new)
+    rec = _new_record(tx, new)
     tx.insert(rec)
     return rec, True
 
@@ -235,7 +251,7 @@ def _claim_review(tx: JobTx, new: NewJob, limit: int, since: datetime) -> Review
             return ReviewClaim(existing, False, counted)
     if len(counted) >= limit:
         return ReviewClaim(None, False, counted)
-    rec = _new_record(new)
+    rec = _new_record(tx, new)
     tx.insert(rec)
     return ReviewClaim(rec, True, [*counted, rec.created_at])
 
@@ -295,7 +311,9 @@ def _finish(
     failed_pulls: dict[str, str] | None = None,
     awaiting_children: bool = False,
     retry_at: datetime | None = None,
+    settled: list[JobRecord] | None = None,
 ) -> JobRecord | None:
+    """End a job, or (``awaiting_children``) mark its own work done. A parent ingest this settles joins ``settled``."""
     rec = tx.load(job_id)
     if rec is None or not rec.active:
         return rec
@@ -333,12 +351,15 @@ def _finish(
                 update={"progress": _with_pull(parent.progress, rec.pull_key, entry), "updated_at": now}
             )
             tx.save(parent)
-            _settle(tx, parent)
+            _settle(tx, parent, settled)
     return rec
 
 
-def _settle(tx: JobTx, rec: JobRecord) -> JobRecord:
-    """Finish an ingest that is waiting for its process jobs, once none of them is active."""
+def _settle(tx: JobTx, rec: JobRecord, settled: list[JobRecord] | None = None) -> JobRecord:
+    """
+    Finish an ingest that is waiting for its process jobs, once none of them is active. When it finishes, it joins
+    ``settled`` (the store logs ``job.settled`` for those): callers pass a list unless the ingest's own run settles it.
+    """
     rec = tx.load(rec.id) or rec
     if rec.state is not JobState.RUNNING or not rec.awaiting_children:
         return rec
@@ -360,6 +381,8 @@ def _settle(tx: JobTx, rec: JobRecord) -> JobRecord:
     now = _now()
     rec = rec.model_copy(update={**update, "awaiting_children": False, "finished_at": now, "updated_at": now})
     tx.save(rec)
+    if settled is not None:
+        settled.append(rec)
     return rec
 
 
@@ -406,7 +429,7 @@ def _set_budget_wait(tx: JobTx, job_id: str, waiting: bool) -> bool:
     return True
 
 
-def _cancel(tx: JobTx, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
+def _cancel(tx: JobTx, job_id: str, settled: list[JobRecord] | None = None) -> tuple[JobRecord | None, list[JobRecord]]:
     """
     Cancel a job and the process jobs under it. Queued ones become ``cancelled`` at once (returned, so the queue can
     drop them); running ones are flagged and stop at their next page boundary.
@@ -420,15 +443,40 @@ def _cancel(tx: JobTx, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
         if child is None or not child.active:
             continue
         if child.state in (JobState.QUEUED, JobState.WAITING_BUDGET):
-            done = _finish(tx, child.id, JobState.CANCELLED)
+            done = _finish(tx, child.id, JobState.CANCELLED, settled=settled)
             if done is not None:
                 dropped.append(done)
         else:
             tx.save(child.model_copy(update={"cancel_requested": True, "updated_at": _now()}))
     final = tx.load(job_id)
     if final is not None and final.awaiting_children:
-        final = _settle(tx, final)
+        final = _settle(tx, final, settled)
     return final, dropped
+
+
+def _log_settled(settled: list[JobRecord]) -> None:
+    """
+    One ``job.settled`` line per ingest that finished after its own run ended, in the ingest's log context: its
+    ``job.finish`` said ``awaiting_children``, and this line says what the row ended as.
+    """
+    for rec in settled:
+        error_code = rec.error_code if rec.state is not JobState.DONE else None
+        with log_context(
+            request_id=rec.request_id, job_id=rec.id, user_id=rec.requested_by, report_code=rec.report_code
+        ):
+            logger.log(
+                logging.ERROR if rec.state is JobState.FAILED else logging.INFO,
+                "Job %s settled: %s%s",
+                rec.id,
+                rec.state.value,
+                f" ({error_code})" if error_code else "",
+                extra={
+                    "event": "job.settled",
+                    "job_kind": rec.kind.value,
+                    "outcome": rec.state.value,
+                    "error_code": error_code,
+                },
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +499,7 @@ class JobStore:
 
     async def create(self, new: NewJob) -> JobRecord:
         def work(tx: JobTx) -> JobRecord:
-            rec = _new_record(new)
+            rec = _new_record(tx, new)
             tx.insert(rec)
             return rec
 
@@ -524,8 +572,12 @@ class JobStore:
         awaiting_children: bool = False,
         retry_at: datetime | None = None,
     ) -> JobRecord | None:
-        """End a job. With ``awaiting_children`` it stays running until its process jobs finish (``state`` unused)."""
-        return await self._run(
+        """
+        End a job. With ``awaiting_children`` it stays running until its process jobs finish (``state`` unused); the
+        returned row is then still running, or already finished when nothing was left to wait for.
+        """
+        settled: list[JobRecord] = []
+        rec = await self._run(
             lambda tx: _finish(
                 tx,
                 job_id,
@@ -536,9 +588,12 @@ class JobStore:
                 failed_pulls=failed_pulls,
                 awaiting_children=awaiting_children,
                 retry_at=retry_at,
+                settled=settled,
             ),
             job_id=job_id,
         )
+        _log_settled(settled)
+        return rec
 
     async def requeue(self, job_id: str, error_code: str, error_message: str, retry_at: datetime | None = None) -> None:
         """Put a running job back to ``queued`` after a failure the queue will retry, at ``retry_at`` if known."""
@@ -558,7 +613,10 @@ class JobStore:
 
     async def request_cancel(self, job_id: str) -> tuple[JobRecord | None, list[JobRecord]]:
         """Cancel a job; returns it and the jobs that were still queued and are now cancelled."""
-        return await self._run(lambda tx: _cancel(tx, job_id), job_id=job_id)
+        settled: list[JobRecord] = []
+        result = await self._run(lambda tx: _cancel(tx, job_id, settled), job_id=job_id)
+        _log_settled(settled)
+        return result
 
     async def cancel_requested(self, job_id: str) -> bool:
         return await asyncio.to_thread(self._backend.cancel_requested, job_id)
@@ -679,8 +737,8 @@ class _MemoryTx:
 # ---------------------------------------------------------------------------
 
 _COLUMNS: LiteralString = (
-    "id, kind, report_code, pull_key, parent_id, state, progress, requested_by, auth_kind, points_spent, "
-    "error_code, error_message, attempts, cancel_requested, awaiting_children, queue_job_id, spec, "
+    "id, kind, report_code, pull_key, parent_id, request_id, state, progress, requested_by, auth_kind, "
+    "points_spent, error_code, error_message, attempts, cancel_requested, awaiting_children, queue_job_id, spec, "
     "created_at, started_at, finished_at, updated_at"
 )
 _SELECT_ONE: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE id = %s"
@@ -707,10 +765,10 @@ _SELECT_REVIEWS_SINCE: LiteralString = (
 _SELECT_CHILDREN: LiteralString = "SELECT " + _COLUMNS + " FROM jobs WHERE parent_id = %s ORDER BY created_at"
 _INSERT: LiteralString = (
     "INSERT INTO jobs (" + _COLUMNS + ") VALUES "
-    "(%(id)s, %(kind)s, %(report_code)s, %(pull_key)s, %(parent_id)s, %(state)s, %(progress)s, %(requested_by)s, "
-    "%(auth_kind)s, %(points_spent)s, %(error_code)s, %(error_message)s, %(attempts)s, %(cancel_requested)s, "
-    "%(awaiting_children)s, %(queue_job_id)s, %(spec)s, %(created_at)s, %(started_at)s, %(finished_at)s, "
-    "%(updated_at)s)"
+    "(%(id)s, %(kind)s, %(report_code)s, %(pull_key)s, %(parent_id)s, %(request_id)s, %(state)s, %(progress)s, "
+    "%(requested_by)s, %(auth_kind)s, %(points_spent)s, %(error_code)s, %(error_message)s, %(attempts)s, "
+    "%(cancel_requested)s, %(awaiting_children)s, %(queue_job_id)s, %(spec)s, %(created_at)s, %(started_at)s, "
+    "%(finished_at)s, %(updated_at)s)"
 )
 _UPDATE: LiteralString = (
     "UPDATE jobs SET state = %(state)s, progress = %(progress)s, points_spent = %(points_spent)s, "

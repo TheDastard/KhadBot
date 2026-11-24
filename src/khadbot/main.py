@@ -311,6 +311,7 @@ def _run_backfill(encounter: int, difficulty: int | None, since: str | None, dry
                 f"{len(result.matched)} pulls match: {len(result.enqueued)} queued, "
                 f"{len(result.already_queued)} already queued. No WCL points are spent."
             )
+            print(f"Request ID: {result.request_id}")
 
     try:
         # psycopg's async connections need the selector event loop, which Windows does not use by default.
