@@ -8,6 +8,8 @@ up compressed.
 
 from __future__ import annotations
 
+import logging
+
 import boto3
 import pytest
 import zstandard
@@ -152,3 +154,40 @@ def test_corrupt_compressed_data_raises(tmp_path):
     inner.put("raw/x.zst", b"not a zstd frame")
     with pytest.raises(zstandard.ZstdError):
         CompressedBlobStore(inner, ("raw/",)).get("raw/x")
+
+
+def _blob_errors(caplog) -> list:
+    return [r for r in caplog.records if getattr(r, "event", None) == "blob.error"]
+
+
+@pytest.mark.parametrize("op", ["get", "put", "exists", "delete", "list"])
+def test_a_failed_operation_logs_blob_error_and_still_raises(moto_s3, caplog, op):
+    caplog.set_level(logging.WARNING, logger="khadbot.storage.s3")
+    store = S3BlobStore("no-such-bucket", region=REGION)
+    key = "records/user-41872/secret/report.json"
+    call = {
+        "get": lambda: store.get(key),
+        "put": lambda: store.put(key, b"x"),
+        "exists": lambda: store.exists(key),
+        "delete": lambda: store.delete(key),
+        "list": lambda: store.list("records/user-41872/"),
+    }[op]
+    with pytest.raises(ClientError):
+        call()
+    (record,) = _blob_errors(caplog)
+    assert record.levelno == logging.WARNING
+    assert record.op == op
+    assert record.status  # the S3 error code or HTTP status
+    text = record.getMessage() + repr(vars(record))
+    assert "records/" in record.getMessage()
+    assert "41872" not in text
+
+
+def test_a_missing_object_and_success_log_nothing(moto_s3, caplog):
+    caplog.set_level(logging.DEBUG, logger="khadbot.storage.s3")
+    store = moto_s3_store()
+    assert store.get("raw/ABC/missing.json") is None
+    assert store.exists("raw/ABC/missing.json") is False
+    store.put("raw/ABC/report.json", b"{}")
+    assert store.get("raw/ABC/report.json") == b"{}"
+    assert _blob_errors(caplog) == []
