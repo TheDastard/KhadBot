@@ -7,6 +7,7 @@ and doesn't do with them. The decision behind it is in `docs/decisions.md` (game
 | Image | Source | Where it is drawn |
 |---|---|---|
 | Spell tooltip and icon | Wowhead's tooltip script, in the browser | Every ability link |
+| Mechanic icon | Not drawn: a neutral square marked with the mechanic's icon ability ID (`icon_ability_id` on `GET /v1/encounters/{id}/names`). It is a plain image, never a Wowhead link, and no allowed source serves a spell's image outside Wowhead's script | Mechanic names, chips, lane labels, the mechanic panel |
 | Ability icon name | WCL's `ReportAbility.icon` (`GET /v1/reports/{code}/abilities`) | Anywhere that wants an icon without the script |
 | Boss portrait | The game client's journal art, exported by hand and served by the KhadBot API (`GET /v1/art/portraits/{name}.png`); nothing is drawn until uploaded | Pull heading (96 by 48), search results' encounter rows (48 by 24) |
 | Boss thumbnail | The boss's Mythic kill achievement icon, from Blizzard's Game Data API, as a URL in `GET /v1/art/encounters`; a neutral square without one | Rail group headers (28 px), the opening-a-pull tile (72 px); the night overview when built |
