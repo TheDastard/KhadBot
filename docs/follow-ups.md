@@ -124,7 +124,7 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   fails before any request is charged its estimate. A cancelled waiting job keeps its place in line until reached.
 - **Usage ledger gaps.** A failed ingest writes no WCL row. The default `ANTHROPIC_MODEL`
   (`claude-sonnet-4-20250514`) has no price in `config/pricing/models.yaml`. Nothing warns when prices go stale.
-- **Error tracker service not chosen.** The API and worker report through the Sentry SDKs once a DSN is
+- **Error tracker service not chosen.** The API, worker and web app report through the Sentry SDKs once a DSN is
   set; whether that is Sentry's hosted plan or GlitchTip run ourselves is open (D116), and no DSN is set anywhere.
 - **Worker health is per machine.** `main.py worker --check` reads a local file; a heartbeat row would show other
   machines.
@@ -166,8 +166,10 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
 - **Phone layouts.** The 390-wide artboards: rail selector, panel as bottom sheet, account sheet, phone sizes,
   phone-width Playwright and axe runs.
 - **Not deployed.** Add the web app as its own service with the deploy pipeline (`NEXT_PUBLIC_API_BASE` per
-  environment, its origin in `KHADBOT_WEB_ORIGINS`), and a Content-Security-Policy with the hosts in
-  `docs/game-art.md` (the Wowhead hosts and `render.worldofwarcraft.com` for `img-src`).
+  environment, its origin in `KHADBOT_WEB_ORIGINS`, `NEXT_PUBLIC_SENTRY_DSN` once a tracker is chosen, with
+  `NEXT_PUBLIC_KHADBOT_ENV` and `NEXT_PUBLIC_KHADBOT_VERSION` matching the API's), and a
+  Content-Security-Policy with the hosts in `docs/game-art.md` (the Wowhead hosts and `render.worldofwarcraft.com`
+  for `img-src`) and the error tracker's ingest host in `connect-src`.
 - **"So busy nights mean less waiting"** is left out of the sign-in copy until WCL's user points are on; restore it
   then.
 - **Fonts cover Latin only.** Add `latin-ext` and `cyrillic` subsets if players notice.

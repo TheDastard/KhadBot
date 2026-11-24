@@ -118,6 +118,8 @@ With `SENTRY_DSN` set ([configuration](configuration.md)), the API and the worke
 - No user details, cookies, request headers, request bodies, query data or stack-frame variables are collected. Every string in an event or breadcrumb goes through the same redaction as the log lines, and a logged message's arguments are dropped in favour of the redacted formatted text.
 - Each event is tagged with `service` and the `request_id`, `job_id`, `user_id`, `report_code` and `pull_key` of the work it happened in, so the tag finds the matching log lines. `release` is `KHADBOT_VERSION`; `environment` is `KHADBOT_ENV` (`unset` when empty).
 
+The web app reports client-side errors the same way when built with `NEXT_PUBLIC_SENTRY_DSN` (`apps/web/src/instrumentation-client.ts`). Its events take `environment` from `NEXT_PUBLIC_KHADBOT_ENV` (`unset` when empty) and `release` from `NEXT_PUBLIC_KHADBOT_VERSION`, set at build time like the DSN; give them the same values as the API's `KHADBOT_ENV` and `KHADBOT_VERSION`.
+
 ### Worker health
 
 A worker has no HTTP server. While it runs it touches a file every `KHADBOT_WORKER_HEARTBEAT_S` seconds from its event loop, and removes it when it stops. `python main.py worker --check` (in the image, `khadbot worker --check`) needs no database and exits 0 only if that file was touched within `KHADBOT_WORKER_STALE_S` seconds, so a crashed or hung worker fails it. The compose stack uses it as the worker's health check; on a platform, use it as the container health command. The API's health route is `/v1/health`.
