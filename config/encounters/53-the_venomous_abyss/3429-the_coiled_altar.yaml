@@ -4,7 +4,9 @@
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
-# entry against logs from it. Counts in comments are over 35 Heroic pulls (one kill) from four reports.
+# entry against logs from it. Counts in comments are over 35 Heroic pulls (one kill) from four reports;
+# "Normal:" counts are over 13 Normal pulls (one kill) from reports 6xHBTkhGXbL3CdMD (fights 22-25 and
+# 27-32) and 1DaN32nvrTFZKBqx (fights 31-33), of which 9 reach Stage Two and 3 Stage Three.
 #
 # Failures are charged to the player responsible, for most rules the player who was hit. Soak, interrupt
 # and stack rules count one failure per occurrence and charge no one.
@@ -18,19 +20,19 @@ file_version: 2
 phases:
   - id: p1
     name: "Stage One: Serpent's Bargain"
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     start: {trigger: pull}
   - id: p2
     name: "Stage Two: Usurper's Reprisal"
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     start: {trigger: wcl_phase, phase: 2}
   - id: intermission
     name: "Intermission: The Claimed Vessel"
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     start: {trigger: wcl_phase, phase: 3}
   - id: p3
     name: "Stage Three: Coiled Union"
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     start: {trigger: wcl_phase, phase: 4}
 
 mechanics:
@@ -39,7 +41,8 @@ mechanics:
     name: Dreadful Presence
     description: "Malacrass's raid-wide Shadow damage for the whole fight. It is not counted as a failure."
     # Malacrass's raid-wide Shadow damage for the whole fight; one cast (1288624) at the pull.
-    difficulties: [heroic]
+    # Normal: one cast about 8 s into Stage Two in each of the 9 pulls that reach it.
+    difficulties: [heroic, normal]
     ability_ids: [1288635, 1288624]
     kind: unavoidable
     severity: low
@@ -50,7 +53,8 @@ mechanics:
       Venom globules spawned by Toxic Deluge, each pulsing the raid until it is destroyed. It is not counted as a
       failure.
     # Toxic Deluge (cast 1299960) spawns venom globules; each pulses the raid until it is destroyed.
-    difficulties: [heroic]
+    # Normal: 48 Toxic Deluge casts over 13 pulls.
+    difficulties: [heroic, normal]
     ability_ids: [1282408, 1299960]
     kind: unavoidable
     severity: medium
@@ -62,7 +66,8 @@ mechanics:
       to the player hit; no guide describes it, so the rule is a first reading.
     # Hits 1 to 8 players on some Toxic Deluge casts (57 hits over 19 pulls, 136 casts), so it reads as the
     # globules' landing. No guide describes it; the rule is a first reading (follow-ups).
-    difficulties: [heroic]
+    # Normal: 18 hits over 8 pulls (48 casts), 18 failures.
+    difficulties: [heroic, normal]
     ability_ids: [1300137]
     kind: avoidable
     failure: {rule: any_hit}
@@ -78,7 +83,8 @@ mechanics:
     # A player carrying a globule (debuff 1282419, 5 s) pulses damage (1282288) on players nearby, then
     # drops a fresh globule. A player hit while carrying none is a bystander the carrier failed to keep clear
     # of: 1,644 of 7,083 hits, 701 failures once each player is judged once per cluster at their first hit.
-    difficulties: [heroic]
+    # Normal: 4,119 hits, 436 debuffs, 452 failures (12 to 87 a pull).
+    difficulties: [heroic, normal]
     ability_ids: [1282288, 1282419]
     kind: debuff
     failure: {rule: hit_without_aura, aura_ids: [1282419]}
@@ -98,6 +104,19 @@ mechanics:
     cluster_window_ms: 3000
     severity: high
 
+  - id: venom_rupture
+    name: Venom Rupture
+    description: >-
+      Raid-wide hit each time venom globules are destroyed; Zul'jan's fall destroys every globule left. It is not
+      counted as a failure.
+    # Normal: no debuff and no ticks. 6,191 hits land in bursts of one hit per player per globule (up to
+    # 147 hits at once), with one burst at Zul'jan's fall.
+    difficulties: [normal]
+    ability_ids: [1299838]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
+
   - id: noxious_ground
     name: Noxious Ground
     description: >-
@@ -106,7 +125,8 @@ mechanics:
     # Puddles from the altar's mouths during Fangs of the Coiled Altar. One ID is the cast on the player,
     # the debuff and the tick. One tick is allowed for stepping out: of 450 debuffs, 142 ended before a
     # tick and 115 after one.
-    difficulties: [heroic]
+    # Normal: 190 debuffs, 403 ticks, 74 failures.
+    difficulties: [heroic, normal]
     ability_ids: [1283290]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 1}
@@ -120,7 +140,8 @@ mechanics:
       counts one failure, charged to that player.
     # Zul'jan throws axes (cast 1283832, hit 1283840) that then wander the room (Axegrinder, NPC 260474,
     # cast 1283841) and hit whoever they touch (damage and a sub-second debuff, 1285017).
-    difficulties: [heroic]
+    # Normal: 1,710 hits, 337 failures (15 to 58 a pull).
+    difficulties: [heroic, normal]
     ability_ids: [1285017, 1283832, 1283840, 1283841]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 0}
@@ -135,7 +156,8 @@ mechanics:
     # Thrown axe (cast 1282287 on a player) leaving a 14 s Nature DoT (1306906) on the players it passes;
     # a Poison dispel removes it. 191 dispels over 419 debuffs; 222 ran 13 s or longer. No source says how
     # long is too long, so there is no rule.
-    difficulties: [heroic]
+    # Normal: 70 dispels over 106 debuffs.
+    difficulties: [heroic, normal]
     ability_ids: [1306906, 1282287]
     kind: dispel
     cluster_window_ms: 2000
@@ -158,13 +180,28 @@ mechanics:
     cluster_window_ms: 3000
     severity: high
 
+  - id: guillotine
+    name: Guillotine
+    description: >-
+      An axe marks one player, and 1.5 s later its damage is split among the players nearby. A soak by fewer than 5
+      players is one failure, charged to no one; a failed soak can bring Execution on the raid.
+    # Normal: the same cast, marker and damage, but no soak debuff (1307425 never applies). One Guillotine
+    # per pull, at about 45 s. 12 soaks: 7 to 25 soakers, except one of 4, which was followed by Execution.
+    difficulties: [normal]
+    ability_ids: [1283594, 1283489, 1283485]
+    kind: soak
+    failure: {rule: soak_count_lt, value: 5}
+    cluster_window_ms: 3000
+    severity: high
+
   - id: execution
     name: Execution
     description: >-
       Raid-wide hit that follows a failed Guillotine soak, the cost of that failure. It is not counted as a failure
       itself.
     # Raid-wide hit that follows a failed Guillotine soak (once, 19 players); the cost of that failure.
-    difficulties: [heroic]
+    # Normal: once, 23 players, after the soak of 4.
+    difficulties: [heroic, normal]
     ability_ids: [1283606]
     kind: unavoidable
     cluster_window_ms: 3000
@@ -177,7 +214,8 @@ mechanics:
       not counted as a failure.
     # Eruption after the Guillotine: Widow's Kiss (1283623) within 50 yards, the smaller Widow's Touch
     # (1283631) beyond.
-    difficulties: [heroic]
+    # Normal: Widow's Touch hits 276 times and Widow's Kiss twice.
+    difficulties: [heroic, normal]
     ability_ids: [1283623, 1283631]
     kind: unavoidable
     cluster_window_ms: 3000
@@ -191,6 +229,7 @@ mechanics:
     # Stage Three's Guillotine: casts 1299267 (on the player) and 1299266 (also the marker debuff), damage
     # 1299296, soak debuff 1307652 (a healing absorb). 10 soaks: 7 had 9 to 18 soakers, the others 3, 2
     # and 1; the soaks of 2 and 1 were followed by Grim Execution.
+    # Not on Normal: no cast in the 3 Normal pulls that reach Stage Three.
     difficulties: [heroic]
     ability_ids: [1299296, 1299267, 1299266, 1307652]
     kind: soak
@@ -202,6 +241,7 @@ mechanics:
     name: Grim Execution
     description: "Raid-wide hit that follows a failed Grim Guillotine soak. It is not counted as a failure itself."
     # Raid-wide hit that follows a failed Grim Guillotine soak.
+    # Not on Normal (no Grim Guillotine there).
     difficulties: [heroic]
     ability_ids: [1299301]
     kind: unavoidable
@@ -215,6 +255,7 @@ mechanics:
       counted as a failure.
     # Eruption after the Grim Guillotine: Death's Embrace (1299396) within 50 yards, Death's Whisper
     # (1299401) beyond.
+    # Not on Normal (no Grim Guillotine there).
     difficulties: [heroic]
     ability_ids: [1299396, 1299401]
     kind: unavoidable
@@ -230,7 +271,8 @@ mechanics:
       Zul'jan's frontal, aimed at his tank. Anyone it hits other than the player holding Zul'jan's aggro fails, once per
       cast, charged to the player hit.
     # Zul'jan's frontal; one ID for the cast and the hit. 173 casts hit one player 156 times.
-    difficulties: [heroic]
+    # Normal: 50 casts hit 82 times, 36 killing blows; 38 failures.
+    difficulties: [heroic, normal]
     ability_ids: [1299684]
     kind: avoidable
     failure: {rule: hits_on_non_tank, ms: 8000}
@@ -244,7 +286,9 @@ mechanics:
       swap or a player stood in two: one failure per occurrence, charged to no one.
     # Debuff on each player hit: more Sever damage taken for 45 s. A second stack means the tanks did not
     # swap, or a player stood in two.
-    difficulties: [heroic]
+    # Normal: 16 failures, all in report 6xHBTkhGXbL3CdMD, where the first stack outlasts the third Sever (38 s
+    # later); none in the other report, where it ends after 33 s as on Heroic.
+    difficulties: [heroic, normal]
     ability_ids: [1301690]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 1}
@@ -257,7 +301,8 @@ mechanics:
       Stage Three's Shadow Sever, which also applies Gravebound. Anyone it hits other than the aggro holder of the boss
       that cast it fails, once per cast, charged to the player hit.
     # Stage Three's Sever (Shadow); also applies Gravebound. Every cast in the logs is Zul'jan's.
-    difficulties: [heroic]
+    # Normal: 14 casts hit 19 times, 7 failures.
+    difficulties: [heroic, normal]
     ability_ids: [1307292]
     kind: avoidable
     failure: {rule: hits_on_non_tank, ms: 8000}
@@ -267,7 +312,7 @@ mechanics:
   - id: blighted_sever_stacks
     name: Blighted Sever (stacks)
     description: "Stacking debuff from Blighted Sever. A second stack is one failure per occurrence, charged to no one."
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1307403]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 1}
@@ -283,7 +328,8 @@ mechanics:
     # debuff (1307959). It destroys Manifestations of Dread and leaves Gravebound on players hit. 55 casts
     # hit one player 42 times. No rule: Malacrass never melees, so the logs don't name his tank
     # (follow-ups).
-    difficulties: [heroic]
+    # Normal: 16 casts hit 22 times; 1307967 is not seen.
+    difficulties: [heroic, normal]
     ability_ids: [1286620, 1312630, 1307967]
     kind: unavoidable
     cluster_window_ms: 2000
@@ -292,7 +338,7 @@ mechanics:
   - id: soul_sever_stacks
     name: Soul Sever (stacks)
     description: "Stacking debuff from Soul Sever. A second stack is one failure per occurrence, charged to no one."
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1307959]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 1}
@@ -304,7 +350,7 @@ mechanics:
     description: >-
       Zul'jan's melee consumes the toxin Fangs of the Coiled Altar builds on him, causing damage spikes on the tank. It
       is not counted as a failure.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1300322]
     kind: unavoidable
     severity: low
@@ -314,7 +360,8 @@ mechanics:
     description: >-
       Stage Three Shadow DoT that Zul'jan's melee stacks on his tank after Defilement. It is not counted as a failure.
     # Stage Three: Zul'jan's melee stacks a Shadow DoT on his tank (up to 16 seen) after Defilement.
-    difficulties: [heroic]
+    # Normal: 22 applications over 3 pulls.
+    difficulties: [heroic, normal]
     ability_ids: [1298795]
     kind: debuff
     severity: medium
@@ -322,7 +369,7 @@ mechanics:
   - id: dread_bolt
     name: Dread Bolt
     description: "Malacrass's filler cast on one player. It is not counted as a failure."
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1307184]
     kind: unavoidable
     severity: low
@@ -335,7 +382,8 @@ mechanics:
       of Dread. No failure is counted.
     # Mind control (cast 1285643, debuff 1297445) that walks players off the edge until its shield is
     # broken; each player freed leaves a Manifestation of Dread.
-    difficulties: [heroic]
+    # Normal: 27 casts, 118 debuffs.
+    difficulties: [heroic, normal]
     ability_ids: [1285643, 1297445]
     kind: debuff
     severity: high
@@ -352,6 +400,33 @@ mechanics:
     kind: debuff
     severity: medium
 
+  - id: manifestation_of_dread
+    name: Manifestation of Dread
+    description: >-
+      Ghost fixated on a player; it moves only while unwatched and hits them with Despair if it reaches them. No
+      failure is counted here; the hits are counted under Despair.
+    # Normal: same fixation (1285911) and Unassailable (1285847), but a ghost that reaches its player casts
+    # Despair instead of re-applying Dreadmarch: all 118 Dreadmarch debuffs land within 3 s of a Dreadmarch
+    # cast (Heroic: 361 of 514).
+    difficulties: [normal]
+    ability_ids: [1285911, 1285847]
+    kind: debuff
+    severity: medium
+
+  - id: despair
+    name: Despair
+    description: >-
+      Damage a Manifestation of Dread deals to the player it is fixated on once it reaches them. Each player hit in an
+      occurrence is one failure, charged to that player, who let the ghost reach them.
+    # Normal only: 252 hits from Manifestations of Dread over 8 pulls, 250 of them on a player carrying
+    # Unnerving Fixation, 11 killing blows. Its casts are not in the ingest filter, so only the damage is read.
+    difficulties: [normal]
+    ability_ids: [1307009]
+    kind: avoidable
+    failure: {rule: hits_per_cluster_gt, value: 0}
+    cluster_window_ms: 2000
+    severity: high
+
   - id: gloombomb
     name: Gloombomb
     description: >-
@@ -361,7 +436,8 @@ mechanics:
     # A player hit twice by one cast stood in another's bomb. 70 of 330 hits landed on players without the
     # debuff, but hit_without_aura can't charge those: the bomb's damage lands 1 ms or more after the carrier's
     # debuff is removed, so it would charge the carriers too (follow-ups).
-    difficulties: [heroic]
+    # Normal: 19 casts, 56 debuffs, 80 hits, 4 failures.
+    difficulties: [heroic, normal]
     ability_ids: [1310883, 1310882, 1310881]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 1}
@@ -375,7 +451,7 @@ mechanics:
       collect; it ticks while it lasts. Running out is counted under Gravebound (expired).
     # Debuff (1286837) from Soul Sever, Blighted Sever and Gloombomb: the player's soul shatters into
     # fragments they must collect; it ticks (1308330) while it lasts.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1286837, 1308330]
     kind: debuff
     cluster_window_ms: 2000
@@ -387,7 +463,8 @@ mechanics:
       The lethal hit when Gravebound runs out with soul fragments uncollected. Every hit is a failure, charged to the
       player hit.
     # The lethal hit when Gravebound runs out with fragments uncollected: all 46 hits killed.
-    difficulties: [heroic]
+    # Normal: 39 hits, all killing blows.
+    difficulties: [heroic, normal]
     ability_ids: [1297906]
     kind: avoidable
     failure: {rule: any_hit}
@@ -400,6 +477,7 @@ mechanics:
       interrupted is a failure, charged to no one.
     # Spiteful Soulcoiler (NPC 261521, summoned by Spiritcackle) raid-wide fear; one ID for the cast and
     # the fear debuff. 164 casts begun, 88 interrupted, 12 completed.
+    # Not on Normal: no Spiritcackle, Wail of Terror or Retaliatory Malice in the 9 Normal pulls that reach Stage Two.
     difficulties: [heroic]
     ability_ids: [1286399]
     kind: interrupt
@@ -413,6 +491,7 @@ mechanics:
       interrupt. It is not counted as a failure.
     # Spiritcackle (1286441) summons the add. Retaliatory Malice (cast 1308311, damage 1308323) chips the
     # raid while it lives; 1308011 is the Wail of Terror cast logged as it blinks away after an interrupt.
+    # Not on Normal (see Wail of Terror).
     difficulties: [heroic]
     ability_ids: [1308323, 1308311, 1286441, 1308011]
     kind: unavoidable
@@ -427,7 +506,8 @@ mechanics:
     # Malacrass shields himself and channels; breaking the shield within 15 s stops it (logged as an
     # interrupt, 25 times). The cast row marks a channel that went through: 9 times, 95 killing blows.
     # Suffocating Darkness (1286947) absorbs healing while the shield holds.
-    difficulties: [heroic]
+    # Normal: 13 channels begun, 11 broken, 1 went through (6 killing blows), 1 cut short by the wipe.
+    difficulties: [heroic, normal]
     ability_ids: [1286918, 1286947]
     kind: interrupt
     failure: {rule: not_interrupted}
@@ -442,7 +522,8 @@ mechanics:
       not counted as a failure.
     # Malacrass (Soulbinding 1304032, Deathguard 1304028) revives Zul'jan, who heals through Ghastly
     # Regeneration (1304498, 1304033) while taking double damage.
-    difficulties: [heroic]
+    # Normal: 3 casts, one per pull reaching the intermission.
+    difficulties: [heroic, normal]
     ability_ids: [1304032, 1304028, 1304498, 1304033]
     kind: unavoidable
     severity: low
@@ -452,7 +533,8 @@ mechanics:
     description: >-
       Raid-wide hit each time a player blocks a Fragment of Malacrass on its way to Zul'jan; blocks must be staggered.
       No failure is counted, as nothing in the logs says who blocked.
-    difficulties: [heroic]
+    # Normal: 2,951 hits over 3 pulls.
+    difficulties: [heroic, normal]
     ability_ids: [1287722]
     kind: soak
     cluster_window_ms: 1000
@@ -465,7 +547,7 @@ mechanics:
       Zul'jan's Stage Three cast that puts a healing absorb on the raid and starts Corrupted Toxin. It is not counted as
       a failure.
     # Zul'jan's cast (1298381) puts a healing absorb on the raid (1298594) and starts Corrupted Toxin.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1298381, 1298594]
     kind: debuff
     severity: high
@@ -475,7 +557,8 @@ mechanics:
     description: >-
       Ground from the altar during Defilement that absorbs healing. Each debuff is a step into it, a failure charged to
       that player.
-    difficulties: [heroic]
+    # Normal: 67 debuffs over 3 pulls (37, 23 and 7).
+    difficulties: [heroic, normal]
     ability_ids: [1298591]
     kind: avoidable
     failure: {rule: aura_applied}
@@ -487,7 +570,8 @@ mechanics:
       Lethal hit from Malacrass; no guide names it and its trigger is unknown. It is not counted as a failure.
     # Lethal hit from Malacrass (17 hits, all killing blows, 3 pulls). No guide names it and its trigger is
     # unknown (follow-ups).
-    difficulties: [heroic]
+    # Normal: 20 hits, all killing blows: 19 at 9 to 10 s into a 16 s pull, one in Stage Two.
+    difficulties: [heroic, normal]
     ability_ids: [1312424]
     kind: unavoidable
     severity: high
@@ -497,10 +581,11 @@ damage_windows:
     name: Fangs of the Coiled Altar
     # 8 s raid-wide channel, about twice per Stage One (68 casts over 35 pulls). expected_defensive_cooldowns is a guess
     # (follow-ups).
-    difficulties: [heroic]
+    # Normal: at 0 and 85 s of Stage One.
+    difficulties: [heroic, normal]
     ability_ids: [1282512]
     cluster_window_ms: 3000
     expected_defensive_cooldowns: 1
 
 ignored_abilities:
-  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # Zul'jan on the tanks
+  - {ability_id: 1, name: Melee, difficulties: [heroic, normal]}  # Zul'jan on the tanks

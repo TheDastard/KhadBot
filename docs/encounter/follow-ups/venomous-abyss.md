@@ -39,19 +39,19 @@ pulls: coverage `full`, no `phase_trigger_unmatched`, failures Mother's Wrath 13
 - **Normal and Mythic** aren't covered; check each entry against those logs first.
 - **Unowned punishments.** 2 Unchecked Rages and 3 Rattler Slams have no aggro holder; they need tank assignments.
 
-## The Coiled Altar (3429), Heroic
+## The Coiled Altar (3429), Heroic, Normal
 
-`config/encounters/53-the_venomous_abyss/3429-the_coiled_altar.yaml`, first pass awaiting review; its comments give
-counts over 35 Heroic pulls (one kill).
+`config/encounters/53-the_venomous_abyss/3429-the_coiled_altar.yaml`: first pass, 35 Heroic and 13 Normal pulls.
 
-- **Review the 16 failure rules**, above all Volatile Venom bystanders (701) and Axegrinder (568). `MECHANIC_CAP`
-  (8) cuts a failing mechanic from 6 pulls' digests.
+- **Review the failure rules**: Volatile Venom bystanders (Heroic 701, Normal 452), Axegrinder (568, 337), Normal's
+  Despair (123, a ghost reaching its player). `MECHANIC_CAP` (8) cuts failing mechanics from 6 Heroic digests.
 - **Player-on-player damage**: 104.8M over the 32 pulls that reach Dreadmarch is unclassified, mostly players' DoTs
   (451963, Frost Fever, Virulent Plague, Flame Shock); none hits a player under Dreadmarch. Name the cause.
-- **Guillotine soak threshold** (5, from the guides): Execution follows only soaks of 2 or fewer, and one Grim
-  Execution has no soak hit. A soak-group `hit_while_aura` rule waits for logs with a second soak.
-- **Gloombomb bystanders** need a grace window on an aura's end before `hit_without_aura` stops charging carriers.
-- **Soul Sever** has no rule: Malacrass never melees, so his tank must come from taunts, Dread Bolt or a raid plan.
+- **Guillotine soak threshold** (5, guides): Execution follows soaks of 2 or fewer on Heroic, 4 on Normal (no soak
+  debuff there); one Grim Execution has no soak hit. A `hit_while_aura` rule needs a second soak.
+- **Tanks**: Normal Sever-stack failures are all in 6xHBTkhGXbL3CdMD (16; a stack outlasts 38 s, 33 s elsewhere).
+  Lethal Sever 1301681 (Normal) is in no entry. Soul Sever needs Malacrass's tank (taunts, Dread Bolt, raid plan).
+- **Gloombomb bystanders** need a grace window for `hit_without_aura`. Heroic-only: Grim Guillotine, Soulcoiler.
 - **Confirm**: Noxious Ground's free tick, Toxic Deluge as avoidable, Fangs' `expected_defensive_cooldowns: 1`, and
   Unworthy's (1312424) trigger. No source yet for Venomfang, Venom Rupture, Corrupted Toxin, Dreadmarch rules.
 
