@@ -126,19 +126,19 @@ and two Normal kills. Failures (Heroic; Normal by kill): Froth 177; 119, 60, Wav
   count, how Normal's Siphon Blood picks targets, infected players per Imbibe (2 to 6 on Normal). Unseen: Blood fountain
   on Heroic, Clotting Venom damage and Malignant Burst on both, Malignant Catalyst and Catalytic Bile on Normal.
 
-## The Lost Explorers (3497), Heroic
+## The Lost Explorers (3497), Heroic, Normal
 
-`config/encounters/53-the_venomous_abyss/3497-the_lost_explorers.yaml`, first pass awaiting review, from only four
-Heroic pulls (three kills); counts and the unseen abilities are in its comments.
+`config/encounters/53-the_venomous_abyss/3497-the_lost_explorers.yaml`, first pass awaiting review, from four Heroic
+pulls (three kills) and two Normal kills; counts and the unseen abilities are in its comments.
 
-- **Phases assume the feed order Nema, Epu, Gebbo.** Another order gets wrong phases, so the format needs phases
-  that match in any order; no pull reached the fourth Final Ascension, so the last phase is missing.
-- **Review**: Shell Spin charges the cast's target (7 of 32 casts); Aftershock `hits_per_cluster_gt 0`, Shredding
-  Shards past 7 stacks, Blink Nova's defensive count. Relic Rupture charges no one until a raid plan assigns crates.
-- **No rule yet** for Mighty Thud (no failed leap seen, and not a damage window), Steady Strikes, Splinters and
-  Spreading Flames; Elemental Explosion's rule is untested on a debuff carried into the next volley.
-- **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback's damage, Haunting Spirits
-  (1310561, unexplained deaths in the wipe).
+- **Phases assume the feed order Nema, Epu, Gebbo**; a Normal kill fed Gebbo, then Nema (57.7 to 174.7 s read as
+  gathering_1). Match phases in any order (Command IDs and WCL phases follow the tortollan); no fourth gather seen.
+- **Review**: Shell Spin charges the target (7 of 32 Heroic casts) and 20 to 21 players a Normal kill; Aftershock
+  `hits_per_cluster_gt 0`, Shredding Shards past 7, Blink Nova's cooldowns; Relic Rupture charges no one (no plan).
+- **No rule yet** for Mighty Thud (no failed leap, not a damage window), Steady Strikes, Splinters, Spreading Flames,
+  Hoji's Shadow Breath (one Normal kill); Elemental Explosion's rule is untested on a debuff carried into a volley.
+- **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback, Haunting Spirits (1310561:
+  deaths follow it on both difficulties); Normal lacks Final Ascension, Aftershock, Spreading Flames, Smashing Shovel.
 
 ## Sszorak (3420), Heroic, Normal
 

@@ -9,7 +9,8 @@
 # entry against logs from it. Counts in comments are over three Heroic kills (xk73VCBywmavDKz9 fight 11,
 # AQpRY9VNDrCGXtBF fight 20, xJqFwTPH73CXMkBV fight 22) unless they name the fourth pull, a 26 s wipe
 # (AQpRY9VNDrCGXtBF fight 19). That is little data: several rules below fired once or never, and their
-# comments say so.
+# comments say so. Normal counts, marked "Normal", are over two kills (RzFgvG7xV1AHLXh6 fight 6 and
+# 1DaN32nvrTFZKBqx fight 19); the second fed only Gebbo and Nema.
 #
 # Failures are charged to the player who was hit, except debuff_stacks_gt, not_interrupted and the
 # Relic Rupture per_cluster rule, which charge no one.
@@ -18,42 +19,45 @@ name: The Lost Explorers
 zone: {id: 53, name: The Venomous Abyss}
 file_version: 2
 
-# WarcraftLogs reports no phase transitions for this encounter. The fight is a cycle the raid drives:
+# The fight is a cycle the raid drives:
 # Mor'zahi casts Final Ascension (1297075) and gathers energy for 60 s; a player throws a Disgusting Fish
 # (a player cast, 1296535, whose target is the tortollan fed); 4 to 5 s later Mor'zahi casts Mor'zahi's
 # Command and that tortollan uses its extra ability for 60 s; it then casts Dark Whispers (1301667) and
 # Mor'zahi starts Final Ascension again within 1.2 s. Each tortollan can be fed once.
 #
-# Phases are matched in order, and the order of the feeds is the raid's choice. All three kills fed Nema,
-# then Epu, then Gebbo, so that is the order listed; a raid that feeds in another order gets wrong phases
-# (follow-ups). Mor'zahi's Command has one ID per feed: 1296975 followed a fish thrown to Nema
-# (3 of 3), 1297022 one to Epu (3 of 3) and 1297024 one to Gebbo (2 of 2). With one order in the logs,
-# whether the ID follows the tortollan or the feed's position is not known. One kill ended before the
-# third feed and no pull reached a fourth Final Ascension.
+# WarcraftLogs marks each Command as a phase (3 Nema, 2 Epu, 4 Gebbo, then 1 again) on both
+# difficulties, but phases are matched in order either way, and the order of the feeds is the raid's
+# choice. All three Heroic kills and one Normal kill fed Nema, then Epu, then Gebbo, so that is the order
+# listed; a raid that feeds in another order gets wrong phases (follow-ups). The other Normal
+# kill fed Gebbo, then Nema: its Gebbo Command and second gather fall in gathering_1. Mor'zahi's Command
+# has one ID per tortollan, whatever the feed's position: 1296975 followed a fish thrown to Nema (3 of 3
+# Heroic, 2 of 2 Normal), 1297022 one to Epu (3 of 3, 1 of 1) and 1297024 one to Gebbo (2 of 2, 2 of 2,
+# one of them the first feed). Final Ascension starts 60 s apart on Normal too. One Heroic kill ended
+# before the third feed and no pull reached a fourth Final Ascension.
 phases:
   - id: gathering_1
     name: "Final Ascension gathers (first)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: pull}
   - id: nema_commanded
     name: "Mor'zahi's Command: First Mate Nema (Mighty Thud)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: boss_cast, ability_id: 1296975}
   - id: gathering_2
     name: "Final Ascension gathers (second)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: boss_cast, ability_id: 1297075}
   - id: epu_commanded
     name: "Mor'zahi's Command: Scrollsage Epu (Frostfire Volley)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: boss_cast, ability_id: 1297022}
   - id: gathering_3
     name: "Final Ascension gathers (third)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: boss_cast, ability_id: 1297075}
   - id: gebbo_commanded
     name: "Mor'zahi's Command: Trader Gebbo (Explosive Surprise)"
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: boss_cast, ability_id: 1297024}
 
 mechanics:
@@ -63,7 +67,7 @@ mechanics:
     description: >-
       Raid-wide damage every 2 s for the whole fight, the largest source of damage taken. It is not counted as a
       failure.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1295450]
     kind: unavoidable
     severity: low
@@ -76,7 +80,7 @@ mechanics:
     # The channel that wipes the raid, begun when Mor'zahi's energy fills, 60 s after he starts gathering.
     # A fish thrown before it finishes stops it: it began on 2 of the 8 feeds, 0.03 and 0.2 s after the
     # fish was thrown. It has no damage in these logs, and neither does Fishy Feedback, the raid hit
-    # guides describe on each feed (follow-ups).
+    # guides describe on each feed (follow-ups). Not seen on Normal: no feed let it begin.
     difficulties: [heroic]
     ability_ids: [1292779]
     kind: unavoidable
@@ -87,8 +91,9 @@ mechanics:
     description: >-
       Creepy Statues fire at marked spots around each feed, and players should step out of them. Every hit is a
       failure, charged to the player hit.
-    # Creepy Statues (NPC 264706) fire at marked spots around each feed; step out of them.
-    difficulties: [heroic]
+    # Creepy Statues (NPC 264706) fire at marked spots around each feed; step out of them. Normal: 34
+    # and 18 hits. A second ID, 1292758, hit one immune player three times for nothing on Normal.
+    difficulties: [normal, heroic]
     ability_ids: [1292764]
     kind: avoidable
     failure: {rule: any_hit}
@@ -103,8 +108,9 @@ mechanics:
     # Three shells thrown in a cone at a player (cast 1296062); each player a shell touches is stunned
     # for 4 s (debuff 1291918). Every stun is a failure, the cast's own target included: of the 32 casts
     # 2 stunned nobody and 12 stunned one player. The target was stunned on 7 of them (4, 0, 2 and 1 a
-    # pull). hits_on_non_target can't spare it: it judges damage hits and the stun has none.
-    difficulties: [heroic]
+    # pull). hits_on_non_target can't spare it: it judges damage hits and the stun has none. Normal
+    # stuns far more: 39 and 44 over 12 and 8 casts (0 to 10 a cast), 21 and 20 players a kill.
+    difficulties: [normal, heroic]
     ability_ids: [1296062, 1291918]
     kind: avoidable
     failure: {rule: aura_applied}
@@ -117,7 +123,8 @@ mechanics:
       counted: the logs give no threshold for a late swap.
     # Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. Stacks at
     # a swap ran from 26 to 63, so the logs give no threshold for a late swap (follow-ups).
-    difficulties: [heroic]
+    # Normal: 8 to 33.
+    difficulties: [normal, heroic]
     ability_ids: [1291929]
     kind: debuff
     severity: low
@@ -131,7 +138,8 @@ mechanics:
     # turn, 2 s apart: a cast naming the marked player (1296133), then damage split evenly between the
     # players within 6 yd (1300237). A leap that hits nobody is said to hit the whole raid instead; none
     # of the 18 leaps did (5 to 11 players each), so there is no rule for it (follow-ups).
-    difficulties: [heroic]
+    # Normal: the same timings; 12 leaps, 4 to 13 players each.
+    difficulties: [normal, heroic]
     ability_ids: [1296094, 1296133, 1300237]
     kind: soak
     cluster_window_ms: 1000
@@ -143,7 +151,8 @@ mechanics:
       Quaking ground left at each Mighty Thud impact, ticking once a second on players inside it. Each player hit
       in an occurrence counts one failure, charged to that player.
     # Quaking ground left at each Mighty Thud impact, ticking once a second on players inside it. Soakers
-    # are knocked out of it by the leap; the first tick lands 1.1 s after the impact.
+    # are knocked out of it by the leap; the first tick lands 1.1 s after the impact. Neither Normal
+    # kill has it (no debuff or damage on 1310500 after 12 leaps), so it stays Heroic.
     difficulties: [heroic]
     ability_ids: [1310500]
     kind: avoidable
@@ -159,8 +168,8 @@ mechanics:
       the marked player stands needs positions, so no failure is counted.
     # Cast (1296021) and the debuff marking the player Epu teleports to (1296025). The raid damage is the
     # blink_nova damage window. Where the marked player takes it matters and needs positions
-    # (follow-ups).
-    difficulties: [heroic]
+    # (follow-ups). Normal: 7 and 5 teleports.
+    difficulties: [normal, heroic]
     ability_ids: [1296021, 1296025]
     kind: debuff
     severity: medium
@@ -172,8 +181,8 @@ mechanics:
       DoT and slow. Each cast that is not interrupted is a failure, charged to no one.
     # Cast at a player by Epu; interrupt it. A cast that completes hits its target and leaves a
     # dispellable DoT and slow on the same ID. 47 casts were begun in the kills and 1 completed; the
-    # 26 s wipe completed 2.
-    difficulties: [heroic]
+    # 26 s wipe completed 2. Normal: 28 begun, 1 completed.
+    difficulties: [normal, heroic]
     ability_ids: [1286922]
     kind: interrupt
     failure: {rule: not_interrupted}
@@ -189,8 +198,9 @@ mechanics:
     # stack of a debuff (1295858) that raises the next shard's damage; the tanks swap so it falls off. 11
     # of 13 debuffs ended at 7 stacks, one channel. A stack past 7 means a second channel landed on a tank
     # still debuffed: one failure per such channel, charged to no one. It fired twice, both in one kill:
-    # 13 stacks on one tank and 8 on the other.
-    difficulties: [heroic]
+    # 13 stacks on one tank and 8 on the other. Normal: seven shards a channel too; it fired twice in
+    # one kill (14 stacks) and once in the other (8; a tank died at 3 s and four players took shards).
+    difficulties: [normal, heroic]
     ability_ids: [1295854, 1310616, 1295858]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 7}
@@ -203,7 +213,10 @@ mechanics:
   # element's debuff sets off Elemental Explosion on the raid, so each such hit is a failure charged to
   # that player. It fired once, with the only Elemental Explosion in the logs: a player took a fire
   # missile and then a frost missile of the same volley. No player carried a debuff from one volley into
-  # the next (the longest lasted 23.5 s), so that way of failing is untested.
+  # the next (the longest lasted 23.5 s), so that way of failing is untested. Normal: one kill fed Epu,
+  # with the same timings; both its volleys set off Elemental Explosion (75 and 48 hits), and the frost
+  # rule fired 4 times. Two debuffs were carried into the next volley (29.5 and 61 s), and neither met
+  # the opposite element, so that way of failing is still untested.
   - id: frostfire_volley_fire
     name: Frostfire Volley (fire)
     description: >-
@@ -211,7 +224,7 @@ mechanics:
       fire missile that hits a player carrying Piercing Frost sets off Elemental Explosion: a failure charged to
       that player.
     # The cast (1295891) and the fire missiles' damage.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1295891, 1295893]
     kind: unavoidable
     failure: {rule: hit_while_aura, aura_ids: [1295954]}
@@ -224,7 +237,7 @@ mechanics:
       Frost missiles from Epu's Frostfire Volley land 0.5 s after the fire ones, hit players within 10 yd and give
       Piercing Frost. One that hits a player carrying Burning Flames sets off Elemental Explosion: a failure
       charged to that player.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1295985]
     kind: unavoidable
     failure: {rule: hit_while_aura, aura_ids: [1295928]}
@@ -236,7 +249,7 @@ mechanics:
     description: >-
       Raid hit when a Frostfire Volley missile meets the opposite element's debuff. It is not counted here: the
       player who caused it is charged by the Frostfire Volley rules.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1295952]
     kind: avoidable
     cluster_window_ms: 3000
@@ -248,8 +261,8 @@ mechanics:
       Debuff and DoT from a fire missile, lasting 1 min or until the player steps into a Frost Patch. It is not
       counted as a failure.
     # Debuff (1295928) and DoT (1310667) from a fire missile, for 1 min or until the player steps into a
-    # Frost Patch. Half were cleared within 3 s.
-    difficulties: [heroic]
+    # Frost Patch. Half were cleared within 3 s; on Normal 6 of 9.
+    difficulties: [normal, heroic]
     ability_ids: [1295928, 1310667]
     kind: debuff
     severity: medium
@@ -261,7 +274,7 @@ mechanics:
       not counted as a failure.
     # Debuff (1295954), DoT and slow (1310662) from a frost missile, for 1 min or until the player steps
     # into a Fire Patch.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1295954, 1310662]
     kind: debuff
     severity: medium
@@ -271,7 +284,7 @@ mechanics:
     description: >-
       Ground left by the Frostfire Volley missiles. Players step into the opposite element's patch to clear their
       debuff, so a tick can't be told from a mistake and no failure is counted.
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1297648, 1297649]
     kind: unavoidable
     cluster_window_ms: 3000
@@ -285,8 +298,8 @@ mechanics:
       a crate landed.
     # Crates thrown at marked spots, every 4 s in bursts (casts 1291933, and 1306145 with damage 1306127
     # for the variant thrown two or three times a kill). Standing where one lands is a failure: 69 hits in the
-    # kills, one a killing blow.
-    difficulties: [heroic]
+    # kills, one a killing blow. Normal: 31 and 22 hits, none a killing blow.
+    difficulties: [normal, heroic]
     ability_ids: [1291933, 1291935, 1306145, 1306127]
     kind: avoidable
     failure: {rule: any_hit}
@@ -300,8 +313,9 @@ mechanics:
     # Stacking bleed on a player who stomps a crate (Useless Junk, NPC 270001). Stomping is the job: the
     # crates hide the Disgusting Fish and rupture if left. The second largest source of damage taken.
     # Stacks reached 2 on 59 occasions, 3 on 8 and 4 on 2; no source gives a Heroic limit
-    # (follow-ups).
-    difficulties: [heroic]
+    # (follow-ups). Normal stacks higher: 3 on 22 occasions, 4 on 13, 5 on 6 and 6 on 1; it
+    # killed one player.
+    difficulties: [normal, heroic]
     ability_ids: [1308853]
     kind: debuff
     severity: medium
@@ -314,8 +328,9 @@ mechanics:
     # A crate left unstomped starts to rupture (cast 1310028 by the crate) and 10 s later hits the whole
     # raid (1310027). 21 crates began to rupture and 4 times the raid was hit (20 to 25 players each, 93
     # hits). One failure per occurrence, charged to no one: nobody in particular is at fault, and crate
-    # assignments from a raid plan could charge it.
-    difficulties: [heroic]
+    # assignments from a raid plan could charge it. Normal: 4 crates began to rupture and none hit the
+    # raid, so 1310027 and the rule are unchecked there.
+    difficulties: [normal, heroic]
     ability_ids: [1310028, 1310027]
     kind: avoidable
     failure: {rule: per_cluster, blame: {by: nobody}}
@@ -323,7 +338,7 @@ mechanics:
     severity: high
 
   # Gebbo's extra abilities reached the raid in one pull only: one kill ended before his feed and in
-  # another he died as the bomb's cast began.
+  # another he died as the bomb's cast began. On Normal, likewise in one kill: the one that fed him first.
   - id: bouncy_mushroom
     name: Bouncy Mushroom
     description: >-
@@ -331,8 +346,8 @@ mechanics:
       and the mushroom then bursts. It is not counted as a failure.
     # Mushroom Toss (1292104) drops mushrooms (NPC 268045) at players. Touching one bounces the player
     # (cast 1299855, debuff 1299854), which is how the raid clears Blast Wave; the mushroom then bursts
-    # (Fungal Burst, 1305618, 2 hits).
-    difficulties: [heroic]
+    # (Fungal Burst, 1305618, 2 hits). Normal: two tosses, 44 bounces, 9 Fungal Burst hits.
+    difficulties: [normal, heroic]
     ability_ids: [1292104, 1299855, 1299854, 1305618]
     kind: unavoidable
     severity: low
@@ -347,6 +362,16 @@ mechanics:
     kind: debuff
     severity: medium
 
+  - id: explosive_surprise
+    name: Explosive Surprise
+    description: "Bomb on one player, who takes it to the room's edge. It is not counted as a failure."
+    # Normal adds the bomb's landing hit on the carrier, 2 s after the debuff ends (1296245, 160k): it
+    # hit once in two bombs. Heroic has no row of it.
+    difficulties: [normal]
+    ability_ids: [1296249, 1297625, 1296245]
+    kind: debuff
+    severity: medium
+
   - id: blast_wave
     name: Blast Wave
     description: >-
@@ -354,8 +379,8 @@ mechanics:
       over it. Each player it touches is a failure, charged to that player.
     # Ring that spreads from the bomb 10 s after it lands: a hit of up to 1.2M before mitigation and a
     # DoT on the same ID. Bounce or teleport over it. Each player it touches is a failure. One wave in
-    # the logs: 11 players hit, 6 killed.
-    difficulties: [heroic]
+    # the logs: 11 players hit, 6 killed. Normal: two waves, 10 and 11 players hit, none killed.
+    difficulties: [normal, heroic]
     ability_ids: [1305844]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 0}
@@ -368,7 +393,7 @@ mechanics:
       Fire spreading from Gebbo's bomb that damages players inside it. It has been seen once, so no failure is
       counted yet.
     # Fire spreading from the bomb (NPC 266037): debuff 1297650 while inside, damage 1314061. One
-    # occurrence, during the wave, so no rule yet (follow-ups).
+    # occurrence, during the wave, so no rule yet (follow-ups). Not in either Normal kill.
     difficulties: [heroic]
     ability_ids: [1297650, 1314061]
     kind: avoidable
@@ -382,22 +407,40 @@ mechanics:
       failure.
     # Gebbo's extra damage and knockback on each swing once another tortollan is dead. Seen in one kill,
     # in its last 18 s. The other two tortollans' abilities for the same case, Relentless Escalation and
-    # Cataclysmic Invocation, are not in the logs.
+    # Cataclysmic Invocation, are not in the logs. Not in either Normal kill.
     difficulties: [heroic]
     ability_ids: [1296252, 1296251]
     kind: unavoidable
     severity: high
+
+  # -- Hoji ----------------------------------------------------------------------------------
+  - id: shadow_breath
+    name: Shadow Breath
+    description: >-
+      Hoji marks a player and 4 s later breathes on them, hitting the marked player and anyone standing with
+      them. It is not counted as a failure.
+    # Hoji (NPC 262030) was in one Normal kill only (1DaN32nvrTFZKBqx fight 19), active all fight, and in
+    # none of the Heroic pulls. It marks a player (debuff 1308214) every 7 to 12 s; 4.0 s later the breath hits
+    # (1308238): 29 of 32 breaths hit 1 to 8 players, the marked one in 26. 1307501 hit immune players
+    # for nothing. No rule: bystanders are hit as the mark ends, which hit_without_aura would charge to
+    # the marked player too (follow-ups).
+    difficulties: [normal]
+    ability_ids: [1308214, 1308238, 1307501]
+    kind: avoidable
+    cluster_window_ms: 1000
+    severity: medium
 
 damage_windows:
   - id: blink_nova
     name: Blink Nova
     # Raid-wide hit when Epu teleports to the marked player, 19 times in the kills, smaller the farther
     # a player stands from the mark. expected_defensive_cooldowns is a guess (follow-ups).
-    difficulties: [heroic]
+    # Normal: 12 times in two kills.
+    difficulties: [normal, heroic]
     ability_ids: [1294334]
     cluster_window_ms: 2000
     expected_defensive_cooldowns: 1
 
 ignored_abilities:
-  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # the three tortollans on the tanks
-  - {ability_id: 3, name: Falling, difficulties: [heroic]}               # landing after a mushroom bounce
+  - {ability_id: 1, name: Melee, difficulties: [normal, heroic]}     # the three tortollans on the tanks
+  - {ability_id: 3, name: Falling, difficulties: [normal, heroic]}   # landing after a mushroom bounce
