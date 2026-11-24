@@ -84,18 +84,18 @@ Desperate Thrash 7, Deadly Venom 69, Toxin Cloud 18.
 - **Confirm** the intermission starting on Ritual of Awakening (WCL's transition is 23 s later on Heroic, 21.4 on
   Normal). No rule yet for Latent Cultist emergence, Essence Rend placement (positions) or Corpse Blight stacks.
 
-## Entombed Sentinels (3445), Heroic
+## Entombed Sentinels (3445), Heroic, Normal
 
-`config/encounters/53-the_venomous_abyss/3445-entombed_sentinels.yaml`, first pass awaiting review. Failures: Blood
-Venom 549, Living Venom 287, Deadly Venom 60, Cultivated Burst 22, Unstable Miasma 9, Noxious Blast 9, Injection 2.
+`config/encounters/53-the_venomous_abyss/3445-entombed_sentinels.yaml`, first pass awaiting review. Failures, Heroic:
+Blood Venom 549, Living Venom 287, Deadly Venom 60, Burst 22, Miasma 9, Noxious Blast 9, Injection 2; Normal (2 kills):
+Noxious Blast 6, Miasma 1, Deadly Venom 1 (no damage); no Living or Blood Venom or Burst (toxins cleared).
 
-- **Review the thresholds**: Blood Venom `hits_per_cluster_gt 1` (is crossing pools part of the fight?) and Unstable
-  Miasma `soak_count_lt 8` (from these logs only; other raid sizes need a raid plan's group sizes).
-- **Unowned failures.** Noxious Blast needs droplet assignments; no blame option names Injection's debuffed tank.
-- **No rule yet** for Toxic Droplets, Clinging Murk, Blighted Blood (guides disagree on dispel timing) and the marks:
-  no source gives a limit. Living Venom has no cast; whether stepping on a droplet launches it is unconfirmed.
-- **Not in the logs**: Empowering Slam's bonus, Ula'tek's Dominance (testable from positions once the range is
-  settled), Helical Toxins' starting stacks. Contaminate's `expected_defensive_cooldowns: 1` is a guess.
+- **Review the thresholds**: Blood Venom `hits_per_cluster_gt 1` (is crossing pools part of the fight?) and Miasma
+  `soak_count_lt 8`, Heroic-derived (Normal splits ~3M, not 4.4M; its one failure, 4 hit, killed 3); needs group sizes.
+- **Unowned failures.** Noxious Blast needs droplet assignments; no blame option names Injection's debuffed tank. No
+  rule yet for Toxic Droplets, Clinging Murk, Blighted Blood (dispel timing disputed) and the marks (no limit given).
+- **Not in the logs**: Empowering Slam's bonus, Living Venom's trigger, Ula'tek's Dominance (testable from positions
+  once its range is known), Helical Toxins' starting stacks. Contaminate's `expected_defensive_cooldowns: 1` is a guess.
 
 ## Nymrissa Wavecaller (3379), Heroic, Normal
 
