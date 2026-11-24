@@ -420,7 +420,7 @@ class TestEncounterFile:
     def test_default_root_files_are_well_formed(self):
         encounters = load_all_encounters()  # raises on an invalid or misplaced file
         assert 3492 in encounters
-        assert encounters[3492].difficulties() == ["heroic"]
+        assert encounters[3492].difficulties() == ["normal", "heroic"]
 
     @pytest.mark.parametrize(
         ("mutate", "match"),

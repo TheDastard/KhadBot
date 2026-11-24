@@ -15,28 +15,28 @@ the same as for `docs/follow-ups.md` (`.claude/rules/docs.md`).
   and secret in their secrets. The upload folder must also hold Kith'ix's `UI-EJ-BOSS-Kithix.blp`, which the export
   lacks.
 
-## Ula'tek (3492), Heroic
+## Ula'tek (3492), Heroic, Normal
 
-`config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`, first pass awaiting review. Over the 47 recorded
-pulls: coverage `full`, no `phase_trigger_unmatched`, failures Mother's Wrath 13, Unchecked Rage 21, Rattler Slam
-10, Calcified Corpse 19, Circling Prey 12, Desperate Thrash 28, Acidic Expulsion 1.
+`config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`, awaiting review; Mythic isn't covered. Every pull has
+coverage `full` and no `phase_trigger_unmatched`. Failures over the 47 Heroic pulls: Mother's Wrath 13, Unchecked
+Rage 21, Rattler Slam 10, Calcified Corpse 19, Circling Prey 12, Desperate Thrash 28, Acidic Expulsion 1; over the
+8 Normal pulls (`1DaN32nvrTFZKBqx` 34-41): Mother's Wrath 6, Unchecked Rage 17, Rattler Slam 2, Calcified Corpse 4,
+Desperate Thrash 7, Deadly Venom 69, Toxin Cloud 18.
 
-- **Review the failure rules** against those counts.
-- **Spectral Coils as a damage window.** Every player takes it and it causes many overkill deaths; only Rage of
-  the Shackled is a window today.
-- **Rage of the Shackled `expected_defensive_cooldowns: 1`** is a guess.
-- **Rage of the Shackled's cast** (1286860) and the Venomous Heart's (1299526) aren't listed, so the filtered enemy
-  Casts page misses them. Decide at review; adding them refetches enemy Casts for every pull.
+- **Review the failure rules** against those counts. On Normal pull 41 one Deadly Venom cluster fails 17 of 27
+  players and the one Toxin Cloud 18 of 27, just before stage two: close to firing on everyone.
+- **Damage windows.** Only Rage of the Shackled is one; Spectral Coils (every player hit, many overkill deaths)
+  could be. Rage's `expected_defensive_cooldowns: 1` is a guess, and its cast (1286860) and the Venomous Heart's
+  (1299526) aren't listed, so enemy Casts miss them; adding them refetches enemy Casts for every pull.
 - **Poisonous Bite** has no rule until a source says how long the DoT may stay (`debuff_duration_gt`).
-- **Soul Constrictor soakers** are undetected: the debuff is never reapplied and every hit is equal
+- **Soul Constrictor soakers** (Heroic) are undetected: the debuff is never reapplied and every hit is equal
   (`docs/encounter/failure-rules.md`). Needs positions at impact or a raid plan.
 - **Mephitic Thrash** has no rule; positions could judge it once a reviewer confirms the radius and shape.
-- **Mother's Wrath `reach_yd`.** Target distance doesn't split the 13 failures cleanly; decide whether distance is
-  the right test.
-- **Hits with no enemy cast.** One Circling Prey has no cast; rules using Ula'tek's casts must change only who is
-  charged, never whether it counts.
+- **Mother's Wrath `reach_yd`.** Target distance doesn't split the 13 Heroic failures cleanly; is it the right test?
+- **Hits with no enemy cast.** One Circling Prey has none; rules on Ula'tek's casts may change only who is charged.
 - **Ingested Venom** (1313529) as the Serpent's Bite soak debuff is the raid's belief; confirm.
-- **Normal and Mythic** aren't covered; check each entry against those logs first.
+- **Unseen on Normal**: Fury Unleashed, Poisonous Bite, Petrifying Sting, a close-in Circling Prey (1M is Heroic's),
+  Acidic Expulsion past 1 stack, an uncut Malice.
 - **Unowned punishments.** 2 Unchecked Rages and 3 Rattler Slams have no aggro holder; they need tank assignments.
 
 ## The Coiled Altar (3429), Heroic, Normal
