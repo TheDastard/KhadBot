@@ -7,25 +7,30 @@
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
 # entry against logs from it.
 #
-# Everything here was checked against one Heroic pull, a kill (x9bLZvAHpnm4tWF3 fight 4, 364 s, one death).
-# Counts in the comments are over that pull. Several mechanics the guides describe never happened in it
-# (Bubblefin Berserkers and their Pulsing Tides, Shatter, Unending Tides), so their IDs are unknown and they are
-# not in the file.
+# Heroic was checked against one pull, a kill (x9bLZvAHpnm4tWF3 fight 4, 364 s, one death). Normal was checked
+# against two kills: 6xHBTkhGXbL3CdMD fight 1 (336 s, three deaths) and 1DaN32nvrTFZKBqx fight 44 (231 s, one
+# death). Counts in the comments are over those pulls. Several mechanics the guides describe never happened in
+# any of them (Bubblefin Berserkers and their Pulsing Tides, Shatter, Unending Tides), so their IDs are unknown
+# and they are not in the file.
+#
+# Normal uses the same ability IDs and cast timers as Heroic. Frost Orbs don't stack on Normal and Chilling
+# Frost lasts longer, so those two have Normal entries of their own.
 #
 # Failures are charged to the player responsible: the player hit, or the player bitten. The missed tank swap
 # counts one failure per occurrence and charges no one.
 encounter_id: 3379
 name: Nymrissa Wavecaller
 zone: {id: 53, name: The Venomous Abyss}
-file_version: 1
+file_version: 2
 
 # WarcraftLogs reports no phases for this encounter. The fight is one cycle of about 110 s that repeats until
 # the kill: Abyssal Rain, Alluring Bubble and its murloc swarms, Iceblade Flurry, Chilling Frost and its orbs,
-# then Swirling Whirlpools and the Pop! (at 120, 230 and 340 s in the kill).
+# then Swirling Whirlpools and the Pop! (at 120, 230 and 340 s in the Heroic kill; at 120 and 230 s in both
+# Normal kills).
 phases:
   - id: p1
     name: Nymrissa Wavecaller
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     start: {trigger: pull}
 
 mechanics:
@@ -39,7 +44,9 @@ mechanics:
     # Casts 1284015 and 1257717, at 18, 128, 238 and 348 s. Each Shorerunner (NPC 253032) logs one cast of
     # 1260012 as it spawns: 95 murlocs in waves of 15 about 8 and 52 s after each bubble. No Berserker appears
     # in the kill, so its NPC and ability IDs are unknown (follow-ups).
-    difficulties: [heroic]
+    # Normal: the same casts at 18, 128 and 238 s; smaller waves at the same times, 73 murlocs in waves of 10 to
+    # 15 (6xHB fight 1) and 36 in waves of 5 to 13 (1DaN fight 44). No Berserker in either kill.
+    difficulties: [normal, heroic]
     ability_ids: [1284015, 1257717, 1260012]
     kind: unavoidable
     severity: medium
@@ -51,7 +58,9 @@ mechanics:
       path. Each player hit by a whirlpool counts one failure, charged to that player.
     # Cast (1258673) 9 s before each Pop!; hits (1258677) are logged with the environment as their source.
     # 1 failure in the kill (618k before mitigation, at 339 s).
-    difficulties: [heroic]
+    # Normal: the same cast and timing; 286k a hit before mitigation. 41 hits on 18 players in 6xHB fight 1
+    # (three deaths at 118 to 120 s) and 8 hits on 5 players in 1DaN fight 44 (one death at 230 s).
+    difficulties: [normal, heroic]
     ability_ids: [1258673, 1258677]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 0}
@@ -65,7 +74,9 @@ mechanics:
       charged to the player bitten.
     # Shark NPC 275082. One ID for the debuff and the damage, about 150k a second before mitigation. 3 bites in
     # the kill, all within 3.3 s of a Pop! (two at 123 s, one a tank, and one at 343 s).
-    difficulties: [heroic]
+    # Normal: the same Shark, ID and 20 s DoT (149k a second). 4 bites in 6xHB fight 1, all within 3 s of a Pop!
+    # (one at 123 s, three at 233 s); none in 1DaN fight 44.
+    difficulties: [normal, heroic]
     ability_ids: [1265425]
     kind: avoidable
     failure: {rule: aura_applied}
@@ -79,6 +90,19 @@ mechanics:
       stands, so the targets move to place them. It is not counted as a failure.
     # Six casts in the kill.
     difficulties: [heroic]
+    ability_ids: [1313393]
+    kind: debuff
+    cluster_window_ms: 2000
+    severity: low
+
+  - id: chilling_frost
+    name: Chilling Frost
+    description: >-
+      Hits three players every 1.5 s for 6 to 7.5 s and slows them; each hit leaves a Frost Orb where the
+      player stands, so the targets move to place them. It is not counted as a failure.
+    # Normal: the same ID and three targets a cast, but four or five hits each (debuff 5.4 to 7.6 s) where
+    # Heroic has three (4.5 s). Six casts in 6xHB fight 1 (89 hits), four in 1DaN fight 44 (48 hits).
+    difficulties: [normal]
     ability_ids: [1313393]
     kind: debuff
     cluster_window_ms: 2000
@@ -99,6 +123,22 @@ mechanics:
     cluster_window_ms: 2000
     severity: high
 
+  - id: frost_orb
+    name: Frost Orb
+    description: >-
+      Orbs that must be soaked: touching one clings it to the player as a DoT for about 16 s, and touching
+      another refreshes it rather than stacking. An orb left untouched Shatters; no failure is counted, as no
+      Shatter has been seen in the logs.
+    # Normal: the same ID, but no stack rows: a second touch refreshes the debuff. A touch hits for 63k to 66k
+    # before mitigation and the DoT ticks every 2 s for 42k to 44k, flat. 62 touches (34 applies, 28
+    # refreshes) over six casts in 6xHB fight 1; 44 (33 and 11) over four casts in 1DaN fight 44. No death to
+    # it.
+    difficulties: [normal]
+    ability_ids: [1313448]
+    kind: soak
+    cluster_window_ms: 2000
+    severity: high
+
   - id: lingering_frost
     name: Lingering Frost
     description: >-
@@ -106,7 +146,9 @@ mechanics:
       Soakers step onto their own patches, so a hit is not counted as a failure.
     # A debuff on contact (also logged as a cast on the player) and the tick. 101 contacts on 20 players, 62 of
     # them under 1 s, and 88 ticks (1.19M damage). Three soakers took 14 to 20 ticks each (follow-ups).
-    difficulties: [heroic]
+    # Normal: the same ID and behaviour. 124 contacts on 21 players and 141 ticks (1.03M) in 6xHB fight 1; 75
+    # contacts on 25 players and 61 ticks (0.51M) in 1DaN fight 44.
+    difficulties: [normal, heroic]
     ability_ids: [1257654]
     kind: avoidable
     cluster_window_ms: 2000
@@ -120,7 +162,9 @@ mechanics:
       failure; its stacks are judged as Iceblade Flurry (stacks).
     # Cast and debuff (1282937) on Nymrissa's current target, then a hit each second for 5 s (1282945). Cast
     # every 22 s outside the whirlpools, 13 times in the kill.
-    difficulties: [heroic]
+    # Normal: the same IDs, timer and 5 s debuff; 12 casts in 6xHB fight 1 and 8 in 1DaN fight 44, six hits
+    # each.
+    difficulties: [normal, heroic]
     ability_ids: [1282937, 1282945]
     kind: unavoidable
     severity: low
@@ -132,7 +176,9 @@ mechanics:
       means a tank took two casts in a row: one failure per missed swap, charged to no one.
     # Debuff 1282947, lasting 40 s; casts come 22 s apart. 1 failure in the kill (the 205 s cast, which took
     # one tank to 12 stacks).
-    difficulties: [heroic]
+    # Normal: the same debuff, 6 stacks a cast and 40 s. 4 failures in 6xHB fight 1 (73, 95, 183 and 271 s;
+    # one tank reached 18 stacks) and 1 in 1DaN fight 44 (161 s).
+    difficulties: [normal, heroic]
     ability_ids: [1282947]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 6}
@@ -145,8 +191,9 @@ damage_windows:
     # Cast (1260837) every 33 to 66 s; a raid-wide hit each second for 4 s, then a drench DoT every 2 s for
     # about 24 s (1260843 for the hits, the DoT and the debuff). Seven casts in the kill. On Heroic each cast
     # also gives Nymrissa a stack of Wavecaller's Might, which no buff row in the log shows.
+    # Normal: the same IDs, cast times and 27 s debuff; seven casts in 6xHB fight 1, five in 1DaN fight 44.
     # expected_defensive_cooldowns is a guess (see its follow-ups).
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1260837, 1260843]
     cluster_window_ms: 3000
     expected_defensive_cooldowns: 1
@@ -156,11 +203,13 @@ damage_windows:
     # A whirlpool reaches the bubble: one raid-wide hit and a knockback (1266340, environment source; the
     # environment's cast 1258150), 300k to 450k before mitigation, at 120, 230 and 340 s. A hit of 0 from
     # Nymrissa (1258154) lands on one or two players at the same moment; what it marks is unknown.
+    # Normal: the same IDs at 120 and 230 s in both kills, 123k to 206k before mitigation; the zero hit lands
+    # on two or three players.
     # expected_defensive_cooldowns is a guess (see its follow-ups).
-    difficulties: [heroic]
+    difficulties: [normal, heroic]
     ability_ids: [1266340, 1258150, 1258154]
     cluster_window_ms: 2000
     expected_defensive_cooldowns: 1
 
 ignored_abilities:
-  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # boss on the tanks
+  - {ability_id: 1, name: Melee, difficulties: [normal, heroic]}         # boss on the tanks

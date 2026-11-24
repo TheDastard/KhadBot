@@ -97,17 +97,17 @@ Venom 549, Living Venom 287, Deadly Venom 60, Cultivated Burst 22, Unstable Mias
 - **Not in the logs**: Empowering Slam's bonus, Ula'tek's Dominance (testable from positions once the range is
   settled), Helical Toxins' starting stacks. Contaminate's `expected_defensive_cooldowns: 1` is a guess.
 
-## Nymrissa Wavecaller (3379), Heroic
+## Nymrissa Wavecaller (3379), Heroic, Normal
 
 `config/encounters/53-the_venomous_abyss/3379-nymrissa_wavecaller.yaml`, first pass awaiting review, from one Heroic
-kill, so no rule is tested yet: recheck on wipes, more kills and the Mythic pulls.
+and two Normal kills; recheck on wipes and the Mythic pulls. Normal failures: Whirlpools 25 and 5, Bites 4 and 0.
 
-- **Unseen in the kill, so no IDs**: Bubblefin Berserkers and their Pulsing Tides (a murloc reaching the bubble has
+- **Unseen in any kill, so no IDs**: Bubblefin Berserkers and their Pulsing Tides (a murloc reaching the bubble has
   no rule), Shatter, Wavecaller's Might and Unending Tides. Pulsing Tides and Shatter fit `per_cluster` by nobody.
-- **No rule yet** for Frost Orb stacks (`debuff_stacks_gt 2` would give 4 failures; is 3 the limit?) and Lingering
-  Frost, which needs to excuse the soaker's own patch or a tick count past which standing in it fails.
-- **Blame**: Iceblade Flurry past 6 stacks charges no one, though the other tank should have taunted; whether Wild
-  Bite on a tank knocked into the water is that tank's error is for a reviewer.
+- **No rule yet** for Frost Orb stacks (Heroic `debuff_stacks_gt 2` gives 4: is 3 the limit? Normal orbs refresh,
+  never stack) or Lingering Frost, which needs to excuse the soaker's own patch or a tick limit.
+- **Blame**: Iceblade Flurry past 6 stacks (Heroic 1, Normal 4 and 1) charges no one, though the other tank should
+  have taunted; whether Wild Bite on a tank knocked into the water is that tank's error is for a reviewer.
 - **Guesses**: Abyssal Rain's and Pop!'s defensive counts, and what Pop!'s zero hit marks. Repeating phases on the
   Alluring Bubble and Swirling Whirlpools casts could split the single phase's ~110 s cycle.
 
