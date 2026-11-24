@@ -140,20 +140,20 @@ Heroic pulls (three kills); counts and the unseen abilities are in its comments.
 - **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback's damage, Haunting Spirits
   (1310561, unexplained deaths in the wipe).
 
-## Sszorak (3420), Heroic
+## Sszorak (3420), Heroic, Normal
 
 `config/encounters/53-the_venomous_abyss/3420-sszorak.yaml`, first pass awaiting review, from 24 Heroic pulls (three
-kills).
+kills) and 4 Normal pulls (two kills).
 
-- **Tempest charges nearly everyone**: `aura_applied` gives 15 to 24 players a pull. Decide whether every contact
-  counts or only repeated ones (`debuff_stacks_gt`; stacks reached 2 to 7 a pull).
-- **A Viscous Cyst popped before the intermission** has no rule; it needs a mechanic scoped to some phases, which
-  the format lacks. Who touched the cyst isn't logged, so per_cluster with no blame is the likely shape.
-- **Mutilate double soaks and Raging Crosswinds bystanders** have no rule: the hit opens the gash in the same
-  millisecond, and a mark is removed up to 77 ms before its hit. Aura rules need a minimum aura age or a grace window.
-- **Review** Turbulent Gusts' 4 s limit (charge both if one partner was immune?); Caustic Residue is in one report.
-- **Not covered:** Venomous Surge cyst placement (needs positions; its `expected_defensive_cooldowns: 1` is a guess)
-  and players blown off in the intermission (no log row).
+- **Tempest charges nearly everyone**: `aura_applied` gives 15 to 24 players a pull on Heroic, 23 to 25 on Normal.
+  Decide whether every contact counts or only repeated ones (`debuff_stacks_gt`; stacks reach 2 to 7 a pull).
+- **An early Viscous Cyst pop** has no rule: it needs a phase-scoped mechanic (per_cluster, no blame: no one is logged).
+- **Mutilate double soaks and Crosswinds bystanders** have no rule: the gash opens in the hit's ms and a mark ends up to
+  77 ms before its hit (needs an aura age or grace window); on Normal most players soak both Mutilates of a pair.
+- **Review** Ravage: WCL writes a targeted cast row per player hit, so the tank may be charged (1 to 8 a Normal pull).
+- **Review** Turbulent Gusts' 4 s limit (an immune partner?); 36 of 261 Normal debuffs end at 3.45 to 3.51 s.
+- **Not covered:** cyst placement (positions; Surge's `expected_defensive_cooldowns: 1` is a guess) and intermission
+  blow-offs (no log row). Caustic Claws and Residue (in one Heroic report) have no Normal rows, so stay Heroic-only.
 
 ## The Twin Fangs (3421), Heroic
 
