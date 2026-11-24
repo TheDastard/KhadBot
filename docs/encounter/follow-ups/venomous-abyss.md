@@ -69,20 +69,20 @@ Desperate Thrash 7, Deadly Venom 69, Toxin Cloud 18.
 - **Need a source**: Blood of the Old Ones (1308670, 6 killing blows), Nightfall's stack limit, and Eightfold
   Eclipse's `expected_defensive_cooldowns: 1`; Eclipse Fragment soaks need a raid plan.
 
-## Nek'zali the Soulcoiler (3470), Heroic
+## Nek'zali the Soulcoiler (3470), Heroic, Normal
 
-`config/encounters/53-the_venomous_abyss/3470-nekzali_the_soulcoiler.yaml`, first pass awaiting review; seven Heroic
-pulls, three kills.
+`config/encounters/53-the_venomous_abyss/3470-nekzali_the_soulcoiler.yaml`; 7 Heroic pulls (3 kills), 2 Normal kills.
 
-- **Review the failure rules**; Latent Cultist (299 contacts) looks high: is one tick a failure?
-- **Log-derived limits to confirm**: Ritual Burn past 5 (a six-Invoke Stage Two would pass it with no Amani in the
-  well), Hollowing Strikes past 15 (guides swap at 6 to 8), Hungering Pyre under 6 soakers (should scale with size).
-- **A Restless Amani reaching the well** has no rule: it logs only a Soulcoil Rite (1288772). It needs a rule that
-  counts occurrences not preceded by a listed cast, charged to no one; `ritual_burn` catches only pile-ups.
+- **Review the failure rules**; Latent Cultist (299 Heroic contacts, 81 and 53 per Normal kill): is one tick a failure?
+- **Log-derived limits to confirm**: Ritual Burn past 5 (a six-Invoke Stage Two passes it with no Amani in the
+  well), Hollowing Strikes past 15 (guides swap at 6 to 8; 2 and 1 runs per Normal kill), Hungering Pyre under 6
+  soakers (should scale with size; untested on Normal, where every Pyre had 12 to 14).
+- **Restless Amani reaching the well** has no rule (it logs only a Soulcoil Rite, 1288772: count Rites with no
+  listed cast, charged to no one). Normal lacks Ritual Burn, Cremation, Vessel of Awakening and Uncoiled Rage.
 - **Possession Barrage** early bursts need positions (its defensive count is a guess); **Soulcoil Well** counts
   include raids walking in to end a lost pull, which the wipe cutoff doesn't always catch.
-- **Confirm** the intermission starting on Ritual of Awakening (23 s before WCL's transition). No rule yet for Latent
-  Cultist emergence, Essence Rend placement (needs positions) or Corpse Blight stacks.
+- **Confirm** the intermission starting on Ritual of Awakening (WCL's transition is 23 s later on Heroic, 21.4 on
+  Normal). No rule yet for Latent Cultist emergence, Essence Rend placement (positions) or Corpse Blight stacks.
 
 ## Entombed Sentinels (3445), Heroic
 
