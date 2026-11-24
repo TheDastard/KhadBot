@@ -104,6 +104,10 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
 - **WCL ability icons unconfirmed.** `masterData.abilities.icon` is in the query but no recording has it.
 - **Report guild and visibility are not fetched.** `reports.guild_id`, `guild_name` and `visibility` stay empty, so
   the per-guild budget allowance and the usage ledger's guild column fall back. Add them to the report query.
+- **A failed app-token request isn't remembered.** With bad client credentials one ingest asked WCL's token
+  endpoint 155 times in 12 s (once per fetch); the stack does this, since `deploy/stack.env` holds placeholder
+  credentials and its comment wrongly says the stack makes no WCL calls (the worker's budget sync and any ingest of
+  an unloaded pull call WCL).
 - **Character matching by name.** Metadata gives no server per actor, so a same-named player from another server
   matches; ask for the actor's `server` if the schema has it.
 
@@ -124,10 +128,37 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   fails before any request is charged its estimate. A cancelled waiting job keeps its place in line until reached.
 - **Usage ledger gaps.** A failed ingest writes no WCL row. The default `ANTHROPIC_MODEL`
   (`claude-sonnet-4-20250514`) has no price in `config/pricing/models.yaml`. Nothing warns when prices go stale.
-- **Error tracker service not chosen.** The API, worker and web app report through the Sentry SDKs once a DSN is
-  set; whether that is Sentry's hosted plan or GlitchTip run ourselves is open (D116), and no DSN is set anywhere.
+- **A Postgres restart breaks the stack until restarted.** The API's pool (`db/connect.py`) hands out a closed
+  connection (one 500 `AdminShutdown`, no pool `check`), and the worker exits 0 and stays down (`restart: "no"`).
+  Seen once when `stack:seed` recreated the postgres container right after `stack:up`; not reproduced.
+- **Cancelling an ingest whose process jobs are all still queued ends it `done`.** `_cancel` in `jobs/status.py`
+  drops the children before it flags the root, so `_settle` runs with `cancel_requested` still false.
 - **Worker health is per machine.** `main.py worker --check` reads a local file; a heartbeat row would show other
   machines.
+
+## Logs and observability
+
+- **Error tracker service not chosen.** The API, worker and web app report through the Sentry SDKs once a DSN is
+  set; whether that is Sentry's hosted plan or GlitchTip run ourselves is open (D116), and no DSN is set anywhere.
+- **Hosted logs aren't collected.** Staging and production lines stay on the platform's stdout. It waits on the
+  hosting platform and on choosing Grafana Cloud or a Loki run ourselves (D113). `config.alloy` finds containers
+  through the Docker socket of the `khadbot` compose project, which a platform doesn't offer: use the platform's log
+  drain or an Alloy sidecar. Measure line volume on staging before choosing retention.
+- **Hosted deploys set neither `KHADBOT_ENV` nor `KHADBOT_VERSION`.** Only `deploy/stack.env`, the dev loop and CI's
+  `GIT_SHA` build argument set them; without `env=staging`/`prod` the dashboards' env picker can't tell environments
+  apart, and without a version no line names the build that wrote it.
+- **The read-only Postgres role exists only on the local stack.** `deploy/observability/postgres/readonly.sql` runs
+  from the `obs-readonly` compose service. A hosted database needs the role made by an operator step, its password in
+  the platform's secrets, Grafana's `khadbot-pg` data source over TLS, and a read replica if dashboard queries load the
+  primary.
+- **No hosted Grafana access model.** The local Grafana lets anonymous users act as Admin because it binds to
+  127.0.0.1. A hosted one needs real sign-in, a decision on who gets access, and data sources provisioned with the
+  UIDs the dashboards name (`loki`, `khadbot-pg`).
+- **Hosted log retention isn't set.** Lines hold WCL user IDs and report codes; choose how long they're kept and
+  record it in `docs/hosting/operations.md` beside the bucket retention.
+- **Alerts have no contact point.** The rules show only in Grafana's Alerting list until a channel is chosen.
+- **Not yet: traces** (OpenTelemetry to Tempo, with `trace_id` in the log contract) **and Postgres slow-query
+  logging** (`log_min_duration_statement` on staging, collected by Alloy).
 
 ## Storage and read models
 
@@ -143,6 +174,9 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
 
 ## Hosted API
 
+- **No hosting platform chosen** for the API, the worker and the web app. Every hosted item in "Logs and
+  observability", the web app's "Not deployed" and "Worker health is per machine" wait on it;
+  `docs/hosting/observability.md` ("Open questions") lists the decisions due with it.
 - **Report lookup leftovers.** `api/jobs.parse_source` duplicates `wcl.reports.parse_report_source`. A watch poll
   writes `report.json` without `khadbotFetchedAt`, so the next lookup refetches. `ready` reads the whole report
   where a query for projected fight IDs would do.

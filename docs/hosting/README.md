@@ -7,7 +7,7 @@ How the hosted service is packaged and configured: the container image, the envi
 | [configuration.md](configuration.md) | Every environment variable by component (API, migrate, worker, watch, lookup, search, replay, seed) |
 | [local.md](local.md) | The local container stack, the native dev loop, the web app against either, test sessions |
 | [operations.md](operations.md) | Signing out everywhere, rotating the token key, retention and backfill, the usage ledger, logs, worker health |
-| [observability.md](observability.md) | Loki, Alloy and Grafana in the stack's `obs` profile: starting them, finding lines by ID, labels and structured metadata |
+| [observability.md](observability.md) | Logs, request IDs and error tracking in one place: the log events, following an ID from the API to the worker, Loki, Alloy and Grafana in the stack's `obs` profile, dashboards, alerts, production status |
 
 A new environment variable goes in `configuration.md` under its component (`.claude/rules/hosted.md`).
 

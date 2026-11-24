@@ -1,6 +1,26 @@
-# Logs: Loki, Alloy and Grafana
+# Observability
 
-The compose file's opt-in `obs` profile collects every service's log lines into Loki and shows them in Grafana. Plain `stack:up` and the CI `stack` job start none of it. Why these tools: `docs/decisions.md` (D113). The line format is in [operations.md](operations.md#logs).
+What the hosted service records about itself and where to read it:
+
+- **Log lines**: every hosted command writes one JSON object per line to stdout, with the IDs of the request or job it serves ([Log lines](#log-lines)).
+- **Collection and viewing**: the compose file's opt-in `obs` profile collects the local stack's and the dev loop's lines into Loki and shows them in Grafana, with dashboards and alert rules kept in the repo. Plain `stack:up` and the CI `stack` job start none of it. Why these tools: `docs/decisions.md` (D113).
+- **Error tracking**: the API, the worker and the web app report errors through the Sentry SDKs once a DSN is set ([operations.md](operations.md#error-tracking), D116).
+- **Production**: nothing ships or collects logs outside a developer's machine yet ([Production](#production)).
+
+## Log lines
+
+The format (D112) is defined in `src/khadbot/logging_setup.py`; [operations.md](operations.md#logs) has every field, the redaction rules and the log level and format settings. In short: base fields (`time`, `level`, `logger`, `message`, `exc`), process fields set once at start (`service`, `version` from `KHADBOT_VERSION`, `env` from `KHADBOT_ENV`), context IDs from `log_context()` (`request_id`, `job_id`, `user_id`, `report_code`, `pull_key`), and event fields passed through `extra=`, of which only the names in `EVENT_FIELDS` are written.
+
+| Event | Written by | Fields | Level |
+|---|---|---|---|
+| `http.request` | `api/request_log.py`, once per API request ([operations.md](operations.md#logs)) | `method`, `route`, `status`, `duration_ms`, `error_code`; `user_id` when signed in | INFO; WARNING for 5xx; DEBUG for `/v1/health` |
+| `job.start`, `job.finish` | `jobs/queue.py`, once each per run of a job ([operations.md](operations.md#logs)) | `job_kind`, `queue`, `attempt`; `job.finish` adds `outcome`, `duration_ms`, `error_code`, `points` | INFO; `job.finish` WARNING for retrying or interrupted, ERROR for failed |
+| `job.settled` | `jobs/status.py`, once when an ingest whose run logged `awaiting_children` finishes | `job_kind`, `outcome`, `error_code` | INFO; ERROR for failed |
+| `wcl.request` | `wcl/client.py`, once per WarcraftLogs HTTP request | `op` (the GraphQL operation name, or `oauth_token`), `status`, `duration_ms`, `attempt` | DEBUG; WARNING on failure |
+| `llm.call` | `encounter/analyst/usage.py`, once per model call | `model`, `outcome`, `duration_ms`, `input_tokens`, `output_tokens` | INFO |
+| `blob.error` | `storage/s3.py`, when an S3 operation fails | `op`, `status` | WARNING |
+
+`version` is the image's `GIT_SHA` build argument; a local stack built with `GIT_SHA=$(git rev-parse --short HEAD) mise run stack:up` writes it, a plain `stack:up` leaves it out. The stack sets `env` to `stack` (`deploy/stack.env`) and the dev loop to `dev`.
 
 ## What runs
 
@@ -46,6 +66,17 @@ Structured metadata filters go after the stream selector, with `|`. The same que
 
     curl -G http://127.0.0.1:3100/loki/api/v1/query_range --data-urlencode 'query={service="worker"} | job_id="..."'
 
+## Following an ID
+
+One request ID (D114, D115) connects a user's failure to every line it caused:
+
+1. The API takes the caller's `X-Request-ID` (8 to 64 letters, digits and hyphens) or generates one, and returns it in the response's `X-Request-ID`, an unhandled exception's 500 included. Its `http.request` line and every line logged while handling the request carry it, and `user_id` once the caller is known to be signed in.
+2. A job queued by the request stores it in `jobs.request_id`; an ingest's process jobs inherit it.
+3. The worker restores it in the job's log context, so `job.start`, `job.finish` and every line of the run (`wcl.request`, `llm.call`, library lines) carry it with the `job_id`.
+4. In the web app, an error state for a server failure shows "Reference:" and the ID's first 8 characters (`apps/web/src/components/shared/request-reference.tsx`). Paste them into the `request_id` box of the Follow an ID dashboard, which matches IDs by prefix.
+
+Work that starts outside a request generates its own ID: each live watch poll has one, carried by its lines and stored by the ingest it queues, and each backfill run has one for all its jobs (`main.py backfill` prints it). Lines with no request ID: the records cleanup and the worker's own start-up lines.
+
 ## Grafana provisioning
 
 Everything Grafana loads comes from `deploy/observability/grafana/`, mounted read-only:
@@ -75,7 +106,7 @@ Which log events feed which panels ([operations.md](operations.md#logs) has the 
 - `wcl.request`: WCL requests by `op`. Successful requests log at DEBUG, so they count only with `KHADBOT_LOG_LEVEL=DEBUG`; failures log at WARNING and always count.
 - `llm.call`: LLM calls and duration by model.
 
-In Follow an ID an empty variable matches every line, so set at least one and widen the time range to the request's or job's time. The jobs table matches `request_id` through `to_jsonb(j) ->> 'request_id'`, which finds nothing (rather than failing) while `jobs` has no `request_id` column. Every set variable must match (AND).
+In Follow an ID an empty variable matches every line, so set at least one and widen the time range to the request's or job's time. The jobs table matches `jobs.request_id` through `to_jsonb(j) ->> 'request_id'`. Every set variable must match (AND).
 
 ## Alerts
 
@@ -90,10 +121,29 @@ In Follow an ID an empty variable matches every line, so set at least one and wi
 
 Grafana does not expand environment variables in alert rule files, so the daily LLM limit is the threshold's `params` value in `rules.yaml`, not a setting. No contact point is provisioned: a firing rule shows in Grafana's Alerting list only.
 
+## Error tracking
+
+With `SENTRY_DSN` set, the API and the worker send unhandled exceptions and `ERROR` records to Sentry or GlitchTip, redacted like the log lines and tagged with the same IDs, so an event's `request_id` or `job_id` tag finds its lines here; `NEXT_PUBLIC_SENTRY_DSN` does the same for the web app's client-side errors. Without a DSN nothing is imported or sent. What is collected and how: [operations.md](operations.md#error-tracking). No DSN is set anywhere yet, since the service is not chosen (D116).
+
+## Production
+
+Only the local stack and the dev loop are collected. Staging and production logs go to the platform's stdout and are not shipped, kept or shown in Grafana: that waits on the hosting platform and on choosing Grafana Cloud or a Loki run ourselves. The plan is the same Alloy config with a remote Loki endpoint (or the platform's log drain), the same dashboard files, and the Postgres data source over TLS with the read-only role.
+
 ## Docker socket on Windows
 
 Docker Desktop (engine 29.9.3, Linux containers) on Windows 11 exposes the engine to a container that mounts `/var/run/docker.sock:/var/run/docker.sock`: a throwaway `docker:27-cli` container listed the running containers through it, and Alloy discovers the stack's containers the same way. From Git Bash, run such a `docker run -v` with `MSYS_NO_PATHCONV=1`, or Git Bash rewrites `/var/run` to a Windows path; `docker compose` reads the mount from `compose.yaml` and is unaffected. The dev loop's file tailing needs no socket.
 
 ## Open questions
 
-- Where alerts are sent (the contact point and channel). Until that is chosen, the rules notify no one.
+Decisions deferred until a hosting platform is chosen. Each has its work item in `docs/follow-ups.md`, named after the arrow.
+
+- Which platform hosts the API, the worker and the web app. Every item below waits on it. → "No hosting platform chosen"
+- Where production logs go, Grafana Cloud or a Loki run ourselves (D113), and how they get there: the platform's log drain or an Alloy sidecar. → "Hosted logs aren't collected"
+- How long hosted logs are kept; they hold WCL user IDs and report codes. → "Hosted log retention isn't set"
+- Who signs in to a hosted Grafana, and how. → "No hosted Grafana access model"
+- Whether dashboard queries read a replica rather than the primary database. → "The read-only Postgres role exists only on the local stack"
+- Which error tracker takes the DSNs: Sentry's hosted plan or GlitchTip run ourselves (D116). → "Error tracker service not chosen"
+- Where alerts are sent. Until a channel is chosen, the rules notify no one. → "Alerts have no contact point"
+- How worker health is checked once more than one machine runs workers: the health file is local to each. → "Worker health is per machine"
+
+Once these are settled, the deploy sets `KHADBOT_ENV` and `KHADBOT_VERSION` for the API and worker, and `NEXT_PUBLIC_KHADBOT_ENV`, `NEXT_PUBLIC_KHADBOT_VERSION` and `NEXT_PUBLIC_SENTRY_DSN` for the web build. → "Hosted deploys set neither `KHADBOT_ENV` nor `KHADBOT_VERSION`", "Not deployed"

@@ -6,6 +6,8 @@ paths:
   - "src/khadbot/storage/**"
   - "src/khadbot/wcl/**"
   - "src/khadbot/wiring.py"
+  - "src/khadbot/logging_setup.py"
+  - "src/khadbot/error_reporting.py"
   - "deploy/**"
 ---
 
@@ -17,6 +19,12 @@ Hosted mode (`KHADBOT_MODE=hosted`) runs the same engine behind Postgres, an S3-
 
 - Secrets (WCL client secret, user and refresh tokens, database URLs, bucket credentials, encryption keys) never appear in code, logs, job payloads, LLM context, findings, test fixtures or error messages. Payloads carry a user ID, never a token. Tests use obviously fake values.
 - Don't log request headers, token responses or connection strings. Log IDs.
+
+## Logging
+
+- Log an event with `extra=` using names from `logging_setup.EVENT_FIELDS`; the formatter drops any other name. A new field goes into the contract in the same change: `EVENT_FIELDS`, the table in `docs/hosting/operations.md` ("Logs") and `docs/hosting/observability.md`.
+- IDs (`request_id`, `job_id`, `user_id`, `report_code`, `pull_key`) belong in `log_context()`, never in Loki labels: only `service`, `level` and `env` are labels (D113), so the number of streams stays small.
+- Never log GraphQL query variables, request or response headers, tokens or bodies; redaction is a backstop, not permission.
 
 ## Database
 
