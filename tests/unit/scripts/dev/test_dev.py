@@ -1,12 +1,14 @@
 """
 tests/unit/scripts/dev/test_dev.py
 
-scripts/dev/dev.py, the native dev loop runner: which environment the API and worker get, the command lines it builds
-and the port it checks. It starts no process and touches no Docker.
+scripts/dev/dev.py, the native dev loop runner: which environment the API and worker get, the command lines it builds,
+the port it checks and how it renders and files the processes' log lines. It starts no process and touches no Docker.
 """
 
 from __future__ import annotations
 
+import io
+import json
 import sys
 
 import pytest
@@ -90,3 +92,119 @@ class TestCommands:
         monkeypatch.setattr(dev, "port_in_use", lambda port: True)
         with pytest.raises(SystemExit, match="stack:down"):
             dev.require_free_port(8000)
+
+
+API_LINE = json.dumps(
+    {
+        "time": "2026-11-24T19:02:11.483+00:00",
+        "level": "INFO",
+        "logger": "khadbot.api.request_log",
+        "message": "GET /v1/health 200",
+        "service": "api",
+        "env": "dev",
+        "request_id": "7f3a9c0e5b2d4e61",
+        "event": "http.request",
+        "status": 200,
+    }
+)
+
+
+class TestLogLines:
+    def test_the_api_and_worker_log_json(self):
+        env = dev.khadbot_environment({"KHADBOT_LOG_FORMAT": "text", "KHADBOT_MODE": "hosted"})
+        assert env == {"KHADBOT_LOG_FORMAT": "json", "KHADBOT_MODE": "hosted"}
+
+    def test_a_json_line_renders_compactly_without_the_process_fields(self):
+        assert dev.render_line(API_LINE) == (
+            "19:02:11 INFO khadbot.api.request_log: GET /v1/health 200 "
+            "request_id=7f3a9c0e5b2d4e61 event=http.request status=200"
+        )
+
+    def test_an_exception_follows_on_its_own_lines(self):
+        line = json.dumps({"level": "ERROR", "logger": "x", "message": "boom", "exc": "Traceback\n  ValueError"})
+        assert dev.render_line(line).splitlines() == ["ERROR x: boom", "Traceback", "  ValueError"]
+
+    def test_other_output_renders_as_it_is(self):
+        assert dev.render_line("[reload] dev.py changed; restarting") == "[reload] dev.py changed; restarting"
+        assert dev.render_line('{"not": "a log line"}') == '{"not": "a log line"}'
+
+    def test_a_json_line_is_filed_as_it_is(self):
+        assert dev.json_line(API_LINE, "api") == API_LINE
+
+    def test_other_output_is_filed_as_a_redacted_json_line(self):
+        entry = json.loads(dev.json_line("\x1b[32m ready\x1b[0m postgres://u:hunter2@db", "web"))
+        assert entry["service"] == "web" and entry["level"] == "INFO" and entry["logger"] == "output"
+        assert entry["message"] == " ready postgres://u:<redacted>@db"
+        assert entry["time"]
+
+    def test_pump_prefixes_the_terminal_and_files_every_line(self, tmp_path, capsys):
+        log = dev.open_log("api", tmp_path)
+        dev.pump(io.StringIO(f"{API_LINE}\nplain output\n\n"), "api", log)
+        assert log.closed
+        out = capsys.readouterr().out.splitlines()
+        assert out == [
+            "[api] 19:02:11 INFO khadbot.api.request_log: GET /v1/health 200 "
+            "request_id=7f3a9c0e5b2d4e61 event=http.request status=200",
+            "[api] plain output",
+            "[api] ",
+        ]
+        filed = (tmp_path / "api.jsonl").read_text(encoding="utf-8").splitlines()
+        assert filed[0] == API_LINE
+        assert json.loads(filed[1])["message"] == "plain output"
+        assert len(filed) == 2  # blank lines are not filed
+
+    def test_each_start_empties_the_file(self, tmp_path):
+        (tmp_path / "worker.jsonl").write_text("old\n", encoding="utf-8")
+        dev.open_log("worker", tmp_path).close()
+        assert (tmp_path / "worker.jsonl").read_text(encoding="utf-8") == ""
+
+    def test_the_files_live_at_the_checkout_root(self):
+        assert dev.DEV_LOGS == dev.REPO / ".khadbot_dev_logs"
+
+
+class TestStopping:
+    """Stopping the loop signals every process tree before waiting on any, and ignores repeat stop requests."""
+
+    class FakeProc:
+        def __init__(self, name: str, events: list[str]) -> None:
+            self.name, self.events, self.pid = name, events, 0
+
+        def poll(self):
+            return None
+
+        def wait(self, timeout=None):
+            self.events.append(f"wait {self.name}")
+            return 0
+
+        def kill(self):
+            self.events.append(f"kill {self.name}")
+
+    def test_every_tree_is_signalled_before_any_is_waited_for(self, monkeypatch):
+        import signal
+
+        events: list[str] = []
+        monkeypatch.setattr(dev, "signal_tree", lambda proc: events.append(f"signal {proc.name}"))
+        procs = {name: self.FakeProc(name, events) for name in ("api", "worker", "web")}
+        try:
+            dev.stop_all(procs)
+        finally:
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+            signal.signal(getattr(signal, "SIGBREAK", signal.SIGTERM), signal.SIG_DFL)
+        assert events == ["signal api", "signal worker", "signal web", "wait api", "wait worker", "wait web"]
+
+    def test_stop_requests_are_ignored_while_stopping(self, monkeypatch):
+        import signal
+
+        seen: dict[str, object] = {}
+
+        def record(proc):
+            seen["term"] = signal.getsignal(getattr(signal, "SIGBREAK", signal.SIGTERM))
+            seen["int"] = signal.getsignal(signal.SIGINT)
+
+        monkeypatch.setattr(dev, "signal_tree", record)
+        try:
+            dev.stop_all({"web": self.FakeProc("web", [])})
+        finally:
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+            signal.signal(getattr(signal, "SIGBREAK", signal.SIGTERM), signal.SIG_DFL)
+        assert seen == {"term": signal.SIG_IGN, "int": signal.SIG_IGN}

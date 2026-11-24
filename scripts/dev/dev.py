@@ -17,12 +17,19 @@ worker run on this machine in hosted mode and restart when a Python or config fi
 ``dev:session`` run these. Settings
 come from deploy/dev.env (copied from deploy/dev.env.example by scripts/dev/setup.ps1) on top of the main checkout's
 .env, which supplies the WCL credentials. See docs/hosting/local.md, "Local development".
+
+The API and the worker log JSON (``KHADBOT_LOG_FORMAT=json``). Each process's lines go to
+``.khadbot_dev_logs/<service>.jsonl`` at this checkout's root, emptied at each start, one JSON object per line (output
+that isn't a KhadBot JSON line, such as the web dev server's, is wrapped into one), and to the terminal as compact
+prefixed text.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -31,7 +38,9 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import IO
 
 REPO = Path(__file__).resolve().parents[2]
 COMPOSE = ["docker", "compose", "-f", str(REPO / "deploy" / "compose.yaml")]
@@ -41,6 +50,7 @@ API_HOST = "127.0.0.1"
 API_PORT = 8000
 WEB_PORT = 3000
 WEB_DIR = REPO / "apps" / "web"
+DEV_LOGS = REPO / ".khadbot_dev_logs"
 PLACEHOLDER_WCL = {
     "WARCRAFTLOGS_CLIENT_ID": "local-dev-client-id",
     "WARCRAFTLOGS_CLIENT_SECRET": "local-dev-client-secret",
@@ -182,8 +192,90 @@ def khadbot_command(role: str, args: list[str]) -> list[str]:
     return python_script("main.py", role, "--reload", *extra, *args)
 
 
-def stop_tree(proc: subprocess.Popen[str]) -> None:
-    """Stop ``proc`` and everything it started (the reloader runs the server as a child)."""
+def khadbot_environment(env: dict[str, str]) -> dict[str, str]:
+    """The API's and the worker's environment: JSON log lines, which the log files keep and the terminal renders."""
+    return {**env, "KHADBOT_LOG_FORMAT": "json"}
+
+
+# ---------------------------------------------------------------------------
+# Log lines
+# ---------------------------------------------------------------------------
+
+_ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")  # colour and cursor codes
+_RENDERED = ("time", "level", "logger", "message", "service", "version", "env", "exc")
+
+
+def _log_entry(line: str) -> dict[str, object] | None:
+    """``line`` as a KhadBot JSON log entry, or None when it is other output."""
+    if not line.startswith("{"):
+        return None
+    try:
+        entry = json.loads(line)
+    except ValueError:
+        return None
+    return entry if isinstance(entry, dict) and "message" in entry and "level" in entry else None
+
+
+def json_line(line: str, service: str) -> str:
+    """``line`` as one JSON object for the log file: a KhadBot JSON line as it is, other output wrapped and redacted."""
+    if _log_entry(line) is not None:
+        return line
+    from khadbot.logging_setup import redact
+
+    entry = {
+        "time": datetime.now(UTC).isoformat(timespec="milliseconds"),
+        "level": "INFO",
+        "logger": "output",
+        "message": redact(_ANSI.sub("", line)),
+        "service": service,
+    }
+    return json.dumps(entry, ensure_ascii=False)
+
+
+def render_line(line: str) -> str:
+    """``line`` for the terminal: a KhadBot JSON line as ``HH:MM:SS LEVEL logger: message key=value``, else as it is.
+
+    The process fields (service, version, env) are left out; the context IDs and event fields follow the message, and
+    an exception's traceback follows on its own lines.
+    """
+    entry = _log_entry(line)
+    if entry is None:
+        return line
+    clock = str(entry.get("time", ""))[11:19]
+    text = f"{clock} {entry['level']} {entry.get('logger', '')}: {entry['message']}".lstrip()
+    fields = " ".join(f"{key}={value}" for key, value in entry.items() if key not in _RENDERED)
+    text = f"{text} {fields}" if fields else text
+    return f"{text}\n{entry['exc']}" if entry.get("exc") else text
+
+
+def open_log(service: str, directory: Path | None = None) -> IO[str]:
+    """``<directory>/<service>.jsonl`` (``.khadbot_dev_logs/`` by default), emptied, for one process's lines."""
+    folder = directory or DEV_LOGS
+    folder.mkdir(parents=True, exist_ok=True)
+    return (folder / f"{service}.jsonl").open("w", encoding="utf-8", buffering=1)
+
+
+def pump(stream: IO[str], label: str, log: IO[str] | None = None) -> None:
+    """Copy a process's output to the terminal with ``[label]`` prefixes and, when given, to ``log`` as JSON lines."""
+    try:
+        for raw in stream:
+            line = raw.rstrip()
+            for part in render_line(line).splitlines() or [""]:
+                print(f"[{label}] {part}", flush=True)
+            if log is not None and line.strip():
+                log.write(json_line(line, label) + "\n")
+    finally:
+        if log is not None:
+            log.close()
+
+
+# ---------------------------------------------------------------------------
+# Process control
+# ---------------------------------------------------------------------------
+
+
+def signal_tree(proc: subprocess.Popen[str]) -> None:
+    """Ask ``proc`` and everything it started (the reloader runs the server as a child) to stop, without waiting."""
     if proc.poll() is not None:
         return
     if sys.platform == "win32":
@@ -195,14 +287,46 @@ def stop_tree(proc: subprocess.Popen[str]) -> None:
             os.killpg(proc.pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
+
+
+def wait_tree(proc: subprocess.Popen[str]) -> None:
+    """Wait for ``proc`` to exit after ``signal_tree``, killing it after 10 seconds."""
     try:
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
         proc.kill()
 
 
+def stop_tree(proc: subprocess.Popen[str]) -> None:
+    """Stop ``proc`` and everything it started, and wait for it."""
+    signal_tree(proc)
+    wait_tree(proc)
+
+
+def stop_all(procs: dict[str, subprocess.Popen[str]]) -> None:
+    """
+    Stop every process, ignoring further stop requests while it does. Every tree is signalled before any is waited
+    for, so a slow API or worker never delays the web dev server's signal: a second terminate (CI's ``pkill`` reaches
+    both ``uv run`` and this script, and ``uv`` forwards it) used to interrupt the waits and leave later children,
+    and the port they hold, running.
+    """
+    import signal
+
+    for name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), signal.SIG_IGN)
+    for proc in procs.values():
+        signal_tree(proc)
+    for proc in procs.values():
+        wait_tree(proc)
+
+
 def spawn(command: list[str], env: dict[str, str], label: str | None) -> subprocess.Popen[str]:
-    """Start ``command`` in its own process group, with output prefixed by ``label`` when one is given."""
+    """Start ``command`` in its own process group.
+
+    With a ``label``, its output is prefixed with it in the terminal and written to ``.khadbot_dev_logs/<label>.jsonl``;
+    without one, it goes straight to the terminal.
+    """
     kwargs: dict[str, object] = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP  # Ctrl-C reaches this script only
@@ -221,12 +345,7 @@ def spawn(command: list[str], env: dict[str, str], label: str | None) -> subproc
     )
     if label:
         assert proc.stdout is not None
-
-        def pump(stream: object) -> None:
-            for line in stream:  # type: ignore[attr-defined]
-                print(f"[{label}] {line.rstrip()}", flush=True)
-
-        threading.Thread(target=pump, args=(proc.stdout,), daemon=True).start()
+        threading.Thread(target=pump, args=(proc.stdout, label, open_log(label)), daemon=True).start()
     return proc
 
 
@@ -246,8 +365,7 @@ def supervise(procs: dict[str, subprocess.Popen[str]]) -> int:
         print("\ndev: stopping", flush=True)
         return 0
     finally:
-        for proc in procs.values():
-            stop_tree(proc)
+        stop_all(procs)
 
 
 def wait_for_health(port: int, procs: dict[str, subprocess.Popen[str]], timeout: float = 120) -> float | None:
@@ -292,7 +410,7 @@ def run_one(role: str, args: list[str], env: dict[str, str]) -> None:
     """Run the API or the worker in the foreground, with reload."""
     if role == "api":
         require_free_port(api_port(args))
-    proc = spawn(khadbot_command(role, args), env, label=None)
+    proc = spawn(khadbot_command(role, args), khadbot_environment(env), label=role)
     sys.exit(supervise({role: proc}))
 
 
@@ -313,8 +431,8 @@ def run_all(args: list[str], env: dict[str, str]) -> None:
     started = time.monotonic()
     infra(env)
     procs = {
-        "api": spawn(khadbot_command("api", args), env, label="api"),
-        "worker": spawn(khadbot_command("worker", []), env, label="worker"),
+        "api": spawn(khadbot_command("api", args), khadbot_environment(env), label="api"),
+        "worker": spawn(khadbot_command("worker", []), khadbot_environment(env), label="worker"),
     }
     if web is not None:
         procs["web"] = spawn(web, web_environment(env, port), label="web")
@@ -325,8 +443,7 @@ def run_all(args: list[str], env: dict[str, str]) -> None:
     if took is None:
         print("dev: the API did not come up", flush=True)
         supervise_status = 1
-        for proc in procs.values():
-            stop_tree(proc)
+        stop_all(procs)
         sys.exit(supervise_status)
     print(
         f"dev: ready at http://{API_HOST}:{port} (API healthy {took:.1f}s after launch, "
