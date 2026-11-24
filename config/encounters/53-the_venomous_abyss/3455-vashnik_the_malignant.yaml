@@ -13,6 +13,12 @@
 # appear, and no living venom ever reached the Malignant Cavity (no Malignant Burst). Those have no entry
 # here (follow-ups).
 #
+# Normal was checked against two kills, RzFgvG7xV1AHLXh6 fight 4 (478 s, six Imbibes) and 1DaN32nvrTFZKBqx
+# fight 14 (223 s, three Imbibes). Normal has no Malignant Catalyst or Catalytic Bile. In fight 4 Vashnik
+# drank from the Fountain of Blood at four of six Imbibes, so Normal adds Hemo Expulsion, Siphoning Infection
+# and Siphon Blood; its Clotting Venom adds (NPCs 259408, 261678, 261679) dealt no damage and no venom
+# reached the Malignant Cavity.
+#
 # Failures are charged to the player responsible. For most rules that is the player who was hit. Rules
 # that judge the raid as a whole (an unsoaked Catalytic Bile, a tank who took two bites in a row) count one
 # failure per occurrence and charge no one.
@@ -26,7 +32,7 @@ file_version: 1
 phases:
   - id: p1
     name: Vashnik the Malignant
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     start: {trigger: pull}
 
 mechanics:
@@ -36,7 +42,7 @@ mechanics:
     description: >-
       The soft enrage: each Imbibe adds a permanent stack of a raid-wide tick every 2 s. It is not counted as a
       failure.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1284561]
     kind: unavoidable
     severity: low
@@ -95,6 +101,20 @@ mechanics:
     cluster_window_ms: 3000
     severity: low
 
+  - id: virulent_fumes
+    name: Virulent Fumes
+    description: >-
+      Small ticks and a short debuff from the environment; the Dungeon Journal doesn't name it. It is not counted
+      as a failure.
+    # Same IDs as Heroic but not tied to Imbibe on Normal: 438 ticks on all 25 players spread over the whole of
+    # RzFgvG7xV1AHLXh6 4 (the pull that drank from the Fountain of Blood), 12 ticks on 3 players in
+    # 1DaN32nvrTFZKBqx 14.
+    difficulties: [normal]
+    ability_ids: [1291461, 1291467]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: low
+
   # -- Tanking ---------------------------------------------------------------------------------
   - id: dripping_fangs
     name: Dripping Fangs
@@ -102,7 +122,7 @@ mechanics:
       Bite on Vashnik's target with a 32 s DoT and Physical damage taken debuff; the tanks swap on each bite. A
       second stack means a tank took two bites in a row: one failure, charged to no one.
     # Cast and hit 1280935, debuff 1280934. Bites come about 28 s apart. 3 failures, one in each kill.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1280935, 1280934]
     kind: debuff
     failure: {rule: debuff_stacks_gt, value: 1}
@@ -115,8 +135,9 @@ mechanics:
       Debuff on 6 or 7 players that ticks on everyone within 4.5 yards of them once a second for 6 s. Carriers
       take their own ticks; a player without the debuff who is hit stood next to a carrier and fails once per
       cast, charged to that player.
-    # Debuff 1281913 (8 s; 1281910 is applied and removed in the same millisecond) and ticks 1281925.
-    difficulties: [heroic]
+    # Debuff 1281913 (8 s; 1281910 is applied and removed in the same millisecond) and ticks 1281925. Normal:
+    # 7 carriers every cast, 1281913 lasts 6 s, same IDs.
+    difficulties: [heroic, normal]
     ability_ids: [1281910, 1281913, 1281925]
     kind: avoidable
     failure: {rule: hit_without_aura, aura_ids: [1281913]}
@@ -129,7 +150,7 @@ mechanics:
       Waves that erupt in the cardinal directions from each Plague Froth carrier when the debuff expires. Every
       hit is a failure, one per player per eruption, charged to the player hit.
     # The waves land over the 2 s after the debuff expires.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1295798]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 0}
@@ -142,8 +163,9 @@ mechanics:
     description: >-
       Shadow fountain infection on two players per Imbibe; the infected players erupt in Stygian Burst. It is
       not counted as a failure.
-    # Debuff and DoT 1294994, about 5 s.
-    difficulties: [heroic]
+    # Debuff and DoT 1294994, about 5 s. Normal applies it 8 and 40 s after each Shadow Imbibe, to 2 players
+    # in 1DaN32nvrTFZKBqx 14 and to 3 or 6 in RzFgvG7xV1AHLXh6 4 (follow-ups).
+    difficulties: [heroic, normal]
     ability_ids: [1294994]
     kind: debuff
     severity: low
@@ -154,7 +176,7 @@ mechanics:
       Eruptions every 1.5 s from players with Stygian Infection, hitting everyone within 6 yards. A player hit
       without the infection stood in someone else's burst: one failure per burst, charged to that player.
     # The carrier who didn't spread out may share the blame (follow-ups).
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1302489]
     kind: avoidable
     failure: {rule: hit_without_aura, aura_ids: [1294994]}
@@ -166,8 +188,9 @@ mechanics:
     description: >-
       Flame fountain infection on two players per Imbibe; dispelling it sets off a Caustic Explosion on the
       raid, so dispels are staggered. No failure is counted: dispels too close together have no rule yet.
-    # Debuff and DoT 1295173 (follow-ups).
-    difficulties: [heroic]
+    # Debuff and DoT 1295173 (follow-ups). Normal: 2 players per application in 1DaN32nvrTFZKBqx 14,
+    # 4 or 6 in RzFgvG7xV1AHLXh6 4.
+    difficulties: [heroic, normal]
     ability_ids: [1295173]
     kind: dispel
     severity: medium
@@ -175,7 +198,7 @@ mechanics:
   - id: caustic_explosion
     name: Caustic Explosion
     description: "Raid-wide hit when an Exploding Infection is dispelled or expires. It is not counted as a failure."
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1295209]
     kind: unavoidable
     cluster_window_ms: 1000
@@ -186,7 +209,7 @@ mechanics:
     name: Burning Presence
     description: "Raid-wide pulse every 3 s from each living Burning Venom add. It is not counted as a failure."
     # Burning Venom is NPC 260905, two per Flame Imbibe.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1305901]
     kind: unavoidable
     cluster_window_ms: 3000
@@ -204,6 +227,16 @@ mechanics:
     cluster_window_ms: 2000
     severity: medium
 
+  - id: caustic_surge
+    name: Caustic Surge
+    description: "Raid-wide hit when a Burning Venom dies. It is not counted as a failure."
+    # Normal has no DoT: one 1285979 hit per player per death and no aura rows (10 deaths over the two pulls).
+    difficulties: [normal]
+    ability_ids: [1285979]
+    kind: unavoidable
+    cluster_window_ms: 2000
+    severity: medium
+
   - id: congealing_bolt
     name: Congealing Bolt
     description: >-
@@ -212,7 +245,7 @@ mechanics:
     # Shrouded Venom (NPC 260895, five per Shadow Imbibe) bolt: damage and a stacking dispellable debuff
     # (1305833, up to 3 stacks, 21 dispels); 1305826 and 1305832 are its zero-damage companion rows. The
     # Dungeon Journal doesn't list it.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1305826, 1305832, 1305833]
     kind: dispel
     severity: low
@@ -222,12 +255,37 @@ mechanics:
     description: >-
       Shadow venom sprayed where a Shrouded Venom dies, hitting players within 3 yards of an impact. Every hit
       is a failure, one per player per spray, charged to the player hit.
-    difficulties: [heroic]
+    difficulties: [heroic, normal]
     ability_ids: [1286737]
     kind: avoidable
     failure: {rule: hits_per_cluster_gt, value: 0}
     cluster_window_ms: 2000
     severity: low
+
+  # -- Fountain of Blood -----------------------------------------------------------------------
+  - id: siphoning_infection
+    name: Siphoning Infection
+    description: >-
+      Blood fountain infection on one player, 8 and 40 s after each Imbibe that drinks from the Fountain of
+      Blood; a DoT that lasts up to about 27 s. It is not counted as a failure.
+    # Debuff and DoT 1295224 from Vashnik; 7 applications in RzFgvG7xV1AHLXh6 4, lasting 8 to 27 s.
+    difficulties: [normal]
+    ability_ids: [1295224]
+    kind: debuff
+    severity: low
+
+  - id: siphon_blood
+    name: Siphon Blood
+    description: >-
+      Damage to other players while a Siphoning Infection lasts, rising from a few to about 14 players a second.
+      How players are picked isn't known, so it is not counted as a failure.
+    # 1295229, source Environment: 418 hits on 23 players in RzFgvG7xV1AHLXh6 4, only while a 1295224 debuff
+    # is up and never on its carrier (follow-ups).
+    difficulties: [normal]
+    ability_ids: [1295229]
+    kind: unavoidable
+    cluster_window_ms: 3000
+    severity: medium
 
 damage_windows:
   - id: imbibe
@@ -240,5 +298,14 @@ damage_windows:
     cluster_window_ms: 5000
     expected_defensive_cooldowns: 1
 
+  - id: imbibe
+    name: Imbibe
+    # Normal adds Hemo Expulsion (1298582, Blood): Imbibe at 24 s and every 84 s in both kills, drinking two of
+    # the three fountains each time; RzFgvG7xV1AHLXh6 4 drank Blood at four of six.
+    difficulties: [normal]
+    ability_ids: [1284663, 1298583, 1298587, 1298582]
+    cluster_window_ms: 5000
+    expected_defensive_cooldowns: 1
+
 ignored_abilities:
-  - {ability_id: 1, name: Melee, difficulties: [heroic]}                 # Vashnik on the tanks
+  - {ability_id: 1, name: Melee, difficulties: [heroic, normal]}         # Vashnik on the tanks

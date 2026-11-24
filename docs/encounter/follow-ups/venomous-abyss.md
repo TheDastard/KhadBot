@@ -111,20 +111,20 @@ and two Normal kills; recheck on wipes and the Mythic pulls. Normal failures: Wh
 - **Guesses**: Abyssal Rain's and Pop!'s defensive counts, and what Pop!'s zero hit marks. Repeating phases on the
   Alluring Bubble and Swirling Whirlpools casts could split the single phase's ~110 s cycle.
 
-## Vashnik the Malignant (3455), Heroic
+## Vashnik the Malignant (3455), Heroic, Normal
 
 `config/encounters/53-the_venomous_abyss/3455-vashnik_the_malignant.yaml`, first pass awaiting review, from three Heroic
-kills and no wipes. Failures to review: Plague Froth 177, Plague Wave 221, Stygian Burst 29, the rest under 10.
+and two Normal kills. Failures (Heroic; Normal by kill): Froth 177; 119, 60, Wave 221; 147, 122, Burst 29; 61, 9.
 
-- **Plague Froth may overcount.** 60 failures are bystanders hit only by the first tick, before anyone could move;
-  `hit_without_aura` has no first-tick grace. Decide whether they count. Plague Wave (about 9 players an eruption,
-  healed through) may not be a failure at all.
+- **Plague Froth and Wave may overcount.** 60 Heroic Froth failures are first-tick bystanders (no grace); Normal Froth
+  fails 24 and 20 of 25 players, Wave all 25 in both kills. Wave (healed through) may not be a failure at all.
 - **Stygian Burst blame.** Carriers in melee hit the tanks repeatedly, so the carrier may be at fault rather than the
   player hit; a former carrier hit within 1.5 s of the infection ending also counts.
 - **Staggered dispels and add kills** (Exploding Infection, Burning Venom deaths) need a rule kind for two occurrences
-  closer than a limit; Caustic Surge has no stack counts, so `debuff_stacks_gt` can't see the overlap.
-- **Unconfirmed**: the unsoaked Catalytic Bile ID (1282616), Virulent Fumes and Congealing Bolt (not in the Dungeon
-  Journal), Imbibe's cooldown count; the Blood fountain and leaked adds aren't covered (YAML header).
+  closer than a limit; Caustic Surge has no stack counts (nor a DoT on Normal), so `debuff_stacks_gt` can't see it.
+- **Unconfirmed**: unsoaked Bile (1282616), Virulent Fumes and Congealing Bolt (not in the Journal), Imbibe's cooldown
+  count, how Normal's Siphon Blood picks targets, infected players per Imbibe (2 to 6 on Normal). Unseen: Blood fountain
+  on Heroic, Clotting Venom damage and Malignant Burst on both, Malignant Catalyst and Catalytic Bile on Normal.
 
 ## The Lost Explorers (3497), Heroic
 
