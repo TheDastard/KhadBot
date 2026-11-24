@@ -22,6 +22,7 @@ export function ServerReports() {
         tone="bad"
         where="Any page"
         code={isApiErrorLike(query.error).code}
+        error={query.error}
         title="KhadBot isn't responding"
         body="Check your connection, then try again."
         action={{ label: "Retry", onClick: () => void query.refetch() }}

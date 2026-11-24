@@ -75,6 +75,7 @@ export function PullNotLoaded({ code, fight }: PullNotLoadedProps) {
       signedOut={signedOut}
       thumbnailSrc={thumbnailSrc}
       attribution={attribution}
+      requestError={open.openError}
     />
   );
 }

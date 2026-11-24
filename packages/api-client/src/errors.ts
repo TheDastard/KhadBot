@@ -2,6 +2,7 @@
 //
 // ApiError: every failed API call, as one typed error. The API answers errors as `{code, message}` (ErrorBody), and
 // a budget wait adds `wait_s` (BudgetWaitBody); a call that never reached the API gets the code `api_unreachable`.
+// An error response's `X-Request-ID` header, when valid, is kept as `requestId` so the app can show it as a reference.
 
 import type { components } from "./schema";
 
@@ -23,15 +24,40 @@ export class ApiError extends Error {
   readonly retryAfterS: number | null;
   /** The parsed error body, when there was one. */
   readonly body: unknown;
+  /**
+   * The response's `X-Request-ID`, the reference that finds this request in the API's logs. Absent when the call got
+   * no answer, the API sent none (or CORS hid it), or the value wasn't a valid ID.
+   */
+  readonly requestId?: string;
 
-  constructor(init: { status: number; code: string; message: string; retryAfterS?: number | null; body?: unknown }) {
+  constructor(init: {
+    status: number;
+    code: string;
+    message: string;
+    retryAfterS?: number | null;
+    body?: unknown;
+    requestId?: string;
+  }) {
     super(init.message);
     this.name = "ApiError";
     this.status = init.status;
     this.code = init.code;
     this.retryAfterS = init.retryAfterS ?? null;
     this.body = init.body;
+    this.requestId = init.requestId;
   }
+}
+
+/** The response header carrying the API's request ID. */
+export const REQUEST_ID_HEADER = "X-Request-ID";
+
+const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
+
+/** A request ID from a header value: 8 to 64 of `[A-Za-z0-9-]`; anything else (or nothing) is undefined. */
+export function parseRequestId(header: string | null): string | undefined {
+  if (header === null) return undefined;
+  const value = header.trim();
+  return REQUEST_ID.test(value) ? value : undefined;
 }
 
 export function isApiError(value: unknown): value is ApiError {
@@ -60,6 +86,7 @@ export function parseRetryAfter(header: string | null, now: number = Date.now())
 /** The ApiError for an error response and its parsed body. */
 export function errorFromResponse(response: Response, body: unknown): ApiError {
   const headerWait = parseRetryAfter(response.headers.get("Retry-After"));
+  const requestId = parseRequestId(response.headers.get(REQUEST_ID_HEADER));
   if (isErrorBody(body)) {
     const wait = (body as Partial<BudgetWaitBody>).wait_s;
     return new ApiError({
@@ -68,6 +95,7 @@ export function errorFromResponse(response: Response, body: unknown): ApiError {
       message: body.message,
       retryAfterS: typeof wait === "number" ? wait : headerWait,
       body,
+      requestId,
     });
   }
   return new ApiError({
@@ -76,6 +104,7 @@ export function errorFromResponse(response: Response, body: unknown): ApiError {
     message: `The API answered ${response.status} without an error body.`,
     retryAfterS: headerWait,
     body,
+    requestId,
   });
 }
 

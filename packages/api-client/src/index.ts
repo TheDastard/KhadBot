@@ -13,7 +13,9 @@ export {
   ApiError,
   errorFromResponse,
   isApiError,
+  parseRequestId,
   parseRetryAfter,
+  REQUEST_ID_HEADER,
   UNEXPECTED_RESPONSE,
   unreachable,
 } from "./errors";

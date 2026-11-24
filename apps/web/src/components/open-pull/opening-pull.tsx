@@ -55,6 +55,8 @@ export interface OpeningPullProps {
   thumbnailSrc?: string | undefined;
   /** The art attribution line, shown at the foot of the screen when any art is drawn. */
   attribution?: string | null;
+  /** The request that failed to open the pull (ApiError), for the error card's reference line on a 5xx. */
+  requestError?: unknown;
 }
 
 const DIFFICULTY_WORD: Record<string, string> = { lfr: "LFR", normal: "Normal", heroic: "Heroic", mythic: "Mythic" };
@@ -80,7 +82,20 @@ export function tileMonoLine(code: string, fight: number, tile: PullTileInfo | n
 }
 
 export function OpeningPull(props: OpeningPullProps) {
-  const { code, fight, tile, steps, phase, countdownS, onStartAgain, signInHref, signedOut = false, thumbnailSrc, attribution } = props;
+  const {
+    code,
+    fight,
+    tile,
+    steps,
+    phase,
+    countdownS,
+    onStartAgain,
+    signInHref,
+    signedOut = false,
+    thumbnailSrc,
+    attribution,
+    requestError,
+  } = props;
   const countdown = countdownS === null ? null : formatCountdown(countdownS);
   const card = cardFor(phase, steps);
   return (
@@ -117,6 +132,7 @@ export function OpeningPull(props: OpeningPullProps) {
           countdownS={countdownS}
           onStartAgain={onStartAgain}
           signInHref={signInHref}
+          requestError={requestError}
         />
       ) : null}
 
@@ -269,11 +285,13 @@ function ErrorCard_({
   countdownS,
   onStartAgain,
   signInHref,
+  requestError,
 }: {
   card: ErrorCard;
   countdownS: number | null;
   onStartAgain: () => void;
   signInHref: string;
+  requestError?: unknown;
 }) {
   const waiting = card.action === "retry" && countdownS !== null && countdownS > 0;
   const action = actionFor(card.action, waiting, countdownS, onStartAgain, signInHref);
@@ -285,6 +303,7 @@ function ErrorCard_({
       title={card.title}
       body={card.body}
       action={action}
+      error={requestError}
     />
   );
 }

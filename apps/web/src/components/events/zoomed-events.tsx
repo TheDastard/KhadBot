@@ -94,6 +94,7 @@ export function ZoomedEvents({ code, fight, window, actor, onClear, names }: Zoo
           tone="bad"
           where="Events"
           code={isApiError(query.error) ? query.error.code : "unexpected_error"}
+          error={query.error}
           title="These events couldn't be shown"
           body={(query.error as Error).message}
           action={{ label: "Try again", onClick: () => void query.refetch() }}

@@ -81,6 +81,7 @@ export function SearchError({
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title="Guild not found"
           body={`WarcraftLogs has no guild called “${subject.name}” on ${subject.server}. Check the spelling and the server.`}
           action={edit}
@@ -92,6 +93,7 @@ export function SearchError({
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title="Character not found"
           body={`WarcraftLogs has no character called “${subject.name}” on ${subject.server}. Check the spelling and the server.`}
           action={edit}
@@ -103,6 +105,7 @@ export function SearchError({
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title="That server isn't on the list"
           body="Pick a server from the list as you type; it fills in the region too."
           action={edit}
@@ -114,6 +117,7 @@ export function SearchError({
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title="That isn't a WarcraftLogs guild link"
           body="Paste a link like warcraftlogs.com/guild/us/server/guild-name, or type the server and the guild."
           action={edit}

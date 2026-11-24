@@ -57,6 +57,7 @@ export function CapabilitiesGate({ children }: { children: ReactNode }) {
           tone="bad"
           where="Any page"
           code={(health.error as { code?: string }).code ?? "api_unreachable"}
+          error={health.error}
           title="KhadBot isn't responding"
           body="Check your connection, then try again."
           action={{ label: "Retry", onClick: () => void health.refetch() }}

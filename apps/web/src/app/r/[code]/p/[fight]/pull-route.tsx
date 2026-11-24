@@ -102,6 +102,7 @@ function PullRouteFor({ code, fight }: { code: string; fight: number }) {
             tone="bad"
             where="Pull"
             code={code_}
+            error={error}
             title={
               unreachable
                 ? "KhadBot isn't responding"

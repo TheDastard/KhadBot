@@ -190,6 +190,29 @@ test.describe("errors", () => {
     await expect(page.getByRole("heading", { name: "KhadBot can't connect to WarcraftLogs" })).toBeVisible();
   });
 
+  test("a server failure shows its request reference and copies the full ID", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.route("**/v1/lookup/report*", (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        headers: {
+          "access-control-allow-origin": "http://localhost:3000",
+          "access-control-allow-credentials": "true",
+          "access-control-expose-headers": "X-Request-ID",
+          "x-request-id": "7f3a9c0e5b2d4e61",
+        },
+        body: JSON.stringify({ code: "wcl_unavailable", message: "down" }),
+      }),
+    );
+    await page.goto(`/?source=${PUBLIC}`);
+    const alert = page.getByRole("alert");
+    await expect(alert.getByText("Reference: 7f3a9c0e")).toBeVisible();
+    await alert.getByRole("button", { name: "Copy the full reference" }).click();
+    await expect(alert.getByText("Copied")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("7f3a9c0e5b2d4e61");
+  });
+
   test("an API that does not answer says KhadBot isn't responding", async ({ page }) => {
     await page.route("**/v1/lookup/report*", (route) => route.abort("failed"));
     await page.goto(`/?source=${PUBLIC}`);

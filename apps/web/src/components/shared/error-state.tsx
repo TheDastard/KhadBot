@@ -3,7 +3,8 @@
 // An error or empty state in place of the content it replaces (the canvas's "Errors" artboard): what happened (title),
 // the next step (body), the action, and a small mono label naming where it happened and the API error code
 // ("Search · report_not_found"). Tones: bad (it failed), warn (wait or retry), info (nothing to show). Announced with
-// role="alert" for bad and warn, role="status" for info.
+// role="alert" for bad and warn, role="status" for info. Pass the thrown `error` and a 5xx answer with a request ID
+// adds the "Reference: 7f3a9c0e" line and its copy button (request-reference.tsx).
 //
 //   <ErrorState tone="warn" where="Loading" code="rate_limited" title="WarcraftLogs is busy"
 //     body="KhadBot can't load more from WarcraftLogs right now." action={{ label: "Retry in 0:42", disabled: true }} />
@@ -14,6 +15,8 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+import { RequestReference } from "./request-reference";
 
 export type ErrorTone = "bad" | "warn" | "info";
 
@@ -36,6 +39,8 @@ export interface ErrorStateProps {
   action?: ErrorAction;
   /** A short note beside the action. */
   note?: ReactNode;
+  /** What the query threw: a 5xx ApiError with a request ID adds the "Reference: ..." line (RequestReference). */
+  error?: unknown;
   className?: string;
 }
 
@@ -51,7 +56,7 @@ const WELL: Record<ErrorTone, string> = {
   info: "text-info bg-infot",
 };
 
-export function ErrorState({ tone, title, body, where, code, action, note, className }: ErrorStateProps) {
+export function ErrorState({ tone, title, body, where, code, action, note, error, className }: ErrorStateProps) {
   const label = [where, code].filter(Boolean).join(" · ");
   return (
     <section
@@ -77,6 +82,7 @@ export function ErrorState({ tone, title, body, where, code, action, note, class
               {note ? <span className="text-xs text-mut">{note}</span> : null}
             </div>
           ) : null}
+          <RequestReference error={error} className="mt-1" />
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { ApiError } from "@khadbot/api-client";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -138,5 +139,46 @@ describe("ErrorState", () => {
     render(<ErrorState tone="info" title="Nothing here" body="Search for a night." />);
     expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("ErrorState reference", () => {
+  const ID = "7f3a9c0e5b2d4e61";
+  const failure = (status: number, requestId?: string) =>
+    new ApiError({ status, code: "wcl_unavailable", message: "Down.", ...(requestId ? { requestId } : {}) });
+  const show = (error: unknown) =>
+    render(<ErrorState tone="bad" title="KhadBot can't connect to WarcraftLogs" body="Try again later." error={error} />);
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows the first 8 characters for a 5xx with an ID", () => {
+    show(failure(503, ID));
+    expect(screen.getByRole("alert").textContent).toContain("Reference: 7f3a9c0e");
+    expect(screen.getByRole("alert").textContent).not.toContain(ID);
+    expect(screen.getByRole("button", { name: "Copy the full reference" })).toBeTruthy();
+  });
+
+  it("shows nothing for a 404, a 5xx without an ID or a call that got no answer", () => {
+    for (const error of [failure(404, ID), failure(503), failure(0), new Error("x"), undefined]) {
+      const { unmount } = show(error);
+      expect(screen.queryByText(/Reference:/)).toBeNull();
+      unmount();
+    }
+  });
+
+  it("copies the full ID", async () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    show(failure(500, ID));
+    fireEvent.click(screen.getByRole("button", { name: "Copy the full reference" }));
+    expect(await screen.findByText("Copied")).toBeTruthy();
+    expect(writeText).toHaveBeenCalledWith(ID);
+  });
+
+  it("shows the full ID when the clipboard refuses", async () => {
+    vi.stubGlobal("navigator", { clipboard: { writeText: async () => Promise.reject(new Error("denied")) } });
+    show(failure(502, ID));
+    fireEvent.click(screen.getByRole("button", { name: "Copy the full reference" }));
+    expect(await screen.findByText(ID)).toBeTruthy();
   });
 });

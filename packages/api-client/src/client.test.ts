@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { API_UNREACHABLE, ApiError, apiUrl, createApiClient, CSRF_HEADER, parseRetryAfter, unwrap } from "./index";
+import {
+  API_UNREACHABLE,
+  ApiError,
+  apiUrl,
+  createApiClient,
+  CSRF_HEADER,
+  parseRequestId,
+  parseRetryAfter,
+  unwrap,
+} from "./index";
 
 function recorder(respond: (req: Request) => Response) {
   const seen: Request[] = [];
@@ -91,6 +100,35 @@ describe("unwrap", () => {
     });
     const err = await unwrap(api.GET("/v1/health")).catch((e) => e);
     expect(err).toMatchObject({ status: 0, code: API_UNREACHABLE });
+    expect(err.requestId).toBeUndefined();
+  });
+
+  it("keeps a valid X-Request-ID on the error", async () => {
+    const { fetch } = recorder(() =>
+      json(503, { code: "wcl_unavailable", message: "Down." }, { "X-Request-ID": "7f3a9c0e5b2d4e61" }),
+    );
+    const api = createApiClient({ baseUrl: "http://api.test", fetch });
+    const err = await unwrap(api.GET("/v1/me")).catch((e) => e);
+    expect(err).toMatchObject({ status: 503, requestId: "7f3a9c0e5b2d4e61" });
+  });
+
+  it("keeps the ID on a body that isn't the API's shape", async () => {
+    const { fetch } = recorder(
+      () => new Response("<html>Bad gateway</html>", { status: 502, headers: { "X-Request-ID": "abcdef12" } }),
+    );
+    const api = createApiClient({ baseUrl: "http://api.test", fetch });
+    const err = await unwrap(api.GET("/v1/me")).catch((e) => e);
+    expect(err).toMatchObject({ code: "unexpected_response", requestId: "abcdef12" });
+  });
+
+  it("drops an X-Request-ID that isn't a valid ID", async () => {
+    const { fetch } = recorder(() =>
+      json(500, { code: "internal_error", message: "Oops." }, { "X-Request-ID": "<script>alert(1)</script>" }),
+    );
+    const api = createApiClient({ baseUrl: "http://api.test", fetch });
+    const err = await unwrap(api.GET("/v1/me")).catch((e) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.requestId).toBeUndefined();
   });
 });
 
@@ -102,6 +140,17 @@ describe("helpers", () => {
     const now = Date.parse("2026-11-01T12:00:00Z");
     expect(parseRetryAfter("Sun, 01 Nov 2026 12:00:30 GMT", now)).toBe(30);
     expect(parseRetryAfter("Sun, 01 Nov 2026 11:00:00 GMT", now)).toBe(0);
+  });
+
+  it("accepts 8 to 64 letters, digits and hyphens as a request ID", () => {
+    expect(parseRequestId(null)).toBeUndefined();
+    expect(parseRequestId("7f3a9c0e5b2d4e61")).toBe("7f3a9c0e5b2d4e61");
+    expect(parseRequestId("a1b2-C3D4")).toBe("a1b2-C3D4");
+    expect(parseRequestId("x".repeat(64))).toBe("x".repeat(64));
+    expect(parseRequestId("short")).toBeUndefined();
+    expect(parseRequestId("x".repeat(65))).toBeUndefined();
+    expect(parseRequestId("has space1")).toBeUndefined();
+    expect(parseRequestId("under_score")).toBeUndefined();
   });
 
   it("builds absolute URLs with a query", () => {

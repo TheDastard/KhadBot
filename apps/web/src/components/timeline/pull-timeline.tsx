@@ -84,6 +84,7 @@ export function PullTimeline({ code, fight }: PullTimelineProps) {
             tone="bad"
             where="Timeline"
             code={isApiError(timeline.error) ? timeline.error.code : "unexpected_error"}
+            error={timeline.error}
             title="The timeline couldn't be shown"
             body={(timeline.error as Error).message}
             action={{ label: "Try again", onClick: () => void timeline.refetch() }}

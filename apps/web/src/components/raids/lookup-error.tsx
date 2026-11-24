@@ -36,6 +36,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title={SIGNED_IN_NOT_FOUND}
           body="Check the code, or ask the report's owner to share it with your account."
           action={{ label: "Edit the code", onClick: onEditCode }}
@@ -49,6 +50,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           tone="warn"
           where="Loading"
           code={error.code}
+          error={error}
           title="WarcraftLogs is busy"
           body="KhadBot can't load more from WarcraftLogs right now. Everything loaded so far is kept."
           action={{
@@ -65,6 +67,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           tone="bad"
           where="Loading"
           code={error.code}
+          error={error}
           title="KhadBot can't connect to WarcraftLogs"
           body="Something is wrong on our side. Try again later."
           action={{ label: "Try again", onClick: onRetry }}
@@ -77,6 +80,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           tone="bad"
           where="Search"
           code={error.code}
+          error={error}
           title="That isn't a report code or link"
           body="Paste the code from a WarcraftLogs report address, or the whole address."
           action={{ label: "Edit the code", onClick: onEditCode }}
@@ -88,6 +92,7 @@ export function LookupError({ error, failedAt, onRetry, onEditCode }: LookupErro
           tone="bad"
           where="Any page"
           code={error.code}
+          error={error}
           title="KhadBot isn't responding"
           body="Check your connection, then try again."
           action={{ label: "Retry", onClick: onRetry }}
