@@ -47,9 +47,12 @@ in order, the rest in parallel. Work that didn't come from a plan stays with who
 - Parallel test runs share one machine. Under load, Windows timing and file-sharing tests flake, and an agent that
   leaves test runs or servers going slows everyone. Stop a finished agent that keeps reporting with `TaskStop`;
   start full checks one at a time where you can.
-- Before landing, prove every commit:
-  `git rebase --exec "uv sync --extra dev -q && uv run --extra dev ruff check src tests scripts && uv run --extra dev mypy src && uv run --extra dev lint-imports && uv run --extra dev pytest tests/unit -n auto -q --no-cov" refs/remotes/origin/main`.
-  A flaky failure stops the rebase; rerun that commit's tests, and `git rebase --continue` only once they pass.
+- Before landing, prove every commit with the full gate, one stack at a time:
+  `git rebase --exec "uv sync --extra dev -q && mise run check" refs/remotes/origin/main`. Run it in the
+  background; with the parallel suite each commit takes one to two minutes. Don't swap in a narrower check for
+  data- or docs-only commits: encounter files and registries feed the real-fixture tests and goldens, so only the
+  full suite proves them, and a narrower check saves under a minute a commit. A flaky failure stops the rebase;
+  rerun that commit's tests, and `git rebase --continue` only once they pass.
 
 ## Cleaning up
 

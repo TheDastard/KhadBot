@@ -36,7 +36,8 @@ has goldens or generated files, regenerate them rather than hand-merging (`uv ru
 
 ## 3. Check
 
-`mise run check` must be green. Stop and fix it here; never push a red branch to see what CI says.
+`mise run check` must be green. Stop and fix it here; never push a red branch to see what CI says. A branch with
+several commits proves each one with the full gate (the `git rebase --exec` line in the `parallel-work` skill).
 `mise run lint:commits` must pass too (the CI `commit-messages` job runs the same check). Reword a failing message
 before pushing: `git commit --amend` for the tip, an `amend!` commit and an autosquash rebase for an older one.
 
