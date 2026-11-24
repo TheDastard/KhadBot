@@ -400,7 +400,7 @@ async def _one_request(
     attempt = 0
     while True:
         try:
-            data = await client.query(EVENTS_PAGE_OPTIONAL_TYPE, variables)
+            data = await client.query(EVENTS_PAGE_OPTIONAL_TYPE, variables, attempt=attempt + 1)
             break
         except WarcraftLogsRateLimitError as exc:
             if attempt >= max_retries:

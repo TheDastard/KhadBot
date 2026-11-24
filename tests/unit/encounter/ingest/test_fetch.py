@@ -1,16 +1,20 @@
 """
 tests/unit/encounter/ingest/test_fetch.py
 
-RawPageCache, build_filter and the paginated fetcher. WCL is replaced by a stub client
-(no network, no respx); asyncio.sleep is patched so backoff tests run instantly.
+RawPageCache, build_filter and the paginated fetcher. WCL is replaced by a stub client, except where a test
+drives the real client over respx to check the attempt numbers it logs; asyncio.sleep is patched so backoff
+tests run instantly.
 """
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import AsyncMock
 
+import httpx
 import orjson
 import pytest
+import respx
 
 from khadbot.encounter.ingest.fetch import (
     DEFAULT_SPECS,
@@ -23,7 +27,13 @@ from khadbot.encounter.ingest.fetch import (
 )
 from khadbot.encounter.models import FetchSpec, Pull
 from khadbot.storage import LocalBlobStore
-from khadbot.wcl.client import WarcraftLogsNetworkError, WarcraftLogsRateLimitError
+from khadbot.wcl.client import (
+    GRAPHQL_CLIENT_URL,
+    TOKEN_URL,
+    WarcraftLogsClient,
+    WarcraftLogsNetworkError,
+    WarcraftLogsRateLimitError,
+)
 
 CODE = "ABC123"
 EMPTY_PAGE = {"data": [], "nextPageTimestamp": None}
@@ -54,10 +64,12 @@ class StubClient:
         self.chains = chains or {}
         self.errors = list(errors or [])
         self.calls: list[dict] = []
+        self.attempts: list[int] = []
 
-    async def query(self, gql: str, variables: dict | None = None, **_):
+    async def query(self, gql: str, variables: dict | None = None, *, attempt: int = 1, **_):
         assert variables is not None
         self.calls.append(variables)
+        self.attempts.append(attempt)
         if self.errors:
             raise self.errors.pop(0)
         key = variables["dataType"] + ("-Enemies" if variables["hostility"] == "Enemies" else "")
@@ -320,6 +332,27 @@ class TestFetchPull:
         with pytest.raises(WarcraftLogsNetworkError):
             await fetch_pull(client, RawPageCache(tmp_path), CODE, make_pull(), [spec], max_retries=2)
         assert len(client.calls) == 3
+
+    async def test_each_try_passes_its_attempt_number(self, tmp_path):
+        spec = FetchSpec(data_type="Deaths")
+        client = StubClient(errors=[WarcraftLogsRateLimitError("slow"), WarcraftLogsNetworkError("timed out")])
+        await fetch_pull(client, RawPageCache(tmp_path), CODE, make_pull(), [spec], max_retries=3)
+        assert client.attempts == [1, 2, 3]
+
+    async def test_a_retried_request_logs_its_attempt(self, tmp_path, caplog):
+        caplog.set_level(logging.DEBUG, logger="khadbot.wcl.client")
+        page = {"data": {"reportData": {"report": {"events": EMPTY_PAGE}}}}
+        with respx.mock() as router:
+            router.post(TOKEN_URL).mock(
+                return_value=httpx.Response(200, json={"access_token": "fake-app-token", "expires_in": 3600})
+            )
+            router.post(GRAPHQL_CLIENT_URL).mock(side_effect=[httpx.Response(429), httpx.Response(200, json=page)])
+            async with WarcraftLogsClient("fake-client-id", "fake-client-secret") as wcl:
+                await fetch_pull(
+                    wcl, RawPageCache(tmp_path), CODE, make_pull(), [FetchSpec(data_type="Deaths")], max_retries=3
+                )
+        records = [r for r in caplog.records if getattr(r, "event", None) == "wcl.request" and r.op != "oauth_token"]
+        assert [(r.op, r.status, r.attempt) for r in records] == [("GetEventsPage", 429, 1), ("GetEventsPage", 200, 2)]
 
     async def test_one_failing_spec_keeps_the_others_cached(self, tmp_path):
         cache = RawPageCache(tmp_path)

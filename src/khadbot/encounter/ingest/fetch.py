@@ -356,21 +356,25 @@ async def query_wcl(
     gql: str,
     variables: dict[str, Any],
     token_provider: TokenProvider | None = None,
+    *,
+    attempt: int = 1,
 ) -> dict[str, Any]:
     """
     One WCL query, on the app token or (with ``token_provider``) the signed-in user's.
 
     The provider is asked for the token on every request, so it can refresh an expired one. If WCL answers 401,
     it is asked once more and the request is retried once; a second 401 raises ``UserTokenRejectedError``.
+    ``attempt`` is the caller's 1-based try number, passed to the client for its ``wcl.request`` log record; the
+    token-refresh retry keeps the same number (its first record already shows the 401).
     """
     if token_provider is None:
-        return await client.query(gql, variables)
+        return await client.query(gql, variables, attempt=attempt)
     try:
-        return await client.query(gql, variables, user_token=await token_provider())
+        return await client.query(gql, variables, user_token=await token_provider(), attempt=attempt)
     except WarcraftLogsUnauthorizedError:
         logger.info("WCL rejected the user token; asking for a fresh one and retrying once")
     try:
-        return await client.query(gql, variables, user_token=await token_provider())
+        return await client.query(gql, variables, user_token=await token_provider(), attempt=attempt)
     except WarcraftLogsUnauthorizedError as exc:
         raise UserTokenRejectedError("WCL rejected the user's access token after a refresh.") from exc
 
@@ -389,7 +393,7 @@ async def _request_events(
     while True:
         try:
             async with _request_semaphore(cfg.wcl_max_concurrency):
-                data = await query_wcl(client, GET_EVENTS_PAGE, variables, token_provider)
+                data = await query_wcl(client, GET_EVENTS_PAGE, variables, token_provider, attempt=attempt + 1)
             break
         except (WarcraftLogsRateLimitError, WarcraftLogsNetworkError) as exc:
             if attempt >= max_retries:

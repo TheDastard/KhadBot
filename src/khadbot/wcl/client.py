@@ -33,6 +33,7 @@ Typical usage (private report with PKCE token)::
 from __future__ import annotations
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -56,6 +57,12 @@ RATE_LIMIT_QUERY = "query { rateLimitData { limitPerHour pointsSpentThisHour poi
 
 # Shave 60 s off the real expiry to avoid edge-case clock skew.
 TOKEN_EXPIRY_BUFFER_SECONDS = 60
+
+# ``op`` of the client-credentials token request on its ``wcl.request`` line.
+TOKEN_OPERATION = "oauth_token"
+
+_OPERATION_NAME = re.compile(r"^\s*(?:query|mutation)\s+(\w+)")
+_FIRST_FIELD = re.compile(r"^\s*(?:query|mutation)?\s*\{\s*(\w+)")
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +187,7 @@ class WarcraftLogsClient:
         logger.debug("Fetching new WarcraftLogs client-credentials token.")
         assert self._http is not None, "Client must be used as an async context manager."
 
+        started = time.perf_counter()
         try:
             resp = await self._http.post(
                 TOKEN_URL,
@@ -188,11 +196,14 @@ class WarcraftLogsClient:
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            _log_request(TOKEN_OPERATION, started, 1, exc.response.status_code, failed=True)
             raise WarcraftLogsAuthError(
                 f"Failed to obtain WarcraftLogs token: HTTP {exc.response.status_code}"
             ) from exc
         except httpx.RequestError as exc:
+            _log_request(TOKEN_OPERATION, started, 1, None, failed=True, reason=type(exc).__name__)
             raise WarcraftLogsAuthError(f"Network error fetching WarcraftLogs token: {exc}") from exc
+        _log_request(TOKEN_OPERATION, started, 1, resp.status_code, failed=False)
 
         payload = resp.json()
         self._token_cache.access_token = payload["access_token"]
@@ -213,9 +224,14 @@ class WarcraftLogsClient:
         variables: dict[str, Any] | None = None,
         *,
         user_token: str | None = None,
+        attempt: int = 1,
     ) -> dict[str, Any]:
         """
         Execute a GraphQL query and return the ``data`` field of the response.
+
+        Each call sends one HTTP request and logs one ``wcl.request`` record: the operation name, HTTP status,
+        duration and ``attempt``, at DEBUG, or WARNING when it fails. The query variables, headers and body are never
+        logged, since variables can hold the codes of private reports.
 
         Parameters
         ----------
@@ -227,6 +243,8 @@ class WarcraftLogsClient:
             If provided, the request is sent to the ``/user`` endpoint using
             this token instead of the app-level client-credentials token.
             Required for private reports.
+        attempt:
+            Which try of the caller's this is (1-based), for the log record only; the client never retries.
 
         Raises
         ------
@@ -256,6 +274,8 @@ class WarcraftLogsClient:
         if variables:
             payload["variables"] = variables
 
+        op = operation_name(gql)
+        started = time.perf_counter()
         try:
             resp = await self._http.post(
                 endpoint,
@@ -264,6 +284,7 @@ class WarcraftLogsClient:
             )
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            _log_request(op, started, attempt, exc.response.status_code, failed=True)
             if exc.response.status_code == 401:
                 raise WarcraftLogsUnauthorizedError("WarcraftLogs rejected the access token (HTTP 401).") from exc
             if exc.response.status_code == 429:
@@ -273,11 +294,16 @@ class WarcraftLogsClient:
                 ) from exc
             raise WarcraftLogsAPIError(f"WarcraftLogs GraphQL HTTP error: {exc.response.status_code}") from exc
         except httpx.RequestError as exc:
+            _log_request(op, started, attempt, None, failed=True, reason=type(exc).__name__)
             raise WarcraftLogsNetworkError(f"WarcraftLogs network error: {exc}") from exc
 
         body = resp.json()
+        errors = body.get("errors")
+        _log_request(
+            op, started, attempt, resp.status_code, failed=bool(errors), reason="GraphQL error" if errors else ""
+        )
 
-        if errors := body.get("errors"):
+        if errors:
             first_message = errors[0].get("message", "")
             if "rate limit" in first_message.lower():
                 raise WarcraftLogsRateLimitError(
@@ -302,6 +328,35 @@ class WarcraftLogsClient:
         """Return ``{limitPerHour, pointsSpentThisHour, pointsResetIn}`` for the app, or for ``user_token``'s user."""
         data = await self.query(RATE_LIMIT_QUERY, user_token=user_token)
         return data.get("rateLimitData", {})
+
+
+def operation_name(gql: str) -> str:
+    """
+    A query's label for logs: its operation name (``GetEventsPage``), else the first field an anonymous query selects
+    (``rateLimitData``), else ``anonymous``. Never anything from the variables.
+    """
+    if match := _OPERATION_NAME.match(gql) or _FIRST_FIELD.match(gql):
+        return match.group(1)
+    return "anonymous"
+
+
+def _log_request(op: str, started: float, attempt: int, status: int | None, *, failed: bool, reason: str = "") -> None:
+    """Write the ``wcl.request`` record of one HTTP request: DEBUG when it succeeded, WARNING when it failed."""
+    duration_ms = round((time.perf_counter() - started) * 1000)
+    extra: dict[str, Any] = {"event": "wcl.request", "op": op, "duration_ms": duration_ms, "attempt": attempt}
+    if status is not None:
+        extra["status"] = status
+    outcome = str(status) if status is not None else "failed"
+    if reason:
+        outcome = f"{outcome} ({reason})"
+    logger.log(
+        logging.WARNING if failed else logging.DEBUG,
+        "WCL %s %s in %d ms",
+        op,
+        outcome,
+        duration_ms,
+        extra=extra,
+    )
 
 
 def _parse_retry_after(value: str | None) -> float | None:

@@ -53,7 +53,9 @@ class StubWcl:
     def requests(self) -> int:
         return len(self.tokens)
 
-    async def query(self, gql: str, variables: dict | None = None, *, user_token: str | None = None) -> dict:
+    async def query(
+        self, gql: str, variables: dict | None = None, *, user_token: str | None = None, attempt: int = 1
+    ) -> dict:
         self.tokens.append(user_token)
         if self.error is not None:
             raise self.error
