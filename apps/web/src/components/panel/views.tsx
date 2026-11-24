@@ -2,22 +2,28 @@
 //
 // One renderer per evidence kind, from the canvas's "Context panel, every ref kind" artboard: the death moment, the
 // mechanic card, a cooldown use, a damage window's coverage, an event row and the pull summary, plus the plan, error
-// and loading views. A renderer takes the record and a ViewContext (the pull's names) and draws a PanelLayout; none of
+// and loading views. The mechanic card is the mechanic's drill-down: what it is (description, abilities as Wowhead
+// links), how it is judged (the failure rule in plain words), how it went (tiles, failures by player, each cluster
+// with its blame context) and what it cost (the deaths in its window). A spell that belongs to a mechanic stays an
+// AbilityName with the mechanic's chip beside it. A renderer takes the record and a ViewContext (the pull's names) and draws a PanelLayout; none of
 // them knows the panel's frame (see parts.tsx).
 
 "use client";
 
 import { AbilityName } from "@/components/shared/ability-name";
 import { EvidenceChip } from "@/components/shared/evidence-chip";
+import { MechanicIcon } from "@/components/shared/mechanic-tip";
 import { PlayerName } from "@/components/shared/player-name";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { UnverifiedTag } from "@/components/pull/unverified-tag";
 import { Button } from "@/components/ui/button";
 import { spellIdOf, type Names } from "@/components/pull/names";
-import { useLazyDigest, type EvidenceData } from "@/components/pull/queries";
+import { deathNumber } from "@/components/pull/logic";
+import { useLazyDigest, useReportAbilities, type EvidenceData } from "@/components/pull/queries";
+import { MechanicChip } from "@/components/pull/ref-chip";
 import { useFocusActions, windowAround } from "@/lib/focus";
 import { formatClockTenths, formatNumber, formatPct } from "@/lib/format";
-import { buildRef, parseRef } from "@/lib/refs";
+import { parseRef } from "@/lib/refs";
 import { cn } from "@/lib/utils";
 import { SkeletonBlock } from "@/components/shared/skeletons";
 import { AlertTriangleIcon } from "lucide-react";
@@ -51,11 +57,32 @@ function Ability({ id, name }: { id: number | null | undefined; name: string | n
 }
 
 function MechChip({ code, fight, id, names }: { code: string; fight: number; id: string; names: Names }) {
+  return <MechanicChip code={code} fight={fight} facts={names.mechanicFacts(id)} />;
+}
+
+/** A spell as a Wowhead link and, when it belongs to a mechanic, that mechanic's chip beside it. */
+function AbilityWithMechanic({
+  id,
+  name,
+  mechanicId,
+  code,
+  fight,
+  names,
+}: {
+  id: number | null | undefined;
+  name: string | null | undefined;
+  /** The mechanic the record names; otherwise the one the ability belongs to. */
+  mechanicId?: string | null;
+  code: string;
+  fight: number;
+  names: Names;
+}) {
+  const mech = mechanicId ?? names.mechanicOfAbility(spellIdOf(id));
   return (
-    <EvidenceChip
-      evidenceRef={buildRef({ kind: "mech", report: code, fight, key: id })}
-      label={names.mechanic(id)}
-    />
+    <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+      <Ability id={id} name={name} />
+      {mech ? <MechChip code={code} fight={fight} id={mech} names={names} /> : null}
+    </span>
   );
 }
 
@@ -85,7 +112,13 @@ export function DeathView({ record: d, evidenceRef, code, fight, names, onClose 
       </div>
       <Rows>
         <Row label="Killed by" strong>
-          <Ability id={d.killing_ability_id} name={d.killing_ability_name} />
+          <AbilityWithMechanic
+            id={d.killing_ability_id}
+            name={d.killing_ability_name}
+            code={code}
+            fight={fight}
+            names={names}
+          />
         </Row>
         {d.killer_name ? <Row label="Killer">{d.killer_name}</Row> : null}
         {d.overkill !== null ? <Row label="Overkill">{formatNumber(d.overkill)}</Row> : null}
@@ -104,8 +137,8 @@ export function DeathView({ record: d, evidenceRef, code, fight, names, onClose 
           {d.top_hits.map((h, i) => (
             <div key={i} className="grid grid-cols-[52px_minmax(0,1fr)_auto] gap-2 border-t border-line py-1 text-[13px]">
               <span className="font-mono">{formatClockTenths(h.t_ms)}</span>
-              <span>
-                <Ability id={h.ability_id} name={h.ability_name} />{" "}
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <AbilityWithMechanic id={h.ability_id} name={h.ability_name} code={code} fight={fight} names={names} />
                 <span className="text-mut">{h.source_name ?? ""}</span>
               </span>
               <span className="text-right font-medium">{formatNumber(h.amount)}</span>
@@ -136,17 +169,87 @@ export function DeathView({ record: d, evidenceRef, code, fight, names, onClose 
 // Mechanic card
 // ---------------------------------------------------------------------------
 
-export function MechanicView({ record: m, evidenceRef, code, names, onClose }: ViewProps<"mech">) {
+const BLAME_STATE: Record<string, { label: string; tone: "plain" | "bad" }> = {
+  beyond_reach: { label: "Beyond reach", tone: "bad" },
+  in_reach: { label: "In reach", tone: "plain" },
+  dead: { label: "Dead", tone: "plain" },
+  alive: { label: "Alive", tone: "plain" },
+  no_position: { label: "No position", tone: "plain" },
+  no_holder: { label: "No holder", tone: "plain" },
+};
+
+const KIND_LABEL: Record<string, string> = {
+  avoidable: "Avoidable",
+  soak: "Soak",
+  interrupt: "Interrupt",
+  dispel: "Dispel",
+  debuff: "Debuff",
+  unavoidable: "Unavoidable",
+};
+
+/** The mechanic's abilities as Wowhead links, named from the report's abilities (or the registry). */
+function MechanicAbilities({ code, abilityIds, names }: { code: string; abilityIds: number[]; names: Names }) {
+  const abilities = useReportAbilities(code, abilityIds.length > 0);
+  if (!abilityIds.length) return null;
+  const byId = new Map((abilities.data?.abilities ?? []).map((a) => [a.id, a.name]));
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" data-testid="mechanic-abilities">
+      <span className="text-mut">Abilities</span>
+      {abilityIds.map((id) => (
+        <span key={id} className="inline-flex items-baseline gap-1.5">
+          <AbilityName spellId={spellIdOf(id)} name={byId.get(id) ?? names.spell(id)} />
+          <span className="font-mono text-[11px] text-mut">{id}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const SUB_HEAD = "flex justify-between gap-2 text-xs text-mut";
+
+export function MechanicView({ record: m, evidenceRef, code, fight, names, onClose }: ViewProps<"mech">) {
+  const facts = names.mechanicFacts(m.mechanic_id);
+  const description = m.description ?? facts.description;
+  const digest = useLazyDigest(code, fight, true, true);
+  const deaths = (digest.data?.deaths ?? []).filter((d) => d.mechanic_ids.includes(m.mechanic_id));
   const charged = Object.entries(m.failures_by_player)
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const most = charged[0]?.[1] ?? 0;
+  const blame = m.cluster_rows.some((c) => c.blamed || c.blame_state);
   const tiles: Array<[string, string, boolean]> = [
     [String(m.failures), "failures", m.failures > 0],
     [String(m.hits), `hits in ${m.clusters} ${m.clusters === 1 ? "cluster" : "clusters"}`, false],
     [String(m.deaths_in_window), "deaths in window", false],
   ];
   return (
-    <PanelLayout kind="mech" evidenceRef={evidenceRef} onClose={onClose} title={names.mechanic(m.mechanic_id)}>
+    <PanelLayout
+      kind="mech"
+      evidenceRef={evidenceRef}
+      onClose={onClose}
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          <MechanicIcon facts={facts} />
+          {facts.name}
+        </span>
+      }
+    >
+      {facts.kind || facts.severity ? (
+        <div className="flex flex-wrap gap-1.5">
+          {facts.kind ? <Tag>{KIND_LABEL[facts.kind] ?? facts.kind}</Tag> : null}
+          {facts.severity ? (
+            <Tag tone={facts.severity === "high" ? "warn" : "plain"}>Severity {facts.severity}</Tag>
+          ) : null}
+        </div>
+      ) : null}
+      {description ? <p className="m-0 text-[13px] leading-normal">{description}</p> : null}
+      <MechanicAbilities code={code} abilityIds={facts.abilityIds} names={names} />
+      {facts.failureSummary ? (
+        <div className="flex flex-col gap-1 rounded-sm bg-s2 px-2.5 py-2 text-xs" data-testid="mechanic-rule">
+          <span className="font-semibold">How failures count</span>
+          <span>{facts.failureSummary}</span>
+        </div>
+      ) : null}
       <div className="grid grid-cols-3 gap-2 text-center">
         {tiles.map(([value, label, bad]) => (
           <div key={label} className="rounded-sm bg-s2 p-1.5">
@@ -161,51 +264,115 @@ export function MechanicView({ record: m, evidenceRef, code, names, onClose }: V
           Mechanic not yet verified: its rule and counts have not been checked by a person
         </span>
       ) : null}
-      <Muted>
-        Damage taken {formatNumber(m.damage_taken)}
-        {charged.length ? " · Failures charged: " : ""}
-        {charged.map(([name, n], i) => (
-          <span key={name}>
-            {i > 0 ? ", " : ""}
-            <PlayerName name={name} code={code} /> {n}
-          </span>
-        ))}
-      </Muted>
+      <div className="flex flex-col gap-1.5">
+        <span className={SUB_HEAD}>
+          <span>Failures by player</span>
+          <span>Damage taken {formatNumber(m.damage_taken)}</span>
+        </span>
+        {charged.length ? (
+          <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]" aria-label="Failures by player">
+            {charged.map(([name, n]) => (
+              <li key={name} className="grid grid-cols-[96px_minmax(0,1fr)_28px] items-center gap-2">
+                <span className="truncate">
+                  <PlayerName name={name} code={code} />
+                </span>
+                <span aria-hidden className="h-2 overflow-hidden rounded-sm bg-s3">
+                  <span className="block h-full bg-bad" style={{ width: `${(n / most) * 100}%` }} />
+                </span>
+                <b className="text-right text-bad">{n}</b>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Muted>No failures charged to a player.</Muted>
+        )}
+      </div>
       {m.cluster_rows.length ? (
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Clusters">
-          <table className="w-full min-w-[300px] border-collapse text-xs">
-            <thead>
-              <tr className="text-left text-mut">
-                <th scope="col" className="px-1.5 py-1 font-semibold">#</th>
-                <th scope="col" className="px-1.5 py-1 font-semibold">Time</th>
-                <th scope="col" className="px-1.5 py-1 text-right font-semibold">Hits</th>
-                <th scope="col" className="px-1.5 py-1 text-right font-semibold">Fail</th>
-                <th scope="col" className="px-1.5 py-1 font-semibold">Failed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {m.cluster_rows.map((c) => (
-                <tr key={c.cluster} className="border-t border-line align-top">
-                  <td className="px-1.5 py-1">{c.cluster}</td>
-                  <td className="px-1.5 py-1 font-mono whitespace-nowrap">
-                    {formatClockTenths(c.t_ms)}–{formatClockTenths(c.end_ms)}
-                  </td>
-                  <td className="px-1.5 py-1 text-right">{c.hits}</td>
-                  <td className={cn("px-1.5 py-1 text-right font-semibold", c.failures > 0 ? "text-bad" : "text-mut")}>
-                    {c.failures}
-                  </td>
-                  <td className="px-1.5 py-1 text-mut">
-                    {c.failed_players.map((p, i) => (
-                      <span key={p}>
-                        {i > 0 ? ", " : ""}
-                        <PlayerName name={p} code={code} />
-                      </span>
-                    ))}
-                  </td>
+        <div className="flex flex-col gap-1.5">
+          <span className={SUB_HEAD}>
+            <span>Clusters</span>
+            {blame ? <span>blame at the first hit</span> : null}
+          </span>
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Clusters">
+            <table className="w-full min-w-[300px] border-collapse text-xs">
+              <thead>
+                <tr className="text-left text-mut">
+                  <th scope="col" className="px-1.5 py-1 font-semibold">#</th>
+                  <th scope="col" className="px-1.5 py-1 font-semibold">Time</th>
+                  <th scope="col" className="px-1.5 py-1 text-right font-semibold">Hits</th>
+                  <th scope="col" className="px-1.5 py-1 text-right font-semibold">Fail</th>
+                  {blame ? (
+                    <>
+                      <th scope="col" className="px-1.5 py-1 font-semibold">Charged to</th>
+                      <th scope="col" className="px-1.5 py-1 font-semibold">At the hit</th>
+                    </>
+                  ) : (
+                    <th scope="col" className="px-1.5 py-1 font-semibold">Failed</th>
+                  )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {m.cluster_rows.map((c) => {
+                  const state = c.blame_state ? BLAME_STATE[c.blame_state] : undefined;
+                  return (
+                    <tr key={c.cluster} className="border-t border-line align-top">
+                      <td className="px-1.5 py-1">{c.cluster}</td>
+                      <td className="px-1.5 py-1 font-mono whitespace-nowrap">
+                        {formatClockTenths(c.t_ms)}–{formatClockTenths(c.end_ms)}
+                      </td>
+                      <td className="px-1.5 py-1 text-right">{c.hits}</td>
+                      <td className={cn("px-1.5 py-1 text-right font-semibold", c.failures > 0 ? "text-bad" : "text-mut")}>
+                        {c.failures}
+                      </td>
+                      {blame ? (
+                        <>
+                          <td className="px-1.5 py-1">{c.blamed ? <PlayerName name={c.blamed} code={code} /> : "—"}</td>
+                          <td className="px-1.5 py-1">
+                            {state ? (
+                              <span className="whitespace-nowrap">
+                                <Tag tone={state.tone}>{state.label}</Tag>
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                            {typeof c.blame_dist_yd === "number" ? (
+                              <span className="block text-mut">
+                                {c.blame_dist_yd.toFixed(1)} yd
+                                {typeof c.blame_reach_yd === "number" ? ` of ${c.blame_reach_yd}` : ""}
+                              </span>
+                            ) : null}
+                          </td>
+                        </>
+                      ) : (
+                        <td className="px-1.5 py-1 text-mut">
+                          {c.failed_players.map((p, i) => (
+                            <span key={p}>
+                              {i > 0 ? ", " : ""}
+                              <PlayerName name={p} code={code} />
+                            </span>
+                          ))}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+      {deaths.length ? (
+        <div className="flex flex-col gap-1.5" data-testid="mechanic-deaths">
+          <span className={SUB_HEAD}>Deaths in its window</span>
+          <span className="flex flex-wrap gap-1.5">
+            {deaths.map((d) => (
+              <EvidenceChip
+                key={d.ref}
+                evidenceRef={d.ref}
+                label={`${d.phase_id ? `${names.phaseShort(d.phase_id)} · ` : ""}death ${deathNumber(d.ref) ?? ""} · ${d.name}`}
+              />
+            ))}
+          </span>
         </div>
       ) : null}
     </PanelLayout>
@@ -307,7 +474,7 @@ export function WindowView({ record: w, evidenceRef, code, fight, names, onClose
 // Event row
 // ---------------------------------------------------------------------------
 
-export function EventView({ record: e, evidenceRef, code, names, onClose }: ViewProps<"event">) {
+export function EventView({ record: e, evidenceRef, code, fight, names, onClose }: ViewProps<"event">) {
   const who = (name: string | null | undefined) => (name ? <PlayerName name={name} code={code} /> : "—");
   return (
     <PanelLayout
@@ -331,6 +498,12 @@ export function EventView({ record: e, evidenceRef, code, names, onClose }: View
             {e.ability_id ? <span className="font-mono text-[11px] text-mut">{e.ability_id}</span> : null}
           </Row>
         ) : null}
+        {e.mechanic_id ? (
+          <Row label="Mechanic">
+            <MechChip code={code} fight={fight} id={e.mechanic_id} names={names} />
+            <UnverifiedTag verified={names.mechanicVerified(e.mechanic_id)} />
+          </Row>
+        ) : null}
         {e.amount !== null && e.amount !== undefined ? (
           <Row label="Amount · health after">
             {formatNumber(e.amount)}
@@ -338,10 +511,6 @@ export function EventView({ record: e, evidenceRef, code, names, onClose }: View
           </Row>
         ) : null}
         {e.overkill ? <Row label="Overkill">{formatNumber(e.overkill)}</Row> : null}
-        {e.mechanic_id ? <Row label="Mechanic">
-            {names.mechanic(e.mechanic_id)}
-            <UnverifiedTag verified={names.mechanicVerified(e.mechanic_id)} />
-          </Row> : null}
       </Rows>
       {e.failure ? (
         <Tag tone="bad">

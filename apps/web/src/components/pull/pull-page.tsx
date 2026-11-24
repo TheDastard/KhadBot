@@ -37,7 +37,7 @@ export function PullPage({
   const context = usePullContext(code, fight);
   const findings = usePullFindings(code, fight);
   const { names, summary } = context;
-  const section = { code, digest, names };
+  const section = { code, fight, digest, names };
 
   return (
     <div data-slot="pull-body" className="grid min-h-[calc(100vh-57px)] grid-cols-[240px_minmax(0,1fr)] items-stretch">

@@ -205,4 +205,8 @@ part of the canonical dump only when set, so files without it keep their hash."
 
 Wherever the web portal plan lists `GET /v1/encounters/{id}/names`, add: "`mechanic_info: dict[str, MechanicInfo]`
 for every mechanic: `ability_ids`, `icon_ability_id` (resolved), `kind`, `severity` and `failure_summary` (the
-failure rule in plain words, null without a rule)."
+failure rule in plain words, null without a rule)." In the pull page section, add: "Mechanics get KhadBot's own
+tooltip (description and failure summary) on chips, table names and timeline lane labels, and a card tooltip on
+timeline mechanic markers; spells keep Wowhead's. The mechanic panel shows the description, the failure summary,
+the tiles, failures by player, the clusters with their blame context, the deaths in its window and its abilities as
+Wowhead links."

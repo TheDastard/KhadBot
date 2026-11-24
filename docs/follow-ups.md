@@ -176,8 +176,11 @@ dashboard ([first-round plan](https://claude.ai/artifact/9Ns4vbDzBAjpq3Fy96LVC7)
   smaller pull with deaths past the cutoff.
 - **The pull rail lists only loaded pulls** until the night overview exists.
 - **Tables are tight at 1024 px** beside the 380 px panel; narrow or overlay the panel below about 1200 px.
-- **Timeline markers lack spell IDs**, so mechanics and windows show a neutral square and cooldown initials overlap
-  on long pulls. Add the ability ID to both markers. The timeline's own range zoom isn't built.
+- **Icons are neutral squares**: no allowed source serves a spell image for a mechanic's `icon_ability_id`
+  (`docs/game-art.md`); window markers lack an ability ID; cooldown initials overlap on long pulls; no range zoom.
+- **Mechanic panel gaps**: no strip of the pull; aura and cast rules' failures are in no cluster (needs
+  `failure_rows`); `MechanicCluster` has no ref to its first hit; timeline mechanic markers carry no `blamed` or
+  `blame_state`, so their card can't say who was charged.
 - **Crowded deaths overlap** for the pointer; a stacked or clustered death lane would fix it.
 
 ## Dev loop

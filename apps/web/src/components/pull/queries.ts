@@ -2,7 +2,8 @@
 //
 // The queries the pull page and the context panel share, built on lib/queries.ts's key prefixes so that opening a
 // pull (which invalidates `queryKeys.pull`) refreshes them too: the report's pulls (the rail and the header counts),
-// the encounter's display names, the cooldown registry's names, a pull's cached findings and an evidence record.
+// the encounter's display names, the cooldown registry's names, the report's ability names, a pull's cached findings
+// and an evidence record.
 
 "use client";
 
@@ -23,6 +24,7 @@ const retryServerErrors = (count: number, error: unknown) => count < 2 && !isCli
 export type ReportDetailData = ApiGet<"/v1/reports/{code}">;
 export type EncounterNamesData = ApiGet<"/v1/encounters/{encounter_id}/names">;
 export type CooldownListData = ApiGet<"/v1/cooldowns">;
+export type ReportAbilitiesData = ApiGet<"/v1/reports/{code}/abilities">;
 export type FindingsData = ApiGet<"/v1/reports/{code}/pulls/{fight}/findings">;
 export type EvidenceData = ApiGet<"/v1/evidence/{ref}">;
 
@@ -57,6 +59,17 @@ export function useCooldownNames() {
     queryKey: ["cooldowns"],
     queryFn: () => unwrap(api().GET("/v1/cooldowns")),
     staleTime: 60 * 60_000,
+    retry: retryServerErrors,
+  });
+}
+
+/** `GET /v1/reports/{code}/abilities`: the names WCL gives the report's abilities, by game ID. */
+export function useReportAbilities(code: string, enabled = true) {
+  return useQuery({
+    queryKey: [...queryKeys.report(code), "abilities"],
+    queryFn: () => unwrap(api().GET("/v1/reports/{code}/abilities", { params: { path: { code } } })),
+    enabled,
+    staleTime: 30 * 60_000,
     retry: retryServerErrors,
   });
 }

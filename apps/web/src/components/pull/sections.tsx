@@ -2,11 +2,13 @@
 //
 // The main column's table sections, as the canvas's "Pull investigation" artboard draws them: Deaths, Mechanics,
 // Damage windows and Cooldown uses. Each row ends in an evidence chip that opens its record in the context panel.
-// Rows after the death cutoff are muted; the selected row has the accent tint.
+// Rows after the death cutoff are muted; the selected row has the accent tint. Mechanic names and `mech` chips carry
+// KhadBot's description tooltip; a killing blow stays a Wowhead link, with its mechanic's chip beside it.
 
 "use client";
 
 import { AbilityName } from "@/components/shared/ability-name";
+import { MechanicName } from "@/components/shared/mechanic-tip";
 import { PlayerName } from "@/components/shared/player-name";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { UnverifiedTag } from "./unverified-tag";
@@ -18,11 +20,12 @@ import { cn } from "@/lib/utils";
 import { allCooldownUses, deathNumber, topCharged } from "./logic";
 import type { Names } from "./names";
 import { spellIdOf } from "./names";
-import { RefChip } from "./ref-chip";
+import { MechanicChip, RefChip } from "./ref-chip";
 import { Mono, SectionCard, TableBox, Th } from "./section-card";
 
 interface SectionProps {
   code: string;
+  fight: number;
   digest: PullDigestData;
   names: Names;
 }
@@ -33,6 +36,7 @@ interface SectionProps {
 
 export function DeathsSection({
   code,
+  fight,
   digest,
   names,
   total,
@@ -63,7 +67,7 @@ export function DeathsSection({
         </thead>
         <tbody>
           {digest.deaths.map((d) => (
-            <DeathRow key={d.ref} code={code} death={d} names={names} />
+            <DeathRow key={d.ref} code={code} fight={fight} death={d} names={names} />
           ))}
         </tbody>
       </TableBox>
@@ -72,8 +76,19 @@ export function DeathsSection({
 }
 
 /** One death; only this row re-renders when the selection moves to or from it. */
-function DeathRow({ code, death: d, names }: { code: string; death: PullDigestData["deaths"][number]; names: Names }) {
+function DeathRow({
+  code,
+  fight,
+  death: d,
+  names,
+}: {
+  code: string;
+  fight: number;
+  death: PullDigestData["deaths"][number];
+  names: Names;
+}) {
   const isSelected = useIsFocusedRef(d.ref);
+  const killedBy = names.mechanicOfAbility(spellIdOf(d.killing_ability_id));
   return (
     <tr
       data-after-cutoff={d.after_cutoff || undefined}
@@ -86,11 +101,14 @@ function DeathRow({ code, death: d, names }: { code: string; death: PullDigestDa
         <PlayerName name={d.name} code={code} />
       </td>
       <td className="px-2 py-1.5">
-        {d.killing_ability_name ? (
-          <AbilityName spellId={spellIdOf(d.killing_ability_id)} name={d.killing_ability_name} />
-        ) : (
-          "Unknown"
-        )}
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {d.killing_ability_name ? (
+            <AbilityName spellId={spellIdOf(d.killing_ability_id)} name={d.killing_ability_name} />
+          ) : (
+            "Unknown"
+          )}
+          {killedBy ? <MechanicChip code={code} fight={fight} facts={names.mechanicFacts(killedBy)} /> : null}
+        </span>
         <span className="block text-xs text-mut">{d.killer_name ?? ""}</span>
       </td>
       <td className="px-2 py-1.5 text-mut">
@@ -126,10 +144,11 @@ export function MechanicsSection({ code, digest, names }: SectionProps) {
         <tbody>
           {active.map((m) => {
             const top = topCharged(m.failures_by_player);
+            const facts = names.mechanicFacts(m.mechanic_id);
             return (
               <tr key={m.ref} className="border-t border-line">
                 <th scope="row" className="px-2 py-1.5 text-left font-medium">
-                  {names.mechanic(m.mechanic_id)}
+                  <MechanicName facts={facts} />
                   <UnverifiedTag verified={names.mechanicVerified(m.mechanic_id)} />
                 </th>
                 <td className={cn("px-2 py-1.5 text-right font-semibold", m.failures > 0 ? "text-bad" : "text-mut")}>
@@ -147,7 +166,7 @@ export function MechanicsSection({ code, digest, names }: SectionProps) {
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-right">
-                  <RefChip evidenceRef={m.ref} label="mech" />
+                  <RefChip evidenceRef={m.ref} label="mech" mechanic={facts} />
                 </td>
               </tr>
             );

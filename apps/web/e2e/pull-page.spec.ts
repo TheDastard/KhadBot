@@ -102,7 +102,7 @@ test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
       ["section-windows", "win"],
       ["section-cooldowns", "cd"],
     ] as const) {
-      await page.getByTestId(section).locator("a[data-ref]").first().click();
+      await page.getByTestId(section).locator(`a[data-ref*=":${kind}:"]`).first().click();
       await expect(panel.locator(`[data-panel-kind="${kind}"]`)).toBeVisible();
     }
     // Back returns to the previous focus (the window chip), reload keeps the current one.
@@ -147,8 +147,8 @@ test.describe("H7z1fqDXjRTFnbtg fight 15", () => {
     await page.goto(pullUrl(LONG.code, LONG.fight));
     await expect(page.getByTestId("pull-header")).toBeVisible();
     const paint = Date.now() - t0;
-    await expect(page.getByTestId("section-deaths").locator("a[data-ref]").first()).toBeVisible();
-    const chips = page.getByTestId("section-deaths").locator("a[data-ref]");
+    await expect(page.getByTestId("section-deaths").locator('a[data-ref*=":death:"]').first()).toBeVisible();
+    const chips = page.getByTestId("section-deaths").locator('a[data-ref*=":death:"]');
     // Measured in the page: from the click event to the panel showing the chip's ref in its record view.
     const timeChip = async (index: number) => {
       const ref = await chips.nth(index).getAttribute("data-ref");
