@@ -2,7 +2,8 @@
 //
 // "Events m:ss – m:ss": the rows of the zoomed window (`?t=`, 30 s at most), under the timeline. The header names the
 // filter ("Kouw · damage and death"), "N of M rows" and Clear zoom; the table is time, type, ability (with its icon
-// through AbilityName), source, amount, HP after and flag, in its own overflow box. Raw events are rows only, never
+// through AbilityName, and the chip of the mechanic it belongs to beside it), source, amount, HP after and flag, in
+// its own overflow box. Raw events are rows only, never
 // marks on the timeline.
 //
 // The filter starts as the selected death's player (when a death is selected) and damage and deaths; each can be
@@ -18,6 +19,8 @@ import { ErrorState } from "@/components/shared/error-state";
 import { Notice } from "@/components/shared/notice";
 import { PlayerName } from "@/components/shared/player-name";
 import { SkeletonBlock } from "@/components/shared/skeletons";
+import type { Names } from "@/components/pull/names";
+import { MechanicChip } from "@/components/pull/ref-chip";
 import type { TimeWindow } from "@/lib/focus";
 import { formatClockTenths, formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -32,11 +35,13 @@ export interface ZoomedEventsProps {
   /** A player to filter to (the selected death's), or null. */
   actor: string | null;
   onClear: () => void;
+  /** The pull's names; with them an ability that belongs to a mechanic gets the mechanic's chip. */
+  names?: Names;
 }
 
 const TH = "px-2 py-1.5 text-left text-xs font-semibold text-mut";
 
-export function ZoomedEvents({ code, fight, window, actor, onClear }: ZoomedEventsProps) {
+export function ZoomedEvents({ code, fight, window, actor, onClear, names }: ZoomedEventsProps) {
   const [everyone, setEveryone] = useState(false);
   const [allTypes, setAllTypes] = useState(false);
   const useActor = actor !== null && !everyone;
@@ -101,7 +106,7 @@ export function ZoomedEvents({ code, fight, window, actor, onClear }: ZoomedEven
           {rows.length === 0 ? (
             <Notice>No events in this window{useActor || !allTypes ? " with this filter" : ""}.</Notice>
           ) : (
-            <EventsTable code={code} rows={rows} />
+            <EventsTable code={code} fight={fight} rows={rows} names={names} />
           )}
         </>
       )}
@@ -125,7 +130,7 @@ function ToggleButton({ pressed, onClick, children }: { pressed: boolean; onClic
   );
 }
 
-function EventsTable({ code, rows }: { code: string; rows: EventRow[] }) {
+function EventsTable({ code, fight, rows, names }: { code: string; fight: number; rows: EventRow[]; names?: Names }) {
   return (
     <div className="max-h-[440px] overflow-auto" tabIndex={0} role="region" aria-label="Event rows">
       <table className="w-full min-w-[620px] border-collapse text-[13px]">
@@ -157,13 +162,17 @@ function EventsTable({ code, rows }: { code: string; rows: EventRow[] }) {
         <tbody>
           {rows.map((row) => {
             const flag = rowFlag(row);
+            const mech = names?.mechanicOfAbility(row.ability_id) ?? null;
             return (
               <tr key={row.ref} data-ref={row.ref} className={cn("border-t border-line", row.type === "death" && "bg-acct")}>
                 <td className="px-2 py-1.5 font-mono">{formatClockTenths(row.t_ms)}</td>
                 <td className="px-2 py-1.5">{row.type}</td>
                 <td className="px-2 py-1.5">
                   {row.ability ? (
-                    <AbilityName spellId={row.ability_id} name={row.ability} />
+                    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <AbilityName spellId={row.ability_id} name={row.ability} />
+                      {mech && names ? <MechanicChip code={code} fight={fight} facts={names.mechanicFacts(mech)} /> : null}
+                    </span>
                   ) : (
                     <span className="inline-flex items-baseline gap-1.5 text-mut">
                       <IconFallback size={16} />—

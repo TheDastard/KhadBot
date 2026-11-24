@@ -4,6 +4,9 @@
 // chart in the browser only (next/dynamic, ssr: false, behind a placeholder of the chart's height), and ties the
 // chart to the URL through useFocus: the selected marker is `?ref=`, a brushed or keyed window is `?t=`.
 //
+// Mechanic facts (descriptions, rules, icons) come from the pull page's names lookup (usePullContext, cached), for
+// the lane labels' and mechanic markers' tooltips and for the mechanic chips beside the zoomed events' abilities.
+//
 // The panel (components/panel/) reads `?ref=` and may set `t`; this component only reads and writes the same two
 // parameters, so the two never talk directly.
 
@@ -14,6 +17,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useMemo } from "react";
 
 import { ZoomedEvents } from "@/components/events/zoomed-events";
+import { usePullContext } from "@/components/pull/use-pull-context";
 import { ErrorState } from "@/components/shared/error-state";
 import { SkeletonBlock } from "@/components/shared/skeletons";
 import { useFocus } from "@/lib/focus";
@@ -44,6 +48,7 @@ export interface PullTimelineProps {
 
 export function PullTimeline({ code, fight }: PullTimelineProps) {
   const timeline = usePullTimeline(code, fight);
+  const { names } = usePullContext(code, fight);
   const focus = useFocus();
   const data = timeline.data;
   const model = useMemo(() => (data ? buildTimeline(data) : null), [data]);
@@ -99,10 +104,11 @@ export function PullTimeline({ code, fight }: PullTimelineProps) {
             onSelect={focus.setRef}
             onZoom={focus.setWindow}
             onZoomAround={zoomAround}
+            mechanics={names.mechanicFacts}
           />
         )}
       </section>
-      {zoom && <ZoomedEvents code={code} fight={fight} window={zoom} actor={actor} onClear={clearZoom} />}
+      {zoom && <ZoomedEvents code={code} fight={fight} window={zoom} actor={actor} onClear={clearZoom} names={names} />}
     </>
   );
 }

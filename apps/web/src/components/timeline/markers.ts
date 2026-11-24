@@ -37,6 +37,9 @@ export interface MechanicMark extends MarkerBase {
   name: string;
   failures: number;
   hits: number;
+  /** This cluster's place among its mechanic's clusters on the pull (1-based), and how many there are. */
+  clusterN: number;
+  clusterOf: number;
 }
 export interface DeathMark extends MarkerBase {
   lane: "death";
@@ -143,6 +146,8 @@ export function buildTimeline(timeline: PullTimelineData): TimelineModel {
       name,
       failures: m.failures,
       hits: m.hits,
+      clusterN: 0,
+      clusterOf: 0,
       label: `${name}, ${formatClockTenths(m.t_ms)}, ${failures}`,
       listText: `${name} cluster, ${failures}`,
     });
@@ -152,7 +157,13 @@ export function buildTimeline(timeline: PullTimelineData): TimelineModel {
   const rows = [...rowsById.values()].sort(
     (a, b) => b.failures - a.failures || hitsOf(b) - hitsOf(a) || a.name.localeCompare(b.name),
   );
-  for (const row of rows) row.marks = orderMarkers(row.marks);
+  for (const row of rows) {
+    row.marks = orderMarkers(row.marks);
+    row.marks.forEach((mark, i) => {
+      mark.clusterN = i + 1;
+      mark.clusterOf = row.marks.length;
+    });
+  }
 
   const deaths: DeathMark[] = timeline.deaths.map((d, i) => {
     const parsed = parseRef(d.ref);

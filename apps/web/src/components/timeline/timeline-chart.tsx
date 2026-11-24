@@ -11,6 +11,10 @@
 //      across lanes (roving tabindex), Enter or a click selects (`onSelect`), Escape clears, Z zooms to 10 s;
 //   3. one tooltip for the marker under the pointer or with keyboard focus, in a portal.
 //
+// Mechanics carry KhadBot's tooltip, never Wowhead's: a lane label's name opens the compact one (hover and focus),
+// and a mechanic marker's tooltip is the mechanic's card (the cooldown card's look) when the encounter file
+// describes it. `mechanics` gives the facts; without it the labels and markers show names only.
+//
 // Focus (the 2 px info ring) and selection (the accent ring with its halo) are separate and may sit on different
 // markers. The component takes its state and callbacks as props; the URL lives in pull-timeline.tsx.
 //
@@ -37,11 +41,12 @@ import {
 import { createPortal } from "react-dom";
 
 import { IconFallback } from "@/components/shared/ability-name";
+import { MechanicIcon, MechanicTooltip, hasMechanicTip, type MechanicFacts } from "@/components/shared/mechanic-tip";
 import type { TimeWindow } from "@/lib/focus";
 import { formatClockTenths } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { MarkerTip } from "./marker-tip";
+import { MarkerTip, mechanicCard } from "./marker-tip";
 import {
   indexOfRef,
   isStepKey,
@@ -192,10 +197,12 @@ export interface TimelineChartProps {
   onZoom: (window: TimeWindow | null) => void;
   /** Z: zoom to 10 s around a marker's time. */
   onZoomAround: (atMs: number) => void;
+  /** A mechanic's facts from the encounter's names lookup (description, rule, icon); names only without it. */
+  mechanics?: (id: string) => MechanicFacts;
 }
 
 export default function TimelineChart(props: TimelineChartProps) {
-  const { code, model, durationMs, cutoffMs, phases, selectedRef: urlRef, zoom, onZoom } = props;
+  const { code, model, durationMs, cutoffMs, phases, selectedRef: urlRef, zoom, onZoom, mechanics } = props;
   const { ordered, rows } = model;
   // A click or Escape shows at once; the URL catches up and then wins.
   const [local, setLocal] = useState<{ from: string | null; value: string | null } | null>(null);
@@ -284,7 +291,7 @@ export default function TimelineChart(props: TimelineChartProps) {
     <div className="flex flex-col gap-2">
       <div className="overflow-x-auto">
         <div className="grid min-w-[760px] grid-cols-[150px_minmax(0,1fr)] gap-x-2.5">
-          <LaneLabels rows={model.rows} layout={layout} />
+          <LaneLabels rows={model.rows} layout={layout} mechanics={mechanics} />
           <div ref={trackRef} className="relative" style={{ height: layout.total }}>
             {width > 0 && (
               <ChartSvg
@@ -313,7 +320,7 @@ export default function TimelineChart(props: TimelineChartProps) {
       </div>
       <Legend />
       <MarkerList ordered={ordered} store={store} />
-      <MarkerTooltip store={store} model={model} code={code} />
+      <MarkerTooltip store={store} model={model} code={code} phases={phases} mechanics={mechanics} />
     </div>
   );
 }
@@ -474,7 +481,15 @@ const ChartSvg = memo(function ChartSvg({
 // Labels, legend, list, tooltip
 // ---------------------------------------------------------------------------
 
-const LaneLabels = memo(function LaneLabels({ rows, layout }: { rows: TimelineModel["rows"]; layout: TimelineLayout }) {
+const LaneLabels = memo(function LaneLabels({
+  rows,
+  layout,
+  mechanics,
+}: {
+  rows: TimelineModel["rows"];
+  layout: TimelineLayout;
+  mechanics?: (id: string) => MechanicFacts;
+}) {
   const plain = "flex items-center text-xs text-mut";
   return (
     <div className="flex flex-col" style={{ height: layout.total }}>
@@ -482,18 +497,7 @@ const LaneLabels = memo(function LaneLabels({ rows, layout }: { rows: TimelineMo
         Phases
       </span>
       {rows.map((row) => (
-        <span key={row.mechanicId} className="flex min-w-0 items-center gap-1.5 text-xs" style={{ height: H_MECH }}>
-          <IconFallback size={16} className={row.failures ? "" : "opacity-60"} />
-          <span className={cn("min-w-0 flex-1 truncate", row.failures ? "font-medium" : "text-mut")} title={row.name}>
-            {row.name}
-          </span>
-          {row.failures > 0 && (
-            <span className="shrink-0 font-semibold text-bad">
-              {row.failures}
-              <span className="sr-only"> failures</span>
-            </span>
-          )}
-        </span>
+        <LaneLabel key={row.mechanicId} row={row} facts={mechanics?.(row.mechanicId)} />
       ))}
       <span className={plain} style={{ height: H_DEATH }}>
         Deaths
@@ -507,6 +511,46 @@ const LaneLabels = memo(function LaneLabels({ rows, layout }: { rows: TimelineMo
     </div>
   );
 });
+
+/** A mechanic's lane label: its icon, its name (KhadBot's compact tooltip when there is more to say) and failures. */
+function LaneLabel({ row, facts }: { row: TimelineModel["rows"][number]; facts: MechanicFacts | undefined }) {
+  const tip = !!facts && hasMechanicTip(facts);
+  const name = (
+    <span
+      tabIndex={tip ? 0 : undefined}
+      className={cn(
+        "min-w-0 flex-1 truncate",
+        row.failures ? "font-medium" : "text-mut",
+        tip && "cursor-help underline decoration-mut decoration-dotted underline-offset-2",
+      )}
+      title={tip ? undefined : row.name}
+    >
+      {row.name}
+    </span>
+  );
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 text-xs" style={{ height: H_MECH }} data-lane-label={row.mechanicId}>
+      {facts ? (
+        <MechanicIcon facts={facts} className={row.failures ? "" : "opacity-60"} />
+      ) : (
+        <IconFallback size={16} className={row.failures ? "" : "opacity-60"} />
+      )}
+      {tip ? (
+        <MechanicTooltip facts={{ ...facts, name: row.name }} side="right">
+          {name}
+        </MechanicTooltip>
+      ) : (
+        name
+      )}
+      {row.failures > 0 && (
+        <span className="shrink-0 font-semibold text-bad">
+          {row.failures}
+          <span className="sr-only"> failures</span>
+        </span>
+      )}
+    </span>
+  );
+}
 
 const Legend = memo(function Legend() {
   const item = "inline-flex items-center gap-1.5";
@@ -583,6 +627,13 @@ const MarkerListItem = memo(function MarkerListItem({ m, store }: { m: Marker; s
   );
 });
 
+/** "Stage One: Fury of the Serpent Mother" -> "Stage One", as the names route's short_name does. */
+function shortPhase(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const head = name.split(": ")[0];
+  return head || name;
+}
+
 const TIP_ID = "timeline-marker-tip";
 const TIP_GAP = 6;
 
@@ -590,7 +641,19 @@ const TIP_GAP = 6;
  * The one tooltip the markers share: the marker under the pointer or with keyboard focus, above it (below when
  * there is no room). It names itself on the marker with aria-describedby while it is open, as Radix's does.
  */
-function MarkerTooltip({ store, model, code }: { store: MarkerUiStore; model: TimelineModel; code: string }) {
+function MarkerTooltip({
+  store,
+  model,
+  code,
+  phases,
+  mechanics,
+}: {
+  store: MarkerUiStore;
+  model: TimelineModel;
+  code: string;
+  phases: TimelineChartProps["phases"];
+  mechanics?: (id: string) => MechanicFacts;
+}) {
   const tip = useSyncExternalStore(store.subscribe, () => store.get().tip, () => null);
   const byId = useMemo(() => new Map(model.ordered.map((m) => [m.id, m])), [model]);
   const marker = tip ? byId.get(tip.id) : undefined;
@@ -628,7 +691,12 @@ function MarkerTooltip({ store, model, code }: { store: MarkerUiStore; model: Ti
   }, [tip, marker, store]);
 
   if (!tip || !marker) return null;
-  const wide = marker.lane === "cooldown";
+  const mechanic = marker.lane === "mechanic" ? mechanics?.(marker.mechanicId) : undefined;
+  const phase =
+    marker.lane === "mechanic"
+      ? shortPhase(phases.find((p) => marker.tMs >= p.start_ms && marker.tMs < p.end_ms)?.name)
+      : null;
+  const wide = marker.lane === "cooldown" || (marker.lane === "mechanic" && mechanicCard(mechanic));
   return createPortal(
     <div
       ref={ref}
@@ -641,7 +709,7 @@ function MarkerTooltip({ store, model, code }: { store: MarkerUiStore; model: Ti
         wide ? "w-72 max-w-72 border border-line bg-s1 p-3 text-ink shadow-lg" : "bg-ink text-bg",
       )}
     >
-      <MarkerTip marker={marker} code={code} />
+      <MarkerTip marker={marker} code={code} context={{ mechanic, phase }} />
     </div>,
     document.body,
   );

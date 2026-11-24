@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { MechanicFacts } from "@/components/shared/mechanic-tip";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { buildTimeline } from "./markers";
@@ -104,5 +105,71 @@ describe("TimelineChart keyboard", () => {
     const items = screen.getAllByRole("listitem").map((li) => li.textContent);
     expect(items[0]).toContain("Death 1");
     expect(items).toHaveLength(4);
+  });
+});
+
+describe("TimelineChart mechanic tooltips", () => {
+  const facts = (id: string): MechanicFacts => ({
+    id,
+    name: "Mech",
+    description: "A mechanic the file describes.",
+    failureSummary: "Every hit is a failure, charged to the player hit.",
+    abilityIds: [1301007],
+    iconAbilityId: 1301007,
+    kind: "avoidable",
+    severity: "high",
+  });
+
+  function setupWith() {
+    render(
+      <TooltipProvider>
+        <TimelineChart
+          code="T"
+          model={buildTimeline(data)}
+          durationMs={data.duration_ms}
+          cutoffMs={null}
+          phases={[{ id: "p1", name: "Stage One", start_ms: 0, end_ms: 100_000 }]}
+          selectedRef={null}
+          zoom={null}
+          onSelect={vi.fn()}
+          onZoom={vi.fn()}
+          onZoomAround={vi.fn()}
+          mechanics={facts}
+        />
+      </TooltipProvider>,
+    );
+  }
+
+  it("gives the lane label KhadBot's compact tooltip on focus", () => {
+    setupWith();
+    const label = document.querySelector("[data-lane-label=m]")!;
+    const name = label.querySelector<HTMLElement>("[tabindex='0']")!;
+    expect(name.textContent).toBe("Mech");
+    expect(label.querySelector("[data-icon-ability-id='1301007']")).not.toBeNull();
+    act(() => name.focus());
+    const tip = document.querySelector("[data-slot=tooltip-content] [data-mechanic-tip=m]");
+    expect(tip?.textContent).toContain("Every hit is a failure");
+    expect(tip?.querySelector("a")).toBeNull();
+  });
+
+  it("shows the mechanic's card on a marker, with the occurrence and no links", () => {
+    setupWith();
+    const marker = screen.getByRole("button", { name: /^Mech,/ });
+    act(() => marker.focus());
+    const card = document.getElementById("timeline-marker-tip")!;
+    expect(card.className).toContain("bg-s1");
+    expect(card.textContent).toContain("A mechanic the file describes.");
+    expect(card.textContent).toContain("Severity high");
+    expect(card.textContent).toContain("0:30.0 – 0:31.0 · Stage One");
+    expect(card.querySelector("a")).toBeNull();
+  });
+
+  it("keeps the compact marker tooltip without facts", () => {
+    setup();
+    const marker = screen.getByRole("button", { name: /^Mech,/ });
+    act(() => marker.focus());
+    const tip = document.getElementById("timeline-marker-tip")!;
+    expect(tip.className).toContain("bg-ink");
+    expect(tip.textContent).toContain("1 hit");
   });
 });
