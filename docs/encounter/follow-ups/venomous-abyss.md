@@ -155,17 +155,17 @@ kills) and 4 Normal pulls (two kills).
 - **Not covered:** cyst placement (positions; Surge's `expected_defensive_cooldowns: 1` is a guess) and intermission
   blow-offs (no log row). Caustic Claws and Residue (in one Heroic report) have no Normal rows, so stay Heroic-only.
 
-## The Twin Fangs (3421), Heroic
+## The Twin Fangs (3421), Heroic, Normal
 
 `config/encounters/53-the_venomous_abyss/3421-the_twin_fangs.yaml`, first pass awaiting review, from 12 Heroic pulls
-(three kills).
+(three kills) and 7 Normal pulls (two kills).
 
-- **Ravenous Feast double soaks** include planned immunity soaks (no damage) and one tank's repeated, survived double
-  soaks; skipping them needs a hit-type filter or a raid plan. Undersoaks need a second rule or a soak-count field.
+- **Ravenous Feast double soaks** (Heroic) include planned immunity soaks and a tank's survived double soaks (needs
+  a hit-type filter or raid plan); undersoaks need a soak-count field. Normal has no rule: the raid soaks together.
 - **Review the thresholds.** Coiling Ichor has no rule (needs positions); Vile Flood counts every tick (`value: 1`
-  would allow the early crossing guides advise); tanks may not be able to dodge their Stir the Depths, Deadly Venom
-  and Vile Flood failures.
-- **Out-of-reach hits** (Concentrated Spittle, Clotted Bolt) also charge non-tanks the bosses turned to as the raid
-  died. Unsoaked globules and Stone Breakers are charged to no one until a raid plan assigns them.
-- **Unchecked:** the Stone Breaker stack rule never fired; the Submerge's start before Sanguine Storm, Uncoiled Wrath
-  and Caustic Rain aren't in the logs; Stir the Depths' cooldown count is a guess.
+  would allow the early crossing guides advise); tanks may not dodge Stir the Depths, Deadly Venom and Vile Flood.
+- **Out-of-reach hits** (Spittle, Bolt) also charge non-tanks the bosses turned to as the raid died; unsoaked globules
+  and Stone Breakers (14 on Normal) go to no one until a raid plan. Normal's 10-stack bursts (1303196) are uncounted.
+- **Unchecked:** Stone Breaker's stack rule fired once (Normal); no Submerge start before Sanguine Storm, Uncoiled
+  Wrath, Caustic Rain or Normal Sanguine Storm pools in the logs; Flames of Ula'tek (1310287, from Vexhul) on 2 Normal
+  wipes is unexplained (17.6% of RzFgvG7xV1AHLXh6 9's damage taken: coverage partial); Stir's cooldown count is a guess.
