@@ -64,6 +64,7 @@ mechanics:
   # -- Mor'zahi --------------------------------------------------------------------------------
   - id: malevolent_presence
     name: Malevolent Presence
+    verified: false
     description: >-
       Raid-wide damage every 2 s for the whole fight, the largest source of damage taken. It is not counted as a
       failure.
@@ -74,6 +75,7 @@ mechanics:
 
   - id: final_ascension
     name: Final Ascension
+    verified: false
     description: >-
       The channel that wipes the raid, begun when Mor'zahi's energy fills 60 s after he starts gathering; a
       Disgusting Fish thrown before it finishes stops it. It is not counted as a failure.
@@ -88,6 +90,7 @@ mechanics:
 
   - id: evil_eyes
     name: Evil Eyes
+    verified: false
     description: >-
       Creepy Statues fire at marked spots around each feed, and players should step out of them. Every hit is a
       failure, charged to the player hit.
@@ -102,6 +105,7 @@ mechanics:
   # -- First Mate Nema -------------------------------------------------------------------------
   - id: shell_spin
     name: Shell Spin
+    verified: false
     description: >-
       Nema throws three shells in a cone at a player, stunning each player a shell touches for 4 s. Every stun is
       a failure charged to the stunned player, the cast's own target included.
@@ -118,6 +122,7 @@ mechanics:
 
   - id: steady_strikes
     name: Steady Strikes
+    verified: false
     description: >-
       Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. No failure is
       counted: the logs give no threshold for a late swap.
@@ -131,6 +136,7 @@ mechanics:
 
   - id: mighty_thud
     name: Mighty Thud
+    verified: false
     description: >-
       Nema's extra ability: he leaps to three marked players in turn, splitting the damage evenly between the
       players within 6 yd of each. No failure is counted.
@@ -147,6 +153,7 @@ mechanics:
 
   - id: aftershock
     name: Aftershock
+    verified: false
     description: >-
       Quaking ground left at each Mighty Thud impact, ticking once a second on players inside it. Each player hit
       in an occurrence counts one failure, charged to that player.
@@ -163,6 +170,7 @@ mechanics:
   # -- Scrollsage Epu --------------------------------------------------------------------------
   - id: blink_nova
     name: Blink Nova (target)
+    verified: false
     description: >-
       Debuff marking the player Epu teleports to; the raid damage on arrival is tracked as a damage window. Where
       the marked player stands needs positions, so no failure is counted.
@@ -176,6 +184,7 @@ mechanics:
 
   - id: icebound_flames
     name: Icebound Flames
+    verified: false
     description: >-
       Cast at a player by Epu that must be interrupted; a completed cast hits its target and leaves a dispellable
       DoT and slow. Each cast that is not interrupted is a failure, charged to no one.
@@ -190,6 +199,7 @@ mechanics:
 
   - id: shredding_shards
     name: Shredding Shards
+    verified: false
     description: >-
       Channel of seven shards at Epu's target, each adding a stack that raises the next shard's damage; the tanks
       swap so it falls off. A stack past 7 means a second channel hit a tank still debuffed: one failure per
@@ -219,6 +229,7 @@ mechanics:
   # the opposite element, so that way of failing is still untested.
   - id: frostfire_volley_fire
     name: Frostfire Volley (fire)
+    verified: false
     description: >-
       Fire missiles from Epu's Frostfire Volley hit players within 10 yd of each target and give Burning Flames. A
       fire missile that hits a player carrying Piercing Frost sets off Elemental Explosion: a failure charged to
@@ -233,6 +244,7 @@ mechanics:
 
   - id: frostfire_volley_frost
     name: Frostfire Volley (frost)
+    verified: false
     description: >-
       Frost missiles from Epu's Frostfire Volley land 0.5 s after the fire ones, hit players within 10 yd and give
       Piercing Frost. One that hits a player carrying Burning Flames sets off Elemental Explosion: a failure
@@ -246,6 +258,7 @@ mechanics:
 
   - id: elemental_explosion
     name: Elemental Explosion
+    verified: false
     description: >-
       Raid hit when a Frostfire Volley missile meets the opposite element's debuff. It is not counted here: the
       player who caused it is charged by the Frostfire Volley rules.
@@ -257,6 +270,7 @@ mechanics:
 
   - id: burning_flames
     name: Burning Flames
+    verified: false
     description: >-
       Debuff and DoT from a fire missile, lasting 1 min or until the player steps into a Frost Patch. It is not
       counted as a failure.
@@ -269,6 +283,7 @@ mechanics:
 
   - id: piercing_frost
     name: Piercing Frost
+    verified: false
     description: >-
       Debuff, DoT and slow from a frost missile, lasting 1 min or until the player steps into a Fire Patch. It is
       not counted as a failure.
@@ -281,6 +296,7 @@ mechanics:
 
   - id: elemental_patches
     name: Frost Patch and Fire Patch
+    verified: false
     description: >-
       Ground left by the Frostfire Volley missiles. Players step into the opposite element's patch to clear their
       debuff, so a tick can't be told from a mistake and no failure is counted.
@@ -293,6 +309,7 @@ mechanics:
   # -- Trader Gebbo ----------------------------------------------------------------------------
   - id: throw_junk
     name: Throw Junk
+    verified: false
     description: >-
       Gebbo throws crates at marked spots in bursts. Every hit is a failure, charged to the player standing where
       a crate landed.
@@ -307,6 +324,7 @@ mechanics:
 
   - id: splinters
     name: Splinters
+    verified: false
     description: >-
       Stacking bleed on a player who stomps a crate; stomping is the job, since the crates hide the Disgusting
       Fish and rupture if left. No failure is counted: no source gives a stack limit.
@@ -322,6 +340,7 @@ mechanics:
 
   - id: relic_rupture
     name: Relic Rupture
+    verified: false
     description: >-
       A crate left unstomped ruptures 10 s later and hits the whole raid. Each rupture that hits the raid is one
       failure, charged to no one, since nobody in particular is at fault.
@@ -341,6 +360,7 @@ mechanics:
   # another he died as the bomb's cast began. On Normal, likewise in one kill: the one that fed him first.
   - id: bouncy_mushroom
     name: Bouncy Mushroom
+    verified: false
     description: >-
       Mushrooms Gebbo drops at players; touching one bounces the player, which is how the raid clears Blast Wave,
       and the mushroom then bursts. It is not counted as a failure.
@@ -354,6 +374,7 @@ mechanics:
 
   - id: explosive_surprise
     name: Explosive Surprise
+    verified: false
     description: "Bomb on one player, who takes it to the room's edge. It is not counted as a failure."
     # Bomb on one player (begun by 1296249; 1297625 is the cast and the 10 s debuff on the carrier), who
     # takes it to the room's edge.
@@ -364,6 +385,7 @@ mechanics:
 
   - id: explosive_surprise
     name: Explosive Surprise
+    verified: false
     description: "Bomb on one player, who takes it to the room's edge. It is not counted as a failure."
     # Normal adds the bomb's landing hit on the carrier, 2 s after the debuff ends (1296245, 160k): it
     # hit once in two bombs. Heroic has no row of it.
@@ -374,6 +396,7 @@ mechanics:
 
   - id: blast_wave
     name: Blast Wave
+    verified: false
     description: >-
       Ring that spreads from Gebbo's bomb 10 s after it lands, a large hit plus a DoT; players bounce or teleport
       over it. Each player it touches is a failure, charged to that player.
@@ -389,6 +412,7 @@ mechanics:
 
   - id: spreading_flames
     name: Spreading Flames
+    verified: false
     description: >-
       Fire spreading from Gebbo's bomb that damages players inside it. It has been seen once, so no failure is
       counted yet.
@@ -402,6 +426,7 @@ mechanics:
 
   - id: smashing_shovel
     name: Smashing Shovel
+    verified: false
     description: >-
       Extra damage and knockback on each of Gebbo's swings once another tortollan is dead. It is not counted as a
       failure.
@@ -416,6 +441,7 @@ mechanics:
   # -- Hoji ----------------------------------------------------------------------------------
   - id: shadow_breath
     name: Shadow Breath
+    verified: false
     description: >-
       Hoji marks a player and 4 s later breathes on them, hitting the marked player and anyone standing with
       them. It is not counted as a failure.

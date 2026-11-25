@@ -92,6 +92,25 @@ describe("names", () => {
     expect(humanize("p3")).toBe("P3");
   });
 
+  it("reports a mechanic's verified flag, and null without the lookup", () => {
+    const encounter = {
+      encounter_id: 1,
+      difficulty: 4,
+      difficulty_name: "heroic",
+      encounter_name: "Boss",
+      phases: {},
+      mechanics: { swirl: "Swirl", bite: "Bite" },
+      mechanic_descriptions: {},
+      mechanic_verified: { swirl: false, bite: true },
+      damage_windows: {},
+    } as Parameters<typeof buildNames>[0];
+    const names = buildNames(encounter, undefined);
+    expect(names.mechanicVerified("swirl")).toBe(false);
+    expect(names.mechanicVerified("bite")).toBe(true);
+    expect(names.mechanicVerified("other")).toBeNull();
+    expect(buildNames(undefined, undefined).mechanicVerified("swirl")).toBeNull();
+  });
+
   it("only real spells link out", () => {
     expect([spellIdOf(0), spellIdOf(1), spellIdOf(2), spellIdOf(null)]).toEqual([null, null, 2, null]);
   });

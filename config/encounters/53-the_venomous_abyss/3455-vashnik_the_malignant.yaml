@@ -39,6 +39,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: toxic_vapor
     name: Toxic Vapor
+    verified: false
     description: >-
       The soft enrage: each Imbibe adds a permanent stack of a raid-wide tick every 2 s. It is not counted as a
       failure.
@@ -49,6 +50,7 @@ mechanics:
 
   - id: malignant_catalyst
     name: Malignant Catalyst
+    verified: false
     description: >-
       Raid-wide hit at the end of a 5 s cast every 39 to 45 s, which launches the Catalytic Bile puddles about
       7 s later. It is not counted as a failure.
@@ -60,6 +62,7 @@ mechanics:
 
   - id: catalytic_bile
     name: Catalytic Bile
+    verified: false
     description: >-
       Bile impacts that players soak, one hit per soaker. A short soak is not counted as a failure here; an
       impact nobody soaked shows as Catalytic Bile (unsoaked).
@@ -73,6 +76,7 @@ mechanics:
 
   - id: catalytic_bile_unsoaked
     name: Catalytic Bile (unsoaked)
+    verified: false
     description: >-
       A Catalytic Bile impact that hit no player hits the whole raid instead. Each one is a failure, charged to
       no one because nobody's soak assignment is in the logs.
@@ -89,6 +93,7 @@ mechanics:
 
   - id: virulent_fumes
     name: Virulent Fumes
+    verified: false
     description: >-
       Small ticks and a short debuff from the environment, mostly in the 20 s after each Imbibe; the Dungeon
       Journal doesn't name it. It is not counted as a failure.
@@ -103,6 +108,7 @@ mechanics:
 
   - id: virulent_fumes
     name: Virulent Fumes
+    verified: false
     description: >-
       Small ticks and a short debuff from the environment; the Dungeon Journal doesn't name it. It is not counted
       as a failure.
@@ -118,6 +124,7 @@ mechanics:
   # -- Tanking ---------------------------------------------------------------------------------
   - id: dripping_fangs
     name: Dripping Fangs
+    verified: false
     description: >-
       Bite on Vashnik's target with a 32 s DoT and Physical damage taken debuff; the tanks swap on each bite. A
       second stack means a tank took two bites in a row: one failure, charged to no one.
@@ -131,6 +138,7 @@ mechanics:
   # -- Plague Froth ----------------------------------------------------------------------------
   - id: plague_froth
     name: Plague Froth
+    verified: false
     description: >-
       Debuff on 6 or 7 players that ticks on everyone within 4.5 yards of them once a second for 6 s. Carriers
       take their own ticks; a player without the debuff who is hit stood next to a carrier and fails once per
@@ -146,6 +154,7 @@ mechanics:
 
   - id: plague_wave
     name: Plague Wave
+    verified: false
     description: >-
       Waves that erupt in the cardinal directions from each Plague Froth carrier when the debuff expires. Every
       hit is a failure, one per player per eruption, charged to the player hit.
@@ -160,6 +169,7 @@ mechanics:
   # -- Adaptive Infection ----------------------------------------------------------------------
   - id: stygian_infection
     name: Stygian Infection
+    verified: false
     description: >-
       Shadow fountain infection on two players per Imbibe; the infected players erupt in Stygian Burst. It is
       not counted as a failure.
@@ -172,6 +182,7 @@ mechanics:
 
   - id: stygian_burst
     name: Stygian Burst
+    verified: false
     description: >-
       Eruptions every 1.5 s from players with Stygian Infection, hitting everyone within 6 yards. A player hit
       without the infection stood in someone else's burst: one failure per burst, charged to that player.
@@ -185,6 +196,7 @@ mechanics:
 
   - id: exploding_infection
     name: Exploding Infection
+    verified: false
     description: >-
       Flame fountain infection on two players per Imbibe; dispelling it sets off a Caustic Explosion on the
       raid, so dispels are staggered. No failure is counted: dispels too close together have no rule yet.
@@ -197,6 +209,7 @@ mechanics:
 
   - id: caustic_explosion
     name: Caustic Explosion
+    verified: false
     description: "Raid-wide hit when an Exploding Infection is dispelled or expires. It is not counted as a failure."
     difficulties: [heroic, normal]
     ability_ids: [1295209]
@@ -207,6 +220,7 @@ mechanics:
   # -- Adds ------------------------------------------------------------------------------------
   - id: burning_presence
     name: Burning Presence
+    verified: false
     description: "Raid-wide pulse every 3 s from each living Burning Venom add. It is not counted as a failure."
     # Burning Venom is NPC 260905, two per Flame Imbibe.
     difficulties: [heroic, normal]
@@ -217,6 +231,7 @@ mechanics:
 
   - id: caustic_surge
     name: Caustic Surge
+    verified: false
     description: >-
       Raid-wide hit and 3 s DoT when a Burning Venom dies; each death adds its own DoT, so the two adds are
       killed apart. No failure is counted: deaths too close together have no rule yet.
@@ -229,6 +244,7 @@ mechanics:
 
   - id: caustic_surge
     name: Caustic Surge
+    verified: false
     description: "Raid-wide hit when a Burning Venom dies. It is not counted as a failure."
     # Normal has no DoT: one 1285979 hit per player per death and no aura rows (10 deaths over the two pulls).
     difficulties: [normal]
@@ -239,6 +255,7 @@ mechanics:
 
   - id: congealing_bolt
     name: Congealing Bolt
+    verified: false
     description: >-
       Bolt from the Shrouded Venom adds that deals damage and applies a stacking dispellable debuff. It is not
       counted as a failure.
@@ -252,6 +269,7 @@ mechanics:
 
   - id: umbral_ejection
     name: Umbral Ejection
+    verified: false
     description: >-
       Shadow venom sprayed where a Shrouded Venom dies, hitting players within 3 yards of an impact. Every hit
       is a failure, one per player per spray, charged to the player hit.
@@ -265,6 +283,7 @@ mechanics:
   # -- Fountain of Blood -----------------------------------------------------------------------
   - id: siphoning_infection
     name: Siphoning Infection
+    verified: false
     description: >-
       Blood fountain infection on one player, 8 and 40 s after each Imbibe that drinks from the Fountain of
       Blood; a DoT that lasts up to about 27 s. It is not counted as a failure.
@@ -276,6 +295,7 @@ mechanics:
 
   - id: siphon_blood
     name: Siphon Blood
+    verified: false
     description: >-
       Damage to other players while a Siphoning Infection lasts, rising from a few to about 14 players a second.
       How players are picked isn't known, so it is not counted as a failure.

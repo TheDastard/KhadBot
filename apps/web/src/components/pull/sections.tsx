@@ -9,6 +9,7 @@
 import { AbilityName } from "@/components/shared/ability-name";
 import { PlayerName } from "@/components/shared/player-name";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { UnverifiedTag } from "./unverified-tag";
 import { useIsFocusedRef } from "@/lib/focus";
 import { formatClockTenths, formatNumber } from "@/lib/format";
 import type { PullDigestData } from "@/lib/queries";
@@ -129,6 +130,7 @@ export function MechanicsSection({ code, digest, names }: SectionProps) {
               <tr key={m.ref} className="border-t border-line">
                 <th scope="row" className="px-2 py-1.5 text-left font-medium">
                   {names.mechanic(m.mechanic_id)}
+                  <UnverifiedTag verified={names.mechanicVerified(m.mechanic_id)} />
                 </th>
                 <td className={cn("px-2 py-1.5 text-right font-semibold", m.failures > 0 ? "text-bad" : "text-mut")}>
                   {m.failures}

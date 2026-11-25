@@ -39,6 +39,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: dreadful_presence
     name: Dreadful Presence
+    verified: false
     description: "Malacrass's raid-wide Shadow damage for the whole fight. It is not counted as a failure."
     # Malacrass's raid-wide Shadow damage for the whole fight; one cast (1288624) at the pull.
     # Normal: one cast about 8 s into Stage Two in each of the 9 pulls that reach it.
@@ -49,6 +50,7 @@ mechanics:
 
   - id: coalesced_venom
     name: Coalesced Venom
+    verified: false
     description: >-
       Venom globules spawned by Toxic Deluge, each pulsing the raid until it is destroyed. It is not counted as a
       failure.
@@ -61,6 +63,7 @@ mechanics:
 
   - id: toxic_deluge
     name: Toxic Deluge (impact)
+    verified: false
     description: >-
       Hits a few players on some Toxic Deluge casts, read as the venom globules landing. Every hit is a failure charged
       to the player hit; no guide describes it, so the rule is a first reading.
@@ -76,6 +79,7 @@ mechanics:
 
   - id: volatile_venom
     name: Volatile Venom
+    verified: false
     description: >-
       A player carrying a venom globule pulses damage on players nearby, then drops a fresh globule. A player hit while
       carrying none is a bystander the carrier failed to keep clear of: one failure per occurrence, charged to the
@@ -93,6 +97,7 @@ mechanics:
 
   - id: venom_rupture
     name: Venom Rupture
+    verified: false
     description: >-
       Stacking raid-wide DoT, one stack per venom globule destroyed; Zul'jan's fall destroys every globule left. No
       failure is counted, as no source gives a stack count that is too many.
@@ -106,6 +111,7 @@ mechanics:
 
   - id: venom_rupture
     name: Venom Rupture
+    verified: false
     description: >-
       Raid-wide hit each time venom globules are destroyed; Zul'jan's fall destroys every globule left. It is not
       counted as a failure.
@@ -119,6 +125,7 @@ mechanics:
 
   - id: noxious_ground
     name: Noxious Ground
+    verified: false
     description: >-
       Puddles from the altar's mouths during Fangs of the Coiled Altar. One tick is allowed for stepping out; a player
       hit more than once in an occurrence fails, charged to that player.
@@ -135,6 +142,7 @@ mechanics:
 
   - id: axegrinder
     name: Axegrinder
+    verified: false
     description: >-
       Axes Zul'jan throws, which then wander the room and hit whoever they touch. Each player hit in an occurrence
       counts one failure, charged to that player.
@@ -150,6 +158,7 @@ mechanics:
 
   - id: venomfang
     name: Venomfang
+    verified: false
     description: >-
       Thrown axe that leaves a 14 s Nature DoT on the players it passes; a Poison dispel removes it. No failure is
       counted, as no source says how long is too long.
@@ -166,6 +175,7 @@ mechanics:
   # -- Guillotine ------------------------------------------------------------------------------
   - id: guillotine
     name: Guillotine
+    verified: false
     description: >-
       An axe marks one player, and 1.5 s later its damage is split among the players within 9 yards. A soak by fewer
       than 5 players is one failure, charged to no one; a failed soak can bring Execution on the raid.
@@ -182,6 +192,7 @@ mechanics:
 
   - id: guillotine
     name: Guillotine
+    verified: false
     description: >-
       An axe marks one player, and 1.5 s later its damage is split among the players nearby. A soak by fewer than 5
       players is one failure, charged to no one; a failed soak can bring Execution on the raid.
@@ -196,6 +207,7 @@ mechanics:
 
   - id: execution
     name: Execution
+    verified: false
     description: >-
       Raid-wide hit that follows a failed Guillotine soak, the cost of that failure. It is not counted as a failure
       itself.
@@ -209,6 +221,7 @@ mechanics:
 
   - id: guillotine_eruption
     name: Widow's Kiss and Widow's Touch
+    verified: false
     description: >-
       Eruption after each Guillotine: Widow's Kiss on players within 50 yards, the smaller Widow's Touch beyond. It is
       not counted as a failure.
@@ -223,6 +236,7 @@ mechanics:
 
   - id: grim_guillotine
     name: Grim Guillotine
+    verified: false
     description: >-
       Stage Three's Guillotine, whose soakers also take a healing absorb. A soak by fewer than 5 players is one failure,
       charged to no one; a failed soak can bring Grim Execution on the raid.
@@ -239,6 +253,7 @@ mechanics:
 
   - id: grim_execution
     name: Grim Execution
+    verified: false
     description: "Raid-wide hit that follows a failed Grim Guillotine soak. It is not counted as a failure itself."
     # Raid-wide hit that follows a failed Grim Guillotine soak.
     # Not on Normal (no Grim Guillotine there).
@@ -250,6 +265,7 @@ mechanics:
 
   - id: grim_guillotine_eruption
     name: Death's Embrace and Death's Whisper
+    verified: false
     description: >-
       Eruption after each Grim Guillotine: Death's Embrace on players within 50 yards, Death's Whisper beyond. It is not
       counted as a failure.
@@ -267,6 +283,7 @@ mechanics:
   # the aggro holder of the boss that cast it fails, once per cast.
   - id: sever
     name: Sever
+    verified: false
     description: >-
       Zul'jan's frontal, aimed at his tank. Anyone it hits other than the player holding Zul'jan's aggro fails, once per
       cast, charged to the player hit.
@@ -281,6 +298,7 @@ mechanics:
 
   - id: sever_stacks
     name: Sever (stacks)
+    verified: false
     description: >-
       Debuff on each player Sever hits that raises Sever damage taken for 45 s. A second stack means the tanks did not
       swap or a player stood in two: one failure per occurrence, charged to no one.
@@ -297,6 +315,7 @@ mechanics:
 
   - id: blighted_sever
     name: Blighted Sever
+    verified: false
     description: >-
       Stage Three's Shadow Sever, which also applies Gravebound. Anyone it hits other than the aggro holder of the boss
       that cast it fails, once per cast, charged to the player hit.
@@ -311,6 +330,7 @@ mechanics:
 
   - id: blighted_sever_stacks
     name: Blighted Sever (stacks)
+    verified: false
     description: "Stacking debuff from Blighted Sever. A second stack is one failure per occurrence, charged to no one."
     difficulties: [heroic, normal]
     ability_ids: [1307403]
@@ -321,6 +341,7 @@ mechanics:
 
   - id: soul_sever
     name: Soul Sever
+    verified: false
     description: >-
       Malacrass's frontal; it destroys Manifestations of Dread and leaves a DoT and Gravebound on players hit. No
       failure is counted: Malacrass never melees, so the logs don't name his tank.
@@ -337,6 +358,7 @@ mechanics:
 
   - id: soul_sever_stacks
     name: Soul Sever (stacks)
+    verified: false
     description: "Stacking debuff from Soul Sever. A second stack is one failure per occurrence, charged to no one."
     difficulties: [heroic, normal]
     ability_ids: [1307959]
@@ -347,6 +369,7 @@ mechanics:
 
   - id: twinfang_toxin
     name: Twinfang Toxin
+    verified: false
     description: >-
       Zul'jan's melee consumes the toxin Fangs of the Coiled Altar builds on him, causing damage spikes on the tank. It
       is not counted as a failure.
@@ -357,6 +380,7 @@ mechanics:
 
   - id: corrupted_toxin
     name: Corrupted Toxin
+    verified: false
     description: >-
       Stage Three Shadow DoT that Zul'jan's melee stacks on his tank after Defilement. It is not counted as a failure.
     # Stage Three: Zul'jan's melee stacks a Shadow DoT on his tank (up to 16 seen) after Defilement.
@@ -368,6 +392,7 @@ mechanics:
 
   - id: dread_bolt
     name: Dread Bolt
+    verified: false
     description: "Malacrass's filler cast on one player. It is not counted as a failure."
     difficulties: [heroic, normal]
     ability_ids: [1307184]
@@ -377,6 +402,7 @@ mechanics:
   # -- Stage Two: Malacrass --------------------------------------------------------------------
   - id: dreadmarch
     name: Dreadmarch
+    verified: false
     description: >-
       Mind control that walks players off the edge until its shield is broken; each player freed leaves a Manifestation
       of Dread. No failure is counted.
@@ -390,6 +416,7 @@ mechanics:
 
   - id: manifestation_of_dread
     name: Manifestation of Dread
+    verified: false
     description: >-
       Ghost fixated on a player; it moves only while unwatched and re-applies Dreadmarch if it reaches them. No failure
       is counted.
@@ -402,6 +429,7 @@ mechanics:
 
   - id: manifestation_of_dread
     name: Manifestation of Dread
+    verified: false
     description: >-
       Ghost fixated on a player; it moves only while unwatched and hits them with Despair if it reaches them. No
       failure is counted here; the hits are counted under Despair.
@@ -415,6 +443,7 @@ mechanics:
 
   - id: despair
     name: Despair
+    verified: false
     description: >-
       Damage a Manifestation of Dread deals to the player it is fixated on once it reaches them. Each player hit in an
       occurrence is one failure, charged to that player, who let the ghost reach them.
@@ -429,6 +458,7 @@ mechanics:
 
   - id: gloombomb
     name: Gloombomb
+    verified: false
     description: >-
       Three players explode for 15 yards and take Gravebound. A player hit twice by one cast stood in another's bomb: a
       failure charged to that player. Bystanders hit once are not charged yet.
@@ -446,6 +476,7 @@ mechanics:
 
   - id: gravebound
     name: Gravebound
+    verified: false
     description: >-
       Debuff from Soul Sever, Blighted Sever and Gloombomb that shatters the player's soul into fragments they must
       collect; it ticks while it lasts. Running out is counted under Gravebound (expired).
@@ -459,6 +490,7 @@ mechanics:
 
   - id: gravebound_expired
     name: Gravebound (expired)
+    verified: false
     description: >-
       The lethal hit when Gravebound runs out with soul fragments uncollected. Every hit is a failure, charged to the
       player hit.
@@ -472,6 +504,7 @@ mechanics:
 
   - id: wail_of_terror
     name: Wail of Terror
+    verified: false
     description: >-
       Raid-wide fear from a Spiteful Soulcoiler, an add Malacrass summons with Spiritcackle. Each cast that is not
       interrupted is a failure, charged to no one.
@@ -486,6 +519,7 @@ mechanics:
 
   - id: spiteful_soulcoiler
     name: Spiteful Soulcoiler
+    verified: false
     description: >-
       Add summoned by Spiritcackle whose Retaliatory Malice chips the raid while it lives; it blinks away after an
       interrupt. It is not counted as a failure.
@@ -500,6 +534,7 @@ mechanics:
 
   - id: eternal_nightfall
     name: Eternal Nightfall
+    verified: false
     description: >-
       Malacrass shields himself and channels, and Suffocating Darkness absorbs healing while the shield holds; breaking
       it within 15 s stops the channel. Each channel that goes through is a failure, charged to no one.
@@ -517,6 +552,7 @@ mechanics:
   # -- Intermission ----------------------------------------------------------------------------
   - id: soulbinding
     name: Soulbinding
+    verified: false
     description: >-
       Intermission: Malacrass revives Zul'jan, who heals through Ghastly Regeneration while taking double damage. It is
       not counted as a failure.
@@ -530,6 +566,7 @@ mechanics:
 
   - id: spirit_erasure
     name: Spirit Erasure
+    verified: false
     description: >-
       Raid-wide hit each time a player blocks a Fragment of Malacrass on its way to Zul'jan; blocks must be staggered.
       No failure is counted, as nothing in the logs says who blocked.
@@ -543,6 +580,7 @@ mechanics:
   # -- Stage Three -----------------------------------------------------------------------------
   - id: defilement
     name: Defilement of the Coiled Altar
+    verified: false
     description: >-
       Zul'jan's Stage Three cast that puts a healing absorb on the raid and starts Corrupted Toxin. It is not counted as
       a failure.
@@ -554,6 +592,7 @@ mechanics:
 
   - id: defiled_ground
     name: Defiled Ground
+    verified: false
     description: >-
       Ground from the altar during Defilement that absorbs healing. Each debuff is a step into it, a failure charged to
       that player.
@@ -566,6 +605,7 @@ mechanics:
 
   - id: unworthy
     name: Unworthy
+    verified: false
     description: >-
       Lethal hit from Malacrass; no guide names it and its trigger is unknown. It is not counted as a failure.
     # Lethal hit from Malacrass (17 hits, all killing blows, 3 pulls). No guide names it and its trigger is

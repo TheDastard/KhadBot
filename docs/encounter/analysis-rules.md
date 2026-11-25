@@ -24,6 +24,11 @@ anomaly, who a failure is charged to, and how aggro and positions feed that. The
   `GET /v1/encounters/{id}/names` (`mechanic_descriptions`) carry it. The digest leaves it out: Ula'tek's 30
   descriptions come to about 1.1k tokens (`len(text) // 4`), which would take its largest digest (2,225 tokens,
   `recorded-nights.md`) past the 3k ceiling.
+- **Verified.** Every mechanic carries `verified` (default `false`), as registry entries do: it turns `true` only
+  after a person has inspected the entry (IDs, rule, threshold, blame and description) against the logs. Authored
+  files write it explicitly. It is left out of `encfile_hash`, so flipping it rebuilds no annotation, digest or
+  finding; analysis and the analyst never read it. `GET /v1/encounters/{id}/names` serves it (`mechanic_verified`)
+  and the dashboard tags unverified mechanics in the Mechanics section, the mechanic panel and the death panel.
 - **Unknown keys are errors** (`extra="forbid"`), so typos fail at load.
 - **Triggers that match nothing yet.** `boss_hp_below` needs damage on the boss (no DamageDone spec) and
   `boss_aura_applied` needs auras on the boss (Buffs are fetched for friendlies only). Use `boss_cast`, `wcl_phase`

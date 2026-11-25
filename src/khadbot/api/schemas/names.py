@@ -72,6 +72,12 @@ class EncounterNames(BaseModel):
             "and what a failure means. Only mechanics that have one; every mechanic with a failure rule does."
         )
     )
+    mechanic_verified: dict[str, bool] = Field(
+        description=(
+            "Mechanic ID -> whether a person has inspected the encounter file's entry against the logs; every "
+            "mechanic in ``mechanics`` is listed. False entries are shown as unverified."
+        )
+    )
     damage_windows: dict[str, str]  # damage window ID -> name
 
 

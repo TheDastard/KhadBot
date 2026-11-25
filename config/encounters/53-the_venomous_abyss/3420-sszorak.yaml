@@ -45,6 +45,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: ulateks_presence
     name: Ula'tek's Presence
+    verified: false
     description: >-
       Raid-wide damage every 2 s for the whole fight from the environment, the largest source of damage taken. It
       is not counted as a failure.
@@ -55,6 +56,7 @@ mechanics:
 
   - id: viscous_cyst
     name: Viscous Cyst
+    verified: false
     description: >-
       Glob left where each Venomous Surge expires; popping it knocks every player away and gives them a stacking
       DoT. The raid pops some on purpose, and an early pop can't be told from a planned one, so no failure is
@@ -73,6 +75,7 @@ mechanics:
   # -- Apex Predator ---------------------------------------------------------------------------
   - id: ravage
     name: Ravage
+    verified: false
     description: >-
       Sszorak's tank frontal. Anyone hit other than the cast's target stood in front of the boss: a failure
       charged to that player.
@@ -89,6 +92,7 @@ mechanics:
 
   - id: ravage_debuff
     name: Ravage (debuff)
+    verified: false
     description: >-
       Debuff from Ravage making the next Ravage deal 600% more damage for 25 s; the tanks swap between the two
       Ravages of a combo. A second stack means one tank took both: one failure per such stack, charged to no one.
@@ -103,6 +107,7 @@ mechanics:
 
   - id: mutilate
     name: Mutilate
+    verified: false
     description: >-
       Raid frontal aimed at the tank, its damage split between everyone in it. Fewer than 5 players hit, the tank
       included, is deadly and counts one failure per Mutilate, charged to no one.
@@ -121,6 +126,7 @@ mechanics:
 
   - id: mutilated_gash
     name: Mutilated Gash
+    verified: false
     description: >-
       Debuff and DoT on everyone a Mutilate hit, raising the next Mutilate's damage by 500%, so soak groups take
       every other one. A soaker who takes the next one too is not yet counted as a failure.
@@ -135,6 +141,7 @@ mechanics:
 
   - id: tempest
     name: Tempest
+    verified: false
     description: >-
       Roaming tornadoes; each contact hits and applies a stacking DoT and slow. Each new debuff is a failure
       charged to the player hit; a contact while the debuff is up adds a stack but is not counted again.
@@ -150,6 +157,7 @@ mechanics:
 
   - id: corroding_venom
     name: Corroding Venom
+    verified: false
     description: >-
       Stacking physical damage taken increase from Sszorak's melee swings on his target. It is not counted as a
       failure.
@@ -161,6 +169,7 @@ mechanics:
   # -- Venomous Surge --------------------------------------------------------------------------
   - id: venomous_surge
     name: Venomous Surge
+    verified: false
     description: >-
       10 s debuff on two players; when it expires it hits the raid and leaves a Viscous Cyst where the player
       stands. Cyst placement needs positions, so no failure is counted.
@@ -174,6 +183,7 @@ mechanics:
 
   - id: caustic_claws
     name: Caustic Claws
+    verified: false
     description: >-
       Toxin flung around the boss with Venomous Surge, a heavy hit to players within 6 yd of each impact. Every
       hit is a failure, charged to the player hit.
@@ -186,6 +196,7 @@ mechanics:
 
   - id: caustic_residue
     name: Caustic Residue
+    verified: false
     description: >-
       Acid pool left by each Caustic Claws impact that raises damage taken by 30% and ticks each second. Each
       player counts one failure per stay in a pool, charged to that player.
@@ -200,6 +211,7 @@ mechanics:
   # -- Raging Crosswinds -----------------------------------------------------------------------
   - id: raging_crosswinds
     name: Raging Crosswinds
+    verified: false
     description: >-
       Eight players are marked, four with each direction; 8 s later the marks expire, hitting and launching the
       marked players and anyone within 6 yd. Bystanders are not yet counted as a failure.
@@ -215,6 +227,7 @@ mechanics:
 
   - id: raging_crosswinds
     name: Raging Crosswinds
+    verified: false
     description: >-
       Twelve players are marked, six with each direction; 8 s later the marks expire, hitting and launching the
       marked players and anyone near them. Bystanders are not yet counted as a failure.
@@ -228,6 +241,7 @@ mechanics:
 
   - id: turbulent_gusts
     name: Turbulent Gusts
+    verified: false
     description: >-
       Slow fall on every player the Crosswinds launch; colliding with another launched player removes it. A debuff
       lasting over 4 s means the player met no one and drifted: a failure charged to that player.

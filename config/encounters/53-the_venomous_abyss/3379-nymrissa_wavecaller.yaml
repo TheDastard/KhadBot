@@ -37,6 +37,7 @@ mechanics:
   # -- The bubble ------------------------------------------------------------------------------
   - id: alluring_bubble
     name: Alluring Bubble
+    verified: false
     description: >-
       Nymrissa forms a bubble and Bubblefin Shorerunner murlocs swarm toward it; one that reaches it becomes a
       Berserker whose Pulsing Tides hits the raid every 3 s. No failure is counted: no Berserker has been seen
@@ -53,6 +54,7 @@ mechanics:
 
   - id: swirling_whirlpools
     name: Swirling Whirlpools
+    verified: false
     description: >-
       Whirlpools surge toward the bubble before each Pop!, leaving one gap to stand in, and hit players in their
       path. Each player hit by a whirlpool counts one failure, charged to that player.
@@ -69,6 +71,7 @@ mechanics:
 
   - id: wild_bite
     name: Wild Bite
+    verified: false
     description: >-
       A Shark bites a player the Pop! knocked into the water, leaving a 20 s DoT. Each bite is a failure,
       charged to the player bitten.
@@ -85,6 +88,7 @@ mechanics:
   # -- Frost orbs ------------------------------------------------------------------------------
   - id: chilling_frost
     name: Chilling Frost
+    verified: false
     description: >-
       Hits three players every 1.5 s for 6 s and slows them; each hit leaves a Frost Orb where the player
       stands, so the targets move to place them. It is not counted as a failure.
@@ -97,6 +101,7 @@ mechanics:
 
   - id: chilling_frost
     name: Chilling Frost
+    verified: false
     description: >-
       Hits three players every 1.5 s for 6 to 7.5 s and slows them; each hit leaves a Frost Orb where the
       player stands, so the targets move to place them. It is not counted as a failure.
@@ -110,6 +115,7 @@ mechanics:
 
   - id: frost_orb
     name: Frost Orb
+    verified: false
     description: >-
       Orbs that must be soaked: touching one clings it to the player as a stacking DoT. An orb left untouched
       Shatters for a raid-wide hit and a 30 s DoT; no failure is counted, as no Shatter has been seen in the
@@ -125,6 +131,7 @@ mechanics:
 
   - id: frost_orb
     name: Frost Orb
+    verified: false
     description: >-
       Orbs that must be soaked: touching one clings it to the player as a DoT for about 16 s, and touching
       another refreshes it rather than stacking. An orb left untouched Shatters; no failure is counted, as no
@@ -141,6 +148,7 @@ mechanics:
 
   - id: lingering_frost
     name: Lingering Frost
+    verified: false
     description: >-
       Icy patch left where an orb is picked up that ticks each second on players in it and makes them slide.
       Soakers step onto their own patches, so a hit is not counted as a failure.
@@ -157,6 +165,7 @@ mechanics:
   # -- Tanking ---------------------------------------------------------------------------------
   - id: iceblade_flurry
     name: Iceblade Flurry
+    verified: false
     description: >-
       Debuff on Nymrissa's current target, then a hit each second for 5 s. Taking it as the tank is not a
       failure; its stacks are judged as Iceblade Flurry (stacks).
@@ -171,6 +180,7 @@ mechanics:
 
   - id: iceblade_flurry_stacks
     name: Iceblade Flurry (stacks)
+    verified: false
     description: >-
       Stacking debuff from each Iceblade Flurry hit, 6 stacks a cast; the tanks swap on each cast. A 7th stack
       means a tank took two casts in a row: one failure per missed swap, charged to no one.

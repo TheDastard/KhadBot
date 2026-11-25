@@ -46,6 +46,7 @@ mechanics:
   # -- Eternal Venom ---------------------------------------------------------------------------
   - id: eternal_venom
     name: Eternal Venom
+    verified: false
     description: >-
       Permanent stacking DoT behind the fight: most of Vexhul's abilities add a stack, Ravenous Feast removes one,
       and 9 stacks kill the player. It is not counted itself; the hits that add stacks are.
@@ -59,6 +60,7 @@ mechanics:
 
   - id: eternal_venom
     name: Eternal Venom
+    verified: false
     description: >-
       Permanent stacking DoT behind the fight: most of Vexhul's abilities add a stack and a Ravenous Feast soak
       removes one. A hit at 10 stacks clears them with a burst of damage instead of a stack. It is not counted
@@ -74,6 +76,7 @@ mechanics:
   # -- Vexhul ----------------------------------------------------------------------------------
   - id: caustic_deluge
     name: Caustic Deluge
+    verified: false
     description: >-
       Channel on Vexhul's tank with acid splashes around them, each adding an Eternal Venom stack and leaving a
       Caustic Globule. A splash that hits anyone but the cast's target is that player's failure, once per Deluge.
@@ -91,6 +94,7 @@ mechanics:
 
   - id: envenomed
     name: Envenomed
+    verified: false
     description: >-
       Stacking debuff each Caustic Deluge tick puts on its target for 90 s; the tanks swap between Deluges. More
       than 11 stacks means a tank took two Deluges in a row: one failure, charged to no one.
@@ -107,6 +111,7 @@ mechanics:
 
   - id: caustic_globule
     name: Caustic Globule
+    verified: false
     description: >-
       Globule left by each Deluge splash; a player who touches one soaks it alone for one Eternal Venom stack.
       Soaking is not counted as a failure; a globule nobody touches is.
@@ -121,6 +126,7 @@ mechanics:
 
   - id: caustic_globule_rupture
     name: Caustic Globule (unsoaked)
+    verified: false
     description: >-
       A globule nobody touched ruptures on the whole raid, giving everyone an Eternal Venom stack. One failure per
       rupture, charged to no one, since nobody owns a globule.
@@ -134,6 +140,7 @@ mechanics:
 
   - id: venomous_emergence
     name: Venomous Emergence
+    verified: false
     description: >-
       Raid-wide hit that gives everyone an Eternal Venom stack as three Spawns of Vexhul surface. It is not
       counted as a failure.
@@ -145,6 +152,7 @@ mechanics:
 
   - id: corrosive_spit
     name: Corrosive Spit
+    verified: false
     description: >-
       A Spawn of Vexhul marks a player and spits a line at them. Anyone else in the line takes an Eternal Venom
       stack: a failure charged to that player.
@@ -161,6 +169,7 @@ mechanics:
 
   - id: stir_the_depths_waves
     name: Stir the Depths (waves)
+    verified: false
     description: >-
       Waves rolling across the platform during Stir the Depths, each hit adding an Eternal Venom stack. Any hit is
       a failure charged to the player hit, once per wave.
@@ -173,6 +182,7 @@ mechanics:
 
   - id: concentrated_spittle
     name: Concentrated Spittle
+    verified: false
     description: >-
       Vexhul's attack on her target when they are out of her reach. Every hit is a failure charged to the player
       hit, usually a tank, or a player she turned to as the raid died.
@@ -187,6 +197,7 @@ mechanics:
   # -- Ithraz ----------------------------------------------------------------------------------
   - id: ravenous_feast
     name: Ravenous Feast
+    verified: false
     description: >-
       Ithraz's three strikes, each split among players within 14 yd; a soak removes one stack and gives Feasted,
       800% more Feast damage for 8 s. A player hit by more than one strike of a Feast fails, once per Feast.
@@ -204,6 +215,7 @@ mechanics:
 
   - id: ravenous_feast
     name: Ravenous Feast
+    verified: false
     description: >-
       Ithraz's three strikes, each split among players within 14 yd. A player's first soak in a Feast removes one
       Eternal Venom stack and gives Feasted; later soaks remove none and cost no extra damage. No failure is
@@ -219,6 +231,7 @@ mechanics:
 
   - id: stone_breaker
     name: Stone Breaker
+    verified: false
     description: >-
       Ithraz's three slams 3 s apart, each adding a stacking debuff that raises Stone Breaker damage; the tanks
       take alternate sets. A debuff past 3 stacks means one tank took two sets running: one failure, charged to no
@@ -236,6 +249,7 @@ mechanics:
 
   - id: stone_breaker
     name: Stone Breaker
+    verified: false
     description: >-
       Ithraz's three slams 3.5 s apart, each adding a stacking debuff that raises Stone Breaker damage; the tanks
       take alternate sets. A debuff past 3 stacks means one tank took two sets running: one failure, charged to no
@@ -251,6 +265,7 @@ mechanics:
 
   - id: stone_breaker_unsoaked
     name: Stone Breaker (unsoaked)
+    verified: false
     description: >-
       A Stone Breaker slam that strikes nobody hits the whole raid instead. One failure per slam, charged to no
       one: the logs don't say whose turn it was.
@@ -264,6 +279,7 @@ mechanics:
 
   - id: coiling_ichor
     name: Coiling Ichor
+    verified: false
     description: >-
       Debuff on several marked players with damage around each that grows as the circle shrinks over 12 s. No
       failure is counted: every player is hit at the first tick, before the marked players have left the raid.
@@ -278,6 +294,7 @@ mechanics:
 
   - id: congealed_gore
     name: Congealed Gore
+    verified: false
     description: >-
       Pools left where Coiling Ichor expires that tick on and slow players in them. A single tick is a player
       crossing a pool; a second tick in one occurrence is a failure, charged to that player.
@@ -292,6 +309,7 @@ mechanics:
 
   - id: clotted_bolt
     name: Clotted Bolt
+    verified: false
     description: >-
       Ithraz's attack on his target when they are out of his reach. Every hit is a failure charged to the player
       hit, usually a tank, or a player he turned to as the raid died.
@@ -306,6 +324,7 @@ mechanics:
   # -- Submerge --------------------------------------------------------------------------------
   - id: vile_flood
     name: Vile Flood
+    verified: false
     description: >-
       Vexhul's sweeping beam during Submerge, hitting every 0.5 s while a player stands in it, each hit adding a
       stack. Any hit is a failure charged to that player, once per sweep.
@@ -320,6 +339,7 @@ mechanics:
 
   - id: sanguine_storm
     name: Sanguine Storm
+    verified: false
     description: >-
       Ithraz's gore impacts during Submerge, hitting players within 4 yd. Every hit is a failure, charged to the
       player hit.
@@ -332,6 +352,7 @@ mechanics:
 
   - id: sanguine_gore
     name: Congealed Gore (Sanguine Storm)
+    verified: false
     description: >-
       Short pools Sanguine Storm leaves that tick on and slow players in them. A second tick in one occurrence is
       a failure, charged to that player.
@@ -346,6 +367,7 @@ mechanics:
 
   - id: noxious_slick
     name: Noxious Slick
+    verified: false
     description: >-
       Slick left by the Submerge impacts that ticks and raises damage taken. A second tick in one occurrence is a
       failure, charged to that player.
@@ -361,6 +383,7 @@ mechanics:
   # -- Arena -----------------------------------------------------------------------------------
   - id: toxic_fumes
     name: Toxic Fumes
+    verified: false
     description: "Raid-wide damage every 2 s for the whole fight from the environment. It is not counted as a failure."
     difficulties: [heroic, normal]
     ability_ids: [1294976]
@@ -369,6 +392,7 @@ mechanics:
 
   - id: deadly_venom
     name: Deadly Venom
+    verified: false
     description: >-
       Venom around the platform that ticks once a second on players standing in it. Each player hit in an
       occurrence counts one failure, charged to that player.

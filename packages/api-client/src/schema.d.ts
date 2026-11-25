@@ -183,8 +183,9 @@ export interface paths {
         /**
          * Get Names
          * @description Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a
-         *     short name for tight spaces, and each mechanic that has one its plain-text description. An encounter or difficulty without an encounter file answers an empty lookup, not an
-         *     error. Cooldown names are ``GET /v1/cooldowns``.
+         *     short name for tight spaces, and each mechanic that has one its plain-text description. Each mechanic also says
+         *     whether a person has verified it. An encounter or difficulty without an encounter file answers an empty lookup,
+         *     not an error. Cooldown names are ``GET /v1/cooldowns``.
          */
         get: operations["get_names_v1_encounters__encounter_id__names_get"];
         put?: never;
@@ -1127,6 +1128,13 @@ export interface components {
              */
             mechanic_descriptions: {
                 [key: string]: string;
+            };
+            /**
+             * Mechanic Verified
+             * @description Mechanic ID -> whether a person has inspected the encounter file's entry against the logs; every mechanic in ``mechanics`` is listed. False entries are shown as unverified.
+             */
+            mechanic_verified: {
+                [key: string]: boolean;
             };
             /** Mechanics */
             mechanics: {

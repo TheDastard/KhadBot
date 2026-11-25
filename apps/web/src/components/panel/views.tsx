@@ -11,6 +11,7 @@ import { AbilityName } from "@/components/shared/ability-name";
 import { EvidenceChip } from "@/components/shared/evidence-chip";
 import { PlayerName } from "@/components/shared/player-name";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { UnverifiedTag } from "@/components/pull/unverified-tag";
 import { Button } from "@/components/ui/button";
 import { spellIdOf, type Names } from "@/components/pull/names";
 import { useLazyDigest, type EvidenceData } from "@/components/pull/queries";
@@ -154,6 +155,12 @@ export function MechanicView({ record: m, evidenceRef, code, names, onClose }: V
           </div>
         ))}
       </div>
+      {names.mechanicVerified(m.mechanic_id) === false ? (
+        <span className="inline-flex items-center gap-1.5 rounded-sm bg-warnt px-2 py-1.5 text-xs text-warn">
+          <AlertTriangleIcon className="size-3.5" aria-hidden />
+          Mechanic not yet verified: its rule and counts have not been checked by a person
+        </span>
+      ) : null}
       <Muted>
         Damage taken {formatNumber(m.damage_taken)}
         {charged.length ? " · Failures charged: " : ""}
@@ -331,7 +338,10 @@ export function EventView({ record: e, evidenceRef, code, names, onClose }: View
           </Row>
         ) : null}
         {e.overkill ? <Row label="Overkill">{formatNumber(e.overkill)}</Row> : null}
-        {e.mechanic_id ? <Row label="Mechanic">{names.mechanic(e.mechanic_id)}</Row> : null}
+        {e.mechanic_id ? <Row label="Mechanic">
+            {names.mechanic(e.mechanic_id)}
+            <UnverifiedTag verified={names.mechanicVerified(e.mechanic_id)} />
+          </Row> : null}
       </Rows>
       {e.failure ? (
         <Tag tone="bad">

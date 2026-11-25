@@ -983,6 +983,14 @@
             "title": "Mechanic Descriptions",
             "type": "object"
           },
+          "mechanic_verified": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Mechanic ID -> whether a person has inspected the encounter file's entry against the logs; every mechanic in ``mechanics`` is listed. False entries are shown as unverified.",
+            "title": "Mechanic Verified",
+            "type": "object"
+          },
           "mechanics": {
             "additionalProperties": {
               "type": "string"
@@ -1006,6 +1014,7 @@
           "phases",
           "mechanics",
           "mechanic_descriptions",
+          "mechanic_verified",
           "damage_windows"
         ],
         "title": "EncounterNames",
@@ -5269,7 +5278,7 @@
     },
     "/v1/encounters/{encounter_id}/names": {
       "get": {
-        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces, and each mechanic that has one its plain-text description. An encounter or difficulty without an encounter file answers an empty lookup, not an\nerror. Cooldown names are ``GET /v1/cooldowns``.",
+        "description": "Display names for the encounter's phase, mechanic and damage-window IDs at one difficulty; each phase also has a\nshort name for tight spaces, and each mechanic that has one its plain-text description. Each mechanic also says\nwhether a person has verified it. An encounter or difficulty without an encounter file answers an empty lookup,\nnot an error. Cooldown names are ``GET /v1/cooldowns``.",
         "operationId": "get_names_v1_encounters__encounter_id__names_get",
         "parameters": [
           {

@@ -44,6 +44,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: soulcoil_rite
     name: Soulcoil Rite
+    verified: false
     description: >-
       Raid-wide hit plus a stacking DoT from Soulcoil Ignition, each Stage Two Invoke, or anything that enters the
       Soulcoil Well. No failure is counted, as no event tells the causes apart; on Heroic, Ritual Burn catches the
@@ -63,6 +64,7 @@ mechanics:
 
   - id: ritual_burn
     name: Ritual Burn
+    verified: false
     description: >-
       Debuff from every Soulcoil Rite that makes the next Rites hit harder. Each run of Rites that takes the raid past 5
       stacks is one failure, charged to no one: Restless Amani reached the well or players died in it.
@@ -81,6 +83,7 @@ mechanics:
 
   - id: corpse_blight
     name: Corpse Blight
+    verified: false
     description: >-
       Each Restless Amani that dies hits the raid and adds a stack of a 15 s DoT. It is not counted as a failure.
     # Each Restless Amani that dies hits the raid (1294729, logged with the Amani as its source) and adds a
@@ -94,6 +97,7 @@ mechanics:
 
   - id: uncoiling
     name: Uncoiling
+    verified: false
     description: "Stage Two raid-wide tick until Nek'zali dies. It is not counted as a failure."
     # Stage Two raid-wide tick every 0.9 s until Nek'zali dies.
     difficulties: [normal, heroic]
@@ -104,6 +108,7 @@ mechanics:
 
   - id: invoke
     name: Invoke
+    verified: false
     description: >-
       Stage Two cast that brings a Soulcoil Rite and moves the Latent Cultists around the well. It is not counted as a
       failure.
@@ -116,6 +121,7 @@ mechanics:
 
   - id: uncoiled_rage
     name: Uncoiled Rage
+    verified: false
     description: "Nek'zali's enrage at 100 energy, raising her damage and attack speed. It is not counted as a failure."
     # Enrage at 100 energy: 500% damage, 150% attack speed. Cast once, in the one Stage Two wipe, after
     # six Restless Amani reached the well. Never cast in the two Normal kills.
@@ -127,6 +133,7 @@ mechanics:
   # -- Tanking ---------------------------------------------------------------------------------
   - id: possession_barrage
     name: Possession Barrage
+    verified: false
     description: >-
       Cast on Nek'zali's target, then five spirits fly at that player and burst on the first player they reach, hitting
       the raid harder the shorter they flew. No failure is counted, as a burst's size names no one.
@@ -147,6 +154,7 @@ mechanics:
 
   - id: hollowing_strikes
     name: Hollowing Strikes
+    verified: false
     description: >-
       Each melee swing stacks a DoT and reduced healing and absorption on the tank; the tanks swap on each Possession
       Barrage. Each run past 15 stacks is one failure, charged to no one.
@@ -167,6 +175,7 @@ mechanics:
   # -- Avoidable -------------------------------------------------------------------------------
   - id: latent_cultist
     name: Latent Cultist
+    verified: false
     description: >-
       Permanent puddle left where an Essence Rend ended that damages and slows on contact; the puddles move around the
       well after each Invoke. Each player hit counts one failure per contact, charged to that player.
@@ -183,6 +192,7 @@ mechanics:
 
   - id: latent_cultist_emergence
     name: Latent Cultist (emergence)
+    verified: false
     description: >-
       A larger hit on players near a Latent Cultist as it materializes. No failure is counted, as the logs don't say
       whether the player hit dropped it or was a bystander.
@@ -196,6 +206,7 @@ mechanics:
 
   - id: anguished_echoes
     name: Anguished Echoes
+    verified: false
     description: >-
       Impact circles that rain out of the well during Soulcoil Ignition. Every hit is a failure, charged to the player
       hit.
@@ -207,6 +218,7 @@ mechanics:
 
   - id: soulcoil_well
     name: Soulcoil Well
+    verified: false
     description: >-
       Standing in the well in the middle of the room; a player who dies in it causes a Soulcoil Rite. Each player hit
       counts one failure per visit, charged to that player.
@@ -224,6 +236,7 @@ mechanics:
 
   - id: soul_transfer
     name: Soul Transfer
+    verified: false
     description: >-
       Intermission: Summoner Jawae and Nek'zali channel into one side of the room while an Echo of Jawae forms, and the
       blast at the end hits anyone still in the beam. Every hit is a failure, charged to the player hit.
@@ -239,6 +252,7 @@ mechanics:
   # -- Assigned --------------------------------------------------------------------------------
   - id: essence_rend
     name: Essence Rend
+    verified: false
     description: >-
       Pulls players toward the well, then knocks them away with a dispellable DoT; a Latent Cultist appears where it
       ends, so players should reach the room's edge first. No failure is counted yet.
@@ -255,6 +269,7 @@ mechanics:
 
   - id: hungering_pyre
     name: Hungering Pyre
+    verified: false
     description: >-
       Echo of Jawae soak whose damage is split between the players inside. A Pyre with fewer than 6 soakers is one
       failure, charged to no one.
@@ -272,6 +287,7 @@ mechanics:
 
   - id: slithering_flame
     name: Slithering Flame
+    verified: false
     description: >-
       Hit and 8 s DoT on every player who did not soak the Pyre; players walk it over Restless Amani corpses because it
       ends in a Cremation. It is not counted as a failure.
@@ -285,6 +301,7 @@ mechanics:
 
   - id: slithering_flame
     name: Slithering Flame
+    verified: false
     description: >-
       Hit and 20 s DoT on every player who did not soak the Pyre. No Cremation follows it on Normal. It is not counted
       as a failure.
@@ -298,6 +315,7 @@ mechanics:
 
   - id: cremation
     name: Cremation
+    verified: false
     description: >-
       The explosion at the end of a Slithering Flame and under each Pyre; it burns corpses within 4 yards and leaves a
       short DoT on the player. It is not counted as a failure.
@@ -313,6 +331,7 @@ mechanics:
   # -- Adds ------------------------------------------------------------------------------------
   - id: gravebound_advance
     name: Gravebound Advance
+    verified: false
     description: >-
       Shield on Restless Amani as each group leaves the sarcophagi; it absorbs only magic damage, and they can't be
       killed or stopped while it holds. It is not counted as a failure.
@@ -327,6 +346,7 @@ mechanics:
 
   - id: vessel_of_awakening
     name: Vessel of Awakening
+    verified: false
     description: >-
       A Restless Amani corpse not burned by a Pyre or a Cremation is repossessed in the intermission and pulses raid-
       wide damage. Every occurrence is one failure, charged to no one.
@@ -344,6 +364,7 @@ mechanics:
 
   - id: ritual_of_awakening
     name: Ritual of Awakening
+    verified: false
     description: "Nek'zali's cast as she retreats to the well at 50% health; it starts the intermission."
     difficulties: [normal, heroic]
     ability_ids: [1295124]

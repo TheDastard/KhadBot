@@ -37,6 +37,7 @@ mechanics:
   # -- Raid-wide pressure ----------------------------------------------------------------------
   - id: voidswarm
     name: Voidswarm
+    verified: false
     description: "Raid-wide ticks while the portals open and each add set arrives. It is not counted as a failure."
     # Three raid-wide ticks 2 s apart while the portals open and each add set arrives. No enemy cast is
     # logged for it.
@@ -48,6 +49,7 @@ mechanics:
 
   - id: extinguish
     name: Extinguish
+    verified: false
     description: >-
       Raid-wide shockwave; Light's Embrace from Lady Liadrin's motes cuts it by 90% and is used up by the hit. A player
       hit without Light's Embrace fails, once per shockwave, charged to that player.
@@ -66,6 +68,7 @@ mechanics:
 
   - id: suffocating_darkness
     name: Suffocating Darkness
+    verified: false
     description: >-
       The intermission: a raid-wide tick every second until Liadrin's Divine Radiance clears it. It is not counted as a
       failure.
@@ -79,6 +82,7 @@ mechanics:
 
   - id: stygian_howl
     name: Stygian Howl
+    verified: false
     description: "Raid-wide stun that opens Stage Two. It is not counted as a failure."
     difficulties: [heroic]
     ability_ids: [1301110]
@@ -88,6 +92,7 @@ mechanics:
   # -- Tanking ---------------------------------------------------------------------------------
   - id: dark_devastation
     name: Dark Devastation
+    verified: false
     description: >-
       Cast on Kith'ix's current target, then Shadow and Physical hits on everyone within 15 yards of them. Anyone hit
       other than the cast's target stood too close: a failure charged to the player hit.
@@ -106,6 +111,7 @@ mechanics:
 
   - id: devastated
     name: Devastated
+    verified: false
     description: >-
       Debuff from Dark Devastation that raises damage taken for 25 s; the tanks swap on each cast. A second stack means
       a tank took two in a row: one failure, charged to no one.
@@ -120,6 +126,7 @@ mechanics:
 
   - id: voidscar
     name: Voidscar
+    verified: false
     description: >-
       Pool left where Dark Devastation landed that damages and knocks back on contact. Each player hit counts one
       failure per contact, charged to that player; tank hits as the pool forms are still under review.
@@ -136,6 +143,7 @@ mechanics:
 
   - id: negation
     name: Negation
+    verified: false
     description: >-
       Stage Two debuff on Kith'ix's target that the tank removes by touching a Null Gate; left to run its 8 s, it
       explodes. A Negation lasting over 7.9 s is a failure charged to the tank who carried it.
@@ -152,6 +160,7 @@ mechanics:
   # -- Avoidable -------------------------------------------------------------------------------
   - id: twisted_appendage
     name: Twisted Appendage
+    verified: false
     description: >-
       Tentacles that slap a marked area 3 s after they appear. Each player hit counts one failure per slap, charged to
       that player.
@@ -164,6 +173,7 @@ mechanics:
 
   - id: suffocation
     name: Suffocation
+    verified: false
     description: >-
       Intermission debuff and damage on a player outside Liadrin's Refulgent Bulwark. Each application is a failure
       charged to that player, including a player dragged out by an unhealed Abyssal Grasp.
@@ -179,6 +189,7 @@ mechanics:
 
   - id: blood_of_the_old_ones
     name: Blood of the Old Ones
+    verified: false
     description: >-
       Environment damage ticking on single players, probably the ground outside the bulwark; no guide names it. No
       failure is counted until someone confirms what it is.
@@ -193,6 +204,7 @@ mechanics:
 
   - id: null_gate
     name: Null Gate
+    verified: false
     description: >-
       Stage Two: three players are marked for 5 s, then a gate opens on each and hits them. It is not counted as a
       failure.
@@ -207,6 +219,7 @@ mechanics:
 
   - id: nullshards
     name: Nullshards
+    verified: false
     description: >-
       Shards scattered by Null Gates; each contact adds a Nullify stack. Contacts are not counted, since nearly everyone
       is hit; the lethal stack is the failure instead.
@@ -220,6 +233,7 @@ mechanics:
 
   - id: nullify
     name: Nullify
+    verified: false
     description: >-
       Stacking debuff and DoT from Null Gates and Nullshards. Its lethal stack is counted under Nullify (lethal stack).
     # Stacking debuff (1308875) and its DoT (1308876) from Null Gates and Nullshards.
@@ -230,6 +244,7 @@ mechanics:
 
   - id: nullify_death
     name: Nullify (lethal stack)
+    verified: false
     description: >-
       The hit that kills a player whose Nullify reached its limit. Every hit is a failure, charged to the player hit.
     # The hit that kills a player whose Nullify reached its limit. The debuff rows show 4 stacks on most
@@ -243,6 +258,7 @@ mechanics:
   # -- Assigned --------------------------------------------------------------------------------
   - id: unspeakable_horrors
     name: Unspeakable Horrors
+    verified: false
     description: >-
       Marks three players for 6 s, after which each gets Overwhelming Fear; they should leave the group first. It is not
       counted as a failure.
@@ -253,6 +269,7 @@ mechanics:
 
   - id: overwhelming_fear
     name: Overwhelming Fear
+    verified: false
     description: >-
       Fear that screams when it ends or is dispelled, hitting the raid for less the farther away the player is; dispel
       it once the player is out of the group. A fear that runs its full 6 s is a failure charged to the feared player.
@@ -269,6 +286,7 @@ mechanics:
 
   - id: abyssal_grasp
     name: Abyssal Grasp
+    verified: false
     description: >-
       Intermission heal absorb on seven players at a time; left for its full 8 s, it drags the player into the darkness.
       Each one that runs its course is a failure charged to the player grabbed, though the miss is the healers'.
@@ -284,6 +302,7 @@ mechanics:
 
   - id: eclipse_fragment
     name: Eclipse Fragment
+    verified: false
     description: >-
       Intermission orbs that drift toward Liadrin; a player who intercepts one takes a stacking DoT. No failure is
       counted, as who should soak comes from a raid plan.
@@ -298,6 +317,7 @@ mechanics:
 
   - id: lost_refulgence
     name: Lost Refulgence
+    verified: false
     description: >-
       Raid-wide DoT each time an Eclipse Fragment reaches Liadrin, which also shrinks her bulwark. Every occurrence is
       one failure, charged to no one.
@@ -314,6 +334,7 @@ mechanics:
   # -- Adds ------------------------------------------------------------------------------------
   - id: venom_roar
     name: Venom Roar
+    verified: false
     description: >-
       Venomous Hulk frontal cone with a knockback. Anyone hit other than the Hulk's aggro holder fails, once per cone,
       charged to the player hit.
@@ -328,6 +349,7 @@ mechanics:
 
   - id: voidweave
     name: Voidweave
+    verified: false
     description: >-
       Voidweaver channel that puts a debuff on seven random players, damaging them every second for 8 s. It is not
       counted as a failure.
@@ -341,6 +363,7 @@ mechanics:
 
   - id: nightfall
     name: Nightfall
+    verified: false
     description: >-
       Voidweaver cast that hits the raid and stacks a debuff raising that hit while a Voidweaver lives. No failure is
       counted, as no source gives a stack limit.
@@ -356,6 +379,7 @@ mechanics:
 
   - id: digestive_juices
     name: Digestive Juices
+    verified: false
     description: >-
       Raid-wide stacking DoT each time a Bomber Beetle explodes; beetles should explode one at a time. Each add set that
       takes the raid past 3 stacks is one failure, charged to no one.
@@ -373,6 +397,7 @@ mechanics:
 
   - id: hatch
     name: Hatch
+    verified: false
     description: >-
       Mindstinger Egg cast; eggs drop when a Hulk or Voidweaver dies and must die before it finishes. No failure is
       counted, as no egg has been seen hatching.

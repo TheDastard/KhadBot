@@ -8,6 +8,8 @@ import type { CooldownListData, EncounterNamesData } from "./queries";
 
 export interface Names {
   mechanic: (id: string) => string;
+  /** False when nobody has yet checked the encounter file's entry against the logs; null when unknown. */
+  mechanicVerified: (id: string) => boolean | null;
   window: (id: string) => string;
   /** The phase's full name, or its ID made readable. */
   phase: (id: string | null | undefined) => string | null;
@@ -34,6 +36,7 @@ export function buildNames(
 ): Names {
   return {
     mechanic: (id) => encounter?.mechanics[id] ?? humanize(id),
+    mechanicVerified: (id) => encounter?.mechanic_verified[id] ?? null,
     window: (id) => encounter?.damage_windows[id] ?? humanize(id),
     phase: (id) => (id ? (encounter?.phases[id]?.name ?? humanize(id)) : null),
     phaseShort: (id) =>

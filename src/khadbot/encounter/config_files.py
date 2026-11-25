@@ -397,7 +397,9 @@ class Mechanic(_Entry):
     """
     One mechanic. ``description`` says in plain text what the mechanic does and, when it has a ``failure`` rule, what
     a failure means (who failed and how). It is shown to people and to the analyst, so a mechanic with a failure rule
-    requires one.
+    requires one. ``verified`` is true only once a person has inspected the entry (IDs, rule, threshold, blame and
+    description) against the logs; the dashboard tags unverified mechanics. It is left out of ``encfile_hash``, since
+    analysis never reads it.
     """
 
     id: str
@@ -408,6 +410,7 @@ class Mechanic(_Entry):
     failure: FailureRule | None = None
     cluster_window_ms: int = 1000
     severity: Literal["low", "medium", "high"] = "medium"
+    verified: bool = False
 
     @model_validator(mode="after")
     def _description(self) -> Mechanic:
@@ -722,13 +725,20 @@ def load_all_encounters(root: Path | None = None) -> dict[int, EncounterFile]:
     return found
 
 
-def _content_hash(model: BaseModel) -> str:
-    canonical = orjson.dumps(model.model_dump(mode="json", by_alias=True), option=orjson.OPT_SORT_KEYS)
+def _content_hash(model: BaseModel, exclude: dict[str, Any] | None = None) -> str:
+    data = model.model_dump(mode="json", by_alias=True, exclude=exclude)
+    canonical = orjson.dumps(data, option=orjson.OPT_SORT_KEYS)
     return hashlib.sha256(canonical).hexdigest()[:12]
 
 
 def encfile_hash(enc: EncounterFile | None) -> str:
-    return _content_hash(enc) if enc is not None else "none"
+    """
+    The content hash of an encounter file or view. A mechanic's ``verified`` flag is left out: it records a person's
+    review, which analysis never reads, so flipping it keeps annotations, digests and findings cached.
+    """
+    if enc is None:
+        return "none"
+    return _content_hash(enc, exclude={"mechanics": {"__all__": {"verified"}}})
 
 
 def cooldowns_hash(registry: CooldownRegistry) -> str:

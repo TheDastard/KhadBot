@@ -44,6 +44,7 @@ mechanics:
   # -- Both Sentinels --------------------------------------------------------------------------
   - id: mark_of_acid
     name: Mark of Acid
+    verified: false
     description: >-
       Stacking DoT the Breath of Ula'tek puts on every player within 40 yards every 5 s; stacks drop when the
       groups swap sides at each intermission. It is not counted as a failure.
@@ -56,6 +57,7 @@ mechanics:
 
   - id: mark_of_blood
     name: Mark of Blood
+    verified: false
     description: >-
       The Blood of Ula'tek's stacking DoT on the players near it, working as Mark of Acid does; stacks drop when
       the groups swap sides at each intermission. It is not counted as a failure.
@@ -68,6 +70,7 @@ mechanics:
 
   - id: vitriolic_stasis
     name: Vitriolic Stasis
+    verified: false
     description: >-
       Opens each intermission: the Sentinels come together and take 99% less damage. It is not counted as a
       failure.
@@ -79,6 +82,7 @@ mechanics:
 
   - id: helical_toxins
     name: Helical Toxins
+    verified: false
     description: >-
       Intermission debuff and DoT on every player; colliding with a partner so the two toxins total exactly 4
       removes both. A toxin still on its player 28 s after the Vitriolic Stasis cast becomes Cultivated Burst.
@@ -91,6 +95,7 @@ mechanics:
 
   - id: cultivated_burst
     name: Cultivated Burst
+    verified: false
     description: >-
       Explosion on a player whose Helical Toxins was not neutralized, about 28 s after the Vitriolic Stasis
       cast. Every hit is a failure, charged to the player hit.
@@ -104,6 +109,7 @@ mechanics:
 
   - id: cultivated_burst_dot
     name: Cultivated Burst (DoT)
+    verified: false
     description: "One-minute DoT on a player who survived Cultivated Burst. It is not counted as a failure."
     # Debuff 1284947 and its damage 1284948. Not seen on Normal (no Cultivated Burst).
     difficulties: [heroic]
@@ -113,6 +119,7 @@ mechanics:
 
   - id: deadly_venom
     name: Deadly Venom
+    verified: false
     description: >-
       Venom around the edge of the room that ticks once a second on players standing in it. Each player hit in
       an occurrence counts one failure, charged to that player.
@@ -127,6 +134,7 @@ mechanics:
   # -- Breath of Ula'tek (green) ---------------------------------------------------------------
   - id: venom_coagulation
     name: Venom Coagulation
+    verified: false
     description: >-
       The Breath spawns a Venom Coagulation slime, which pulses Contaminate on the raid until it dies. It is not
       counted as a failure.
@@ -139,6 +147,7 @@ mechanics:
 
   - id: toxic_droplets
     name: Toxic Droplets
+    verified: false
     description: >-
       Droplets the Breath scatters, which players soak by stepping on them, taking a hit each; droplets left
       alone explode as Noxious Blast. No failure is counted: nothing says how many one player may take.
@@ -153,6 +162,7 @@ mechanics:
 
   - id: noxious_blast
     name: Noxious Blast
+    verified: false
     description: >-
       Raid-wide hit from each Toxic Droplet left alone, about 18 s after the cast. A cast that left any droplet
       is one failure however many exploded, charged to no one because nobody owns a droplet.
@@ -167,6 +177,7 @@ mechanics:
 
   - id: living_venom
     name: Living Venom
+    verified: false
     description: >-
       Venom that flies from the droplets to the Breath and back out, hitting players in its path. Each player
       hit in an occurrence counts one failure, charged to that player.
@@ -181,6 +192,7 @@ mechanics:
 
   - id: empowering_slam
     name: Empowering Slam
+    verified: false
     description: >-
       Tank hit; each slam on the same target raises the Breath's physical damage until it slams someone else.
       It is not counted as a failure.
@@ -194,6 +206,7 @@ mechanics:
   # -- Blood of Ula'tek (red) ------------------------------------------------------------------
   - id: bloodvenom_injection
     name: Bloodvenom Injection
+    verified: false
     description: >-
       Tank hit with a stacking debuff and DoT; the tanks swap Sentinels at each intermission, so a tank holds 4
       stacks at most. A fifth stack means a tank kept the Blood through an intermission: one failure, charged
@@ -211,6 +224,7 @@ mechanics:
 
   - id: blighted_blood
     name: Blighted Blood
+    verified: false
     description: >-
       Dispellable 18 s DoT on several players. No failure is counted: the guides disagree on how soon to dispel
       it.
@@ -223,6 +237,7 @@ mechanics:
 
   - id: blood_venom
     name: Blood Venom
+    verified: false
     description: >-
       Pools left where the Blood's debuffs end, ticking about once a second on players inside. A single tick is
       a player crossing a pool; a second tick in one occurrence is a failure, charged to that player.
@@ -237,6 +252,7 @@ mechanics:
 
   - id: unstable_miasma
     name: Unstable Miasma
+    verified: false
     description: >-
       A mark on one player erupts 8 s later, its damage split evenly among the players within 7.5 yards; the
       Blood's group soaks it together. An eruption that hits fewer than 8 players is one failure, charged to no
@@ -255,6 +271,7 @@ mechanics:
 
   - id: clinging_murk
     name: Clinging Murk
+    verified: false
     description: >-
       Short stacking DoT the Unstable Miasma eruption spreads among the players it hit. It is not counted as a
       failure.

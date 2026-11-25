@@ -679,6 +679,16 @@ class TestEncounterFile:
         enc_data["mechanics"][0]["description"] = "A different swirl."
         assert encfile_hash(parse_encounter(enc_data)) != encfile_hash(described)
 
+    def test_verified_defaults_false_and_stays_out_of_the_hash(self, enc_data):
+        enc_data["mechanics"][0].pop("verified", None)
+        unset = parse_encounter(enc_data)
+        assert unset.mechanics[0].verified is False
+        enc_data["mechanics"][0]["verified"] = True
+        reviewed = parse_encounter(enc_data)
+        assert reviewed.mechanics[0].verified is True
+        assert encfile_hash(reviewed) == encfile_hash(unset)
+        assert encfile_hash(reviewed.for_difficulty("heroic")) == encfile_hash(unset.for_difficulty("heroic"))
+
     def test_repeat_is_checked_per_difficulty(self, enc_data):
         # On heroic the repeating phase ends the list; the mythic-only phase after it doesn't break that.
         enc_data["phases"] = [{**p, "difficulties": ["heroic", "mythic"]} for p in enc_data["phases"]]
