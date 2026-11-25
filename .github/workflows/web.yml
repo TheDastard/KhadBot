@@ -108,6 +108,16 @@ jobs:
           pkill -f "scripts/dev/dev.py all" || true
           sleep 3
           docker compose -f deploy/compose.yaml --profile seed --profile smoke down --volumes || true
+          # The web dev server and the API can outlive dev.py; the local suite starts its own on :3000 and refuses
+          # a port in use, so free both ports and wait until nothing listens on them.
+          for port in 3000 8000; do lsof -ti "tcp:$port" | xargs -r kill || true; done
+          for i in $(seq 1 30); do
+            lsof -t -i tcp:3000 -i tcp:8000 >/dev/null 2>&1 || break
+            sleep 1
+          done
+          if lsof -t -i tcp:3000 -i tcp:8000 >/dev/null 2>&1; then
+            for port in 3000 8000; do lsof -ti "tcp:$port" | xargs -r kill -9 || true; done
+          fi
       - run: uv run python scripts/data/build_fixture_data.py --out .khadbot_fixture_data --only QkVa6GHRK8yfrTbw
       - run: mise run test:e2e:local
       - if: failure()
