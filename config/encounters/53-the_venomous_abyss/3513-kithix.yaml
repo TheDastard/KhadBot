@@ -1,6 +1,7 @@
 # Kith'ix, the single boss of The Unbinding of Kith'ix. WarcraftLogs lists the encounter under zone 53,
 # The Venomous Abyss, so the file lives with that raid's.
-# Open gaps for this file are tracked under "Kith'ix" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Kith'ix" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -19,7 +20,7 @@ file_version: 2
 
 # WarcraftLogs reports two phases for this encounter (phase IDs 1-2). Stage One alternates between the add
 # sets and the Suffocating Darkness intermission, which WarcraftLogs does not report as a phase and no
-# trigger can end (docs/follow-ups.md), so both are part of p1 here.
+# trigger can end (follow-ups), so both are part of p1 here.
 phases:
   - id: p1
     name: "Stage One: Darkness' Domain"
@@ -125,7 +126,7 @@ mechanics:
     # Pool left where Dark Devastation landed; contact damages and knocks back. The source is the
     # environment. One failure per player per contact. 30 of the 48 hits are on the two tanks, 16 of them
     # on the Dark Devastation's target within 3.5 s of its impact, so a reviewer should decide whether a
-    # tank's hit as the pool forms counts (docs/follow-ups.md).
+    # tank's hit as the pool forms counts (follow-ups).
     difficulties: [heroic]
     ability_ids: [1304950]
     kind: avoidable
@@ -168,7 +169,7 @@ mechanics:
       charged to that player, including a player dragged out by an unhealed Abyssal Grasp.
     # Debuff and damage on a player outside Liadrin's Refulgent Bulwark during the intermission. Each
     # application is a failure. A player dragged out by an Abyssal Grasp nobody healed gets one too, so
-    # that miss is counted here and under abyssal_grasp: 9 of the 21 applications (docs/follow-ups.md).
+    # that miss is counted here and under abyssal_grasp: 9 of the 21 applications (follow-ups).
     difficulties: [heroic]
     ability_ids: [1303257]
     kind: avoidable
@@ -258,7 +259,7 @@ mechanics:
     # Fear (debuff 1304046) that screams when it ends or is dispelled, hitting the raid for less the
     # farther away the player is (1304047). Dispel it once the player is out of the group. A fear that ran
     # its full 6 s was never dispelled: 7 of 47 did, the other 40 ended within 3.5 s. Whether the player
-    # was out of the group needs positions (docs/follow-ups.md).
+    # was out of the group needs positions (follow-ups).
     difficulties: [heroic]
     ability_ids: [1304046, 1304047]
     kind: dispel
@@ -346,7 +347,7 @@ mechanics:
     # Voidweaver cast (1302705); the raid-wide hit (1302727) and the stacking debuff that raises it
     # (1302728) are logged with Kith'ix as their source. Stacks grow while a Voidweaver lives: 2 to 5 in
     # most sets, 10 in the one that wiped the raid. No rule: no source gives a stack limit
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1302705, 1302727, 1302728]
     kind: debuff
@@ -362,7 +363,7 @@ mechanics:
     # the debuff. The largest source of damage in every pull. Beetles should explode one at a time. Each
     # add set that takes the raid past 3 stacks is one failure, charged to no one. The limit of 3 comes
     # from these pulls, not from a guide: the kill reached 3 in each of its three sets, and the three sets
-    # that reached 4 or 5 killed 3 to 5 players each (docs/follow-ups.md).
+    # that reached 4 or 5 killed 3 to 5 players each (follow-ups).
     difficulties: [heroic]
     ability_ids: [1302319]
     kind: debuff
@@ -387,7 +388,7 @@ damage_windows:
   - id: eightfold_eclipse
     name: Eightfold Eclipse
     # Stage Two raid-wide hit as each eclipse forms, about 8.6 s apart; the eighth wipes the raid. The kill
-    # saw six. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # saw six. expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1305876]
     cluster_window_ms: 2000

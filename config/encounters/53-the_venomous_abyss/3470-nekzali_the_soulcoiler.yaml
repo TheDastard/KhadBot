@@ -1,5 +1,6 @@
 # Nek'zali the Soulcoiler, first boss of The Venomous Abyss.
-# Open gaps for this file are tracked under "Nek'zali the Soulcoiler" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Nek'zali the Soulcoiler" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -45,7 +46,7 @@ mechanics:
     # cause one: Soulcoil Ignition (casts 1293664, 1293660 and 1285681; five Rites a second apart, at the
     # pull and again at 72 to 78 s), each Invoke in Stage Two, and anything that enters the Soulcoil Well:
     # a Restless Amani that reaches it or a player who dies in it. Only the last is a failure, and no event
-    # tells the three apart, so there is no rule here (docs/follow-ups.md); ritual_burn catches the
+    # tells the three apart, so there is no rule here (follow-ups); ritual_burn catches the
     # pile-up. The largest source of damage in every pull.
     difficulties: [heroic]
     ability_ids: [1288772, 1293664, 1293660, 1285681]
@@ -63,7 +64,7 @@ mechanics:
     # three kills took the raid to 4. Each run of Rites that takes the raid past 5 stacks is one failure,
     # charged to no one: a group of Restless Amani reached the well, or players died in it. A single Amani
     # reaching the well stays under the limit, and a long Stage Two would pass it on Invokes alone
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1297624]
     kind: debuff
@@ -128,7 +129,7 @@ mechanics:
     # between. A spirit that flew its full distance hits for 79,417 before mitigation (83,421 in the
     # smaller raid); one that burst at once hits for 100,000 to 137,000. No rule: every player takes every
     # burst, so the size of a burst names no one, and charging the tank needs their distance from Nek'zali
-    # (docs/follow-ups.md). The killing blow on 28 players, all in casts where the spirits burst early.
+    # (follow-ups). The killing blow on 28 players, all in casts where the spirits burst early.
     difficulties: [heroic]
     ability_ids: [1284103, 1292034]
     kind: unavoidable
@@ -176,7 +177,7 @@ mechanics:
       whether the player hit dropped it or was a bystander.
     # A larger hit on players within 6 yards of a cultist as it materializes: 17 hits on 10 players, never
     # fatal. No rule: whether the player hit is the one who dropped it or a bystander is not known
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1292899]
     kind: avoidable
@@ -200,7 +201,7 @@ mechanics:
       counts one failure per visit, charged to that player.
     # Standing in the well in the middle of the room. A player who dies in it causes a Soulcoil Rite. One
     # failure per player per visit. Almost all of the hits are in the last seconds of three wipes, where
-    # the raid went into the well to end the pull (docs/follow-ups.md).
+    # the raid went into the well to end the pull (follow-ups).
     difficulties: [heroic]
     ability_ids: [1290390]
     kind: avoidable
@@ -232,7 +233,7 @@ mechanics:
     # source; 1287987 marks the cast), then knocks them away with a 15 s DoT (1287434, damage and debuff)
     # that a magic dispel removes. A Latent Cultist appears where the DoT ends, so the player should be at
     # the edge of the room first. 72 of 122 were dispelled and 34 ran the full 15 s. No rule: where the
-    # puddle landed needs positions (docs/follow-ups.md).
+    # puddle landed needs positions (follow-ups).
     difficulties: [heroic]
     ability_ids: [1287427, 1287987, 1287434]
     kind: dispel
@@ -322,7 +323,7 @@ damage_windows:
   - id: possession_barrage
     name: Possession Barrage
     # Five raid-wide bursts within about 2.5 s, 28 to 36 s apart. expected_defensive_cooldowns is a guess
-    # (see docs/follow-ups.md). Soulcoil Ignition is the fight's other raid-wide burst but can't be a window:
+    # (see its follow-ups). Soulcoil Ignition is the fight's other raid-wide burst but can't be a window:
     # its Rites share an ID with their own DoT, which ticks all fight.
     difficulties: [heroic]
     ability_ids: [1292034]

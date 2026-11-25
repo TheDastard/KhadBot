@@ -22,7 +22,7 @@ Every store has a local and a hosted implementation behind one interface; `khadb
 - `config/`: agents, personas, prompt templates, encounter files (`encounters/<zone_id>-<zone_slug>/<encounter_id>-<encounter_slug>.yaml`), registries, model prices.
 - `apps/web/` (Next.js dashboard) and `packages/api-client/` (generated from `contracts/openapi.json`) form a pnpm workspace.
 - `deploy/` (image, compose stack), `scripts/` (`dev/`, `data/`, `wcl/`), `tests/` (`unit/`, `integration/`, `eval/`, `fixtures/`, `golden/`, `helpers/`).
-- Docs: `docs/decisions.md` (decisions and why), `docs/follow-ups.md` (open work), and the reference docs `docs/encounter/`, `docs/hosting/`, `docs/wcl/`, `docs/game-art.md`.
+- Docs: `docs/decisions.md` (decisions and why), `docs/follow-ups.md` (open work; per-raid encounter items in `docs/encounter/follow-ups/`), and the reference docs `docs/encounter/`, `docs/hosting/`, `docs/wcl/`, `docs/game-art.md`.
 
 ## Design reference
 

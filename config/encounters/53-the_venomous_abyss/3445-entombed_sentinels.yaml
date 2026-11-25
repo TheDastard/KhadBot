@@ -1,6 +1,7 @@
 # Entombed Sentinels, The Venomous Abyss: the Breath of Ula'tek (NPC 258557) and the Blood of Ula'tek
 # (NPC 258558), fought 40 yards apart by half the raid each.
-# Open gaps for this file are tracked under "Entombed Sentinels" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Entombed Sentinels" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -204,7 +205,7 @@ mechanics:
     description: >-
       Dispellable 18 s DoT on several players. No failure is counted: the guides disagree on how soon to dispel
       it.
-    # Cast (1284483) and the DoT (1284471; one ID covers the debuff and its damage). See docs/follow-ups.md.
+    # Cast (1284483) and the DoT (1284471; one ID covers the debuff and its damage). See its follow-ups.
     difficulties: [heroic]
     ability_ids: [1284483, 1284471]
     kind: dispel
@@ -256,7 +257,7 @@ damage_windows:
   - id: contaminate
     name: Contaminate
     # Raid-wide pulse every 3 s from a Venom Coagulation until the slime dies; a 4 s window keeps one
-    # slime's pulses as one occurrence. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # slime's pulses as one occurrence. expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1284258]
     cluster_window_ms: 4000

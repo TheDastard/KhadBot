@@ -1,6 +1,7 @@
 # The Twin Fangs, The Venomous Abyss: Vexhul (NPC 257361) and Ithraz (NPC 257368), fought side by side, with
 # Spawns of Vexhul (NPC 264023) as adds.
-# Open gaps for this file are tracked under "The Twin Fangs" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "The Twin Fangs" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -173,7 +174,7 @@ mechanics:
     # (1290662); a soak removes one stack and applies Feasted (1310096, 800% more Feast damage for 8 s). One
     # soak group per strike: a player hit by more than one strike of a Feast fails, once per Feast. The rule
     # also counts a player immune to the later strike (a planned immunity soak) and a tank planned to take
-    # two (docs/follow-ups.md).
+    # two (follow-ups).
     difficulties: [heroic]
     ability_ids: [1290516, 1290662, 1310096]
     kind: soak
@@ -217,7 +218,7 @@ mechanics:
       failure is counted: every player is hit at the first tick, before the marked players have left the raid.
     # Cast (1290809), the debuff on several marked players (1290814) and the damage around each of them
     # (1290878), which grows as the circle shrinks over 12 s. No rule: every player is hit at the first tick,
-    # before the marked players have left the raid (docs/follow-ups.md).
+    # before the marked players have left the raid (follow-ups).
     difficulties: [heroic]
     ability_ids: [1290809, 1290814, 1290878]
     kind: debuff
@@ -333,7 +334,7 @@ damage_windows:
   - id: stir_the_depths
     name: Stir the Depths
     # Cast (1290956) and the raid-wide pulse every 2 s for 6 s (1292806), twice per loop; a 3 s window keeps
-    # one cast's pulses as one occurrence. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # one cast's pulses as one occurrence. expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1290956, 1292806]
     cluster_window_ms: 3000

@@ -11,10 +11,11 @@ paths:
 
 Three kinds of doc, each with its own rules:
 
-- **Reference docs** describe how things are now: `docs/wcl/`, `docs/hosting/`, `docs/encounter/`,
-  `docs/game-art.md`.
-- **Logs and queues**: `docs/decisions.md` (why things are the way they are), `docs/follow-ups.md` (work left to
-  do) and `docs/plan-changes.md` (emptied by each plan sync).
+- **Reference docs** describe how things are now: `docs/wcl/`, `docs/hosting/`, `docs/encounter/` (except its
+  `follow-ups/`), `docs/game-art.md`.
+- **Logs and queues**: `docs/decisions.md` (why things are the way they are), `docs/follow-ups.md` and
+  `docs/encounter/follow-ups/` (work left to do; the second holds one file per raid) and `docs/plan-changes.md`
+  (emptied by each plan sync).
 - **Context for Claude**: `CLAUDE.md`, `.claude/rules/` and `.claude/skills/`. These are loaded into sessions, so
   every line costs tokens on every task it reaches.
 
@@ -63,7 +64,7 @@ relative link and backticked `docs/` or `.claude/` path exists.
 - When a decision is reversed, edit its row to the new choice (and date) or delete it if nothing replaces it. No
   "superseded" rows.
 
-## follow-ups.md
+## follow-ups.md and the encounter follow-ups
 
 - One bullet per item: what is missing and where, in a few lines. Detail lives in the issue, the code comment or the
   reference doc it links to.

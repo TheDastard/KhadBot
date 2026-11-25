@@ -77,7 +77,7 @@ What this means for rules:
   and `per_cluster` still counts the occurrence (as it does today).
 - Detect the enrage from its first damage (1286905), never from a cast.
 - Whether the file should list the channel's cast (1286860) is left to the Ula'tek review (see
-  `docs/follow-ups.md`); adding it changes the Casts filter, so every pull's enemy Casts would be refetched.
+  `docs/encounter/follow-ups/venomous-abyss.md`); adding it changes the Casts filter, so every pull's enemy Casts would be refetched.
 
 ### Viper spawns: charge the carrier whose egg broke on Caustic Waves, with a new rule on the shell
 

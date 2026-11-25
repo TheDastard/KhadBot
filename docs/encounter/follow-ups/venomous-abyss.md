@@ -1,0 +1,171 @@
+# The Venomous Abyss follow-ups
+
+Open work on The Venomous Abyss's encounter files (`config/encounters/53-the_venomous_abyss/`) and its game
+art. One heading per encounter; the encounter file's header comment points to it. The rules for items are
+the same as for `docs/follow-ups.md` (`.claude/rules/docs.md`).
+
+## The Venomous Abyss, game art
+
+- **The client export stops short.** Three runs of `exportInterfaceFiles art` on client 12.1.5.70783 wrote every
+  journal file up to file ID 7966637 and none of the ten after it, Kith'ix's `ui-ej-boss-kithix.blp` (8214195) among
+  them, likely a timeout. New bosses' portraits will be missing until the export completes; find a way to make it
+  finish (or export the newest files) before the next raid tier.
+- **Hosted buckets.** The portraits are uploaded to the local stack only; staging and production need the upload
+  script run against their buckets (`docs/game-art.md`, "Uploading to a hosted bucket"), and the Blizzard client ID
+  and secret in their secrets. The upload folder must also hold Kith'ix's `UI-EJ-BOSS-Kithix.blp`, which the export
+  lacks.
+
+## Ula'tek (3492), Heroic
+
+`config/encounters/53-the_venomous_abyss/3492-ulatek.yaml`, first pass awaiting review. Over the 47 recorded
+pulls: coverage `full`, no `phase_trigger_unmatched`, failures Mother's Wrath 13, Unchecked Rage 21, Rattler Slam
+10, Calcified Corpse 19, Circling Prey 12, Desperate Thrash 28, Acidic Expulsion 1.
+
+- **Review the failure rules** against those counts.
+- **Spectral Coils as a damage window.** Every player takes it and it causes many overkill deaths; only Rage of
+  the Shackled is a window today.
+- **Rage of the Shackled `expected_defensive_cooldowns: 1`** is a guess.
+- **Rage of the Shackled's cast** (1286860) and the Venomous Heart's (1299526) aren't listed, so the filtered enemy
+  Casts page misses them. Decide at review; adding them refetches enemy Casts for every pull.
+- **Poisonous Bite** has no rule until a source says how long the DoT may stay (`debuff_duration_gt`).
+- **Soul Constrictor soakers** are undetected: the debuff is never reapplied and every hit is equal
+  (`docs/encounter/failure-rules.md`). Needs positions at impact or a raid plan.
+- **Mephitic Thrash** has no rule; positions could judge it once a reviewer confirms the radius and shape.
+- **Mother's Wrath `reach_yd`.** Target distance doesn't split the 13 failures cleanly; decide whether distance is
+  the right test.
+- **Hits with no enemy cast.** One Circling Prey has no cast; rules using Ula'tek's casts must change only who is
+  charged, never whether it counts.
+- **Ingested Venom** (1313529) as the Serpent's Bite soak debuff is the raid's belief; confirm.
+- **Normal and Mythic** aren't covered; check each entry against those logs first.
+- **Unowned punishments.** 2 Unchecked Rages and 3 Rattler Slams have no aggro holder; they need tank assignments.
+
+## The Coiled Altar (3429), Heroic
+
+`config/encounters/53-the_venomous_abyss/3429-the_coiled_altar.yaml`, first pass awaiting review; its comments give
+counts over 35 Heroic pulls (one kill).
+
+- **Review the 16 failure rules**, above all Volatile Venom bystanders (701) and Axegrinder (568). `MECHANIC_CAP`
+  (8) cuts a failing mechanic from 6 pulls' digests.
+- **Player-on-player damage**: 104.8M over the 32 pulls that reach Dreadmarch is unclassified, mostly players' DoTs
+  (451963, Frost Fever, Virulent Plague, Flame Shock); none hits a player under Dreadmarch. Name the cause.
+- **Guillotine soak threshold** (5, from the guides): Execution follows only soaks of 2 or fewer, and one Grim
+  Execution has no soak hit. A soak-group `hit_while_aura` rule waits for logs with a second soak.
+- **Gloombomb bystanders** need a grace window on an aura's end before `hit_without_aura` stops charging carriers.
+- **Soul Sever** has no rule: Malacrass never melees, so his tank must come from taunts, Dread Bolt or a raid plan.
+- **Confirm**: Noxious Ground's free tick, Toxic Deluge as avoidable, Fangs' `expected_defensive_cooldowns: 1`, and
+  Unworthy's (1312424) trigger. No source yet for Venomfang, Venom Rupture, Corrupted Toxin, Dreadmarch rules.
+
+## Kith'ix (3513), Heroic
+
+`config/encounters/53-the_venomous_abyss/3513-kithix.yaml`, first pass awaiting review; five Heroic pulls, one kill.
+
+- **The intermission isn't a phase.** Suffocating Darkness repeats and ends on Liadrin's Divine Radiance, not a boss
+  event, so it sits inside `p1`.
+- **Judgment calls to confirm**: Extinguish when a tank survives it by a planned immunity or defensive, Dark
+  Devastation's 8 s window, Digestive Juices' 3-stack limit (a 3-stack set also wiped), Voidscar hits on the tanks
+  placing it, and Overwhelming Fear as a full 6 s rather than an early dispel (needs positions).
+- **Suffocation double counts** an unhealed Abyssal Grasp (9 of 21). Stage Two rests on one pull: Null Gate rules
+  and Nullify's lethal stack (4 to 6 by guide) are unconfirmed; Hatch, Mindsting and Dark Frenzy never appear.
+- **Need a source**: Blood of the Old Ones (1308670, 6 killing blows), Nightfall's stack limit, and Eightfold
+  Eclipse's `expected_defensive_cooldowns: 1`; Eclipse Fragment soaks need a raid plan.
+
+## Nek'zali the Soulcoiler (3470), Heroic
+
+`config/encounters/53-the_venomous_abyss/3470-nekzali_the_soulcoiler.yaml`, first pass awaiting review; seven Heroic
+pulls, three kills.
+
+- **Review the failure rules**; Latent Cultist (299 contacts) looks high: is one tick a failure?
+- **Log-derived limits to confirm**: Ritual Burn past 5 (a six-Invoke Stage Two would pass it with no Amani in the
+  well), Hollowing Strikes past 15 (guides swap at 6 to 8), Hungering Pyre under 6 soakers (should scale with size).
+- **A Restless Amani reaching the well** has no rule: it logs only a Soulcoil Rite (1288772). It needs a rule that
+  counts occurrences not preceded by a listed cast, charged to no one; `ritual_burn` catches only pile-ups.
+- **Possession Barrage** early bursts need positions (its defensive count is a guess); **Soulcoil Well** counts
+  include raids walking in to end a lost pull, which the wipe cutoff doesn't always catch.
+- **Confirm** the intermission starting on Ritual of Awakening (23 s before WCL's transition). No rule yet for Latent
+  Cultist emergence, Essence Rend placement (needs positions) or Corpse Blight stacks.
+
+## Entombed Sentinels (3445), Heroic
+
+`config/encounters/53-the_venomous_abyss/3445-entombed_sentinels.yaml`, first pass awaiting review. Failures: Blood
+Venom 549, Living Venom 287, Deadly Venom 60, Cultivated Burst 22, Unstable Miasma 9, Noxious Blast 9, Injection 2.
+
+- **Review the thresholds**: Blood Venom `hits_per_cluster_gt 1` (is crossing pools part of the fight?) and Unstable
+  Miasma `soak_count_lt 8` (from these logs only; other raid sizes need a raid plan's group sizes).
+- **Unowned failures.** Noxious Blast needs droplet assignments; no blame option names Injection's debuffed tank.
+- **No rule yet** for Toxic Droplets, Clinging Murk, Blighted Blood (guides disagree on dispel timing) and the marks:
+  no source gives a limit. Living Venom has no cast; whether stepping on a droplet launches it is unconfirmed.
+- **Not in the logs**: Empowering Slam's bonus, Ula'tek's Dominance (testable from positions once the range is
+  settled), Helical Toxins' starting stacks. Contaminate's `expected_defensive_cooldowns: 1` is a guess.
+
+## Nymrissa Wavecaller (3379), Heroic
+
+`config/encounters/53-the_venomous_abyss/3379-nymrissa_wavecaller.yaml`, first pass awaiting review, from one Heroic
+kill, so no rule is tested yet: recheck on wipes, more kills and the Mythic pulls.
+
+- **Unseen in the kill, so no IDs**: Bubblefin Berserkers and their Pulsing Tides (a murloc reaching the bubble has
+  no rule), Shatter, Wavecaller's Might and Unending Tides. Pulsing Tides and Shatter fit `per_cluster` by nobody.
+- **No rule yet** for Frost Orb stacks (`debuff_stacks_gt 2` would give 4 failures; is 3 the limit?) and Lingering
+  Frost, which needs to excuse the soaker's own patch or a tick count past which standing in it fails.
+- **Blame**: Iceblade Flurry past 6 stacks charges no one, though the other tank should have taunted; whether Wild
+  Bite on a tank knocked into the water is that tank's error is for a reviewer.
+- **Guesses**: Abyssal Rain's and Pop!'s defensive counts, and what Pop!'s zero hit marks. Repeating phases on the
+  Alluring Bubble and Swirling Whirlpools casts could split the single phase's ~110 s cycle.
+
+## Vashnik the Malignant (3455), Heroic
+
+`config/encounters/53-the_venomous_abyss/3455-vashnik_the_malignant.yaml`, first pass awaiting review, from three Heroic
+kills and no wipes. Failures to review: Plague Froth 177, Plague Wave 221, Stygian Burst 29, the rest under 10.
+
+- **Plague Froth may overcount.** 60 failures are bystanders hit only by the first tick, before anyone could move;
+  `hit_without_aura` has no first-tick grace. Decide whether they count. Plague Wave (about 9 players an eruption,
+  healed through) may not be a failure at all.
+- **Stygian Burst blame.** Carriers in melee hit the tanks repeatedly, so the carrier may be at fault rather than the
+  player hit; a former carrier hit within 1.5 s of the infection ending also counts.
+- **Staggered dispels and add kills** (Exploding Infection, Burning Venom deaths) need a rule kind for two occurrences
+  closer than a limit; Caustic Surge has no stack counts, so `debuff_stacks_gt` can't see the overlap.
+- **Unconfirmed**: the unsoaked Catalytic Bile ID (1282616), Virulent Fumes and Congealing Bolt (not in the Dungeon
+  Journal), Imbibe's cooldown count; the Blood fountain and leaked adds aren't covered (YAML header).
+
+## The Lost Explorers (3497), Heroic
+
+`config/encounters/53-the_venomous_abyss/3497-the_lost_explorers.yaml`, first pass awaiting review, from only four
+Heroic pulls (three kills); counts and the unseen abilities are in its comments.
+
+- **Phases assume the feed order Nema, Epu, Gebbo.** Another order gets wrong phases, so the format needs phases
+  that match in any order; no pull reached the fourth Final Ascension, so the last phase is missing.
+- **Review**: Shell Spin charges the cast's target (7 of 32 casts); Aftershock `hits_per_cluster_gt 0`, Shredding
+  Shards past 7 stacks, Blink Nova's defensive count. Relic Rupture charges no one until a raid plan assigns crates.
+- **No rule yet** for Mighty Thud (no failed leap seen, and not a damage window), Steady Strikes, Splinters and
+  Spreading Flames; Elemental Explosion's rule is untested on a debuff carried into the next volley.
+- **Needs positions or more logs**: Blink Nova placement, United Defense, Fishy Feedback's damage, Haunting Spirits
+  (1310561, unexplained deaths in the wipe).
+
+## Sszorak (3420), Heroic
+
+`config/encounters/53-the_venomous_abyss/3420-sszorak.yaml`, first pass awaiting review, from 24 Heroic pulls (three
+kills).
+
+- **Tempest charges nearly everyone**: `aura_applied` gives 15 to 24 players a pull. Decide whether every contact
+  counts or only repeated ones (`debuff_stacks_gt`; stacks reached 2 to 7 a pull).
+- **A Viscous Cyst popped before the intermission** has no rule; it needs a mechanic scoped to some phases, which
+  the format lacks. Who touched the cyst isn't logged, so per_cluster with no blame is the likely shape.
+- **Mutilate double soaks and Raging Crosswinds bystanders** have no rule: the hit opens the gash in the same
+  millisecond, and a mark is removed up to 77 ms before its hit. Aura rules need a minimum aura age or a grace window.
+- **Review** Turbulent Gusts' 4 s limit (charge both if one partner was immune?); Caustic Residue is in one report.
+- **Not covered:** Venomous Surge cyst placement (needs positions; its `expected_defensive_cooldowns: 1` is a guess)
+  and players blown off in the intermission (no log row).
+
+## The Twin Fangs (3421), Heroic
+
+`config/encounters/53-the_venomous_abyss/3421-the_twin_fangs.yaml`, first pass awaiting review, from 12 Heroic pulls
+(three kills).
+
+- **Ravenous Feast double soaks** include planned immunity soaks (no damage) and one tank's repeated, survived double
+  soaks; skipping them needs a hit-type filter or a raid plan. Undersoaks need a second rule or a soak-count field.
+- **Review the thresholds.** Coiling Ichor has no rule (needs positions); Vile Flood counts every tick (`value: 1`
+  would allow the early crossing guides advise); tanks may not be able to dodge their Stir the Depths, Deadly Venom
+  and Vile Flood failures.
+- **Out-of-reach hits** (Concentrated Spittle, Clotted Bolt) also charge non-tanks the bosses turned to as the raid
+  died. Unsoaked globules and Stone Breakers are charged to no one until a raid plan assigns them.
+- **Unchecked:** the Stone Breaker stack rule never fired; the Submerge's start before Sanguine Storm, Uncoiled Wrath
+  and Caustic Rain aren't in the logs; Stir the Depths' cooldown count is a guess.

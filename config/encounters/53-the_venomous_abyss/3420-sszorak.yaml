@@ -1,5 +1,6 @@
 # Sszorak, The Venomous Abyss (NPC 257347).
-# Open gaps for this file are tracked under "Sszorak" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Sszorak" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -59,7 +60,7 @@ mechanics:
     # A glob left where each Venomous Surge expires. Popping it (contact, or after 2 min) knocks every
     # player away and hits them with a stacking DoT on the same ID. The raid pops three on purpose in each
     # intermission and the spare just after it. The most killing blows of any ability (71), most of them from
-    # a cyst popped before the intermission, which no rule can tell from a planned pop (docs/follow-ups.md).
+    # a cyst popped before the intermission, which no rule can tell from a planned pop (follow-ups).
     difficulties: [heroic]
     ability_ids: [1287205]
     kind: unavoidable
@@ -118,7 +119,7 @@ mechanics:
       every other one. A soaker who takes the next one too is not yet counted as a failure.
     # Debuff (1277051) and DoT (1285998) on everyone a Mutilate hit, for 22 s; it raises the next Mutilate's
     # damage by 500%, so each soak group takes every other Mutilate. A soaker who takes the next one too has
-    # no rule (docs/follow-ups.md).
+    # no rule (follow-ups).
     difficulties: [heroic]
     ability_ids: [1277051, 1285998]
     kind: debuff
@@ -156,7 +157,7 @@ mechanics:
       stands. Cyst placement needs positions, so no failure is counted.
     # Cast (1305959), the 10 s debuff on two players (1305963) and its DoT (1312156). When it expires it hits
     # the raid (the venomous_surge damage window) and leaves a Viscous Cyst where the player stands. Where the
-    # cysts go is the raid's plan and needs positions (docs/follow-ups.md).
+    # cysts go is the raid's plan and needs positions (follow-ups).
     difficulties: [heroic]
     ability_ids: [1305959, 1305963, 1312156]
     kind: debuff
@@ -194,7 +195,7 @@ mechanics:
     # The Altar's cast (1285419), then eight players marked 4 with each direction (cast and debuff 1285425
     # and 1285453), their DoT (1312219) and the hit when the marks expire 8 s later (1285616), which lands
     # on the marked players and on anyone within 6 yd and launches them all. Bystanders have no rule
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1285419, 1285425, 1285453, 1312219, 1285616]
     kind: debuff
@@ -220,7 +221,7 @@ damage_windows:
     name: Venomous Surge
     # Raid-wide hit when each Venomous Surge expires, smaller the farther a player stands from its target;
     # the two of each cast land together. Four before each intermission. expected_defensive_cooldowns is a
-    # guess (docs/follow-ups.md).
+    # guess (follow-ups).
     difficulties: [heroic]
     ability_ids: [1306120]
     cluster_window_ms: 3000

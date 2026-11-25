@@ -1,5 +1,6 @@
 # Ula'tek, final boss of The Venomous Abyss.
-# Open gaps for this file are tracked under "Ula'tek" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Ula'tek" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -135,7 +136,7 @@ mechanics:
       such hit is a failure charged to the target of the Mother's Wrath cast just before it.
     # Hits the whole raid when Ula'tek's target is out of her reach. Charged to the target of the
     # Mother's Wrath cast just before it. No reach_yd: the targets' distances from Ula'tek don't split
-    # cleanly at her swing reach (docs/follow-ups.md).
+    # cleanly at her swing reach (follow-ups).
     difficulties: [heroic]
     ability_ids: [1301122]
     kind: avoidable
@@ -439,7 +440,7 @@ damage_windows:
   - id: rage_of_the_shackled
     name: Rage of the Shackled
     # Raid-wide pulses about 4 s apart for 20 s; a 5 s window keeps one channel as one occurrence.
-    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1307367]
     cluster_window_ms: 5000

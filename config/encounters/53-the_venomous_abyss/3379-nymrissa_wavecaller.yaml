@@ -1,6 +1,7 @@
 # Nymrissa Wavecaller, the lair boss of The Tidebound Grotto. WarcraftLogs lists the encounter under zone 53,
 # The Venomous Abyss, so the file lives with that raid's.
-# Open gaps for this file are tracked under "Nymrissa Wavecaller" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Nymrissa Wavecaller" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -37,7 +38,7 @@ mechanics:
       in the logs.
     # Casts 1284015 and 1257717, at 18, 128, 238 and 348 s. Each Shorerunner (NPC 253032) logs one cast of
     # 1260012 as it spawns: 95 murlocs in waves of 15 about 8 and 52 s after each bubble. No Berserker appears
-    # in the kill, so its NPC and ability IDs are unknown (docs/follow-ups.md).
+    # in the kill, so its NPC and ability IDs are unknown (follow-ups).
     difficulties: [heroic]
     ability_ids: [1284015, 1257717, 1260012]
     kind: unavoidable
@@ -91,7 +92,7 @@ mechanics:
       logs.
     # One ID for the hit, the stacking debuff and its DoT, which grows with the stacks. Shatter's ID is unknown.
     # 41 touches over the six casts; four soakers reached 3 stacks and one of them died to the DoT during
-    # Abyssal Rain (docs/follow-ups.md).
+    # Abyssal Rain (follow-ups).
     difficulties: [heroic]
     ability_ids: [1313448]
     kind: soak
@@ -104,7 +105,7 @@ mechanics:
       Icy patch left where an orb is picked up that ticks each second on players in it and makes them slide.
       Soakers step onto their own patches, so a hit is not counted as a failure.
     # A debuff on contact (also logged as a cast on the player) and the tick. 101 contacts on 20 players, 62 of
-    # them under 1 s, and 88 ticks (1.19M damage). Three soakers took 14 to 20 ticks each (docs/follow-ups.md).
+    # them under 1 s, and 88 ticks (1.19M damage). Three soakers took 14 to 20 ticks each (follow-ups).
     difficulties: [heroic]
     ability_ids: [1257654]
     kind: avoidable
@@ -144,7 +145,7 @@ damage_windows:
     # Cast (1260837) every 33 to 66 s; a raid-wide hit each second for 4 s, then a drench DoT every 2 s for
     # about 24 s (1260843 for the hits, the DoT and the debuff). Seven casts in the kill. On Heroic each cast
     # also gives Nymrissa a stack of Wavecaller's Might, which no buff row in the log shows.
-    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1260837, 1260843]
     cluster_window_ms: 3000
@@ -155,7 +156,7 @@ damage_windows:
     # A whirlpool reaches the bubble: one raid-wide hit and a knockback (1266340, environment source; the
     # environment's cast 1258150), 300k to 450k before mitigation, at 120, 230 and 340 s. A hit of 0 from
     # Nymrissa (1258154) lands on one or two players at the same moment; what it marks is unknown.
-    # expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1266340, 1258150, 1258154]
     cluster_window_ms: 2000

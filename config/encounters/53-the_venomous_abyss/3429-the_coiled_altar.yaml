@@ -1,5 +1,6 @@
 # The Coiled Altar (Zul'jan and Hex Lord Malacrass), seventh boss of The Venomous Abyss.
-# Open gaps for this file are tracked under "The Coiled Altar" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "The Coiled Altar" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -60,7 +61,7 @@ mechanics:
       Hits a few players on some Toxic Deluge casts, read as the venom globules landing. Every hit is a failure charged
       to the player hit; no guide describes it, so the rule is a first reading.
     # Hits 1 to 8 players on some Toxic Deluge casts (57 hits over 19 pulls, 136 casts), so it reads as the
-    # globules' landing. No guide describes it; the rule is a first reading (docs/follow-ups.md).
+    # globules' landing. No guide describes it; the rule is a first reading (follow-ups).
     difficulties: [heroic]
     ability_ids: [1300137]
     kind: avoidable
@@ -281,7 +282,7 @@ mechanics:
     # Malacrass's frontal: the hit (1286620, also the cast), its DoT (1312630, 1307967) and the stacking
     # debuff (1307959). It destroys Manifestations of Dread and leaves Gravebound on players hit. 55 casts
     # hit one player 42 times. No rule: Malacrass never melees, so the logs don't name his tank
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1286620, 1312630, 1307967]
     kind: unavoidable
@@ -359,7 +360,7 @@ mechanics:
     # Three players (cast 1310882, debuff 1310881, 5 s) explode for 15 yards (1310883) and take Gravebound.
     # A player hit twice by one cast stood in another's bomb. 70 of 330 hits landed on players without the
     # debuff, but hit_without_aura can't charge those: the bomb's damage lands 1 ms or more after the carrier's
-    # debuff is removed, so it would charge the carriers too (docs/follow-ups.md).
+    # debuff is removed, so it would charge the carriers too (follow-ups).
     difficulties: [heroic]
     ability_ids: [1310883, 1310882, 1310881]
     kind: avoidable
@@ -485,7 +486,7 @@ mechanics:
     description: >-
       Lethal hit from Malacrass; no guide names it and its trigger is unknown. It is not counted as a failure.
     # Lethal hit from Malacrass (17 hits, all killing blows, 3 pulls). No guide names it and its trigger is
-    # unknown (docs/follow-ups.md).
+    # unknown (follow-ups).
     difficulties: [heroic]
     ability_ids: [1312424]
     kind: unavoidable
@@ -495,7 +496,7 @@ damage_windows:
   - id: fangs_of_the_coiled_altar
     name: Fangs of the Coiled Altar
     # 8 s raid-wide channel, about twice per Stage One (68 casts over 35 pulls). expected_defensive_cooldowns is a guess
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1282512]
     cluster_window_ms: 3000

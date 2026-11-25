@@ -1,7 +1,8 @@
 # The Lost Explorers, The Venomous Abyss: three possessed tortollans, First Mate Nema (NPC 261835),
 # Scrollsage Epu (NPC 261843) and Trader Gebbo (NPC 261848), and the spirit that controls them, Mor'zahi
 # (NPC 261584), who can't be attacked. Guides written before a rename call Nema "Nama" and Epu "Iku".
-# Open gaps for this file are tracked under "The Lost Explorers" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "The Lost Explorers" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -25,7 +26,7 @@ file_version: 2
 #
 # Phases are matched in order, and the order of the feeds is the raid's choice. All three kills fed Nema,
 # then Epu, then Gebbo, so that is the order listed; a raid that feeds in another order gets wrong phases
-# (docs/follow-ups.md). Mor'zahi's Command has one ID per feed: 1296975 followed a fish thrown to Nema
+# (follow-ups). Mor'zahi's Command has one ID per feed: 1296975 followed a fish thrown to Nema
 # (3 of 3), 1297022 one to Epu (3 of 3) and 1297024 one to Gebbo (2 of 2). With one order in the logs,
 # whether the ID follows the tortollan or the feed's position is not known. One kill ended before the
 # third feed and no pull reached a fourth Final Ascension.
@@ -75,7 +76,7 @@ mechanics:
     # The channel that wipes the raid, begun when Mor'zahi's energy fills, 60 s after he starts gathering.
     # A fish thrown before it finishes stops it: it began on 2 of the 8 feeds, 0.03 and 0.2 s after the
     # fish was thrown. It has no damage in these logs, and neither does Fishy Feedback, the raid hit
-    # guides describe on each feed (docs/follow-ups.md).
+    # guides describe on each feed (follow-ups).
     difficulties: [heroic]
     ability_ids: [1292779]
     kind: unavoidable
@@ -115,7 +116,7 @@ mechanics:
       Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. No failure is
       counted: the logs give no threshold for a late swap.
     # Stacking damage increase on Nema's target, one stack a swing; the tanks swap to drop it. Stacks at
-    # a swap ran from 26 to 63, so the logs give no threshold for a late swap (docs/follow-ups.md).
+    # a swap ran from 26 to 63, so the logs give no threshold for a late swap (follow-ups).
     difficulties: [heroic]
     ability_ids: [1291929]
     kind: debuff
@@ -129,7 +130,7 @@ mechanics:
     # Nema's extra ability, twice per Command, 32 s apart. He marks three players and leaps to each in
     # turn, 2 s apart: a cast naming the marked player (1296133), then damage split evenly between the
     # players within 6 yd (1300237). A leap that hits nobody is said to hit the whole raid instead; none
-    # of the 18 leaps did (5 to 11 players each), so there is no rule for it (docs/follow-ups.md).
+    # of the 18 leaps did (5 to 11 players each), so there is no rule for it (follow-ups).
     difficulties: [heroic]
     ability_ids: [1296094, 1296133, 1300237]
     kind: soak
@@ -158,7 +159,7 @@ mechanics:
       the marked player stands needs positions, so no failure is counted.
     # Cast (1296021) and the debuff marking the player Epu teleports to (1296025). The raid damage is the
     # blink_nova damage window. Where the marked player takes it matters and needs positions
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1296021, 1296025]
     kind: debuff
@@ -299,7 +300,7 @@ mechanics:
     # Stacking bleed on a player who stomps a crate (Useless Junk, NPC 270001). Stomping is the job: the
     # crates hide the Disgusting Fish and rupture if left. The second largest source of damage taken.
     # Stacks reached 2 on 59 occasions, 3 on 8 and 4 on 2; no source gives a Heroic limit
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1308853]
     kind: debuff
@@ -367,7 +368,7 @@ mechanics:
       Fire spreading from Gebbo's bomb that damages players inside it. It has been seen once, so no failure is
       counted yet.
     # Fire spreading from the bomb (NPC 266037): debuff 1297650 while inside, damage 1314061. One
-    # occurrence, during the wave, so no rule yet (docs/follow-ups.md).
+    # occurrence, during the wave, so no rule yet (follow-ups).
     difficulties: [heroic]
     ability_ids: [1297650, 1314061]
     kind: avoidable
@@ -391,7 +392,7 @@ damage_windows:
   - id: blink_nova
     name: Blink Nova
     # Raid-wide hit when Epu teleports to the marked player, 19 times in the kills, smaller the farther
-    # a player stands from the mark. expected_defensive_cooldowns is a guess (docs/follow-ups.md).
+    # a player stands from the mark. expected_defensive_cooldowns is a guess (follow-ups).
     difficulties: [heroic]
     ability_ids: [1294334]
     cluster_window_ms: 2000

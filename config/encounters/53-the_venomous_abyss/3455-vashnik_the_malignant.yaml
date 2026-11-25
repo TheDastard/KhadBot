@@ -1,5 +1,6 @@
 # Vashnik the Malignant, The Venomous Abyss.
-# Open gaps for this file are tracked under "Vashnik the Malignant" in docs/follow-ups.md.
+# Open gaps for this file are tracked under "Vashnik the Malignant" in
+# docs/encounter/follow-ups/venomous-abyss.md.
 #
 # Ability IDs are the ones WarcraftLogs records, which are often not the spell IDs guides link to.
 # Entries list the difficulties they have been checked on; add a difficulty only after checking the
@@ -10,7 +11,7 @@
 # All three kills tanked Vashnik between the Shadow and Flame fountains for the whole fight, so he never
 # drank from the Fountain of Blood: its expulsion, its Clotting Venom adds and Siphoning Infection never
 # appear, and no living venom ever reached the Malignant Cavity (no Malignant Burst). Those have no entry
-# here (docs/follow-ups.md).
+# here (follow-ups).
 #
 # Failures are charged to the player responsible. For most rules that is the player who was hit. Rules
 # that judge the raid as a whole (an unsoaked Catalytic Bile, a tank who took two bites in a row) count one
@@ -87,7 +88,7 @@ mechanics:
       Journal doesn't name it. It is not counted as a failure.
     # Small ticks (at most 12k) and a short debuff (1291461, source Environment) on 33 players, mostly in the
     # 20 s after each Imbibe. The Dungeon Journal doesn't name it; it may be the fountains' vapor
-    # (docs/follow-ups.md).
+    # (follow-ups).
     difficulties: [heroic]
     ability_ids: [1291461, 1291467]
     kind: unavoidable
@@ -152,7 +153,7 @@ mechanics:
     description: >-
       Eruptions every 1.5 s from players with Stygian Infection, hitting everyone within 6 yards. A player hit
       without the infection stood in someone else's burst: one failure per burst, charged to that player.
-    # The carrier who didn't spread out may share the blame (docs/follow-ups.md).
+    # The carrier who didn't spread out may share the blame (follow-ups).
     difficulties: [heroic]
     ability_ids: [1302489]
     kind: avoidable
@@ -165,7 +166,7 @@ mechanics:
     description: >-
       Flame fountain infection on two players per Imbibe; dispelling it sets off a Caustic Explosion on the
       raid, so dispels are staggered. No failure is counted: dispels too close together have no rule yet.
-    # Debuff and DoT 1295173 (docs/follow-ups.md).
+    # Debuff and DoT 1295173 (follow-ups).
     difficulties: [heroic]
     ability_ids: [1295173]
     kind: dispel
@@ -196,7 +197,7 @@ mechanics:
     description: >-
       Raid-wide hit and 3 s DoT when a Burning Venom dies; each death adds its own DoT, so the two adds are
       killed apart. No failure is counted: deaths too close together have no rule yet.
-    # Each death adding its own DoT is the Heroic behaviour (docs/follow-ups.md).
+    # Each death adding its own DoT is the Heroic behaviour (follow-ups).
     difficulties: [heroic]
     ability_ids: [1285979]
     kind: unavoidable
@@ -233,7 +234,7 @@ damage_windows:
     name: Imbibe
     # Vashnik drinks two fountains at 100 energy: the cast (1284663) and one raid-wide expulsion per fountain,
     # Gloom (1298583, Shadow) and Conflagrating (1298587, Flame), every 84 s. Hemo Expulsion (Blood) never
-    # appears in these kills. expected_defensive_cooldowns is a guess (see docs/follow-ups.md).
+    # appears in these kills. expected_defensive_cooldowns is a guess (see its follow-ups).
     difficulties: [heroic]
     ability_ids: [1284663, 1298583, 1298587]
     cluster_window_ms: 5000

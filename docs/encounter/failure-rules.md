@@ -97,6 +97,6 @@ the break. `ability_ids`, `followed_by_ids` and `on_death` are allowed on this r
 
 ## Not expressible yet
 
-Open requests from authored files are in `docs/follow-ups.md`, under each encounter. The recurring ones: a grace
+Open requests from authored files are in `docs/encounter/follow-ups/`, under each encounter. The recurring ones: a grace
 window on `hit_without_aura`, rules limited to one phase, aura-application versions of `hits_on_non_target`
 (a stun that deals no damage), and position rules (who stood where at a hit).
