@@ -8,7 +8,8 @@ Check the limits in ``.claude/rules/docs.md`` that a script can check, over the 
 - every rule in ``.claude/rules/`` has ``paths:`` frontmatter, except the ones in ``ALWAYS_LOADED_RULES``;
 - every row of the ``docs/decisions.md`` table has five cells, a ``D<n>`` ID used once, and at most
   ``MAX_DECISION_ROW_CHARS`` characters;
-- ``docs/follow-ups.md`` has no "Resolved" section (fixed items are deleted);
+- ``docs/follow-ups.md`` and the per-raid files in ``docs/encounter/follow-ups/`` have no "Resolved" section
+  (fixed items are deleted);
 - every relative Markdown link, and every backticked ``docs/`` or ``.claude/`` path, names a file or folder that
   exists, so a move or rename can't leave a stale reference behind.
 
@@ -131,7 +132,7 @@ def check_decisions(rel: str, text: str) -> list[Problem]:
 
 def check_follow_ups(rel: str, text: str) -> list[Problem]:
     """Fixed follow-ups are deleted, not moved to a Resolved section."""
-    if rel != "docs/follow-ups.md":
+    if rel != "docs/follow-ups.md" and not rel.startswith("docs/encounter/follow-ups/"):
         return []
     return [
         Problem(rel, number, "a Resolved section: delete fixed items instead")

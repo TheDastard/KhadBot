@@ -86,6 +86,13 @@ def test_follow_ups_have_no_resolved_section():
     assert [p.line for p in check.check_follow_ups(rel, "# Follow-ups\n\n## Resolved\n")] == [3]
 
 
+def test_encounter_follow_ups_have_no_resolved_section():
+    rel = "docs/encounter/follow-ups/venomous-abyss.md"
+    assert check.check_follow_ups(rel, "# Raid\n\n## Boss (1), Heroic\n") == []
+    assert [p.line for p in check.check_follow_ups(rel, "# Raid\n\n### Resolved\n")] == [3]
+    assert check.check_follow_ups("docs/encounter/pipeline.md", "## Resolved\n") == []
+
+
 # ---------------------------------------------------------------------------
 # References
 # ---------------------------------------------------------------------------
