@@ -341,6 +341,9 @@ tags:
           - deploy/observability/**
           - docs/hosting/observability.md
           - tests/unit/deploy/test_observability.py
+          - scripts/dev/logs.py
+          - tests/unit/scripts/dev/test_logs.py
+          - .claude/skills/triage-logs/**
 
   # ── Repo-wide ────────────────────────────────────────────────────────────
   repo:

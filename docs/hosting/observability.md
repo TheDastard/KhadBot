@@ -66,6 +66,16 @@ Structured metadata filters go after the stream selector, with `|`. The same que
 
     curl -G http://127.0.0.1:3100/loki/api/v1/query_range --data-urlencode 'query={service="worker"} | job_id="..."'
 
+From a shell, `scripts/dev/logs.py` writes the LogQL for the common questions, so nothing needs quoting for cmd,
+PowerShell or Git Bash. It only reads, from `KHADBOT_LOKI_URL` (default `http://127.0.0.1:3100`):
+
+    mise run logs:query -- summary --since 24h                 # warnings and errors grouped by service, event, error_code, logger
+    mise run logs:query -- lines --event job.finish --level ERROR --limit 5
+    mise run logs:query -- follow 7f3a9c0e                     # every line of a request, job, report or user ID (or its start)
+
+Add `--json` for one object per line. The `triage-logs` skill (`.claude/skills/triage-logs/SKILL.md`) uses it to turn
+recurring problems into follow-ups.
+
 ## Following an ID
 
 One request ID (D114, D115) connects a user's failure to every line it caused:
