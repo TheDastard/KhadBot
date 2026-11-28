@@ -208,3 +208,19 @@ class TestStopping:
             signal.signal(signal.SIGINT, signal.default_int_handler)
             signal.signal(getattr(signal, "SIGBREAK", signal.SIGTERM), signal.SIG_DFL)
         assert seen == {"term": signal.SIG_IGN, "int": signal.SIG_IGN}
+
+    def test_the_first_stop_request_turns_further_ones_off_before_raising(self):
+        import signal
+
+        term = getattr(signal, "SIGBREAK", signal.SIGTERM)
+        try:
+            dev.stop_on_terminate()
+            handler = signal.getsignal(term)
+            assert signal.getsignal(signal.SIGINT) is handler
+            with pytest.raises(KeyboardInterrupt):
+                handler(term, None)
+            assert signal.getsignal(term) == signal.SIG_IGN
+            assert signal.getsignal(signal.SIGINT) == signal.SIG_IGN
+        finally:
+            signal.signal(signal.SIGINT, signal.default_int_handler)
+            signal.signal(term, signal.SIG_DFL)

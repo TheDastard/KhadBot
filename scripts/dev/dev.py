@@ -303,6 +303,15 @@ def stop_tree(proc: subprocess.Popen[str]) -> None:
     wait_tree(proc)
 
 
+def ignore_stop_requests() -> None:
+    """Ignore Ctrl-C and terminate requests from now on: the loop is already stopping its children."""
+    import signal
+
+    for name in ("SIGINT", "SIGTERM", "SIGBREAK"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), signal.SIG_IGN)
+
+
 def stop_all(procs: dict[str, subprocess.Popen[str]]) -> None:
     """
     Stop every process, ignoring further stop requests while it does. Every tree is signalled before any is waited
@@ -310,11 +319,7 @@ def stop_all(procs: dict[str, subprocess.Popen[str]]) -> None:
     both ``uv run`` and this script, and ``uv`` forwards it) used to interrupt the waits and leave later children,
     and the port they hold, running.
     """
-    import signal
-
-    for name in ("SIGINT", "SIGTERM", "SIGBREAK"):
-        if hasattr(signal, name):
-            signal.signal(getattr(signal, name), signal.SIG_IGN)
+    ignore_stop_requests()
     for proc in procs.values():
         signal_tree(proc)
     for proc in procs.values():
@@ -461,13 +466,19 @@ def run_all(args: list[str], env: dict[str, str]) -> None:
 
 
 def stop_on_terminate() -> None:
-    """Treat a terminate request (Ctrl-Break on Windows, SIGTERM elsewhere) like Ctrl-C, so children are stopped."""
+    """
+    Treat a terminate request (Ctrl-Break on Windows, SIGTERM elsewhere) like Ctrl-C, so children are stopped. The
+    first request of either kind turns further ones off before it raises: the second arrives milliseconds later (CI's
+    ``pkill`` reaches both ``uv run`` and this script, and ``uv`` forwards it), before ``stop_all`` could ignore it.
+    """
     import signal
 
     def handler(signum: int, frame: object) -> None:
+        ignore_stop_requests()
         raise KeyboardInterrupt
 
     signal.signal(getattr(signal, "SIGBREAK", signal.SIGTERM), handler)
+    signal.signal(signal.SIGINT, handler)
 
 
 def main() -> None:
